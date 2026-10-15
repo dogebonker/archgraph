@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "Import-graph evidence for architecture decisions: module metrics, cycles, rule verdicts and simulated moves"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/OWNER/archgraph"
+repository = "https://github.com/dogebonker/archgraph"
 readme = "README.md"
 
 [dependencies]

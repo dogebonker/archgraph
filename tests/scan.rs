@@ -2,7 +2,7 @@ mod common;
 
 use std::fs;
 
-use common::{archgraph, fixture, scan, scan_recorded, stable, synthetic};
+use common::{archgraph, fixture, layout, scan, scan_recorded, stable, synthetic, validate};
 use serde_json::{Value, json};
 
 fn files(doc: &Value) -> Vec<&str> {
@@ -814,4 +814,128 @@ fn schema_accepts_unknown_finding_kinds_and_types_known_ones() {
     assert!(!with(
         json!({ "kind": "small-repo", "subject": ".", "evidence": {} })
     ));
+}
+
+/// Runs `report`, returning stdout, stderr and the exit code.
+fn report(args: &[&str]) -> (String, String, Option<i32>) {
+    let out = archgraph(&[&["report"], args].concat());
+    (
+        String::from_utf8(out.stdout).unwrap(),
+        String::from_utf8(out.stderr).unwrap(),
+        out.status.code(),
+    )
+}
+
+#[test]
+fn report_finds_layout_yaml_writes_both_files_and_exits_1_on_forbidden() {
+    let dir = fixture("ts-fda");
+    let input = dir.join("depcruise.json");
+    let out_dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("report/ts-fda");
+    let _ = fs::remove_dir_all(&out_dir);
+    let (stdout, stderr, code) = report(&[
+        dir.to_str().unwrap(),
+        "--collector-input",
+        input.to_str().unwrap(),
+        "--out-dir",
+        out_dir.to_str().unwrap(),
+    ]);
+    assert_eq!(code, Some(1), "{stdout}{stderr}");
+    let layout_yaml = dir.join("layout.yaml");
+    assert!(
+        stdout.contains(&format!("rules: {}", layout_yaml.display())),
+        "{stdout}"
+    );
+    for line in [
+        "12 files, 4 modules, 13 imports",
+        "5 forbidden: browser-no-server 3, public 1, shared-no-domain 1",
+        "1 unplanned: none 1",
+        "no module cycles",
+        "internals-reach (1)",
+        "src/domains/cart/ui/Cart.tsx -> src/domains/checkout/client.ts",
+    ] {
+        assert!(stdout.contains(line), "{line:?} missing from\n{stdout}");
+    }
+    assert!(!stdout.contains('\x1b'), "color on a pipe");
+
+    // The JSON is the scan document `scan --rules layout.yaml` writes; the page embeds it.
+    let (json, html) = (
+        out_dir.join("archgraph.json"),
+        out_dir.join("archgraph.html"),
+    );
+    let written = fs::read_to_string(&json).unwrap();
+    validate(&serde_json::from_str(&written).unwrap());
+    let (_, scanned, _) = scan_recorded("ts-fda", &["--rules", &layout("ts-fda")]);
+    assert_eq!(stable(&written), stable(&scanned));
+    assert!(fs::read_to_string(&html).unwrap().contains(r#"id="graph""#));
+    assert!(stdout.contains(&json.display().to_string()));
+    assert!(
+        stdout.trim_end().ends_with(&html.display().to_string()),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn report_without_rules_exits_0_and_writes_into_the_root_by_default() {
+    // An empty root read as TypeScript with ts-cycles' recorded output: modules are src/a ...
+    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("report/norules");
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).unwrap();
+    let input = fixture("ts-cycles").join("depcruise.json");
+    let (stdout, stderr, code) = report(&[
+        root.to_str().unwrap(),
+        "--language",
+        "typescript",
+        "--collector-input",
+        input.to_str().unwrap(),
+    ]);
+    assert_eq!(code, Some(0), "{stdout}{stderr}");
+    for line in [
+        "rules: none",
+        "11 files, 6 modules, 12 imports",
+        "2 module cycles, largest 3 modules",
+        "lightest two-way cut: src/e -> src/d, 1 import (2 the other way)",
+        "cycle (3)",
+        "src/a, src/b, src/c",
+        "misplaced-file (1)",
+    ] {
+        assert!(stdout.contains(line), "{line:?} missing from\n{stdout}");
+    }
+    assert!(!stdout.contains("forbidden"), "{stdout}");
+    let out_dir = root.join(".archgraph");
+    assert!(out_dir.join("archgraph.json").is_file());
+    assert!(out_dir.join("archgraph.html").is_file());
+}
+
+#[test]
+fn report_with_unreadable_rules_is_an_error() {
+    let dir = fixture("ts-cycles");
+    let input = dir.join("depcruise.json");
+    let out_dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("report/bad-rules");
+    let (_, stderr, code) = report(&[
+        dir.to_str().unwrap(),
+        "--collector-input",
+        input.to_str().unwrap(),
+        "--rules",
+        "/nonexistent/layout.yaml",
+        "--out-dir",
+        out_dir.to_str().unwrap(),
+    ]);
+    assert_eq!(code, Some(2), "{stderr}");
+    assert!(stderr.contains("/nonexistent/layout.yaml"), "{stderr}");
+}
+
+#[test]
+fn depcruise_path_that_does_not_exist_is_a_usage_error() {
+    let out = archgraph(&[
+        "scan",
+        fixture("ts-basic").to_str().unwrap(),
+        "--depcruise",
+        "/nonexistent/depcruise",
+    ]);
+    assert_eq!(out.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("--depcruise /nonexistent/depcruise"),
+        "{stderr}"
+    );
 }

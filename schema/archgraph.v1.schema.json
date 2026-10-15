@@ -484,7 +484,12 @@
         "new_cycles": { "type": "array", "items": {"$ref": "#/$defs/cycle"} },
         "resolved_cycles": { "type": "array", "items": {"$ref": "#/$defs/cycle"} },
         "new_forbidden": { "type": "array", "items": {"$ref": "#/$defs/edge"} },
-        "resolved_forbidden": { "type": "array", "items": {"$ref": "#/$defs/edge"} }
+        "resolved_forbidden": { "type": "array", "items": {"$ref": "#/$defs/edge"} },
+        "new_unplanned": {
+          "description": "Imports unplanned in new whose pair is missing or has another verdict in old. Optional: added in v1 after the first release.",
+          "type": "array",
+          "items": {"$ref": "#/$defs/edge"}
+        }
       }
     },
     "simulation": {

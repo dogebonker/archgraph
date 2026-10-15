@@ -250,6 +250,36 @@ impl Compiled {
         if rules.version != 1 {
             bail!("unsupported rules version {}; expected 1", rules.version);
         }
+        // Ids, reasons, globs and module ids are printed into terminals, CI logs and job
+        // summaries, where a line break could forge a workflow command.
+        let strings = rules
+            .modules
+            .iter()
+            .flat_map(|m| [&m.id, &m.path])
+            .chain(&rules.layers)
+            .chain(
+                rules
+                    .public
+                    .iter()
+                    .flat_map(|p| [&p.module].into_iter().chain(&p.entries)),
+            )
+            .chain(rules.forbid.iter().flat_map(|f| {
+                [&f.from, &f.to]
+                    .into_iter()
+                    .chain(f.id.iter())
+                    .chain(f.reason.iter())
+            }))
+            .chain(rules.allow.iter().flat_map(|a| {
+                [&a.from, &a.to]
+                    .into_iter()
+                    .chain(a.id.iter())
+                    .chain(a.reason.iter())
+            }));
+        for s in strings {
+            if s.chars().any(char::is_control) {
+                bail!("{s:?} holds a control character; rules strings must be one plain line");
+            }
+        }
         let mut modules = Vec::new();
         for m in &rules.modules {
             let path = Pattern::new(&m.path)?;

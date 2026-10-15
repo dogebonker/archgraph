@@ -52,13 +52,19 @@ struct Environment {
     version: String,
 }
 
-/// Runs depcruise in `root`. `--ts-pre-compilation-deps` keeps `import type` edges and
-/// `--ts-config` resolves tsconfig path aliases such as `@/`.
-pub fn run(root: &Path, source_dir: &str) -> Result<Vec<u8>> {
-    let mut cmd = Command::new("npx");
+/// Runs depcruise in `root`: `program`, else `npx --no-install depcruise`.
+/// `--ts-pre-compilation-deps` keeps `import type` edges and `--ts-config` resolves tsconfig
+/// path aliases such as `@/`.
+pub fn run(root: &Path, source_dir: &str, program: Option<&Path>) -> Result<Vec<u8>> {
+    let mut cmd = match program {
+        Some(program) => Command::new(program),
+        None => {
+            let mut npx = Command::new("npx");
+            npx.args(["--no-install", "depcruise"]);
+            npx
+        }
+    };
     cmd.current_dir(root).args([
-        "--no-install",
-        "depcruise",
         "--output-type",
         "json",
         "--no-config",
@@ -69,14 +75,26 @@ pub fn run(root: &Path, source_dir: &str) -> Result<Vec<u8>> {
     if root.join("tsconfig.json").is_file() {
         cmd.args(["--ts-config", "tsconfig.json"]);
     }
+    let running = program.map_or("npx (is Node.js installed?)".into(), |p| {
+        p.display().to_string()
+    });
     let out = cmd
         .arg(source_dir)
         .output()
-        .context("running npx (is Node.js installed?)")?;
+        .with_context(|| format!("running {running}"))?;
     if !out.status.success() {
+        let hint = match program {
+            Some(_) => {
+                "--depcruise must be dependency-cruiser 18.4.0 with typescript 6.0.3 \
+                        installed beside it"
+            }
+            None => {
+                "install the pinned tools in the scanned repository: \
+                     npm install --save-dev dependency-cruiser@18.4.0 typescript@6.0.3"
+            }
+        };
         bail!(
-            "depcruise failed: {}\ninstall the pinned tools in the scanned repository: \
-             npm install --save-dev dependency-cruiser@18.4.0 typescript@6.0.3",
+            "depcruise failed: {}\n{hint}",
             String::from_utf8_lossy(&out.stderr).trim()
         );
     }

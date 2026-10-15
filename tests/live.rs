@@ -1,12 +1,13 @@
 //! Runs the real collectors. Needs depcruise 18.4.0 (with typescript 6.0.3 beside it) and a
-//! python with grimp 3.17, from ARCHGRAPH_DEPCRUISE / ARCHGRAPH_PYTHON or PATH.
+//! python with grimp 3.17, from ARCHGRAPH_DEPCRUISE / ARCHGRAPH_PYTHON or PATH, plus node and git
+//! (ARCHGRAPH_NODE / ARCHGRAPH_GIT or PATH).
 
 mod common;
 
 use std::path::{Path, PathBuf};
 use std::{env, fs};
 
-use common::{fixture, scan, scan_recorded, stable};
+use common::{fixture, scan, scan_recorded, stable, validate};
 use serde_json::json;
 
 fn tool(var: &str, name: &str) -> PathBuf {
@@ -76,6 +77,38 @@ fn depcruise_live_matches_recorded() {
             assert!(edges.contains(&alias) && edges.contains(&type_only));
         }
     }
+}
+
+#[test]
+#[ignore = "needs depcruise 18.4.0 / grimp 3.17; run with --ignored"]
+fn depcruise_path_runs_a_pinned_install_outside_the_scanned_repository() {
+    // No node_modules beside the fixture and only node and git on PATH: npx could not find
+    // depcruise, so a matching scan proves --depcruise ran.
+    let bin = fs::canonicalize(tool("ARCHGRAPH_DEPCRUISE", "depcruise")).unwrap();
+    let dirs = [tool("ARCHGRAPH_NODE", "node"), tool("ARCHGRAPH_GIT", "git")]
+        .map(|p| p.parent().unwrap().to_owned());
+    assert!(dirs.iter().all(|d| !d.join("depcruise").exists()));
+    let dir = fixture("ts-basic");
+    assert!(!dir.join("node_modules").exists());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        .args([
+            "scan",
+            dir.to_str().unwrap(),
+            "--depcruise",
+            bin.to_str().unwrap(),
+        ])
+        .env("PATH", env::join_paths(&dirs).unwrap())
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let live_out = String::from_utf8(out.stdout).unwrap();
+    validate(&serde_json::from_str(&live_out).unwrap());
+    let (_, recorded_out, _) = scan_recorded("ts-basic", &[]);
+    assert_eq!(stable(&live_out), stable(&recorded_out));
 }
 
 #[test]

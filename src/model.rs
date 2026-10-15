@@ -380,6 +380,7 @@ pub struct Diff {
     pub resolved_cycles: Vec<Cycle>,
     pub new_forbidden: Vec<Edge>,
     pub resolved_forbidden: Vec<Edge>,
+    pub new_unplanned: Vec<Edge>,
 }
 
 #[derive(Debug, Serialize)]

@@ -498,6 +498,28 @@ fn rules_errors() {
     assert_eq!(code, Some(2));
     assert!(stderr.contains("version"), "{stderr}");
 
+    // Rule ids, reasons and module ids are printed by report and check and land in CI logs and
+    // job summaries: a line break there could forge a workflow command such as `::error::`.
+    for (name, yaml) in [
+        (
+            "rules/control-id.yaml",
+            "version: 1\nforbid:\n  - { id: \"a\\n::error::forged\", from: \"src/domain/**\", to: \"src/adapters/**\" }\n",
+        ),
+        (
+            "rules/control-reason.yaml",
+            "version: 1\nallow:\n  - { from: \"src/**\", to: \"src/**\", reason: \"ok\\r\" }\n",
+        ),
+        (
+            "rules/control-module.yaml",
+            "version: 1\nmodules:\n  - { id: \"core\\tx\", path: \"src/domain/**\" }\n",
+        ),
+    ] {
+        let (code, stderr) = scan_with(&write_tmp(name, yaml));
+        assert_eq!(code, Some(2), "{name}: {stderr}");
+        assert!(stderr.contains("control character"), "{name}: {stderr}");
+        assert!(!stderr.contains("\n::error::forged"), "{name}: {stderr}");
+    }
+
     // A capture must be a whole segment, and entries can only use the module's capture.
     let partial = write_tmp(
         "rules/partial.yaml",
