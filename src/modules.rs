@@ -13,10 +13,11 @@ const TS_INDEX: &[&str] = &[
     "index.cjs",
 ];
 
-/// The file's directory below `source_root`, truncated to `depth` segments; `.` for a file
-/// directly in the source root. Files outside the source root count from the scan root and are
-/// prefixed `../` (`..` for a file directly in the scan root), so they never merge with a module
-/// inside it.
+/// The file's directory below `source_root`, truncated to `depth` segments. A file directly in
+/// the source root is its own module, named by its file name with extension (`main.ts`), so it
+/// never merges with another root file or with a directory module. Files outside the source root
+/// count from the scan root and are prefixed `../` (`../lib`, `../tool.ts`), so they never merge
+/// with a module inside it.
 pub fn module_of(path: &str, source_root: &str, depth: usize) -> String {
     let (rel, outside) = match source_root {
         "." => (path, false),
@@ -25,16 +26,17 @@ pub fn module_of(path: &str, source_root: &str, depth: usize) -> String {
             None => (path, true),
         },
     };
-    let dirs: Vec<&str> = rel.split('/').collect();
-    let dirs = &dirs[..dirs.len() - 1];
-    let id = match &dirs[..dirs.len().min(depth)] {
-        [] => ".".to_owned(),
-        kept => kept.join("/"),
+    // `--depth 0` keeps every file below the root's top level in `.` (`..` outside it).
+    let id = match rel.rsplit_once('/') {
+        None => rel.to_owned(),
+        Some(_) if depth == 0 => String::new(),
+        Some((dir, _)) => dir.split('/').take(depth).collect::<Vec<_>>().join("/"),
     };
-    match (outside, id.as_str()) {
-        (false, _) => id,
-        (true, ".") => "..".to_owned(),
-        (true, _) => format!("../{id}"),
+    match (outside, id.is_empty()) {
+        (false, false) => id,
+        (false, true) => ".".to_owned(),
+        (true, false) => format!("../{id}"),
+        (true, true) => "..".to_owned(),
     }
 }
 

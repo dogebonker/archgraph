@@ -30,7 +30,7 @@ archgraph scan . --rules layout.yaml -o graph.json    # with edge verdicts
 archgraph scan . --cochange -o graph.json             # also read the last 300 commits (--cochange=N, N >= 1)
 ```
 
-When the root has a `src/` directory, only `src/` is cruised (files outside it appear when `src/` imports them, with module ids prefixed `../`). Only `.ts/.tsx/.js/.jsx/.mjs/.cjs` and `.py` files are files; imports of stylesheets, JSON and other assets are dropped. Type-only imports (`import type`) are edges like any other: they count in metrics, cycles and verdicts.
+A module is a file's directory truncated to `--depth` segments below the source root (`src/` when present, else the root; for Python, the package directory). Each file directly in the source root is a module of its own, named by its file name with extension (`main.ts`, `errors.py`), so a package's lowest layer and its entry points never merge into one module. Imports between two such files are therefore cross-module: rules step 5 (same module) no longer allows them, so under `default: forbidden` they need an `allow` or `layers` rule. Scan documents written by commit 2bf5805 put these files in module `.` and fail `check`, `render` and `simulate` as inconsistent: rescan them. When the root has a `src/` directory, only `src/` is cruised (files outside it appear when `src/` imports them, with module ids prefixed `../`: `../lib`, and `../tool.ts` for a file directly in the root). Only `.ts/.tsx/.js/.jsx/.mjs/.cjs` and `.py` files are files; imports of stylesheets, JSON and other assets are dropped. Type-only imports (`import type`) are edges like any other: they count in metrics, cycles and verdicts.
 
 Options: `--depth N`, `--exclude <glob>` (repeatable), `--include-tests`, `--no-default-excludes`, `--language typescript|python`, `--python <interp>`, `--package <pkg>`, `--collector-input <recorded.json>`.
 
@@ -93,6 +93,7 @@ forbid:
   - { id: browser-no-server, from: "src/domains/*/client.ts", to: "**/*.server.ts", reachable: true }
 allow:
   - { from: "app/**", to: "**", reason: "composition" }
+default: forbidden            # optional; imports no rule decides are forbidden, not unplanned
 ```
 
 Globs: `*` is one path segment, `**` any depth, `{a,b}` alternation. `<name>` captures one segment and binds it within a rule: `modules` path to id, `public` module to entries, and `forbid`/`allow` importer to target, so `{ from: "src/modules/<name>/**", to: "src/modules/<name>/**" }` matches only imports within one module. `to`, `id` and `entries` may use only their rule's capture, and `layers` take no capture (write `*`). A file matching several layers takes the first. Unknown keys in `layout.yaml` are an error; rules embedded in a scan document may carry keys a newer archgraph added.
@@ -105,14 +106,16 @@ Verdict per import, first match wins:
 4. Both files are in layers: target layer at or below the importer's: **allowed**, else **forbidden** (rule `layers`).
 5. Same module: **allowed** (rule `same-module`).
 6. Cross-module import of a `public` entry: **allowed** (rule `public`).
-7. Otherwise: **unplanned** (rule `none`).
+7. Otherwise: **unplanned** (rule `none`), or with `default: forbidden` **forbidden** (rule `default`), so `check` exits 1 on them.
+
+`default: forbidden` turns the rules into a whitelist. An archgraph older than this key reads a scan document whose embedded rules carry it and ignores the key (unknown keys in embedded rules are tolerated), so its `check` reports those imports as unplanned and exits 0. Pin the archgraph version wherever a whitelist gates CI.
 
 ## Findings
 
 | kind | when | suggestion |
 | --- | --- | --- |
 | `cycle` | a module-level import cycle, or a file cycle among the imports inside one module | the fewest imports to remove (`break`) |
-| `misplaced-file` | an imported file (not a barrel, not a module's only file) with at least 2 imports to another module and more there than in its own, imported from at most one other module, whose move adds no forbidden import or cycle, gives the target no new dependency and raises the two modules' combined cohesion | a move into that module, with simulation; none when the name is taken there |
+| `misplaced-file` | a file (not a barrel, not a module's only file) imported by at least 2 files of one other module and by no third module, with more of those imports than edges (in + out) within its own module, whose move adds no forbidden import or cycle, gives the target no new dependency and raises the two modules' combined cohesion. What the file itself imports never pulls it: a router importing `app/deps` stays where it is | a move into that module, keeping the file's folder within its module when the target has it (`chains/domain/hd.py` into signer is `signer/domain/hd.py`), else its root. The file's folder is read relative to the deepest directory its own module's files share, and the target's folder counts only when a file of the target module sits in it. With simulation; none when the name is taken there or the destination would fall in another module |
 | `sink-split` | a module imported by 3 or more modules whose files serve separate groups of importers | one module per group; single-consumer groups as moves, unless two files share a name |
 | `internals-reach` | an import past a module's public entry (rules), or past a TypeScript barrel (no rules) | import the entry instead |
 | `unstable-dependency` | module A imports B (through barrels, as Ca and Ce count) and B is at least 0.25 more unstable than A | depend on an abstraction owned by A, or move the code |

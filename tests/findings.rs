@@ -13,7 +13,7 @@ fn summary(forbidden: usize, unplanned: usize, cycles: usize, modules: Value) ->
 }
 
 #[test]
-fn ts_misplaced_file_and_its_simulation() {
+fn ts_misplaced_file_that_only_imports_another_module_stays() {
     let (doc, _, _) = scan_recorded("ts-misplaced", &[]);
     assert_eq!(
         doc["summary"],
@@ -26,18 +26,11 @@ fn ts_misplaced_file_and_its_simulation() {
             "pricing": m(json!(1.0), 1, 0, json!(0.0)) })
         )
     );
-    // discount.ts: 1 edge within orders (place -> discount), 2 into pricing. orders loses its two
-    // outgoing edges and keeps place -> discount as one: orders and pricing together go from
-    // cohesion 5/7 to 6/7. pricing's own metrics stay, so the simulation leaves it out.
+    // discount.ts has 1 edge within orders (place -> discount) and 2 imports into pricing, but
+    // pricing never imports it: it uses pricing, nothing pulls it there.
     assert_eq!(
         doc["findings"],
         json!([
-            { "kind": "misplaced-file", "subject": "src/orders/discount.ts",
-              "evidence": { "own_module_edges": 1, "target_module": "pricing",
-                            "target_module_edges": 2, "via_barrel": false },
-              "suggestion": { "move": { "file": "src/orders/discount.ts", "to": "src/pricing/discount.ts" } },
-              "simulation": { "after": summary(0, 0, 0, json!({
-                  "orders": m(json!(0.6667), 0, 1, json!(1.0)) })) } },
             { "kind": "small-repo", "subject": ".", "evidence": { "files": 7, "modules": 2 } }
         ])
     );
@@ -58,7 +51,7 @@ fn ts_sink_splits_into_its_consumer_groups() {
         json!([
             { "kind": "misplaced-file", "subject": "src/utils/dates.ts",
               "evidence": { "own_module_edges": 0, "target_module": "calendar",
-                            "target_module_edges": 2, "via_barrel": false },
+                            "imports_from_target": 2, "via_barrel": false },
               "suggestion": { "move": { "file": "src/utils/dates.ts", "to": "src/calendar/dates.ts" } },
               "simulation": dates_moved },
             { "kind": "seam", "subject": ".",
@@ -121,7 +114,7 @@ fn ts_seams_across_folders() {
         json!([
             { "kind": "misplaced-file", "subject": "src/data/a2.ts",
               "evidence": { "own_module_edges": 0, "target_module": "ui",
-                            "target_module_edges": 2, "via_barrel": false },
+                            "imports_from_target": 2, "via_barrel": false },
               "suggestion": { "move": { "file": "src/data/a2.ts", "to": "src/ui/a2.ts" } },
               "simulation": { "after": summary(0, 0, 0, json!({
                   "ui": m(json!(0.6), 0, 1, json!(1.0)) })) } },
@@ -157,17 +150,17 @@ fn simulate_cli_destination_decides_layer() {
             "move": { "file": "src/adapters/out/queue.ts", "to": "src/adapters/in/queue.ts",
                       "module": "adapters/in" },
             "before": summary(3, 0, 1, json!({
-                ".": m(json!(0.0), 0, 2, json!(1.0)),
                 "adapters/in": m(json!(0.0), 2, 2, json!(0.5)),
                 "adapters/out": m(json!(0.0), 3, 1, json!(0.25)),
                 "application": m(json!(0.0), 1, 1, json!(0.5)),
-                "domain": m(json!(0.5), 1, 1, json!(0.5)) })),
+                "domain": m(json!(0.5), 1, 1, json!(0.5)),
+                "main.ts": m(json!(0.0), 0, 2, json!(1.0)) })),
             "after": summary(2, 0, 0, json!({
-                ".": m(json!(0.0), 0, 2, json!(1.0)),
                 "adapters/in": m(json!(0.3333), 1, 2, json!(0.6667)),
                 "adapters/out": m(Value::Null, 3, 0, json!(0.0)),
                 "application": m(json!(0.0), 1, 1, json!(0.5)),
-                "domain": m(json!(0.5), 1, 1, json!(0.5)) })),
+                "domain": m(json!(0.5), 1, 1, json!(0.5)),
+                "main.ts": m(json!(0.0), 0, 2, json!(1.0)) })),
             "new_forbidden": [],
             "removed_forbidden": [
                 { "from": "src/adapters/out/queue.ts", "to": "src/adapters/in/cli.ts",
@@ -246,6 +239,27 @@ fn sink_split_skips_moves_that_collide() {
 }
 
 #[test]
+fn sink_split_suggests_no_move_out_of_the_consumer_module() {
+    // boot.ts serves only main.ts, a module of its own: src/boot.ts would be another one.
+    let doc = scan_edges(
+        "sink-root-consumer",
+        &[
+            ("src/main.ts", "src/utils/boot.ts"),
+            ("src/w/m.ts", "src/utils/c.ts"),
+            ("src/y/m.ts", "src/utils/c.ts"),
+            ("src/z/m.ts", "src/utils/c.ts"),
+        ],
+        &["--depth", "1"],
+    );
+    let sink = common::finding(&doc, "sink-split", "utils");
+    assert_eq!(
+        sink["evidence"]["components"][0],
+        json!({ "files": ["src/utils/boot.ts"], "consumers": ["main.ts"], "moves": [] })
+    );
+    assert!(sink.get("simulation").is_none(), "{sink:#}");
+}
+
+#[test]
 fn unstable_dependency_follows_barrels_like_ca_and_ce() {
     // s imports b's barrel, which re-exports v: for Ca and Ce s depends on v, not on b.
     // s: Ca 2 (p, q), Ce 1 (v), I = 1/3. v: Ca 1, Ce 2 (w, z), I = 2/3.
@@ -283,38 +297,14 @@ fn unstable_dependency_follows_barrels_like_ca_and_ce() {
     );
 }
 
-#[test]
-fn misplaced_file_needs_a_move_that_adds_no_forbidden_import_or_dependency() {
-    // a/f.ts: 1 edge within a (g -> f), 2 into t, imported only from inside a; it also imports
-    // x/y.ts.
-    let edges = |t_uses_x: bool| {
-        let mut edges = vec![
-            ("src/a/g.ts", "src/a/f.ts"),
-            ("src/a/f.ts", "src/t/t1.ts"),
-            ("src/a/f.ts", "src/t/t2.ts"),
-            ("src/a/f.ts", "src/x/y.ts"),
-        ];
-        if t_uses_x {
-            edges.push(("src/t/t1.ts", "src/x/z.ts"));
-        }
-        let edges: Vec<(String, String)> = edges
-            .into_iter()
-            .map(|(f, t)| (f.to_owned(), t.to_owned()))
-            .collect();
-        let (dir, input) = common::synthetic(&format!("misplaced-gate-{t_uses_x}"), 6, &edges);
-        std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
-        (dir, input)
-    };
-    let misplaced = |doc: &Value| {
-        doc["findings"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter(|f| f["kind"] == "misplaced-file")
-            .map(|f| f["subject"].as_str().unwrap().to_owned())
-            .collect::<Vec<_>>()
-    };
-    let (dir, input) = edges(true);
+/// `scan` of synthetic `edges` with source root `src`.
+fn scan_edges(name: &str, edges: &[(&str, &str)], extra: &[&str]) -> Value {
+    let edges: Vec<(String, String)> = edges
+        .iter()
+        .map(|(f, t)| (f.to_string(), t.to_string()))
+        .collect();
+    let (dir, input) = common::synthetic(name, edges.len() + 1, &edges);
+    std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
     let args = [
         dir.as_str(),
         "--collector-input",
@@ -322,54 +312,178 @@ fn misplaced_file_needs_a_move_that_adds_no_forbidden_import_or_dependency() {
         "--language",
         "typescript",
     ];
-    let (doc, _, _) = common::scan(&args);
-    assert_eq!(misplaced(&doc), ["src/a/f.ts"]);
+    common::scan(&[&args[..], extra].concat()).0
+}
+
+fn misplaced(doc: &Value) -> Vec<&Value> {
+    doc["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|f| f["kind"] == "misplaced-file")
+        .collect()
+}
+
+#[test]
+fn misplaced_file_is_pulled_by_its_importers_not_by_its_imports() {
+    // f.ts imports three files of t but only g.ts, in its own module, imports it: f.ts uses t,
+    // it does not belong there.
+    let doc = scan_edges(
+        "misplaced-imports-only",
+        &[
+            ("src/a/g.ts", "src/a/f.ts"),
+            ("src/a/f.ts", "src/t/t1.ts"),
+            ("src/a/f.ts", "src/t/t2.ts"),
+            ("src/a/f.ts", "src/t/t3.ts"),
+        ],
+        &[],
+    );
+    assert_eq!(misplaced(&doc), Vec::<&Value>::new());
+
+    // f.ts is imported by two files of t and by one of its own module: t pulls it.
+    let doc = scan_edges(
+        "misplaced-imported-by-target",
+        &[
+            ("src/a/g.ts", "src/a/f.ts"),
+            ("src/t/t1.ts", "src/a/f.ts"),
+            ("src/t/t2.ts", "src/a/f.ts"),
+        ],
+        &[],
+    );
+    assert_eq!(
+        misplaced(&doc),
+        [&json!({ "kind": "misplaced-file", "subject": "src/a/f.ts",
+                  "evidence": { "own_module_edges": 1, "target_module": "t",
+                                "imports_from_target": 2, "via_barrel": false },
+                  "suggestion": { "move": { "file": "src/a/f.ts", "to": "src/t/f.ts" } },
+                  "simulation": { "after": summary(0, 0, 0, json!({
+                      "a": m(json!(0.0), 0, 1, json!(1.0)),
+                      "t": m(json!(1.0), 1, 0, json!(0.0)) })) } })]
+    );
+
+    // Two imports from t do not outweigh three edges within a: f.ts stays.
+    let doc = scan_edges(
+        "misplaced-own-outweighs",
+        &[
+            ("src/a/g.ts", "src/a/f.ts"),
+            ("src/a/h.ts", "src/a/f.ts"),
+            ("src/a/f.ts", "src/a/k.ts"),
+            ("src/t/t1.ts", "src/a/f.ts"),
+            ("src/t/t2.ts", "src/a/f.ts"),
+        ],
+        &[],
+    );
+    assert_eq!(misplaced(&doc), Vec::<&Value>::new());
+}
+
+#[test]
+fn misplaced_file_keeps_its_folder_within_the_module() {
+    let to = |doc: &Value| {
+        misplaced(doc)
+            .iter()
+            .map(|f| f["suggestion"]["move"]["to"].as_str().unwrap().to_owned())
+            .collect::<Vec<_>>()
+    };
+    // a/domain/f.ts is imported by two files of t, which has a domain/ folder: it goes there.
+    let edges = |t1: &'static str, t2: &'static str| {
+        vec![
+            ("src/a/api/h.ts", "src/a/domain/g.ts"),
+            ("src/a/domain/g.ts", "src/a/domain/f.ts"),
+            (t1, "src/a/domain/f.ts"),
+            (t2, "src/a/domain/f.ts"),
+        ]
+    };
+    let doc = scan_edges(
+        "misplaced-keeps-folder",
+        &edges("src/t/domain/t1.ts", "src/t/api/t2.ts"),
+        &["--depth", "1"],
+    );
+    assert_eq!(to(&doc), ["src/t/domain/f.ts"]);
+
+    // t has no domain/ folder: the module's root.
+    let doc = scan_edges(
+        "misplaced-folder-missing",
+        &edges("src/t/jobs/t1.ts", "src/t/api/t2.ts"),
+        &["--depth", "1"],
+    );
+    assert_eq!(to(&doc), ["src/t/f.ts"]);
+
+    // t's ui/ folder is the module t/ui, not t: the module's root.
+    let rules = common::write_tmp(
+        "rules/nested-modules.yaml",
+        "version: 1\nmodules:\n  - { id: t/ui, path: \"src/t/ui/**\" }\n  \
+         - { id: t, path: \"src/t/**\" }\n  - { id: a, path: \"src/a/**\" }\n",
+    );
+    let doc = scan_edges(
+        "misplaced-folder-other-module",
+        &[
+            ("src/a/api/h.ts", "src/a/ui/g.ts"),
+            ("src/a/ui/g.ts", "src/a/ui/f.ts"),
+            ("src/t/t1.ts", "src/a/ui/f.ts"),
+            ("src/t/api/t2.ts", "src/a/ui/f.ts"),
+            ("src/t/ui/u.ts", "src/t/ui/v.ts"),
+        ],
+        &["--rules", &rules],
+    );
+    assert_eq!(to(&doc), ["src/t/f.ts"]);
+}
+
+#[test]
+fn misplaced_file_needs_a_move_that_adds_no_forbidden_import_or_dependency() {
+    // t1.ts and t2.ts import a/f.ts, g.ts in a does too; f.ts imports x/y.ts and w/v.ts.
+    let edges = |t_uses_x_and_w: bool| {
+        let mut edges = vec![
+            ("src/a/g.ts", "src/a/f.ts"),
+            ("src/t/t1.ts", "src/a/f.ts"),
+            ("src/t/t2.ts", "src/a/f.ts"),
+            ("src/a/f.ts", "src/x/y.ts"),
+            ("src/a/f.ts", "src/w/v.ts"),
+        ];
+        if t_uses_x_and_w {
+            edges.extend([("src/t/t1.ts", "src/x/z.ts"), ("src/t/t1.ts", "src/w/u.ts")]);
+        }
+        edges
+    };
+    let subjects = |doc: &Value| {
+        misplaced(doc)
+            .iter()
+            .map(|f| f["subject"].as_str().unwrap().to_owned())
+            .collect::<Vec<_>>()
+    };
+    let doc = scan_edges("misplaced-gate-true", &edges(true), &[]);
+    assert_eq!(subjects(&doc), ["src/a/f.ts"]);
 
     // In t, f.ts -> x/y.ts would add a forbidden import: no finding.
     let rules = common::write_tmp(
         "rules/t-no-x.yaml",
         "version: 1\nforbid:\n  - { from: \"src/t/**\", to: \"src/x/**\" }\n",
     );
-    let (doc, _, _) = common::scan(&[&args[..], &["--rules", &rules]].concat());
-    assert_eq!(misplaced(&doc), Vec::<String>::new());
+    let doc = scan_edges("misplaced-gate-true", &edges(true), &["--rules", &rules]);
+    assert_eq!(subjects(&doc), Vec::<String>::new());
 
-    // When t does not use x yet, the move would give t a new dependency: no finding.
-    let (dir, input) = edges(false);
-    let (doc, _, _) = common::scan(&[
-        &dir,
-        "--collector-input",
-        &input,
-        "--language",
-        "typescript",
-    ]);
-    assert_eq!(misplaced(&doc), Vec::<String>::new());
+    // When t uses neither x nor w, the move trades t's dependency on a for two new ones: no
+    // finding.
+    let doc = scan_edges("misplaced-gate-false", &edges(false), &[]);
+    assert_eq!(subjects(&doc), Vec::<String>::new());
 }
 
 #[test]
 fn misplaced_file_whose_name_is_taken_has_no_suggestion() {
     // t already has an f.ts, so a/f.ts cannot move there under its name.
-    let edges: Vec<(String, String)> = [
-        ("src/a/g.ts", "src/a/f.ts"),
-        ("src/a/f.ts", "src/t/t1.ts"),
-        ("src/a/f.ts", "src/t/f.ts"),
-    ]
-    .iter()
-    .map(|(f, t)| (f.to_string(), t.to_string()))
-    .collect();
-    let (dir, input) = common::synthetic("misplaced-taken", 4, &edges);
-    std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
-    let (doc, _, _) = common::scan(&[
-        &dir,
-        "--collector-input",
-        &input,
-        "--language",
-        "typescript",
-    ]);
+    let doc = scan_edges(
+        "misplaced-taken",
+        &[
+            ("src/a/g.ts", "src/a/f.ts"),
+            ("src/t/t1.ts", "src/a/f.ts"),
+            ("src/t/f.ts", "src/a/f.ts"),
+        ],
+        &[],
+    );
     assert_eq!(
         common::finding(&doc, "misplaced-file", "src/a/f.ts"),
         &json!({ "kind": "misplaced-file", "subject": "src/a/f.ts",
                  "evidence": { "own_module_edges": 1, "target_module": "t",
-                               "target_module_edges": 2, "via_barrel": false } })
+                               "imports_from_target": 2, "via_barrel": false } })
     );
 }
 

@@ -36,7 +36,7 @@ fn ts_basic_metrics_by_hand() {
             { "path": "src/core/model/store.ts", "module": "core/model", "barrel": false },
             { "path": "src/core/model/types.ts", "module": "core/model", "barrel": false },
             { "path": "src/core/util/log.ts", "module": "core/util", "barrel": false },
-            { "path": "src/main.ts", "module": ".", "barrel": false }
+            { "path": "src/main.ts", "module": "main.ts", "barrel": false }
         ])
     );
     // main.ts reaches run.ts through the `@/` tsconfig alias; run.ts -> types.ts is `import type`;
@@ -57,23 +57,23 @@ fn ts_basic_metrics_by_hand() {
     assert_eq!(
         doc["modules"],
         json!([
-            { "id": ".", "files": 1, "ca": 0, "ce": 1, "instability": 1.0,
-              "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0 },
             { "id": "app/shell", "files": 2, "ca": 1, "ce": 2, "instability": 0.6667,
               "internal_edges": 1, "outgoing_edges": 4, "cohesion": 0.2 },
             { "id": "core/model", "files": 2, "ca": 1, "ce": 1, "instability": 0.5,
               "internal_edges": 1, "outgoing_edges": 1, "cohesion": 0.5 },
             { "id": "core/util", "files": 1, "ca": 2, "ce": 0, "instability": 0.0,
-              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null }
+              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null },
+            { "id": "main.ts", "files": 1, "ca": 0, "ce": 1, "instability": 1.0,
+              "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0 }
         ])
     );
     assert_eq!(
         doc["module_edges"],
         json!([
-            { "from": ".", "to": "app/shell", "imports": 1, "forbidden": 0 },
             { "from": "app/shell", "to": "core/model", "imports": 2, "forbidden": 0 },
             { "from": "app/shell", "to": "core/util", "imports": 2, "forbidden": 0 },
-            { "from": "core/model", "to": "core/util", "imports": 1, "forbidden": 0 }
+            { "from": "core/model", "to": "core/util", "imports": 1, "forbidden": 0 },
+            { "from": "main.ts", "to": "app/shell", "imports": 1, "forbidden": 0 }
         ])
     );
     assert_eq!(doc["cycles"], json!([]));
@@ -85,28 +85,19 @@ fn ts_basic_metrics_by_hand() {
         summary(
             0,
             json!({
-            ".": m(json!(0.0), 0, 1, json!(1.0)),
             "app/shell": m(json!(0.2), 1, 2, json!(0.6667)),
             "core/model": m(json!(0.5), 1, 1, json!(0.5)),
-            "core/util": m(Value::Null, 2, 0, json!(0.0)) })
+            "core/util": m(Value::Null, 2, 0, json!(0.0)),
+            "main.ts": m(json!(0.0), 0, 1, json!(1.0)) })
         )
     );
 
-    // run.ts has 1 edge inside app/shell and 2 into core/model, and only main.ts imports it from
-    // another module. Moving it takes app/shell and core/model together from cohesion 2/7 to 3/7.
-    // log.ts talks only to app/shell but is the only file of core/util, so it is not misplaced.
-    // Label propagation puts all six files in one cluster: no seam. The simulation lists only
-    // the modules whose metrics change.
+    // run.ts imports two files of core/model, but core/model never imports it: not misplaced.
+    // log.ts is the only file of core/util. Label propagation puts all six files in one cluster:
+    // no seam.
     assert_eq!(
         doc["findings"],
         json!([
-            { "kind": "misplaced-file", "subject": "src/app/shell/run.ts",
-              "evidence": { "own_module_edges": 1, "target_module": "core/model",
-                            "target_module_edges": 2, "via_barrel": false },
-              "suggestion": { "move": { "file": "src/app/shell/run.ts", "to": "src/core/model/run.ts" } },
-              "simulation": { "after": summary(0, json!({
-                  "app/shell": m(json!(0.0), 0, 2, json!(1.0)),
-                  "core/model": m(json!(0.6), 2, 1, json!(0.3333)) })) } },
             { "kind": "small-repo", "subject": ".", "evidence": { "files": 6, "modules": 4 } }
         ])
     );
@@ -203,9 +194,8 @@ fn ts_cycles_with_minimum_break_sets() {
         .map(|(c, s)| json!({ "kind": "cycle", "subject": s, "evidence": c }))
         .collect();
     assert_eq!(findings[..3], expected[..]);
-    // Each of y, z, m, n has no edge inside its module and >= 2 into one other; z and n are
-    // alone in their modules, so only y and m are misplaced. y is imported only from a, m only
-    // from e.
+    // y.ts is imported by two files of a and by none of b. m.ts is imported by only one file of
+    // e, and z and n are alone in their modules: only y is misplaced.
     let misplaced: Vec<(&Value, &Value, &Value)> = findings
         .iter()
         .filter(|f| f["kind"] == "misplaced-file")
@@ -217,30 +207,29 @@ fn ts_cycles_with_minimum_break_sets() {
             )
         })
         .collect();
-    let e = |target: &str, edges: usize| {
-        json!({ "own_module_edges": 0, "target_module": target, "target_module_edges": edges,
-                "via_barrel": false })
-    };
     assert_eq!(
         misplaced,
-        [
-            (&json!("src/b/y.ts"), &e("a", 2), &json!("src/a/y.ts")),
-            (&json!("src/d/m.ts"), &e("e", 2), &json!("src/e/m.ts")),
-        ]
+        [(
+            &json!("src/b/y.ts"),
+            &json!({ "own_module_edges": 0, "target_module": "a", "imports_from_target": 2,
+                     "via_barrel": false }),
+            &json!("src/a/y.ts")
+        )]
     );
-    // m.ts into e: the d <-> e module cycle becomes the file cycle m <-> n inside e, and d keeps
-    // only m2 -> n. Only d and e change.
+    // y.ts into a: the a -> b -> c cycle becomes a <-> c (still 3 cycles), w -> y and x -> y turn
+    // internal, b keeps only v -> z and c gains a as importer.
     let sim = &findings
         .iter()
-        .find(|f| f["subject"] == "src/d/m.ts")
+        .find(|f| f["subject"] == "src/b/y.ts")
         .unwrap()["simulation"];
     assert_eq!(doc["summary"]["cycles"], 3);
     assert_eq!(
         sim["after"],
         summary(
             3,
-            json!({ "d": m(json!(0.0), 0, 1, json!(1.0)),
-                           "e": m(json!(1.0), 1, 0, json!(0.0)) })
+            json!({ "a": m(json!(0.6667), 1, 1, json!(0.5)),
+                    "b": m(json!(0.0), 0, 1, json!(1.0)),
+                    "c": m(json!(0.0), 2, 1, json!(0.3333)) })
         )
     );
 
@@ -259,7 +248,7 @@ fn ts_cycles_with_minimum_break_sets() {
         findings.last().unwrap(),
         &json!({ "kind": "small-repo", "subject": ".", "evidence": { "files": 11, "modules": 6 } })
     );
-    assert_eq!(findings.len(), 3 + 2 + 1 + 1);
+    assert_eq!(findings.len(), 3 + 1 + 1 + 1);
 }
 
 #[test]
@@ -654,15 +643,18 @@ fn file_cycle_inside_a_module_is_reported_alongside_a_module_cycle() {
 #[test]
 fn files_outside_the_source_root_never_merge_with_its_modules() {
     // depcruise follows imports out of the cruised src/: lib/u.ts and tool.ts sit beside it.
+    // Each file directly in a root is its own module, named with its extension, so src/lib.ts
+    // never merges with src/lib/ nor with src/main.ts.
     let edges: Vec<(String, String)> = [
         ("src/main.ts", "src/lib/a.ts"),
+        ("src/main.ts", "src/lib.ts"),
         ("src/lib/a.ts", "lib/u.ts"),
         ("src/lib/a.ts", "tool.ts"),
     ]
     .iter()
     .map(|(f, t)| (f.to_string(), t.to_string()))
     .collect();
-    let (dir, input) = synthetic("outside-source-root", 4, &edges);
+    let (dir, input) = synthetic("outside-source-root", 5, &edges);
     fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
     let (doc, _, _) = scan(&[
         &dir,
@@ -676,9 +668,10 @@ fn files_outside_the_source_root_never_merge_with_its_modules() {
         doc["files"],
         json!([
             { "path": "lib/u.ts", "module": "../lib", "barrel": false },
+            { "path": "src/lib.ts", "module": "lib.ts", "barrel": false },
             { "path": "src/lib/a.ts", "module": "lib", "barrel": false },
-            { "path": "src/main.ts", "module": ".", "barrel": false },
-            { "path": "tool.ts", "module": "..", "barrel": false }
+            { "path": "src/main.ts", "module": "main.ts", "barrel": false },
+            { "path": "tool.ts", "module": "../tool.ts", "barrel": false }
         ])
     );
 }

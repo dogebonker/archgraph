@@ -177,6 +177,46 @@ fn ts_fda_check_prints_violations_and_exits_one() {
 }
 
 #[test]
+fn default_forbidden_makes_unplanned_imports_forbidden() {
+    let base = std::fs::read_to_string(layout("ts-fda")).unwrap();
+    let rules = write_tmp(
+        "rules/fda-default-forbidden.yaml",
+        &format!("{base}default: forbidden\n"),
+    );
+    let (doc, _, _) = scan_recorded("ts-fda", &["--rules", &rules]);
+    assert_eq!(doc["config"]["rules"]["doc"]["default"], "forbidden");
+    let clock = verdicts(&doc)
+        .into_iter()
+        .find(|r| r.1 == "src/lib/clock.ts")
+        .unwrap();
+    assert_eq!(
+        (clock.2.as_str(), clock.3.as_str()),
+        ("forbidden", "default")
+    );
+    assert_eq!(doc["summary"]["forbidden"], 6);
+    assert_eq!(doc["summary"]["unplanned"], 0);
+
+    // Without other violations the default alone fails check: ts-basic under empty rules has 6
+    // unplanned imports and exits 0; with `default: forbidden` they are forbidden and it exits 1.
+    let plain = scan_file("ts-basic", &[]);
+    let strict = write_tmp(
+        "rules/empty-default-forbidden.yaml",
+        "version: 1\ndefault: forbidden\n",
+    );
+    let (stdout, _, code) = check(&[&plain, "--rules", &strict]);
+    assert_eq!(code, Some(1));
+    assert!(stdout.ends_with("6 forbidden, 0 unplanned\n"), "{stdout}");
+    assert!(
+        stdout.starts_with("forbidden src/app/shell/run.ts -> src/core/model/store.ts (default)\n"),
+        "{stdout}"
+    );
+
+    // Leaving the key out keeps the embedded rules as they were.
+    let (doc, _, _) = scan_recorded("ts-fda", &["--rules", &layout("ts-fda")]);
+    assert!(doc["config"]["rules"]["doc"].get("default").is_none());
+}
+
+#[test]
 fn ts_modmono_index_only_even_without_an_index() {
     let (doc, _, _) = scan_recorded("ts-modmono", &["--rules", &layout("ts-modmono")]);
     // `modules: <name>` replaces the depth-2 ids (`modules/a`) for files under src/modules.
@@ -189,7 +229,7 @@ fn ts_modmono_index_only_even_without_an_index() {
     assert_eq!(
         modules,
         [
-            ("src/main.ts", "."),
+            ("src/main.ts", "main.ts"),
             ("src/modules/a/application/x.ts", "a"),
             ("src/modules/a/application/z.ts", "a"),
             ("src/modules/a/domain/order.ts", "a"),
@@ -441,6 +481,17 @@ fn rules_errors() {
     let (code, stderr) = scan_with(&top);
     assert_eq!(code, Some(2));
     assert!(stderr.contains("unknown field `layer`"), "{stderr}");
+
+    let default = write_tmp("rules/default-bad.yaml", "version: 1\ndefault: deny\n");
+    let (code, stderr) = scan_with(&default);
+    assert_eq!(code, Some(2));
+    assert!(
+        stderr.contains("deny") && stderr.contains("forbidden"),
+        "{stderr}"
+    );
+    let default = write_tmp("rules/default-ok.yaml", "version: 1\ndefault: forbidden\n");
+    let (code, stderr) = scan_with(&default);
+    assert_eq!(code, Some(0), "{stderr}");
 
     let version = write_tmp("rules/version.yaml", "version: 2\n");
     let (code, stderr) = scan_with(&version);

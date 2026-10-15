@@ -13,10 +13,10 @@ use crate::simulate;
 
 /// A module imported by at least this many others is a shared sink.
 const SINK_CA: usize = 3;
-/// A file needs at least this many edges to one other module before it can look misplaced.
-const MISPLACED_MIN_EDGES: usize = 2;
-/// A file nobody imports is an entry point a framework locates by path (`page.tsx`, `route.ts`).
-const MISPLACED_MIN_IMPORTERS: usize = 1;
+/// A file looks misplaced only when at least this many files of one other module import it. A
+/// file's own imports never pull it: a router importing `app.deps` uses `app`, it does not belong
+/// there. A file nobody imports is an entry point a framework locates by path (`page.tsx`).
+const MISPLACED_MIN_IMPORTS: usize = 2;
 /// A file imported from more other modules than this is a shared provider, not misplaced.
 const MISPLACED_MAX_IMPORTER_MODULES: usize = 1;
 /// Stable dependencies principle: flag A -> B when B is this much less stable than A.
@@ -52,10 +52,19 @@ impl Graph<'_> {
         used.any(|(a, b)| !self.raw.contains(&(a.as_str(), b.as_str())))
     }
 
-    /// The move of `file` into `module`'s directory, unless a file of that name is there.
+    /// The move of `file` into `module`, unless a file of that name is there or the destination
+    /// falls in another module (a file directly in the source root is a module of its own).
     fn move_into(&self, file: &str, module: &str) -> Option<Move> {
-        let to = self.path_in(module, file.rsplit('/').next().unwrap_or(file));
-        (!self.module_of.contains_key(to.as_str())).then(|| Move {
+        let to = self.path_in(
+            self.dest_dir(file, module),
+            file.rsplit('/').next().unwrap_or(file),
+        );
+        let config = &self.doc.config;
+        let lands = self
+            .rules
+            .and_then(|r| r.module_of(&to))
+            .unwrap_or_else(|| modules::module_of(&to, &config.source_root, config.depth));
+        (!self.module_of.contains_key(to.as_str()) && lands == module).then(|| Move {
             file: file.to_owned(),
             to,
         })
@@ -64,21 +73,51 @@ impl Graph<'_> {
     /// `move_into`, or when the name is taken, the same move under `moved-<name>` (repeated
     /// until free): what to simulate when there is no move to suggest.
     fn free_move(&self, file: &str, module: &str) -> Move {
+        let dir = self.dest_dir(file, module);
         let mut name = file.rsplit('/').next().unwrap_or(file).to_owned();
         while self
             .module_of
-            .contains_key(self.path_in(module, &name).as_str())
+            .contains_key(self.path_in(dir, &name).as_str())
         {
             name = format!("moved-{name}");
         }
         Move {
             file: file.to_owned(),
-            to: self.path_in(module, &name),
+            to: self.path_in(dir, &name),
         }
     }
 
-    fn path_in(&self, module: &str, name: &str) -> String {
-        match self.dirs[module].as_str() {
+    /// `module`'s directory plus the folder `file` sits in within its own module
+    /// (`chains/domain/hd.py` into signer is `signer/domain`), or `module`'s directory alone
+    /// when that folder does not exist there.
+    fn dest_dir(&self, file: &str, module: &str) -> &str {
+        let own = self.dirs[self.module_of[file]].as_str();
+        let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
+        let sub = match own {
+            "" => dir,
+            _ => dir
+                .strip_prefix(own)
+                .and_then(|s| s.strip_prefix('/'))
+                .unwrap_or(""),
+        };
+        let root = self.dirs[module].as_str();
+        if sub.is_empty() {
+            return root;
+        }
+        let candidate = self.path_in(root, sub);
+        // The folder must hold a file of `module`: under nested modules it may be another one's.
+        self.module_of
+            .iter()
+            .find(|(p, m)| {
+                **m == module
+                    && p.strip_prefix(candidate.as_str())
+                        .is_some_and(|r| r.starts_with('/'))
+            })
+            .map_or(root, |(p, _)| &p[..candidate.len()])
+    }
+
+    fn path_in(&self, dir: &str, name: &str) -> String {
+        match dir {
             "" => name.to_owned(),
             dir => format!("{dir}/{name}"),
         }
@@ -247,23 +286,11 @@ fn sink_split(g: &Graph, out: &mut Vec<Finding>) {
     }
 }
 
-/// An imported file with more edges to one other module than to its own, imported from at most
-/// one other module, whose move would add no forbidden import or cycle, give the target module no
-/// new dependency and raise the cohesion of the two modules taken together.
+/// A file imported by at least two files of one other module, more often than it has edges (in
+/// and out) within its own, and from no third module, whose move would add no forbidden import or
+/// cycle, give the target module no new dependency and raise the cohesion of the two modules
+/// taken together.
 fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
-    let mut counts: BTreeMap<&str, BTreeMap<&str, usize>> = BTreeMap::new();
-    for (a, b) in &g.pairs {
-        *counts
-            .entry(a)
-            .or_default()
-            .entry(g.module_of[b.as_str()])
-            .or_default() += 1;
-        *counts
-            .entry(b)
-            .or_default()
-            .entry(g.module_of[a.as_str()])
-            .or_default() += 1;
-    }
     let sizes: BTreeMap<&str, usize> = g
         .doc
         .modules
@@ -276,37 +303,31 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
         if file.barrel || file.path.ends_with("__init__.py") || sizes[file.module.as_str()] == 1 {
             continue;
         }
-        let Some(by_module) = counts.get(file.path.as_str()) else {
-            continue;
-        };
-        let importers: Vec<&str> = g
-            .pairs
-            .iter()
-            .filter(|(_, b)| *b == file.path)
-            .map(|(a, _)| g.module_of[a.as_str()])
-            .collect();
-        let importer_modules: BTreeSet<&str> = importers
-            .iter()
-            .copied()
-            .filter(|m| *m != file.module)
-            .collect();
-        if importers.len() < MISPLACED_MIN_IMPORTERS
-            || importer_modules.len() > MISPLACED_MAX_IMPORTER_MODULES
-        {
+        let (path, module) = (file.path.as_str(), file.module.as_str());
+        let mut imports_from: BTreeMap<&str, Vec<&(String, String)>> = BTreeMap::new();
+        for pair in g.pairs.iter().filter(|(_, b)| b == path) {
+            let from = g.module_of[pair.0.as_str()];
+            if from != module {
+                imports_from.entry(from).or_default().push(pair);
+            }
+        }
+        if imports_from.len() > MISPLACED_MAX_IMPORTER_MODULES {
             continue;
         }
-        let own = by_module.get(file.module.as_str()).copied().unwrap_or(0);
-        let Some((&target, &edges)) = by_module
+        let own = g
+            .pairs
             .iter()
-            .filter(|(m, n)| **m != file.module && **n >= MISPLACED_MIN_EDGES && **n > own)
-            .max_by_key(|(m, n)| (**n, Reverse(**m)))
+            .filter(|(a, b)| {
+                (a == path && g.module_of[b.as_str()] == module)
+                    || (b == path && g.module_of[a.as_str()] == module)
+            })
+            .count();
+        let Some((&target, used)) = imports_from
+            .iter()
+            .filter(|(_, used)| used.len() >= MISPLACED_MIN_IMPORTS && used.len() > own)
+            .max_by_key(|(m, used)| (used.len(), Reverse(**m)))
         else {
             continue;
-        };
-        let path = file.path.as_str();
-        let touches = |(a, b): &&(String, String)| {
-            (a == path && g.module_of[b.as_str()] == target)
-                || (b == path && g.module_of[a.as_str()] == target)
         };
         let mut f = finding(
             FindingKind::MisplacedFile,
@@ -314,8 +335,8 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
             Evidence::MisplacedFile {
                 own_module_edges: own,
                 target_module: target.to_owned(),
-                target_module_edges: edges,
-                via_barrel: g.via_barrel(g.pairs.iter().filter(touches)),
+                imports_from_target: used.len(),
+                via_barrel: g.via_barrel(used.iter().copied()),
             },
         );
         // ponytail: every proposed move reruns the whole pipeline; batch or make it incremental
@@ -331,7 +352,7 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
             continue;
         };
         let (was, is) = (&g.doc.summary, &after.summary);
-        let modules = [file.module.as_str(), target];
+        let modules = [module, target];
         // A file that only uses the target (a component calling into a library) would drag its
         // other dependencies into it.
         let ce = |s: &crate::model::Summary| s.modules.get(target).map_or(0, |m| m.ce);

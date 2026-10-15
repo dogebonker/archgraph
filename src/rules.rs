@@ -25,6 +25,16 @@ pub struct Rules {
     pub forbid: Vec<Forbid>,
     #[serde(default)]
     pub allow: Vec<Allow>,
+    /// The verdict for an import no other step decides; absent means `unplanned`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default: Option<Fallback>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Fallback {
+    Unplanned,
+    Forbidden,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -102,6 +112,7 @@ fn known_keys() -> serde_json::Value {
         public: vec![PublicRule::default()],
         forbid: vec![Forbid::default()],
         allow: vec![Allow::default()],
+        default: Some(Fallback::Forbidden),
         ..Rules::default()
     })
     .expect("rules serialize")
@@ -228,6 +239,8 @@ pub struct Compiled {
     /// (name, from, to, reachable); `to` may use only `from`'s capture, bound to the importer.
     forbid: Vec<(String, Pattern, String, bool)>,
     allow: Vec<(String, Pattern, String)>,
+    /// Step 7 gives forbidden (rule `default`) instead of unplanned.
+    default_forbidden: bool,
     /// Globs with a capture bound, compiled on first use.
     bound: RefCell<HashMap<String, GlobMatcher>>,
 }
@@ -291,6 +304,7 @@ impl Compiled {
                 .enumerate()
                 .map(|(i, a)| Ok((name(&a.id, "allow", i), pair(&a.from, &a.to)?, a.to.clone())))
                 .collect::<Result<_>>()?,
+            default_forbidden: rules.default == Some(Fallback::Forbidden),
             bound: RefCell::default(),
         })
     }
@@ -409,7 +423,11 @@ impl Compiled {
                 return (Allowed, "public".into(), None);
             }
         }
-        (Unplanned, "none".into(), None)
+        if self.default_forbidden {
+            (Forbidden, "default".into(), None)
+        } else {
+            (Unplanned, "none".into(), None)
+        }
     }
 
     /// The public entries that an import into `to` should use instead, when a `public` rule

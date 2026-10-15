@@ -24,7 +24,9 @@ fn diff_shows_a_resolved_cycle() {
     assert_eq!(code, Some(0));
     assert_eq!(diff["schema"], "archgraph/v1");
     assert_eq!(diff["kind"], "diff");
-    assert_eq!(diff["old"]["commit"], Value::Null);
+    // The commit of the checkout holding the fixtures, or null outside a git repository.
+    let scanned: Value = serde_json::from_str(&std::fs::read_to_string(&old).unwrap()).unwrap();
+    assert_eq!(diff["old"]["commit"], scanned["source"]["git"]["commit"]);
     assert!(diff["old"]["generated_at"].is_string() && diff["new"]["generated_at"].is_string());
     assert_eq!(
         diff["resolved_cycles"],
@@ -77,7 +79,13 @@ fn diff_shows_a_resolved_forbidden_edge_and_a_removed_module() {
     assert_eq!(diff["added_modules"], json!(["a", "b", "c", "d", "e", "f"]));
     assert_eq!(
         diff["removed_modules"],
-        json!([".", "adapters/in", "adapters/out", "application", "domain"])
+        json!([
+            "adapters/in",
+            "adapters/out",
+            "application",
+            "domain",
+            "main.ts"
+        ])
     );
     assert_eq!(diff["modules"], json!({}));
     assert_eq!(diff["new_cycles"].as_array().unwrap().len(), 3);

@@ -210,9 +210,11 @@ pub enum Evidence {
         via_barrel: bool,
     },
     MisplacedFile {
+        /// Edges in either direction between the file and the rest of its own module.
         own_module_edges: usize,
         target_module: String,
-        target_module_edges: usize,
+        /// Files of the target module that import the file.
+        imports_from_target: usize,
         via_barrel: bool,
     },
     Cycle(Cycle),

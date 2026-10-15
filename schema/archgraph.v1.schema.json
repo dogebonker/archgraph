@@ -213,6 +213,10 @@
               "reason": { "type": ["string", "null"] }
             }
           }
+        },
+        "default": {
+          "description": "The verdict for an import no other step decides. Absent means unplanned.",
+          "enum": ["unplanned", "forbidden"]
         }
       }
     },
@@ -332,11 +336,11 @@
     },
     "evidence-misplaced-file": {
       "type": "object",
-      "required": ["own_module_edges", "target_module", "target_module_edges", "via_barrel"],
+      "required": ["own_module_edges", "target_module", "imports_from_target", "via_barrel"],
       "properties": {
-        "own_module_edges": { "$ref": "#/$defs/count" },
+        "own_module_edges": { "description": "Edges in either direction between the file and the rest of its own module.", "$ref": "#/$defs/count" },
         "target_module": { "type": "string" },
-        "target_module_edges": { "$ref": "#/$defs/count" },
+        "imports_from_target": { "description": "Files of the target module that import the file.", "$ref": "#/$defs/count" },
         "via_barrel": { "type": "boolean" }
       }
     },
