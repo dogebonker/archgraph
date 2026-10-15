@@ -20,7 +20,7 @@ token=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 echo "::stop-commands::$token"
 worktree_added=
 failure=
-# shellcheck disable=SC2329 # run by the EXIT trap
+# shellcheck disable=SC2317,SC2329 # run by the EXIT trap
 cleanup() {
   local status=$?
   if [[ -n $worktree_added ]]; then

@@ -94,7 +94,7 @@ if [[ " ${extra[*]} " != *" --depcruise "* && -x $dir/node_modules/.bin/depcruis
 fi
 
 tmp=$(mktemp -d)
-# shellcheck disable=SC2329 # run by the EXIT trap
+# shellcheck disable=SC2317,SC2329 # run by the EXIT trap
 cleanup() {
   git -C "$repo" worktree remove --force "$tmp/base" >/dev/null 2>&1 || true
   rm -rf "$tmp"
