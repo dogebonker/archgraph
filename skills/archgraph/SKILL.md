@@ -1,8 +1,8 @@
 ---
 name: archgraph
-description: Measures a TypeScript/JavaScript or Python repository's import graph with the archgraph CLI and turns it into architecture evidence - module coupling and cohesion, cycles with the fewest imports to break them, layer and boundary rule verdicts, and file moves backed by a before/after simulation. Use when asked to review or improve a codebase's architecture or module boundaries, find or break import cycles, check imports against layer rules, decide where a file belongs, write or enforce a layout.yaml, render a dependency graph, or compare architecture between two commits.
+description: Measures a TypeScript/JavaScript or Python repository's import graph with the archgraph CLI and turns it into architecture evidence - module coupling and cohesion, cycles with the fewest imports to break them, layer and boundary rule verdicts, and file moves backed by a before/after simulation. Use when asked to review or improve a codebase's architecture or module boundaries, find import cycles, check imports against layer rules, decide where a file belongs, render a dependency graph, or compare architecture between two commits.
 license: MIT OR Apache-2.0
-compatibility: Needs the archgraph binary on PATH. TypeScript/JavaScript scans need dependency-cruiser 18.4.0 and typescript 6.0.3 installed in the scanned repository (run through npx). Python scans need a Python with grimp 3.17.
+compatibility: Needs the archgraph binary on PATH (install.sh, npx archgraph-cli, or cargo install). TypeScript/JavaScript scans need dependency-cruiser 18.4.0 and typescript 6.0.3 installed in the scanned repository (run through npx), or installed elsewhere and passed with --depcruise. Python scans need a Python with grimp 3.17.
 ---
 
 # archgraph
@@ -11,22 +11,24 @@ archgraph reads a repository's file imports, groups files into modules (folders,
 
 ## Setup
 
-1. Run `archgraph --version`. If it is missing, install it: `cargo install --git https://github.com/OWNER/archgraph --locked` (needs a Rust toolchain).
-2. TypeScript/JavaScript: the scanned repository needs `dependency-cruiser@18.4.0` and `typescript@6.0.3` as dev dependencies. If `scan` fails with an install hint, ask the user before running `npm install --save-dev dependency-cruiser@18.4.0 typescript@6.0.3`, since it changes their lockfile.
+1. Run `archgraph --version`. If it is missing, install the prebuilt binary: `curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/dogebonker/archgraph/main/install.sh | sh` (checks the release's SHA-256, installs to `~/.local/bin`), or run it through npm as `npx archgraph-cli`. Without a prebuilt binary for the platform, `cargo install --git https://github.com/dogebonker/archgraph --locked` (needs a Rust toolchain).
+2. TypeScript/JavaScript: dependency-cruiser 18.4.0 parses TypeScript with `typescript@6.0.3` installed beside it, both as dev dependencies of the scanned repository by default. If `scan` fails with an install hint, ask the user before running `npm install --save-dev dependency-cruiser@18.4.0 typescript@6.0.3`, since it changes their lockfile. Installing both outside the repository (`npm install --prefix <dir> dependency-cruiser@18.4.0 typescript@6.0.3`) and passing `--depcruise <dir>/node_modules/.bin/depcruise` leaves the repository untouched.
 3. Python: find or create a Python with `grimp==3.17` (`pip install grimp==3.17` in a venv, or `uv run --with grimp==3.17 python`) and pass it with `--python <interpreter>`.
 
-Write archgraph output to a temporary directory outside the repository unless the user asks to keep it. archgraph itself never writes into the scanned repository.
+Write archgraph output to a temporary directory outside the repository unless the user asks to keep it. archgraph writes into the scanned repository only when `report` runs without `--out-dir` (into `<root>/.archgraph/`), so always pass `--out-dir <tmp>`.
 
-**Scan only repositories you trust.** A TypeScript/JavaScript scan runs `npx --no-install depcruise` inside the repository, and npx resolves the repository's own `node_modules/.bin/depcruise` and reads its `.npmrc`, so the repository decides what runs. For a repository you did not write or do not trust, tell the user and scan it inside a sandbox or container. (Python scans run the interpreter with `-I` and keep the repository off `sys.path` until grimp is loaded; git runs with `core.fsmonitor=false`.)
+**Scan only repositories you trust.** A TypeScript/JavaScript scan runs `npx --no-install depcruise` inside the repository, and npx resolves the repository's own `node_modules/.bin/depcruise` and reads its `.npmrc`, so the repository decides what runs (`--depcruise <path>` runs that executable instead). For a repository you did not write or do not trust, tell the user and scan it inside a sandbox or container. (Python scans run the interpreter with `-I` and keep the repository off `sys.path` until grimp is loaded; git runs with `core.fsmonitor=false`.)
 
 ## Workflow
 
-1. **Scan.** `archgraph scan <root> -o <tmp>/graph.json`. Add `--rules layout.yaml` when the repository has one, `--cochange` to read the last 300 commits for files that change together, `--depth N` when modules sit deeper than two folders below `src/`, `--package <pkg>` when a Python root holds several packages. A warning about unresolved imports means some edges are missing: report it. When the root has `src/`, only `src/` is cruised: say so if the user expects other folders covered. Type-only imports count as edges in metrics, cycles and verdicts. Each file directly in the source root is a module of its own, named with its extension (`main.ts`, `errors.py`).
+For a quick overview a person reads, `archgraph report <root> --out-dir <tmp>` runs steps 1, 3 and 5 at once: it scans (same options as `scan`), applies `--rules` or `<root>/layout.yaml` and says which, writes `archgraph.json` and `archgraph.html`, and prints counts, forbidden imports by rule, module cycles and findings by kind. Exit 1 means forbidden imports exist. For evidence you quote, read the JSON it wrote, as below.
+
+1. **Scan.** `archgraph scan <root> -o <tmp>/graph.json`. Add `--rules layout.yaml` when the repository has one, `--cochange` to read the last 300 commits for files that change together, `--depth N` when modules sit deeper than two folders below `src/`, `--package <pkg>` only when a Python root holds several packages (a single package is found on its own). A warning about unresolved imports means some edges are missing: report it. When the root has `src/`, only `src/` is cruised: say so if the user expects other folders covered. Type-only imports count as edges in metrics, cycles and verdicts. Each file directly in the source root is a module of its own, named with its extension (`main.ts`, `errors.py`).
 2. **Read the summary.** Look at `findings` first. If a `small-repo` finding exists, say the signal is weak before anything else. Then read `summary` (forbidden, unplanned and cycle counts, per-module metrics), `cycles`, `modules` and `module_edges`.
-3. **Check rules.** With rules: `archgraph check <tmp>/graph.json [--rules layout.yaml]`. Exit 1 means forbidden imports exist; each line names the deciding rule. `unplanned` imports are ones no rule covers: either the rules are incomplete or the import is unexpected. Ask which.
+3. **Check rules.** With rules: `archgraph check <tmp>/graph.json [--rules layout.yaml]` (exit 2 when the scan has no rules and none are passed). Exit 1 means forbidden imports exist; each line names the deciding rule. `unplanned` imports are ones no rule covers: either the rules are incomplete or the import is unexpected. Ask which.
 4. **Simulate before proposing.** For every move you want to propose, run `archgraph simulate <tmp>/graph.json --move <file> <dest-path>` and read `before`, `after`, `new_forbidden` and `removed_forbidden`. Findings that suggest a move already carry a `simulation`: `simulation.after` holds the counts after the move and only the modules whose metrics change (`null` for a module the move empties); the numbers before are the scan's `summary`.
 5. **Render for the user.** `archgraph render <tmp>/graph.json -o <tmp>/graph.html` writes one self-contained page. Give the user its path. Colors are a reading aid, not a score.
-6. **Compare over time.** After changes, scan again and run `archgraph diff old.json new.json` to show resolved and new cycles, forbidden imports and metric pairs `[old, new]`.
+6. **Compare over time.** After changes, scan again and run `archgraph diff old.json new.json` to show resolved and new cycles, new and resolved forbidden imports, new unplanned imports and metric pairs `[old, new]`. In CI, `--fail-on new-forbidden,new-cycles,new-unplanned` (any subset) exits 1 when the diff has one, and `--format markdown` prints a pull-request summary instead of JSON. A cycle is new when no cycle of the old scan has its member set, so a cycle that grew counts as new.
 
 ## Reading findings
 
@@ -53,32 +55,13 @@ A scan document is input to `check`, `simulate`, `render` and `diff`: do not edi
 - Prefer few moves with clear gains over many small ones. Run the simulation for each move separately; moves interact, so re-scan after applying any.
 - Do not move files yourself unless the user approves the specific move.
 
-## Writing layout.yaml from an approved layout
+## Acting on the evidence
 
-When the user approves a target layout, write it as rules so `check` can enforce it:
+Three skills next to this one take the next step:
 
-```yaml
-version: 1
-modules:                      # only when folders do not match the intended modules
-  - { id: "domains/<name>", path: "src/domains/<name>/**" }
-layers:                       # lowest first; a file may import its own or a lower layer
-  - "src/shared/**"
-  - "src/domains/*/model.server.ts"
-  - "src/domains/*/ui/**"
-public:                       # module pattern and its public entries
-  - { module: "src/domains/<name>/**", entries: ["src/domains/<name>/index.ts"] }
-forbid:
-  - { id: shared-no-domain, from: "src/shared/**", to: "src/domains/**", reason: "shared imports no domain" }
-  - { id: browser-no-server, from: "src/domains/*/client.ts", to: "**/*.server.ts", reachable: true }
-allow:
-  - { from: "app/**", to: "**", reason: "composition" }
-default: forbidden            # optional: only when the user wants a whitelist
-```
-
-- `*` matches one path segment, `**` any depth, `{a,b}` alternatives. `<name>` matches one segment and binds it within the rule: in `forbid` and `allow` the target must have the same value as the importer, so `{ from: "src/modules/<name>/**", to: "src/modules/<name>/**" }` means "within one module". `layers` take no capture: where a layout writes `<pkg>` or `<domain>` in a layer, write `*`. Unknown keys are an error.
-- Verdict order, first match wins: forbid, allow, public (internal file from outside the module), layers, same module, public entry, otherwise unplanned (rule `none`), or forbidden (rule `default`) with `default: forbidden`. Write `default: forbidden` only when the user wants every import the rules do not cover to fail `check`; an older archgraph ignores the key, so the version must be pinned where it gates CI.
-- Give every forbid an `id` and a `reason` taken from the approved layout. Use `reachable: true` when the rule is about what a file can reach transitively (for example, browser code reaching server code).
-- After writing it, run `archgraph scan <root> --rules layout.yaml -o <tmp>/graph.json` and `archgraph check <tmp>/graph.json`. Walk the user through every forbidden and unplanned import: fix the rules where they misstate the layout, and list the rest as violations to fix.
+- [archgraph-guard](../archgraph-guard/SKILL.md): before a coding task is reported done, compares the change with its base commit and resolves new forbidden imports and cycles.
+- [archgraph-fix](../archgraph-fix/SKILL.md): fixes one finding end to end (simulate, apply, test, re-scan, keep or revert).
+- [archgraph-rules](../archgraph-rules/SKILL.md): writes and calibrates a `layout.yaml` from an approved architecture and wires the CI gate.
 
 ## Limits
 
