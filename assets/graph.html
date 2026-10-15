@@ -8,123 +8,233 @@
 <style>
 :root {
   color-scheme: light dark;
-  --bg: #ffffff; --fg: #1d2025; --muted: #5f6670; --line: #d7dbe0; --panel: #f4f5f7;
-  --edge: #8b929c; --bad: #c62828; --focus: #1f5fcc;
-  --green: #2e7d32; --amber: #b86e00; --red: #c62828; --grey: #9aa0a8;
+  --bg: #f3f4f6; --surface: #ffffff; --raise: #f7f8fa; --fg: #14171c; --muted: #5d6672; --line: #dde1e7; --grid: #cfd5dd;
+  --edge: #8a93a1; --forbidden: #d92d20; --unplanned: #b86e00; --in: #0a6fc2; --out: #b0169a;
+  --move: #0a8c7c; --cochange: #6a4bdc; --focus: #0a6fc2;
+  --green: #2f9257; --amber: #c39210; --red: #cf4e3d; --grey: #99a1ac;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #15171b; --fg: #e6e8eb; --muted: #9ea5af; --line: #30343b; --panel: #1c1f24;
-    --edge: #737b86; --bad: #ef5350; --focus: #7aa7ff;
-    --green: #4caf50; --amber: #f0a020; --red: #ef5350; --grey: #6d737c;
+    --bg: #0b0e13; --surface: #11151b; --raise: #171c23; --fg: #e3e7ed; --muted: #8b94a1; --line: #232932; --grid: #1d232c;
+    --edge: #6c7685; --forbidden: #f04438; --unplanned: #f5a524; --in: #3d9dff; --out: #e45bcb;
+    --move: #2ed3b7; --cochange: #9b8afb; --focus: #3d9dff;
+    --green: #46b56f; --amber: #dcb137; --red: #e8705a; --grey: #5f6875;
   }
 }
 * { box-sizing: border-box; }
-body { margin: 0; height: 100vh; display: flex; flex-direction: column; background: var(--bg); color: var(--fg);
-  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-header { padding: 12px 16px; border-bottom: 1px solid var(--line); }
-h1 { font-size: 16px; margin: 0 0 4px; }
-h2 { font-size: 15px; margin: 0 0 8px; overflow-wrap: anywhere; }
-h3 { font-size: 13px; margin: 14px 0 4px; overflow-wrap: anywhere; }
-.muted { color: var(--muted); font-size: 13px; }
-.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
-.legend span { display: inline-flex; align-items: center; gap: 5px; }
-.swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.swatch.line { width: 16px; height: 3px; border-radius: 0; background: var(--bad); }
+html, body { height: 100%; }
+body { margin: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--fg);
+  font: 13px/1.45 var(--sans); }
+button, input, summary { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+header { background: var(--surface); border-bottom: 1px solid var(--line); padding: 10px 16px 8px; display: grid; gap: 8px; }
+.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; min-width: 0; }
+h1 { font: 700 15px/1.2 var(--mono); margin: 0; letter-spacing: -.01em; }
+h1::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 2px;
+  background: var(--fg); transform: rotate(45deg) translateY(-1px); }
+.muted { color: var(--muted); }
+#stats { min-width: 0; overflow-wrap: anywhere; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.toolbar form { flex: 0 1 300px; min-width: 0; display: flex; }
+#search { width: 100%; min-width: 0; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px;
+  background: var(--raise); font: 12.5px var(--mono); }
+#search[aria-invalid="true"] { border-color: var(--forbidden); }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px solid var(--line);
+  border-radius: 999px; background: var(--raise); cursor: pointer; user-select: none; white-space: nowrap; }
+.chip input { margin: 0; accent-color: var(--fg); }
+.chip:has(input:checked) { border-color: var(--fg); }
+#hide { position: relative; }
+#hide summary { list-style: none; }
+#hide summary::-webkit-details-marker { display: none; }
+#hide summary::after { content: "\25BE"; margin-left: 2px; color: var(--muted); }
+#hide-list { position: absolute; z-index: 5; top: 36px; left: 0; width: min(320px, calc(100vw - 32px)); max-height: 300px; overflow: auto;
+  padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+#hide-list label { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 5px; cursor: pointer; font: 12px var(--mono); }
+#hide-list label:hover { background: var(--raise); }
+#hide-list .n { margin-left: auto; color: var(--muted); }
+#legend-box { position: relative; }
+#legend-box > summary { position: absolute; right: 0; top: 0; cursor: pointer; color: var(--muted); font-size: 12px; list-style: none; }
+#legend-box > summary::after { content: " \25B4"; }
+#legend-box:not([open]) > summary { position: static; }
+#legend-box:not([open]) > summary::after { content: " \25BE"; }
+.legend { padding-right: 70px; display: flex; flex-wrap: wrap; gap: 3px 14px; color: var(--muted); font-size: 12px; }
+.legend > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.legend b { font-weight: 600; color: var(--fg); }
+.sw { display: inline-block; flex: none; }
+.sw.h { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid currentColor;
+  background: color-mix(in srgb, currentColor 24%, transparent); }
+.green { color: var(--green); } .amber { color: var(--amber); } .red { color: var(--red); } .grey { color: var(--grey); }
+.sw.ln { width: 18px; border-top: 2px solid var(--edge); }
+.sw.ln.forbidden { border-color: var(--forbidden); } .sw.ln.unplanned { border-color: var(--unplanned); }
+.sw.ln.dash { border-top-style: dashed; } .sw.ln.in { border-color: var(--in); } .sw.ln.out { border-color: var(--out); }
+.sw.ln.move { border-top: 2px dashed var(--move); } .sw.ln.co { border-top: 2px dotted var(--cochange); }
+.sw.ring { width: 8px; height: 8px; border: 1.5px solid var(--edge); border-radius: 50%; }
+.sw.dia { width: 8px; height: 8px; background: var(--muted); transform: rotate(45deg); }
 main { flex: 1; min-height: 0; display: flex; }
-#canvas { flex: 1; min-width: 0; }
-svg { width: 100%; height: 100%; display: block; }
-aside { width: 360px; flex: none; overflow-y: auto; padding: 12px 16px;
-  border-left: 1px solid var(--line); background: var(--panel); }
+#stage { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+#canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#canvas.dragging { cursor: grabbing; } #canvas.pointing { cursor: pointer; }
+#canvas:focus-visible { outline-offset: -3px; }
+.zoom { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; border: 1px solid var(--line);
+  border-radius: 9px; overflow: hidden; background: var(--surface); box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+.zoom button { width: 34px; height: 32px; border: 0; background: none; cursor: pointer; font: 600 15px var(--mono); }
+.zoom button + button { border-top: 1px solid var(--line); }
+.zoom button:hover { background: var(--raise); }
+#level { position: absolute; left: 12px; bottom: 12px; padding: 4px 10px; border-radius: 999px; background: var(--surface);
+  border: 1px solid var(--line); color: var(--muted); font: 11.5px var(--mono); pointer-events: none; max-width: calc(100% - 80px);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#tip { position: absolute; z-index: 4; max-width: min(420px, calc(100% - 24px)); padding: 8px 10px; pointer-events: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  font-size: 12px; }
+#tip .t { font: 600 12px var(--mono); overflow-wrap: anywhere; margin-bottom: 3px; }
+#tip div + div { color: var(--muted); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+aside { width: clamp(280px, 30vw, 380px); flex: none; overflow-y: auto; padding: 14px 16px 24px; border-left: 1px solid var(--line); background: var(--surface); }
+aside h2 { font: 600 14px/1.35 var(--mono); margin: 2px 0 10px; overflow-wrap: anywhere; }
+aside h3 { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 18px 0 6px; }
+.kicker { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line);
+  font-size: 11px; letter-spacing: 0; text-transform: none; font-weight: 500; }
+.back { border: 0; background: none; padding: 0; margin: 0 0 10px; color: var(--muted); cursor: pointer; font-size: 12px; }
+.back:hover { color: var(--fg); }
+.metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin: 0; }
+.metrics div { padding: 6px 8px; background: var(--raise); border-radius: 7px; border: 1px solid var(--line); }
+.metrics dt { font-size: 10.5px; color: var(--muted); }
+.metrics dd { margin: 0; font: 600 14px var(--mono); }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.act { height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--raise); cursor: pointer; font-size: 12px; }
+.act:hover { border-color: var(--fg); }
+.link { border: 0; background: none; padding: 0; cursor: pointer; text-align: left; overflow-wrap: anywhere; display: inline-flex; align-items: center; gap: 6px; }
+.link:hover { text-decoration: underline; }
+.mono { font-family: var(--mono); font-size: 12px; }
+details.row { border-bottom: 1px solid var(--line); }
+details.row > summary { display: grid; grid-template-columns: 12px minmax(0, 1fr) 64px 36px; align-items: center; gap: 8px;
+  padding: 6px 2px; cursor: pointer; list-style: none; }
+details.row > summary::-webkit-details-marker { display: none; }
+details.row > summary:hover { background: var(--raise); }
+.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.num { font: 12px var(--mono); text-align: right; }
+.bar { height: 6px; border-radius: 3px; background: var(--raise); overflow: hidden; border: 1px solid var(--line); }
+.bar i { display: block; height: 100%; background: var(--edge); }
+.bar i.forbidden { background: var(--forbidden); } .bar i.unplanned { background: var(--unplanned); }
+.tags { grid-column: 2 / -1; display: flex; gap: 6px; flex-wrap: wrap; font-size: 11px; }
+.v { font-size: 11px; color: var(--muted); }
+.v.forbidden, .tags .forbidden { color: var(--forbidden); font-weight: 600; }
+.v.unplanned, .tags .unplanned { color: var(--unplanned); font-weight: 600; }
+.inner { padding: 4px 0 10px 20px; }
+ul.edges { list-style: none; margin: 6px 0 0; padding: 0; }
+ul.edges li { padding: 3px 0; font-size: 12px; overflow-wrap: anywhere; }
+ul.edges li .meta { color: var(--muted); font-size: 11px; }
+details.kind { border: 1px solid var(--line); border-radius: 9px; margin: 0 0 8px; background: var(--raise); }
+details.kind > summary { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; font: 600 12.5px var(--mono); }
+details.kind > p { margin: 0 10px 6px; font-size: 12px; }
+.badge { margin-left: auto; min-width: 22px; padding: 0 7px; border-radius: 999px; background: var(--fg); color: var(--surface);
+  font: 600 11px/18px var(--mono); text-align: center; }
+ul.flist { list-style: none; margin: 0; padding: 0 4px 6px; }
+ul.flist button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 5px 6px; border-radius: 6px;
+  cursor: pointer; font: 11.5px/1.35 var(--mono); }
+.clamp { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+ul.flist button:hover { background: var(--surface); }
+table.sim { border-collapse: collapse; width: 100%; font: 12px var(--mono); margin-top: 6px; }
+table.sim th, table.sim td { padding: 3px 6px; text-align: right; border-bottom: 1px solid var(--line); }
+table.sim th:first-child, table.sim td:first-child { text-align: left; }
+table.sim th { font: 600 10.5px var(--sans); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+table.sim tr.mod td { font-weight: 600; padding-top: 8px; color: var(--fg); }
+.better { color: var(--green); font-weight: 600; } .worse { color: var(--forbidden); font-weight: 600; }
+.note { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--move); background: var(--raise); border-radius: 0 7px 7px 0; overflow-wrap: anywhere; }
+p { margin: 6px 0; }
 @media (max-width: 720px) {
-  body { height: auto; }
+  html, body { height: auto; }
+  header { padding: 10px 16px 8px; }
+  .toolbar form { flex: 1 1 100%; }
   main { flex-direction: column; }
-  #canvas { height: 90vw; min-height: 300px; flex: none; }
+  #stage { flex: none; height: min(76vh, 620px); min-height: 340px; }
   aside { width: auto; border-left: 0; border-top: 1px solid var(--line); }
 }
-table { border-collapse: collapse; font-size: 13px; }
-td { padding: 1px 12px 1px 0; }
-ul { margin: 4px 0 0; padding-left: 18px; }
-li { margin: 2px 0; overflow-wrap: anywhere; font-size: 13px; }
-.forbidden { color: var(--bad); font-weight: 600; }
-.edge { fill: none; stroke: var(--edge); opacity: .75; }
-.edge.bad { stroke: var(--bad); opacity: .95; }
-#arrow path { fill: var(--edge); }
-#arrow-bad path { fill: var(--bad); }
-.node { cursor: pointer; }
-.node circle { stroke: var(--bg); stroke-width: 2; }
-.node text { fill: var(--fg); font-size: 12px; text-anchor: middle; pointer-events: none;
-  paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
-.node:focus { outline: none; }
-.node:focus-visible circle { stroke: var(--focus); stroke-width: 3; }
-.green { fill: var(--green); background: var(--green); }
-.amber { fill: var(--amber); background: var(--amber); }
-.red { fill: var(--red); background: var(--red); }
-.grey { fill: var(--grey); background: var(--grey); }
-svg.selecting .node, svg.selecting .edge { opacity: .18; }
-svg.selecting .node.on, svg.selecting .edge.on { opacity: 1; }
-.node.selected circle { stroke: var(--fg); stroke-width: 3; }
-.node.importer circle { stroke: var(--focus); stroke-width: 3; }
 </style>
 </head>
 <body>
 <header>
-  <h1 id="title">archgraph</h1>
-  <div class="muted" id="stats"></div>
-  <div class="muted legend">
-    <span><i class="swatch green"></i>cohesive, few links</span>
-    <span><i class="swatch amber"></i>mixed</span>
-    <span><i class="swatch red"></i>low cohesion, many links</span>
-    <span><i class="swatch grey"></i>fewer than 2 files</span>
-    <span><i class="swatch line"></i>has a forbidden import</span>
+  <div class="top">
+    <h1 id="title">archgraph</h1>
+    <div class="muted" id="stats"></div>
   </div>
+  <div class="toolbar">
+    <form id="find" role="search">
+      <input id="search" type="search" list="paths" autocomplete="off" spellcheck="false"
+        placeholder="Find a module or file  ( / )" aria-label="Find a module or file">
+      <datalist id="paths"></datalist>
+    </form>
+    <label class="chip"><input type="checkbox" id="t-problems">forbidden and unplanned only</label>
+    <label class="chip"><input type="checkbox" id="t-cycles">cycles only</label>
+    <label class="chip"><input type="checkbox" id="t-types">hide type-only</label>
+    <details id="hide"><summary class="chip" id="hide-sum">hide modules</summary><div id="hide-list"></div></details>
+  </div>
+  <details id="legend-box" open><summary>Legend</summary>
+  <div class="legend">
+    <span><b>Modules</b></span>
+    <span><i class="sw h green"></i>cohesive, few links</span>
+    <span><i class="sw h amber"></i>mixed</span>
+    <span><i class="sw h red"></i>low cohesion, many links</span>
+    <span><i class="sw h grey"></i>fewer than 2 files</span>
+    <span><i class="sw dia"></i>barrel file</span>
+    <span><b>Imports</b></span>
+    <span><i class="sw ln"></i>allowed or no rules</span>
+    <span><i class="sw ln forbidden"></i>forbidden</span>
+    <span><i class="sw ln unplanned"></i>unplanned</span>
+    <span><i class="sw ln dash"></i>type-only</span>
+    <span><i class="sw ring"></i>in a cycle</span>
+    <span><i class="sw ln in"></i>importers</span>
+    <span><i class="sw ln out"></i>imports</span>
+    <span><i class="sw ln move"></i>suggested move</span>
+    <span><i class="sw ln co"></i>changed together</span>
+    <span>Colors are a reading aid, not a score.</span>
+  </div>
+  </details>
 </header>
 <main>
-  <div id="canvas">
-    <svg id="svg" role="group" aria-label="Module import graph">
-      <defs>
-        <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z"/></marker>
-        <marker id="arrow-bad" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z"/></marker>
-      </defs>
-      <g id="edges"></g>
-      <g id="nodes"></g>
-    </svg>
+  <div id="stage">
+    <canvas id="canvas" tabindex="0" role="img"
+      aria-label="Module import graph. Arrow keys pan, plus and minus zoom, 0 fits. Tab to reach each module."></canvas>
+    <div id="mods" class="sr" role="list" aria-label="Modules"></div>
+    <div id="level"></div>
+    <div class="zoom" role="group" aria-label="Zoom">
+      <button type="button" id="z-in" aria-label="Zoom in" title="Zoom in (+)">+</button>
+      <button type="button" id="z-out" aria-label="Zoom out" title="Zoom out (-)">&minus;</button>
+      <button type="button" id="z-fit" aria-label="Fit to view" title="Fit to view (0)">&#x2922;</button>
+    </div>
+    <div id="tip" role="tooltip" hidden></div>
   </div>
-  <aside id="panel" aria-live="polite"></aside>
+  <aside id="panel" aria-label="Details"></aside>
+  <div id="announce" class="sr" aria-live="polite"></div>
 </main>
 <script type="application/json" id="graph">{{GRAPH}}</script>
 <script>
 "use strict";
 const doc = JSON.parse(document.getElementById("graph").textContent);
-const svg = document.getElementById("svg");
-const NS = svg.namespaceURI;
-const panel = document.getElementById("panel");
+const $ = id => document.getElementById(id);
 
+/* Every piece of document text reaches the page through textContent, never markup. */
 function el(tag, attrs, text) {
-  const e = tag.startsWith("svg:") ? document.createElementNS(NS, tag.slice(4)) : document.createElement(tag);
+  const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
   if (text !== undefined) e.textContent = text;
   return e;
 }
-function fmt(x) { return x === null ? "n/a" : String(x); }
-
-const mods = doc.modules;
-const moduleOf = new Map(doc.files.map(f => [f.path, f.module]));
-const degree = m => m.ca + m.ce;
-const sorted = mods.map(degree).sort((a, b) => a - b);
-const n = sorted.length;
-const median = n === 0 ? 0 : n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
-function health(m) {
-  if (m.files < 2) return "grey";
-  if (m.cohesion !== null && m.cohesion >= 0.5 && degree(m) <= median) return "green";
-  if (m.cohesion !== null && m.cohesion < 0.3 && degree(m) > median) return "red";
-  return "amber";
-}
-const forbidden = doc.edges.filter(e => e.verdict === "forbidden").length;
+const fmt = x => x === null || x === undefined ? "n/a" : String(x);
 /* "1 cycle", "2 cycles": the count with its noun in the matching number. */
 const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const dirname = p => p.slice(0, Math.max(p.lastIndexOf("/"), 0));
+const basename = p => p.slice(p.lastIndexOf("/") + 1);
+const TAU = Math.PI * 2;
+
+/* ---------- header ---------- */
+const mods = doc.modules, N = mods.length;
+const forbidden = doc.edges.filter(e => e.verdict === "forbidden").length;
 const commit = doc.source.git ? " at " + doc.source.git.commit.slice(0, 12) + (doc.source.git.dirty ? " (dirty)" : "") : "";
-document.getElementById("stats").textContent =
+$("stats").textContent =
   `${count(doc.files.length, "file", "files")}, ${count(mods.length, "module", "modules")}, ` +
   `${count(doc.module_edges.length, "module import", "module imports")}, ` +
   `${count(doc.cycles.length, "cycle", "cycles")}, ${count(forbidden, "forbidden import", "forbidden imports")}, ` +
@@ -132,143 +242,1527 @@ document.getElementById("stats").textContent =
   `${doc.source.language} via ${doc.source.collector.name}${commit}; ` +
   (doc.config.rules ? `rules ${doc.config.rules.path}.` : "no rules.");
 
-/* Deterministic Fruchterman-Reingold layout: start on a circle, fixed iteration count. */
-const index = new Map(mods.map((m, i) => [m.id, i]));
-const radius = mods.map(m => 6 + 5 * Math.sqrt(m.files));
-const links = doc.module_edges.map(e => [index.get(e.from), index.get(e.to)]);
-const pos = mods.map((_, i) => {
-  const a = 2 * Math.PI * i / Math.max(n, 1);
-  return { x: 40 * Math.sqrt(n) * Math.cos(a), y: 40 * Math.sqrt(n) * Math.sin(a) };
-});
-const K = 90, ITERATIONS = 300;
-for (let it = 0; it < ITERATIONS; it++) {
-  const step = K * (1 - it / ITERATIONS) * 0.5 + 0.5;
-  const d = pos.map(() => ({ x: 0, y: 0 }));
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      const dx = pos[i].x - pos[j].x, dy = pos[i].y - pos[j].y;
-      const len = Math.hypot(dx, dy) || 0.01;
-      const gap = Math.max(len - radius[i] - radius[j], 1);
-      const f = K * K / gap;
-      d[i].x += dx / len * f; d[i].y += dy / len * f;
-      d[j].x -= dx / len * f; d[j].y -= dy / len * f;
-    }
-  }
-  for (const [a, b] of links) {
-    const dx = pos[a].x - pos[b].x, dy = pos[a].y - pos[b].y;
-    const len = Math.hypot(dx, dy) || 0.01;
-    const f = len * len / K;
-    d[a].x -= dx / len * f; d[a].y -= dy / len * f;
-    d[b].x += dx / len * f; d[b].y += dy / len * f;
-  }
-  for (let i = 0; i < n; i++) {
-    d[i].x -= pos[i].x * 0.5; d[i].y -= pos[i].y * 0.5;
-    const len = Math.hypot(d[i].x, d[i].y);
-    if (len > 0) {
-      pos[i].x += d[i].x / len * Math.min(len, step);
-      pos[i].y += d[i].y / len * Math.min(len, step);
-    }
-  }
-}
-let minX = 0, minY = 0, maxX = 1, maxY = 1;
-if (n > 0) {
-  minX = Math.min(...pos.map((p, i) => p.x - radius[i])) - 60;
-  maxX = Math.max(...pos.map((p, i) => p.x + radius[i])) + 60;
-  minY = Math.min(...pos.map((p, i) => p.y - radius[i])) - 20;
-  maxY = Math.max(...pos.map((p, i) => p.y + radius[i])) + 30;
-}
-svg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
+/* ---------- model ---------- */
+const modIndex = new Map(mods.map((m, i) => [m.id, i]));
+const files = doc.files.map((f, i) => ({ i, path: f.path, name: basename(f.path), mod: modIndex.get(f.module),
+  barrel: f.barrel, x: 0, y: 0, ins: [], outs: [] }));
+const F = files.length;
+const fileIndex = new Map(files.map(f => [f.path, f.i]));
+const modFiles = mods.map(() => []);
+for (const f of files) modFiles[f.mod].push(f.i);
 
-const edgeEls = [];
-doc.module_edges.forEach((e, k) => {
-  const [a, b] = links[k];
-  const p = pos[a], q = pos[b];
-  const dx = q.x - p.x, dy = q.y - p.y, len = Math.hypot(dx, dy) || 0.01;
-  /* Bend every edge to its right, so a -> b and b -> a stay apart. */
-  const cx = (p.x + q.x) / 2 - dy / len * len * 0.15, cy = (p.y + q.y) / 2 + dx / len * len * 0.15;
-  const toward = (from, to, r) => {
-    const ux = to.x - from.x, uy = to.y - from.y, ul = Math.hypot(ux, uy) || 0.01;
-    return { x: from.x + ux / ul * r, y: from.y + uy / ul * r };
+/* The directory every file shares, left out of the paths the panel prints. */
+const PREFIX = (() => {
+  if (!F) return "";
+  let p = dirname(files[0].path).split("/");
+  for (const f of files) {
+    const q = dirname(f.path).split("/");
+    let j = 0;
+    while (j < p.length && j < q.length && p[j] === q[j]) j++;
+    p = p.slice(0, j);
+  }
+  return p.length && p[0] !== "" ? p.join("/") + "/" : "";
+})();
+/* A first folder every module id shares ("src/"), left off the labels on the canvas. */
+const MOD_PREFIX = (() => {
+  const first = N > 1 && mods[0].id.includes("/") ? mods[0].id.slice(0, mods[0].id.indexOf("/") + 1) : "";
+  return first && mods.every(m => m.id.startsWith(first) && m.id.length > first.length) ? first : "";
+})();
+const short = p => PREFIX && p.startsWith(PREFIX) ? p.slice(PREFIX.length) : p;
+const shortText = s => PREFIX ? s.split(PREFIX).join("") : s;
+
+const medges = doc.module_edges.map((e, i) => ({ i, a: modIndex.get(e.from), b: modIndex.get(e.to), imports: e.imports,
+  forbidden: e.forbidden, v: { allowed: 0, forbidden: 0, unplanned: 0, none: 0 }, types: 0, list: [] }));
+const meOf = new Map(medges.map(e => [e.a * N + e.b, e]));
+const edges = doc.edges.map((e, i) => {
+  const a = fileIndex.get(e.from), b = fileIndex.get(e.to);
+  const ma = files[a].mod, mb = files[b].mod;
+  const r = { i, a, b, kind: e.kind, verdict: e.verdict, rule: e.rule,
+    tone: e.verdict === "forbidden" || e.verdict === "unplanned" ? e.verdict : "neutral",
+    me: ma === mb ? null : meOf.get(ma * N + mb) || null };
+  files[a].outs.push(i);
+  files[b].ins.push(i);
+  if (r.me) {
+    r.me.list.push(i);
+    r.me.v[e.verdict || "none"]++;
+    if (e.kind === "type") r.me.types++;
+  }
+  return r;
+});
+for (const me of medges) {
+  me.typeOnly = me.list.length > 0 && me.types === me.list.length;
+  me.tone = me.forbidden || me.v.forbidden ? "forbidden" : me.v.unplanned ? "unplanned" : "neutral";
+  me.twoWay = meOf.has(me.b * N + me.a);
+  me.w = Math.min(9, Math.round((0.8 + 0.95 * Math.log2(Math.max(1, me.imports))) * 4) / 4);
+}
+
+const modCycle = new Int32Array(N).fill(-1), fileCycle = new Int32Array(F).fill(-1);
+const breaks = new Set();
+doc.cycles.forEach((c, k) => {
+  for (const m of c.members) {
+    const i = c.level === "module" ? modIndex.get(m) : fileIndex.get(m);
+    if (i !== undefined) (c.level === "module" ? modCycle : fileCycle)[i] = k;
+  }
+  for (const l of c.break) breaks.add(l.from + "\n" + l.to);
+});
+for (const me of medges) me.cycle = modCycle[me.a] >= 0 && modCycle[me.a] === modCycle[me.b];
+for (const e of edges) {
+  e.fileCycle = !e.me && fileCycle[e.a] >= 0 && fileCycle[e.a] === fileCycle[e.b];
+  e.cycle = e.me ? e.me.cycle : e.fileCycle;
+}
+
+const degree = m => m.ca + m.ce;
+const sortedDeg = mods.map(degree).sort((a, b) => a - b);
+const median = N === 0 ? 0 : N % 2 ? sortedDeg[(N - 1) / 2] : (sortedDeg[N / 2 - 1] + sortedDeg[N / 2]) / 2;
+function health(m) {
+  if (m.files < 2) return "grey";
+  if (m.cohesion !== null && m.cohesion >= 0.5 && degree(m) <= median) return "green";
+  if (m.cohesion !== null && m.cohesion < 0.3 && degree(m) > median) return "red";
+  return "amber";
+}
+const modHealth = mods.map(health);
+const HEALTH_TEXT = { green: "cohesive, few links", amber: "mixed", red: "low cohesion, many links", grey: "fewer than 2 files" };
+
+/* ---------- layout (deterministic: no randomness, fixed iteration counts) ---------- */
+const R_DOT = 2.6, SP = 10, GAP = 34, GOLDEN = Math.PI * (3 - Math.sqrt(5));
+const K_FILE0 = 1.25, K_FILE1 = 2.0, K_LABEL = 3.2, K_MAX = 16;
+
+function sunflower(n, c) {
+  const p = [];
+  for (let k = 0; k < n; k++) {
+    const r = c * Math.sqrt(k + 0.5), a = k * GOLDEN;
+    p.push({ x: r * Math.cos(a), y: r * Math.sin(a) });
+  }
+  return p;
+}
+
+/* Circles of radius R pulled together by weighted links, pushed apart until none overlap.
+   ponytail: O(n^2) per step, fine to about a thousand circles; a quadtree lifts that. */
+function pack(R, links, gap, iter, spread, pull) {
+  const n = R.length, X = new Float64Array(n), Y = new Float64Array(n);
+  if (!n) return [X, Y];
+  const deg = new Float64Array(n);
+  for (const [p, q, w] of links) { deg[p] += w; deg[q] += w; }
+  const order = [...R.keys()].sort((a, b) => deg[b] - deg[a] || R[b] - R[a] || a - b);
+  const meanR = R.reduce((s, r) => s + r, 0) / n;
+  sunflower(n, meanR * 1.5 + gap).forEach((p, j) => { X[order[j]] = p.x; Y[order[j]] = p.y; });
+  const maxW = Math.max(1, ...links.map(l => l[2]));
+  const mass = Float64Array.from(R, r => r * r + 1);
+  const collide = strength => {
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) {
+      const dx = X[q] - X[p], dy = Y[q] - Y[p], d = Math.hypot(dx, dy) || 0.01, min = R[p] + R[q] + gap;
+      if (d >= min) continue;
+      const s = (min - d) / d * strength, sp = mass[q] / (mass[p] + mass[q]);
+      X[p] -= dx * s * sp; Y[p] -= dy * s * sp; X[q] += dx * s * (1 - sp); Y[q] += dy * s * (1 - sp);
+    }
   };
-  const s = toward(p, { x: cx, y: cy }, radius[a]);
-  const t = toward(q, { x: cx, y: cy }, radius[b] + 2);
-  const bad = e.forbidden > 0;
-  const path = el("svg:path", {
-    d: `M${s.x},${s.y} Q${cx},${cy} ${t.x},${t.y}`,
-    class: bad ? "edge bad" : "edge",
-    "stroke-width": String(1 + Math.sqrt(e.imports)),
-    "marker-end": bad ? "url(#arrow-bad)" : "url(#arrow)",
+  for (let it = 0; it < iter; it++) {
+    const a = 1 - it / iter;
+    for (const [p, q, w] of links) {
+      const dx = X[q] - X[p], dy = Y[q] - Y[p], d = Math.hypot(dx, dy) || 0.01;
+      const s = (d - (R[p] + R[q] + gap * 1.6)) / d * 0.06 * (w / maxW) * a, sp = mass[q] / (mass[p] + mass[q]);
+      X[p] += dx * s * sp; Y[p] += dy * s * sp; X[q] -= dx * s * (1 - sp); Y[q] -= dy * s * (1 - sp);
+    }
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) {
+      const dx = X[q] - X[p], dy = Y[q] - Y[p], d2 = dx * dx + dy * dy + 1, reach = (R[p] + R[q] + gap) * 2.2;
+      if (d2 > reach * reach) continue;
+      const s = spread * a * reach / d2, sp = mass[q] / (mass[p] + mass[q]);
+      X[p] -= dx * s * sp; Y[p] -= dy * s * sp; X[q] += dx * s * (1 - sp); Y[q] += dy * s * (1 - sp);
+    }
+    for (let i = 0; i < n; i++) { X[i] *= 1 - pull * a; Y[i] *= 1 - pull * a; }
+    collide(0.5);
+  }
+  for (let it = 0; it < 120; it++) collide(1);
+  return [X, Y];
+}
+const weighted = (pairs, n) => {
+  const sum = new Map();
+  for (const [a, b, w] of pairs) {
+    if (a === b) continue;
+    const key = Math.min(a, b) * n + Math.max(a, b);
+    sum.set(key, (sum.get(key) || 0) + w);
+  }
+  return [...sum].map(([key, w]) => [Math.floor(key / n), key % n, Math.log2(1 + w)]);
+};
+
+/* Inside a module, each folder below the deepest directory its files share is a disc of files
+   (barrels and the most imported files at its centre); the discs are packed like the modules. */
+const lx = new Float64Array(F), ly = new Float64Array(F);
+const modR = new Float64Array(N);
+const groups = mods.map(() => []);
+mods.forEach((m, mi) => {
+  const fs = modFiles[mi];
+  if (!fs.length) { modR[mi] = 15; return; }
+  const dirs = fs.map(i => dirname(files[i].path).split("/"));
+  let depth = dirs[0].length;
+  for (const d of dirs) { let j = 0; while (j < depth && j < d.length && d[j] === dirs[0][j]) j++; depth = j; }
+  const byKey = new Map(), gOf = new Map();
+  fs.forEach((f, j) => {
+    const k = dirs[j].length > depth ? dirs[j][depth] : "";
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(f);
   });
-  path.appendChild(el("svg:title", {}, `${e.from} -> ${e.to}: ${e.imports} imports, ${e.forbidden} forbidden`));
-  document.getElementById("edges").appendChild(path);
-  edgeEls.push(path);
+  const gs = [...byKey.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1);
+  const gr = gs.map(([, g], gi) => {
+    const rank = f => (files[f].barrel ? 1e6 : 0) + files[f].ins.length * 2 + files[f].outs.length;
+    g.sort((a, b) => rank(b) - rank(a) || (files[a].path < files[b].path ? -1 : 1));
+    for (const f of g) gOf.set(f, gi);
+    return SP * 0.56 * Math.sqrt(g.length) + R_DOT + 1;
+  });
+  const pairs = [];
+  for (const f of fs) for (const e of files[f].outs) { const t = gOf.get(edges[e].b); if (t !== undefined) pairs.push([gOf.get(f), t, 1]); }
+  const [GX, GY] = gs.length > 1 ? pack(gr, weighted(pairs, gs.length), SP * 0.8, 200, 0.05, 0.06) : [[0], [0]];
+  let cx = 0, cy = 0, area = 0;
+  gs.forEach((_, gi) => { const a = gr[gi] * gr[gi]; cx += GX[gi] * a; cy += GY[gi] * a; area += a; });
+  cx /= area; cy /= area;
+  let r = 0;
+  gs.forEach(([name, g], gi) => {
+    const ox = GX[gi] - cx, oy = GY[gi] - cy;
+    sunflower(g.length, SP * 0.56).forEach((p, j) => { lx[g[j]] = ox + p.x; ly[g[j]] = oy + p.y; });
+    r = Math.max(r, Math.hypot(ox, oy) + gr[gi]);
+    if (gs.length > 1) groups[mi].push({ name: name ? name + "/" : "(root)", x: ox, y: oy, r: gr[gi], n: g.length });
+  });
+  modR[mi] = Math.max(15, r + 7);
 });
 
-const nodeEls = mods.map((m, i) => {
-  const g = el("svg:g", {
-    class: "node", tabindex: "0", role: "button",
-    "aria-label": `module ${m.id}, ${m.files} files, ${health(m)}`,
-    transform: `translate(${pos[i].x},${pos[i].y})`,
-  });
-  g.appendChild(el("svg:circle", { r: String(radius[i]), class: health(m) }));
-  g.appendChild(el("svg:text", { y: String(radius[i] + 14) }, m.id));
-  g.addEventListener("click", ev => { ev.stopPropagation(); select(i); });
-  g.addEventListener("keydown", ev => {
-    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); select(i); }
-  });
-  document.getElementById("nodes").appendChild(g);
-  return g;
-});
-svg.addEventListener("click", () => select(null));
-document.addEventListener("keydown", ev => { if (ev.key === "Escape") select(null); });
+const mx = new Float64Array(N), my = new Float64Array(N);
+{
+  const [X, Y] = pack(Array.from(modR), weighted(medges.map(me => [me.a, me.b, me.imports]), N), GAP, 500, 0.9, 0.012);
+  mx.set(X); my.set(Y);
+}
+for (const f of files) { f.x = mx[f.mod] + lx[f.i]; f.y = my[f.mod] + ly[f.i]; }
 
-function select(i) {
-  svg.classList.toggle("selecting", i !== null);
-  nodeEls.forEach(g => g.classList.remove("on", "selected", "importer"));
-  edgeEls.forEach(p => p.classList.remove("on"));
-  panel.replaceChildren();
-  if (i === null) {
-    panel.appendChild(el("p", { class: "muted" },
-      "Select a module to list the modules that import it and their file imports."));
+/* Quadratic curves as [sx, sy, cx, cy, ex, ey], each bent to its right so a -> b and b -> a part. */
+const ME = new Float64Array(medges.length * 6), MB = new Float64Array(medges.length * 4);
+const FE = new Float64Array(edges.length * 6), FB = new Float64Array(edges.length * 4);
+function curve(G, B, j, ax, ay, bx, by, ra, rb, bend) {
+  const dx = bx - ax, dy = by - ay, d = Math.hypot(dx, dy) || 1;
+  const cx = (ax + bx) / 2 - dy / d * d * bend, cy = (ay + by) / 2 + dx / d * d * bend;
+  const ua = Math.hypot(cx - ax, cy - ay) || 1, ub = Math.hypot(cx - bx, cy - by) || 1;
+  const o = j * 6;
+  G[o] = ax + (cx - ax) / ua * ra; G[o + 1] = ay + (cy - ay) / ua * ra;
+  G[o + 2] = cx; G[o + 3] = cy;
+  G[o + 4] = bx + (cx - bx) / ub * rb; G[o + 5] = by + (cy - by) / ub * rb;
+  const q = j * 4;
+  B[q] = Math.min(G[o], cx, G[o + 4]); B[q + 1] = Math.min(G[o + 1], cy, G[o + 5]);
+  B[q + 2] = Math.max(G[o], cx, G[o + 4]); B[q + 3] = Math.max(G[o + 1], cy, G[o + 5]);
+}
+for (const me of medges) curve(ME, MB, me.i, mx[me.a], my[me.a], mx[me.b], my[me.b], modR[me.a], modR[me.b] + 1, me.twoWay ? 0.17 : 0.08);
+for (const e of edges) {
+  const a = files[e.a], b = files[e.b];
+  curve(FE, FB, e.i, a.x, a.y, b.x, b.y, 0, 0, e.me ? 0.1 : 0.22);
+}
+
+/* Spatial grid of files for hit testing. */
+const CELL = 24, fgrid = new Map();
+const gkey = (x, y) => (Math.floor(x / CELL) + 32768) * 65536 + Math.floor(y / CELL) + 32768;
+for (const f of files) { const k = gkey(f.x, f.y); if (!fgrid.has(k)) fgrid.set(k, []); fgrid.get(k).push(f.i); }
+
+/* ---------- findings ---------- */
+const KIND_TEXT = {
+  "cycle": "Import cycles, with the fewest imports to remove.",
+  "hidden-coupling": "Files in different modules changed together without importing each other.",
+  "internals-reach": "Imports past a module's public entry.",
+  "misplaced-file": "Files the module that imports them would hold better.",
+  "seam": "File clusters that fit the imports better than the folders do.",
+  "sink-split": "Modules whose files serve separate groups of importers.",
+  "small-repo": "Few files or modules: findings carry little signal.",
+  "unstable-dependency": "Imports of a module more unstable than the importer.",
+};
+const subjectText = f => f.subject === "." ? "the whole source tree" : shortText(f.subject);
+const edgeBetween = (a, b) => files[a].outs.find(e => edges[e].b === b);
+function destination(to) {
+  const dir = dirname(to);
+  let sx = 0, sy = 0, n = 0;
+  for (const f of files) if (dirname(f.path) === dir) { sx += f.x; sy += f.y; n++; }
+  if (n) return [sx / n, sy / n];
+  const parts = dir.split("/");
+  let best = 0, bestLen = -1;
+  for (const f of files) {
+    const q = f.path.split("/");
+    let j = 0;
+    while (j < parts.length && j < q.length - 1 && q[j] === parts[j]) j++;
+    if (j > bestLen) { bestLen = j; best = f.mod; }
+  }
+  return [mx[best], my[best]];
+}
+const findings = doc.findings.map((f, i) => {
+  const ms = new Set(), fs = new Set(), fe = new Set(), mes = new Set(), strong = new Set(), moves = [], links = [];
+  const ev = f.evidence || {};
+  const addF = p => { const j = fileIndex.get(p); if (j !== undefined) { fs.add(j); ms.add(files[j].mod); } return j; };
+  const addM = id => { const j = modIndex.get(id); if (j !== undefined) ms.add(j); return j; };
+  const addE = (a, b, hard) => {
+    if (a === undefined || b === undefined) return;
+    const e = edgeBetween(a, b);
+    if (e === undefined) return;
+    fe.add(e);
+    if (hard) strong.add(e);
+    if (edges[e].me) mes.add(edges[e].me.i);
+  };
+  switch (f.kind) {
+    case "cycle":
+      if (ev.level === "module") {
+        ev.members.forEach(addM);
+        for (const me of medges) if (ms.has(me.a) && ms.has(me.b)) { mes.add(me.i); for (const e of me.list) fe.add(e); }
+      } else {
+        ev.members.forEach(addF);
+        for (const e of edges) if (fs.has(e.a) && fs.has(e.b)) fe.add(e.i);
+      }
+      for (const l of ev.break || []) {
+        const a = fileIndex.get(l.from), b = fileIndex.get(l.to);
+        if (a !== undefined && b !== undefined) { fs.add(a); fs.add(b); }
+        addE(a, b, true);
+      }
+      break;
+    case "hidden-coupling": {
+      const a = addF(ev.files[0]), b = addF(ev.files[1]);
+      if (a !== undefined && b !== undefined) links.push([a, b, ev.commits]);
+      break;
+    }
+    case "internals-reach":
+      addM(ev.module);
+      (ev.entries || []).forEach(addF);
+      addE(addF(ev.from), addF(ev.to), true);
+      break;
+    case "misplaced-file": {
+      const a = addF(f.subject);
+      addM(ev.target_module);
+      if (a !== undefined) for (const e of files[a].ins.concat(files[a].outs)) fe.add(e);
+      break;
+    }
+    case "sink-split":
+      addM(f.subject);
+      for (const c of ev.components || []) { c.files.forEach(addF); c.consumers.forEach(addM); }
+      break;
+    case "unstable-dependency": {
+      const a = addM(ev.from), b = addM(ev.to), me = meOf.get(a * N + b);
+      if (me) mes.add(me.i);
+      break;
+    }
+    case "seam":
+      for (const c of ev.clusters || []) c.files.forEach(addF);
+      (ev.hubs || []).forEach(addF);
+      break;
+    default:
+      addM(f.subject);
+      addF(f.subject);
+  }
+  const raw = f.suggestion ? [f.suggestion.move] : [];
+  for (const c of ev.components || []) raw.push(...(c.moves || []));
+  for (const m of raw) {
+    const j = fileIndex.get(m.file);
+    if (j === undefined) continue;
+    fs.add(j);
+    moves.push({ file: j, to: m.to, at: destination(m.to) });
+  }
+  return { f, i, ms, fs, fe, mes, strong, moves, links };
+});
+const findingsOfModule = mods.map(() => []), findingsOfFile = new Map();
+for (const fd of findings) {
+  for (const m of fd.ms) findingsOfModule[m].push(fd);
+  for (const j of fd.fs) { if (!findingsOfFile.has(j)) findingsOfFile.set(j, []); findingsOfFile.get(j).push(fd); }
+}
+
+/* ---------- state ---------- */
+const S_DIM = 0, S_NORM = 1, S_IN = 2, S_OUT = 3, S_INV = 4, S_SELF = 5;
+const modS = new Uint8Array(N), fileS = new Uint8Array(F), meS = new Uint8Array(medges.length), feS = new Uint8Array(edges.length);
+let focused = false, overlay = { moves: [], links: [] };
+let hover = null, kb = null, sel = null;
+const hiddenMods = new Uint8Array(N);
+const filt = { problems: false, cycles: false, types: false };
+const showME = me => !(hiddenMods[me.a] || hiddenMods[me.b]) && (!filt.problems || me.tone !== "neutral") &&
+  (!filt.cycles || me.cycle) && (!filt.types || !me.typeOnly);
+const showFE = e => !(e.me && (hiddenMods[files[e.a].mod] || hiddenMods[files[e.b].mod])) &&
+  (!filt.problems || e.tone !== "neutral") && (!filt.cycles || e.cycle) && (!filt.types || e.kind !== "type");
+const same = (p, q) => p === q || (p && q && p.type === q.type && p.i === q.i);
+const raise = (arr, j, s) => { if (arr[j] < s) arr[j] = s; };
+
+function applyFocus() {
+  const t = hover || kb || sel;
+  overlay = { moves: [], links: [] };
+  focused = !!t;
+  if (!t) return;
+  modS.fill(S_DIM); fileS.fill(S_DIM); meS.fill(S_DIM); feS.fill(S_DIM);
+  if (t.type === "module") {
+    const i = t.i;
+    modS[i] = S_SELF;
+    for (const me of medges) {
+      if (!showME(me)) continue;
+      if (me.a === i) { meS[me.i] = S_OUT; raise(modS, me.b, S_OUT); }
+      if (me.b === i) { meS[me.i] = S_IN; raise(modS, me.a, S_IN); }
+    }
+    for (const f of modFiles[i]) {
+      raise(fileS, f, S_NORM);
+      for (const e of files[f].outs) {
+        const x = edges[e];
+        if (!x.me) { feS[e] = S_NORM; continue; }
+        feS[e] = S_OUT; raise(fileS, x.b, S_OUT);
+      }
+      for (const e of files[f].ins) {
+        const x = edges[e];
+        if (!x.me) continue;
+        feS[e] = S_IN; raise(fileS, x.a, S_IN);
+      }
+    }
+  } else if (t.type === "file") {
+    const f = files[t.i];
+    fileS[t.i] = S_SELF;
+    modS[f.mod] = S_NORM;
+    for (const e of f.outs) { feS[e] = S_OUT; raise(fileS, edges[e].b, S_OUT); raise(modS, files[edges[e].b].mod, S_NORM); }
+    for (const e of f.ins) { feS[e] = S_IN; raise(fileS, edges[e].a, S_IN); raise(modS, files[edges[e].a].mod, S_NORM); }
+    const fl = findingsOfFile.get(t.i) || [];
+    for (const fd of fl) for (const mv of fd.moves) if (mv.file === t.i) overlay.moves.push(mv);
+  } else if (t.type === "medge") {
+    const me = medges[t.i];
+    meS[t.i] = S_SELF;
+    modS[me.a] = S_IN; modS[me.b] = S_OUT;
+    for (const e of me.list) { feS[e] = S_SELF; raise(fileS, edges[e].a, S_IN); raise(fileS, edges[e].b, S_OUT); }
+  } else if (t.type === "fedge") {
+    const e = edges[t.i];
+    feS[t.i] = S_SELF;
+    fileS[e.a] = S_IN; fileS[e.b] = S_OUT;
+    modS[files[e.a].mod] = S_NORM; raise(modS, files[e.b].mod, S_NORM);
+    if (e.me) meS[e.me.i] = S_SELF;
+  } else if (t.type === "finding") {
+    const fd = findings[t.i];
+    for (const m of fd.ms) modS[m] = S_INV;
+    for (const j of fd.fs) fileS[j] = S_INV;
+    for (const e of fd.fe) { feS[e] = fd.strong.has(e) ? S_SELF : S_INV; raise(fileS, edges[e].a, S_NORM); raise(fileS, edges[e].b, S_NORM); }
+    for (const j of fd.mes) meS[j] = S_INV;
+    for (const e of fd.strong) if (edges[e].me) meS[edges[e].me.i] = S_SELF;
+    overlay = { moves: fd.moves, links: fd.links };
+  }
+}
+
+/* ---------- canvas, view ---------- */
+const stage = $("stage"), canvas = $("canvas"), ctx = canvas.getContext("2d");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+let W = 1, H = 1, dpr = 1, kFit = 1, moved = false;
+const view = { k: 1, x: 0, y: 0 };
+const C = {};
+let MONO = "monospace", TONE = {};
+function readTheme() {
+  const s = getComputedStyle(document.documentElement);
+  for (const n of ["bg", "surface", "fg", "muted", "line", "grid", "edge", "forbidden", "unplanned", "in", "out", "move",
+    "cochange", "focus", "green", "amber", "red", "grey"]) C[n] = s.getPropertyValue("--" + n).trim();
+  MONO = s.getPropertyValue("--mono").trim() || "monospace";
+  TONE = { forbidden: C.forbidden, unplanned: C.unplanned, neutral: C.edge };
+  widths.clear();
+}
+const widths = new Map();
+function textW(font, t) {
+  const key = font + "\n" + t;
+  let w = widths.get(key);
+  if (w === undefined) { ctx.font = font; w = ctx.measureText(t).width; widths.set(key, w); }
+  return w;
+}
+
+let raf = 0;
+const redraw = () => { if (!raf) raf = requestAnimationFrame(draw); };
+const kMin = () => Math.min(kFit * 0.5, 0.5);
+const clampK = k => Math.max(kMin(), Math.min(K_MAX, k));
+const centerWorld = () => [(W / 2 - view.x) / view.k, (H / 2 - view.y) / view.k];
+function setView(k, cx, cy) {
+  /* A tip names what was under the pointer before the view moved. */
+  tip.hidden = true;
+  view.k = clampK(k);
+  view.x = W / 2 - cx * view.k;
+  view.y = H / 2 - cy * view.k;
+  redraw();
+}
+let anim = 0;
+function stopAnim() { moved = true; if (anim) cancelAnimationFrame(anim); anim = 0; }
+function animateTo(k1, cx1, cy1) {
+  stopAnim();
+  k1 = clampK(k1);
+  if (reduce.matches) { setView(k1, cx1, cy1); return; }
+  const k0 = view.k, [cx0, cy0] = centerWorld(), t0 = performance.now();
+  const step = now => {
+    const t = Math.min(1, (now - t0) / 420), e = 1 - Math.pow(1 - t, 3);
+    setView(k0 * Math.pow(k1 / k0, e), cx0 + (cx1 - cx0) * e, cy0 + (cy1 - cy0) * e);
+    anim = t < 1 ? requestAnimationFrame(step) : 0;
+  };
+  anim = requestAnimationFrame(step);
+}
+function zoomAt(sx, sy, factor) {
+  const k = clampK(view.k * factor), f = k / view.k;
+  view.x = sx - (sx - view.x) * f;
+  view.y = sy - (sy - view.y) * f;
+  view.k = k;
+  redraw();
+}
+function zoomBy(factor) { const [cx, cy] = centerWorld(); animateTo(view.k * factor, cx, cy); }
+function fitBox(x0, y0, x1, y1, maxK, animate) {
+  const k = Math.min(maxK, W / Math.max(x1 - x0, 1), H / Math.max(y1 - y0, 1));
+  if (animate) animateTo(k, (x0 + x1) / 2, (y0 + y1) / 2);
+  else setView(k, (x0 + x1) / 2, (y0 + y1) / 2);
+}
+/* The world box that shows every module with its label below it (labels keep their pixel size,
+   so the box depends on the zoom it is shown at). */
+function bounds(k) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i = 0; i < N; i++) {
+    const half = Math.max(modR[i], ((mods[i].id.length + 3) * 3.7 + 4) / k);
+    x0 = Math.min(x0, mx[i] - half); x1 = Math.max(x1, mx[i] + half);
+    y0 = Math.min(y0, my[i] - modR[i] - 22 / k); y1 = Math.max(y1, my[i] + modR[i] + 22 / k);
+  }
+  const m = 12 / k;
+  return N ? [x0 - m, y0 - m, x1 + m, y1 + m] : [-100, -100, 100, 100];
+}
+function fitK() {
+  let k = 1;
+  for (let it = 0; it < 4; it++) { const [x0, y0, x1, y1] = bounds(k); k = Math.min(W / (x1 - x0), H / (y1 - y0)); }
+  return k;
+}
+function fit(animate) {
+  kFit = fitK();
+  const [x0, y0, x1, y1] = bounds(kFit);
+  fitBox(x0, y0, x1, y1, K_MAX, animate);
+}
+function zoomToModule(i) {
+  const r = modR[i] + 28;
+  fitBox(mx[i] - r, my[i] - r, mx[i] + r, my[i] + r, K_LABEL * 1.1, true);
+}
+function zoomToFile(i) { animateTo(Math.max(view.k, K_LABEL * 1.15), files[i].x, files[i].y); }
+function zoomToFinding(fd) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const add = (x, y, r) => { x0 = Math.min(x0, x - r); y0 = Math.min(y0, y - r); x1 = Math.max(x1, x + r); y1 = Math.max(y1, y + r); };
+  if (fd.fs.size) for (const j of fd.fs) add(files[j].x, files[j].y, 30);
+  else for (const m of fd.ms) add(mx[m], my[m], modR[m] + 20);
+  for (const mv of fd.moves) add(mv.at[0], mv.at[1], 30);
+  if (x0 === Infinity) return;
+  fitBox(x0, y0, x1, y1, K_LABEL * 1.05, true);
+}
+function zoomToTarget(t) {
+  if (!t) return;
+  if (t.type === "module") zoomToModule(t.i);
+  else if (t.type === "file") zoomToFile(t.i);
+  else if (t.type === "finding") zoomToFinding(findings[t.i]);
+  else if (t.type === "medge") {
+    const me = medges[t.i];
+    fitBox(Math.min(mx[me.a] - modR[me.a], mx[me.b] - modR[me.b]) - 20, Math.min(my[me.a] - modR[me.a], my[me.b] - modR[me.b]) - 20,
+      Math.max(mx[me.a] + modR[me.a], mx[me.b] + modR[me.b]) + 20, Math.max(my[me.a] + modR[me.a], my[me.b] + modR[me.b]) + 20, K_LABEL, true);
+  }
+}
+
+function resize() {
+  const r = stage.getBoundingClientRect();
+  const [cx, cy] = centerWorld();
+  W = Math.max(1, r.width); H = Math.max(1, r.height); dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  if (!moved) fit(false);
+  else { kFit = fitK(); setView(view.k, cx, cy); }
+}
+
+/* ---------- drawing ---------- */
+const smooth = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+let occ = new Map();
+const OC = 40;
+function free(x0, y0, x1, y1) {
+  for (let cx = Math.floor(x0 / OC); cx <= Math.floor(x1 / OC); cx++) for (let cy = Math.floor(y0 / OC); cy <= Math.floor(y1 / OC); cy++) {
+    const l = occ.get(cx * 4096 + cy);
+    if (l) for (const r of l) if (x0 < r[2] && x1 > r[0] && y0 < r[3] && y1 > r[1]) return false;
+  }
+  return true;
+}
+function take(x0, y0, x1, y1) {
+  const r = [x0, y0, x1, y1];
+  for (let cx = Math.floor(x0 / OC); cx <= Math.floor(x1 / OC); cx++) for (let cy = Math.floor(y0 / OC); cy <= Math.floor(y1 / OC); cy++) {
+    const k = cx * 4096 + cy;
+    if (!occ.has(k)) occ.set(k, []);
+    occ.get(k).push(r);
+  }
+}
+function rectHitsCircle(x0, y0, x1, y1, cx, cy, r) {
+  const nx = Math.max(x0, Math.min(cx, x1)), ny = Math.max(y0, Math.min(cy, y1));
+  return (nx - cx) * (nx - cx) + (ny - cy) * (ny - cy) < r * r;
+}
+function halo(text, x, y, font, color, alpha) {
+  ctx.font = font;
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = C.bg; ctx.lineWidth = 3.5;
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+}
+function arrowHead(cx, cy, ex, ey, L) {
+  let ux = ex - cx, uy = ey - cy;
+  const l = Math.hypot(ux, uy) || 1;
+  ux /= l; uy /= l;
+  const bx = ex - ux * L, by = ey - uy * L;
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(bx - uy * L * 0.5, by + ux * L * 0.5);
+  ctx.lineTo(bx + uy * L * 0.5, by - ux * L * 0.5);
+  ctx.closePath();
+}
+const levelEl = $("level");
+let levelText = "";
+
+/* ponytail: every visible mark is redrawn each frame on one canvas, with file edges culled to the
+   viewport and dropped below file zoom. Past ~30k file edges on screen at once frames slow down;
+   cache a bitmap per zoom level then. */
+function draw() {
+  raf = 0;
+  const k = view.k, tx = view.x, ty = view.y, px = 1 / k;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.setLineDash([]);
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  /* Dot grid in world space, re-spaced by powers of two so it stays 32-64px apart. */
+  const gs = Math.pow(2, Math.ceil(Math.log2(32 / k))) * k;
+  ctx.fillStyle = C.grid;
+  ctx.beginPath();
+  for (let x = ((tx % gs) + gs) % gs; x < W; x += gs) for (let y = ((ty % gs) + gs) % gs; y < H; y += gs) ctx.rect(x - 0.8, y - 0.8, 1.6, 1.6);
+  ctx.fill();
+
+  const fileT = smooth((k - K_FILE0) / (K_FILE1 - K_FILE0));
+  /* Dots grow with the zoom up to 5.5px, then stay that size so names have room. */
+  const dotR = Math.min(R_DOT, 5.5 * px);
+  const v0x = -tx * px, v0y = -ty * px, v1x = (W - tx) * px, v1y = (H - ty) * px;
+  const seen = (B, q, pad) => !(B[q + 2] < v0x - pad || B[q] > v1x + pad || B[q + 3] < v0y - pad || B[q + 1] > v1y + pad);
+  ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * tx, dpr * ty);
+
+  /* clusters: drawn over module links, under file links */
+  function drawClusters() {
+  for (let i = 0; i < N; i++) {
+    const r = modR[i], x = mx[i], y = my[i];
+    if (x + r < v0x || x - r > v1x || y + r < v0y || y - r > v1y) continue;
+    const s = focused ? modS[i] : S_NORM, col = C[modHealth[i]], hid = hiddenMods[i] ? 0.5 : 1;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.globalAlpha = 0.9 * (1 - fileT);
+    ctx.fillStyle = C.bg;
+    ctx.fill();
+    ctx.globalAlpha = (0.17 - 0.08 * fileT) * (s === S_DIM ? 0.35 : 1) * hid;
+    ctx.fillStyle = col;
+    ctx.fill();
+    ctx.globalAlpha = (s === S_DIM ? 0.3 : 0.95) * hid;
+    ctx.strokeStyle = s === S_IN ? C.in : s === S_OUT ? C.out : s === S_SELF || s === S_INV ? C.fg : col;
+    ctx.lineWidth = (s >= S_IN ? 2.6 : 1.3) * px;
+    if (hiddenMods[i]) ctx.setLineDash([4 * px, 4 * px]);
+    ctx.stroke();
+    if (fileT > 0 && groups[i].length) {
+      ctx.globalAlpha = 0.45 * fileT * (s === S_DIM ? 0.4 : 1);
+      ctx.lineWidth = px;
+      ctx.setLineDash([2 * px, 3 * px]);
+      ctx.beginPath();
+      for (const g of groups[i]) { ctx.moveTo(x + g.x + g.r, y + g.y); ctx.arc(x + g.x, y + g.y, g.r, 0, TAU); }
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+  }
+  /* edges, batched by style */
+  const buckets = new Map(), marks = [];
+  const put = (G, j, layer, color, alpha, width, dash, arrowL) => {
+    const key = (G === FE ? "f" : "m") + layer + color + alpha + "|" + width + dash + arrowL;
+    let b = buckets.get(key);
+    if (!b) buckets.set(key, b = { G, layer, color, alpha, width, dash, arrowL, list: [] });
+    b.list.push(j);
+  };
+  if (fileT < 1) {
+    const fade = 1 - fileT;
+    for (const me of medges) {
+      if (!showME(me) || !seen(MB, me.i * 4, 0)) continue;
+      const s = focused ? meS[me.i] : S_NORM, problem = me.tone !== "neutral";
+      let color = TONE[me.tone], alpha, w = me.w;
+      if (s === S_DIM) alpha = 0.07;
+      else if (s === S_NORM) alpha = problem ? 0.9 : 0.3;
+      else {
+        alpha = 0.95;
+        w += s === S_SELF ? 1 : 0.5;
+        if (!problem) color = s === S_IN ? C.in : s === S_OUT ? C.out : C.fg;
+      }
+      put(ME, me.i, s === S_DIM ? 0 : s === S_NORM ? (problem ? 2 : 1) : 3, color, alpha * fade, w, me.typeOnly, 4 + w * 1.5);
+      if (me.cycle && (s >= S_IN || filt.cycles)) marks.push([ME, me.i, color, alpha * fade]);
+    }
+  }
+  if (fileT > 0) {
+    const arrows = k >= 2.4;
+    for (const e of edges) {
+      if (!seen(FB, e.i * 4, 2) || !showFE(e)) continue;
+      const s = focused ? feS[e.i] : S_NORM, problem = e.tone !== "neutral";
+      let color = TONE[e.tone], alpha, w = 0.85;
+      if (s === S_DIM) alpha = 0.05;
+      else if (s === S_NORM) alpha = problem ? 0.85 : e.me ? 0.2 : 0.36;
+      else {
+        alpha = 0.95;
+        w = s === S_SELF ? 2.2 : 1.5;
+        if (!problem) color = s === S_IN ? C.in : s === S_OUT ? C.out : C.fg;
+      }
+      put(FE, e.i, s === S_DIM ? 0 : s === S_NORM ? (problem ? 2 : 1) : 3, color, alpha * fileT, w, e.kind === "type",
+        arrows && s !== S_DIM ? 4 + w * 1.6 : 0);
+      if (e.fileCycle && s !== S_DIM && k >= K_FILE1) marks.push([FE, e.i, color, alpha * fileT]);
+    }
+  }
+  const order = [...buckets.values()].sort((p, q) => (p.G === FE) - (q.G === FE) || p.layer - q.layer);
+  let clustersDone = false;
+  for (const b of order) {
+    if (b.G === FE && !clustersDone) { clustersDone = true; drawClusters(); }
+    const G = b.G, L = b.arrowL * px;
+    ctx.globalAlpha = b.alpha;
+    ctx.strokeStyle = b.color;
+    ctx.lineWidth = b.width * px;
+    ctx.setLineDash(b.dash ? [5 * px, 3.5 * px] : []);
+    /* File links end at the dots, whose size depends on the zoom. */
+    const trim = G === FE ? dotR + 1.5 * px : 0, heads = [];
+    let drawn = 0;
+    ctx.beginPath();
+    for (const j of b.list) {
+      const o = j * 6, cx = G[o + 2], cy = G[o + 3];
+      let sx = G[o], sy = G[o + 1], ex = G[o + 4], ey = G[o + 5];
+      if (trim) {
+        const us = Math.hypot(cx - sx, cy - sy) || 1, ue = Math.hypot(cx - ex, cy - ey) || 1;
+        sx += (cx - sx) / us * trim; sy += (cy - sy) / us * trim;
+        ex += (cx - ex) / ue * trim; ey += (cy - ey) / ue * trim;
+      }
+      ctx.moveTo(sx, sy);
+      if (L) {
+        heads.push(cx, cy, ex, ey);
+        const ux = ex - cx, uy = ey - cy, l = Math.hypot(ux, uy) || 1;
+        ctx.quadraticCurveTo(cx, cy, ex - ux / l * L * 0.8, ey - uy / l * L * 0.8);
+      } else ctx.quadraticCurveTo(cx, cy, ex, ey);
+      if (++drawn % 256 === 0) { ctx.stroke(); ctx.beginPath(); }
+    }
+    ctx.stroke();
+    if (L) {
+      ctx.setLineDash([]);
+      ctx.fillStyle = b.color;
+      /* Filled in chunks: one path of thousands of triangles fills far slower than many short ones. */
+      ctx.beginPath();
+      for (let h = 0; h < heads.length; h += 4) {
+        arrowHead(heads[h], heads[h + 1], heads[h + 2], heads[h + 3], L);
+        if ((h / 4) % 256 === 255) { ctx.fill(); ctx.beginPath(); }
+      }
+      ctx.fill();
+    }
+  }
+  if (!clustersDone) drawClusters();
+  ctx.setLineDash([]);
+  ctx.lineWidth = 1.3 * px;
+  for (const [G, j, color, alpha] of marks) {
+    const o = j * 6, x = 0.25 * G[o] + 0.5 * G[o + 2] + 0.25 * G[o + 4], y = 0.25 * G[o + 1] + 0.5 * G[o + 3] + 0.25 * G[o + 5];
+    ctx.globalAlpha = Math.min(1, alpha * 1.6);
+    ctx.beginPath();
+    ctx.arc(x, y, 3 * px, 0, TAU);
+    ctx.fillStyle = C.bg; ctx.fill();
+    ctx.strokeStyle = color; ctx.stroke();
+  }
+
+  /* file dots */
+  const rs = dotR * k;
+  const dotsOn = rs >= 0.45;
+  if (dotsOn) {
+    const dots = new Map();
+    const base = 0.5 + 0.5 * fileT;
+    for (const f of files) {
+      if (f.x < v0x - 6 || f.x > v1x + 6 || f.y < v0y - 6 || f.y > v1y + 6) continue;
+      const s = focused ? fileS[f.i] : S_NORM;
+      const color = s === S_IN ? C.in : s === S_OUT ? C.out : s >= S_INV ? C.fg : C[modHealth[f.mod]];
+      const alpha = s === S_DIM ? 0.14 : s === S_NORM ? base : 1;
+      const key = color + alpha;
+      let b = dots.get(key);
+      if (!b) dots.set(key, b = { color, alpha, list: [] });
+      b.list.push(f);
+    }
+    const dr = rs < 1.6 ? dotR * 1.15 : dotR;
+    for (const b of dots.values()) {
+      ctx.globalAlpha = b.alpha;
+      ctx.fillStyle = b.color;
+      ctx.beginPath();
+      for (const f of b.list) {
+        if (f.barrel) {
+          const r = dotR * 1.75;
+          ctx.moveTo(f.x, f.y - r); ctx.lineTo(f.x + r, f.y); ctx.lineTo(f.x, f.y + r); ctx.lineTo(f.x - r, f.y); ctx.closePath();
+        } else if (rs < 1.6) ctx.rect(f.x - dr, f.y - dr, dr * 2, dr * 2);
+        else { ctx.moveTo(f.x + dr, f.y); ctx.arc(f.x, f.y, dr, 0, TAU); }
+      }
+      ctx.fill();
+    }
+    const t = hover || kb || sel;
+    if (t && t.type === "file") {
+      const f = files[t.i];
+      ctx.globalAlpha = 1; ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6 * px;
+      ctx.beginPath(); ctx.arc(f.x, f.y, dotR + 3 * px, 0, TAU); ctx.stroke();
+    }
+  }
+
+  /* suggested moves and co-change links */
+  const notes = [];
+  ctx.globalAlpha = 1;
+  for (const mv of overlay.moves) {
+    const f = files[mv.file], [dx, dy] = mv.at;
+    const G = new Float64Array(6), B = new Float64Array(4);
+    curve(G, B, 0, f.x, f.y, dx, dy, dotR + 3 * px, dotR * 2 + 3 * px, 0.18);
+    const L = 9 * px;
+    ctx.strokeStyle = C.move; ctx.fillStyle = C.move; ctx.lineWidth = 2.2 * px;
+    ctx.setLineDash([6 * px, 4 * px]);
+    ctx.beginPath(); ctx.moveTo(G[0], G[1]); ctx.quadraticCurveTo(G[2], G[3], G[4], G[5]); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); arrowHead(G[2], G[3], G[4], G[5], L); ctx.fill();
+    ctx.setLineDash([2.5 * px, 2.5 * px]);
+    ctx.beginPath(); ctx.arc(dx, dy, dotR * 2, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
+    notes.push([dx, dy, "→ " + short(mv.to), C.move]);
+  }
+  for (const [a, b, n] of overlay.links) {
+    const p = files[a], q = files[b];
+    ctx.strokeStyle = C.cochange; ctx.lineWidth = 2.4 * px; ctx.lineCap = "round";
+    ctx.setLineDash([0.1 * px, 5 * px]);
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineCap = "butt";
+    notes.push([(p.x + q.x) / 2, (p.y + q.y) / 2, count(n, "commit", "commits") + " together", C.cochange]);
+  }
+  if (kb && kb.type === "module") {
+    const i = kb.i;
+    ctx.strokeStyle = C.focus; ctx.lineWidth = 2 * px; ctx.setLineDash([5 * px, 4 * px]);
+    ctx.beginPath(); ctx.arc(mx[i], my[i], modR[i] + 6 * px, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  /* labels, in screen space, placed by priority */
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  occ = new Map();
+  /* The zoom buttons and the level pill sit over the canvas: no label goes under them. */
+  take(0, H - 46, levelEl.offsetWidth + 18, H);
+  take(W - 58, H - 128, W, H);
+  const NOTE = "600 11px " + MONO, MOD = "600 12px " + MONO, NUM = "400 11px " + MONO, FILE = "400 10.5px " + MONO, GRP = "italic 400 10.5px " + MONO;
+  for (const [x, y, text, color] of notes) {
+    const sx = x * k + tx + 12, sy = y * k + ty - 12, w = textW(NOTE, text);
+    take(sx - 2, sy - 8, sx + w + 2, sy + 8);
+    halo(text, sx, sy, NOTE, color, 1);
+  }
+  const vis = [];
+  for (let i = 0; i < N; i++) {
+    const sx = mx[i] * k + tx, sy = my[i] * k + ty, r = modR[i] * k;
+    if (sx + r < -60 || sx - r > W + 60 || sy + r < -30 || sy - r > H + 30) continue;
+    vis.push(i);
+  }
+  const t = hover || kb || sel;
+  /* Bigger circles on screen pick first; the hovered or selected module before all. */
+  const pri = i => (t && t.type === "module" && t.i === i ? 1e9 : 0) + (focused && modS[i] !== S_DIM ? 1e6 : 0) + modR[i];
+  vis.sort((a, b) => pri(b) - pri(a));
+  const h = 16, SMALL = "600 10.5px " + MONO;
+  const onScreen = (x0, y, w) => x0 >= 2 && x0 + w <= W - 2 && y >= h / 2 && y <= H - h / 2;
+  /* An outside label sits 5px from its own circle and at least 12px from any other, so it is
+     never nearer another circle than its own. */
+  const unambiguous = (i, x0, y, w) => {
+    for (const j of vis) {
+      if (j === i) continue;
+      if (rectHitsCircle(x0 - 12, y - h / 2 - 10, x0 + w + 12, y + h / 2 + 10, mx[j] * k + tx, my[j] * k + ty, modR[j] * k)) return false;
+    }
+    return true;
+  };
+  for (const i of vis) {
+    const sx = mx[i] * k + tx, sy = my[i] * k + ty, r = modR[i] * k;
+    const s = focused ? modS[i] : S_NORM;
+    const id = mods[i].id.slice(MOD_PREFIX.length), num = mods[i].files > 1 ? " " + mods[i].files : "";
+    const full = textW(MOD, id) + (num ? textW(NUM, num) : 0);
+    /* Inside: centred at module zoom, along the top edge once the files show. */
+    const inside = () => {
+      const y = fileT < 0.5 ? sy : sy - r + 15;
+      const dy = Math.abs(y - sy) + 6;
+      const room = dy < r ? 2 * Math.sqrt(r * r - dy * dy) - 6 : 0;
+      /* The full name, then without the count, then a smaller face, then cut with an ellipsis. */
+      let text = id, n = num, font = MOD;
+      if (full > room) {
+        n = "";
+        if (textW(MOD, id) > room) {
+          font = SMALL;
+          if (textW(SMALL, id) > room) {
+            const keep = Math.floor(room / textW(SMALL, "m")) - 1;
+            if (keep < Math.max(4, Math.ceil(id.length / 2))) return null;
+            text = id.slice(0, keep) + "\u2026";
+          }
+        }
+      }
+      const w = textW(font, text) + (n ? textW(NUM, n) : 0), x0 = sx - w / 2;
+      if (!onScreen(x0, y, w) || !free(x0 - 3, y - h / 2, x0 + w + 3, y + h / 2)) return null;
+      return [x0, y, text, n, w, font];
+    };
+    const outside = () => {
+      for (const [x0, y] of [[sx - full / 2, sy + r + 13], [sx - full / 2, sy - r - 13], [sx + r + 5, sy], [sx - r - 5 - full, sy]]) {
+        if (onScreen(x0, y, full) && free(x0 - 3, y - h / 2, x0 + full + 3, y + h / 2) && unambiguous(i, x0, y, full)) return [x0, y, id, num, full, MOD];
+      }
+      return null;
+    };
+    let spot = r >= 24 ? inside() || outside() : outside() || (r >= 12 ? inside() : null);
+    /* The module under the pointer, keyboard focus or selection always shows its name. */
+    if (!spot && t && t.type === "module" && t.i === i) spot = [sx - full / 2, sy + r + 13, id, num, full, MOD];
+    if (!spot) continue;
+    const [x0, y, text, n, w, font] = spot;
+    take(x0 - 3, y - h / 2, x0 + w + 3, y + h / 2);
+    const alpha = s === S_DIM ? 0.4 : hiddenMods[i] ? 0.6 : 1;
+    const color = s === S_IN ? C.in : s === S_OUT ? C.out : C.fg;
+    halo(text, x0, y, font, color, alpha);
+    if (n) halo(n, x0 + textW(font, text), y, NUM, C.muted, alpha);
+  }
+  if (fileT > 0.3) {
+    for (const i of vis) {
+      if (modR[i] * k < 110 || (focused && modS[i] === S_DIM)) continue;
+      for (const g of groups[i]) {
+        const gx = (mx[i] + g.x) * k + tx, gy = (my[i] + g.y) * k + ty, gr = g.r * k, w = textW(GRP, g.name);
+        if (gx + gr < 0 || gx - gr > W || gy + gr < 0 || gy - gr > H) continue;
+        /* Above its folder circle, else just inside its top, below it, or at its centre. */
+        const x0 = Math.max(2, Math.min(W - w - 2, gx - w / 2));
+        const y = [gy - gr - 7, gy - gr + 9, gy + gr + 7, gy].find(y => y > 8 && y < H - 8 && free(x0 - 2, y - 7, x0 + w + 2, y + 7));
+        if (y === undefined) continue;
+        take(x0 - 2, y - 7, x0 + w + 2, y + 7);
+        halo(g.name, x0, y, GRP, C.muted, 0.9 * fileT);
+      }
+    }
+  }
+  if (dotsOn && k >= K_FILE1) {
+    const cand = [];
+    for (const f of files) {
+      const sx = f.x * k + tx, sy = f.y * k + ty;
+      if (sx < -10 || sx > W + 10 || sy < -10 || sy > H + 10) continue;
+      const s = focused ? fileS[f.i] : S_NORM;
+      if (k < K_LABEL && s < S_IN) continue;
+      if (s === S_DIM || modFiles[f.mod].length === 1) continue;
+      cand.push([s * 1e6 + (f.barrel ? 5e5 : 0) + f.ins.length * 10 + f.outs.length, f, sx, sy, s]);
+      if (cand.length > 4000) break;
+    }
+    cand.sort((a, b) => b[0] - a[0]);
+    const off = rs + 4;
+    for (const [, f, sx, sy, s] of cand.slice(0, 1500)) {
+      const w = textW(FILE, f.name);
+      let x0 = sx + off;
+      if (!free(x0, sy - 6, x0 + w, sy + 6)) {
+        x0 = sx - off - w;
+        if (!free(x0, sy - 6, x0 + w, sy + 6)) continue;
+      }
+      take(x0, sy - 6, x0 + w, sy + 6);
+      halo(f.name, x0, sy, FILE, s === S_IN ? C.in : s === S_OUT ? C.out : s >= S_INV ? C.fg : C.muted, 1);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  const lt = fileT < 0.5 ? "modules · zoom in for files" : k < K_LABEL ? "files · zoom in for names" : "files";
+  if (lt !== levelText) { levelText = lt; levelEl.textContent = lt; }
+}
+
+/* ---------- hit testing ---------- */
+function distToCurve(G, o, x, y) {
+  let best = Infinity, px0 = G[o], py0 = G[o + 1];
+  for (let s = 1; s <= 14; s++) {
+    const t = s / 14, u = 1 - t;
+    const qx = u * u * G[o] + 2 * u * t * G[o + 2] + t * t * G[o + 4], qy = u * u * G[o + 1] + 2 * u * t * G[o + 3] + t * t * G[o + 5];
+    const dx = qx - px0, dy = qy - py0, l2 = dx * dx + dy * dy || 1;
+    const h = Math.max(0, Math.min(1, ((x - px0) * dx + (y - py0) * dy) / l2));
+    best = Math.min(best, Math.hypot(px0 + dx * h - x, py0 + dy * h - y));
+    px0 = qx; py0 = qy;
+  }
+  return best;
+}
+function hit(sx, sy) {
+  const k = view.k, x = (sx - view.x) / k, y = (sy - view.y) / k;
+  const fileT = smooth((k - K_FILE0) / (K_FILE1 - K_FILE0));
+  if (fileT > 0.4) {
+    const tol = Math.max(R_DOT + 1, 6 / k);
+    let best = -1, bd = tol;
+    for (let cx = -1; cx <= 1; cx++) for (let cy = -1; cy <= 1; cy++) {
+      for (const j of fgrid.get(gkey(x + cx * CELL, y + cy * CELL)) || []) {
+        const d = Math.hypot(files[j].x - x, files[j].y - y);
+        if (d < bd) { bd = d; best = j; }
+      }
+    }
+    if (best >= 0) return { type: "file", i: best };
+  }
+  let m = -1;
+  for (let i = 0; i < N; i++) if (Math.hypot(mx[i] - x, my[i] - y) <= modR[i] && (m < 0 || modR[i] < modR[m])) m = i;
+  /* Module links run under the clusters, so at module zoom a cluster wins over a link. */
+  if (m >= 0 && fileT < 0.5) return { type: "module", i: m };
+  const tol = 5 / k;
+  let best = null, bd = tol;
+  if (fileT < 0.5) {
+    for (const me of medges) {
+      const q = me.i * 4;
+      if (!showME(me) || x < MB[q] - tol || x > MB[q + 2] + tol || y < MB[q + 1] - tol || y > MB[q + 3] + tol) continue;
+      const d = distToCurve(ME, me.i * 6, x, y) - me.w / 2 / k;
+      if (d < bd) { bd = d; best = { type: "medge", i: me.i }; }
+    }
+  } else {
+    for (const e of edges) {
+      const q = e.i * 4;
+      if (x < FB[q] - tol || x > FB[q + 2] + tol || y < FB[q + 1] - tol || y > FB[q + 3] + tol || !showFE(e)) continue;
+      if (focused && feS[e.i] === S_DIM) continue;
+      const d = distToCurve(FE, e.i * 6, x, y);
+      if (d < bd) { bd = d; best = { type: "fedge", i: e.i }; }
+    }
+  }
+  if (best) return best;
+  return m >= 0 ? { type: "module", i: m } : null;
+}
+
+/* ---------- tooltip ---------- */
+const tip = $("tip");
+function verdictLine(v) {
+  const parts = [];
+  if (v.allowed) parts.push(`${v.allowed} allowed`);
+  if (v.forbidden) parts.push(`${v.forbidden} forbidden`);
+  if (v.unplanned) parts.push(`${v.unplanned} unplanned`);
+  if (v.none) parts.push(`${v.none} without a verdict`);
+  return parts.join(", ");
+}
+function tipLines(h) {
+  if (h.type === "module") {
+    const m = mods[h.i];
+    return [m.id, `${count(m.files, "file", "files")}, ${HEALTH_TEXT[modHealth[h.i]]}`,
+      `imported by ${count(m.ca, "module", "modules")}, imports ${count(m.ce, "module", "modules")}`,
+      `instability ${fmt(m.instability)}, cohesion ${fmt(m.cohesion)}`];
+  }
+  if (h.type === "file") {
+    const f = files[h.i];
+    return [short(f.path), `module ${mods[f.mod].id}` + (f.barrel ? ", barrel" : ""),
+      `imports ${count(f.outs.length, "file", "files")}, imported by ${count(f.ins.length, "file", "files")}`];
+  }
+  if (h.type === "medge") {
+    const me = medges[h.i];
+    const l = [`${mods[me.a].id} → ${mods[me.b].id}`, count(me.imports, "import", "imports")];
+    const v = verdictLine(me.v);
+    if (v) l.push(v);
+    if (me.typeOnly) l.push("type-only");
+    if (me.cycle) l.push("in an import cycle");
+    return l;
+  }
+  const e = edges[h.i];
+  const l = [`${short(files[e.a].path)} → ${short(files[e.b].path)}`, `${e.kind} import`];
+  if (e.verdict) l.push(e.verdict + (e.rule ? ` by rule ${e.rule}` : ""));
+  if (e.cycle) l.push("in an import cycle");
+  return l;
+}
+function showTip(h, sx, sy) {
+  if (!h) { tip.hidden = true; return; }
+  const lines = tipLines(h);
+  tip.replaceChildren(el("div", { class: "t" }, lines[0]), ...lines.slice(1).map(t => el("div", {}, t)));
+  tip.hidden = false;
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = sx + 14, y = sy + 14;
+  if (x + tw > W - 8) x = Math.max(8, sx - tw - 14);
+  if (y + th > H - 8) y = Math.max(8, sy - th - 14);
+  tip.style.left = x + "px";
+  tip.style.top = y + "px";
+}
+
+/* ---------- pointer and keyboard ---------- */
+const pointers = new Map();
+let drag = null, pinch = null;
+const local = ev => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
+function setHover(h) {
+  if (same(h, hover)) return;
+  hover = h;
+  applyFocus();
+  redraw();
+}
+canvas.addEventListener("pointerdown", ev => {
+  if (ev.button !== 0 && ev.pointerType === "mouse") return;
+  try { canvas.setPointerCapture(ev.pointerId); } catch { /* a pointer that is already gone */ }
+  const [x, y] = local(ev);
+  pointers.set(ev.pointerId, [x, y]);
+  stopAnim();
+  if (pointers.size === 1) drag = { x, y, vx: view.x, vy: view.y, moved: false };
+  else if (pointers.size === 2) {
+    const [p, q] = [...pointers.values()];
+    const cx = (p[0] + q[0]) / 2, cy = (p[1] + q[1]) / 2;
+    pinch = { d: Math.hypot(p[0] - q[0], p[1] - q[1]) || 1, k: view.k, wx: (cx - view.x) / view.k, wy: (cy - view.y) / view.k };
+    drag = null;
+  }
+});
+canvas.addEventListener("pointermove", ev => {
+  const [x, y] = local(ev);
+  if (pointers.has(ev.pointerId)) pointers.set(ev.pointerId, [x, y]);
+  if (pinch && pointers.size >= 2) {
+    const [p, q] = [...pointers.values()];
+    const cx = (p[0] + q[0]) / 2, cy = (p[1] + q[1]) / 2;
+    view.k = clampK(pinch.k * Math.hypot(p[0] - q[0], p[1] - q[1]) / pinch.d);
+    view.x = cx - pinch.wx * view.k;
+    view.y = cy - pinch.wy * view.k;
+    redraw();
     return;
   }
-  const m = mods[i];
-  nodeEls[i].classList.add("on", "selected");
-  doc.module_edges.forEach((e, k) => {
-    if (e.to !== m.id) return;
-    edgeEls[k].classList.add("on");
-    nodeEls[index.get(e.from)].classList.add("on", "importer");
-  });
-
-  panel.appendChild(el("h2", {}, m.id));
-  const table = el("table");
-  for (const [k, v] of [["health", health(m)], ["files", m.files], ["Ca (importing modules)", m.ca],
-    ["Ce (imported modules)", m.ce], ["instability", fmt(m.instability)], ["cohesion", fmt(m.cohesion)]]) {
-    const tr = el("tr");
-    tr.appendChild(el("td", { class: "muted" }, k));
-    tr.appendChild(el("td", {}, String(v)));
-    table.appendChild(tr);
+  if (drag) {
+    const dx = x - drag.x, dy = y - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) > 4) { drag.moved = true; canvas.classList.add("dragging"); tip.hidden = true; }
+    if (drag.moved) { view.x = drag.vx + dx; view.y = drag.vy + dy; redraw(); }
+    return;
   }
-  panel.appendChild(table);
+  if (ev.pointerType !== "mouse") return;
+  let h = hit(x, y);
+  /* At file zoom an empty spot inside a cluster neither highlights nor shows a tip. */
+  if (h && h.type === "module" && view.k >= K_FILE1) h = null;
+  canvas.classList.toggle("pointing", !!h);
+  setHover(h);
+  showTip(h, x, y);
+});
+function endPointer(ev) {
+  const [x, y] = local(ev);
+  pointers.delete(ev.pointerId);
+  if (drag && !drag.moved && ev.type === "pointerup") {
+    const h = hit(x, y);
+    if (!h) select(null);
+    else select(same(h, sel) && h.type !== "module" ? null : h);
+  }
+  canvas.classList.remove("dragging");
+  if (pointers.size < 2) pinch = null;
+  if (pointers.size === 1) { const [p] = [...pointers.values()]; drag = { x: p[0], y: p[1], vx: view.x, vy: view.y, moved: true }; }
+  else if (!pointers.size) drag = null;
+}
+canvas.addEventListener("pointerup", endPointer);
+canvas.addEventListener("pointercancel", endPointer);
+canvas.addEventListener("pointerleave", ev => { if (ev.pointerType === "mouse" && !drag) { setHover(null); tip.hidden = true; } });
+canvas.addEventListener("wheel", ev => {
+  ev.preventDefault();
+  stopAnim();
+  const [x, y] = local(ev);
+  const unit = ev.deltaMode === 1 ? 16 : ev.deltaMode === 2 ? H : 1;
+  if (!ev.ctrlKey && Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) { view.x -= ev.deltaX * unit; redraw(); return; }
+  zoomAt(x, y, Math.exp(-ev.deltaY * unit * (ev.ctrlKey ? 0.01 : 0.0016)));
+  tip.hidden = true;
+}, { passive: false });
+canvas.addEventListener("dblclick", ev => {
+  const [x, y] = local(ev);
+  const h = hit(x, y);
+  /* The second click of the pair toggled the selection off: keep what was double-clicked. */
+  if (h) go(h);
+  else { const k = clampK(view.k * 2); animateTo(k, (x - view.x) / view.k, (y - view.y) / view.k); }
+});
+$("z-in").addEventListener("click", () => zoomBy(1.6));
+$("z-out").addEventListener("click", () => zoomBy(1 / 1.6));
+$("z-fit").addEventListener("click", () => fit(true));
+document.addEventListener("keydown", ev => {
+  const t = ev.target;
+  const typing = t instanceof HTMLInputElement && t.type !== "checkbox";
+  if (ev.key === "Escape") {
+    if (typing) return;
+    $("hide").open = false;
+    select(null);
+    return;
+  }
+  if (typing || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  const onGraph = t === canvas || t === document.body || (t instanceof HTMLElement && t.closest("#mods"));
+  if (ev.key === "+" || ev.key === "=") zoomBy(1.5);
+  else if (ev.key === "-" || ev.key === "_") zoomBy(1 / 1.5);
+  else if (ev.key === "0") fit(true);
+  else if (ev.key === "/") $("search").focus();
+  else if (onGraph && ev.key.startsWith("Arrow")) {
+    const d = 80, k = ev.key;
+    moved = true;
+    view.x += k === "ArrowLeft" ? d : k === "ArrowRight" ? -d : 0;
+    view.y += k === "ArrowUp" ? d : k === "ArrowDown" ? -d : 0;
+    redraw();
+  } else return;
+  ev.preventDefault();
+});
 
-  const importers = doc.module_edges.filter(e => e.to === m.id).sort((a, b) => b.imports - a.imports);
-  panel.appendChild(el("h3", {}, importers.length ? `Imported by ${count(importers.length, "module", "modules")}` : "Imported by no module"));
-  for (const me of importers) {
-    panel.appendChild(el("h3", {}, `${me.from}: ${count(me.imports, "import", "imports")}` + (me.forbidden ? `, ${me.forbidden} forbidden` : "")));
-    const ul = el("ul");
-    for (const e of doc.edges) {
-      if (moduleOf.get(e.from) !== me.from || moduleOf.get(e.to) !== m.id) continue;
-      const li = el("li", {}, `${e.from} -> ${e.to} (${e.kind})`);
-      if (e.verdict) {
-        li.appendChild(el("span", { class: e.verdict === "forbidden" ? "forbidden" : "muted" },
-          ` ${e.verdict}` + (e.rule ? ` by ${e.rule}` : "")));
-      }
-      ul.appendChild(li);
-    }
-    panel.appendChild(ul);
+/* One focusable button per module: Tab walks the modules, Enter selects. */
+const modsEl = $("mods");
+const modButtons = mods.map((m, i) => {
+  const b = el("button", { type: "button",
+    "aria-label": `module ${m.id}, ${count(m.files, "file", "files")}, ${HEALTH_TEXT[modHealth[i]]}` }, m.id);
+  b.addEventListener("focus", () => {
+    kb = { type: "module", i };
+    applyFocus();
+    const sx = mx[i] * view.k + view.x, sy = my[i] * view.k + view.y, r = modR[i] * view.k;
+    if (sx - r < 0 || sx + r > W || sy - r < 0 || sy + r > H) animateTo(view.k, mx[i], my[i]);
+    redraw();
+  });
+  b.addEventListener("blur", () => { kb = null; applyFocus(); redraw(); });
+  b.addEventListener("click", () => select({ type: "module", i }));
+  return b;
+});
+[...modButtons].sort((p, q) => p.textContent < q.textContent ? -1 : 1).forEach(b => {
+  const item = el("div", { role: "listitem" });
+  item.append(b);
+  modsEl.append(item);
+});
+
+/* ---------- controls ---------- */
+for (const [id, key] of [["t-problems", "problems"], ["t-cycles", "cycles"], ["t-types", "types"]]) {
+  $(id).addEventListener("change", ev => { filt[key] = ev.target.checked; applyFocus(); redraw(); });
+}
+const hideBoxes = new Map();
+{
+  const list = $("hide-list");
+  const order = mods.map((_, i) => i).filter(i => mods[i].ca > 0).sort((a, b) => mods[b].ca - mods[a].ca || (mods[a].id < mods[b].id ? -1 : 1));
+  if (!order.length) list.append(el("p", { class: "muted" }, "No module is imported."));
+  list.prepend(el("p", { class: "muted" }, "Hide the links of busy modules so the rest reads."));
+  for (const i of order) {
+    const lab = el("label");
+    const box = el("input", { type: "checkbox" });
+    box.addEventListener("change", () => setHidden(i, box.checked));
+    hideBoxes.set(i, box);
+    lab.append(box, el("i", { class: "sw h " + modHealth[i] }), el("span", {}, mods[i].id), el("span", { class: "n" }, `${mods[i].ca} in`));
+    list.append(lab);
   }
 }
-select(null);
+function setHidden(i, on) {
+  hiddenMods[i] = on ? 1 : 0;
+  const box = hideBoxes.get(i);
+  if (box) box.checked = on;
+  const n = hiddenMods.reduce((s, v) => s + v, 0);
+  $("hide-sum").textContent = n ? `hide modules (${n} hidden)` : "hide modules";
+  applyFocus();
+  redraw();
+  if (sel && sel.type === "module" && sel.i === i) showPanel();
+}
+document.addEventListener("click", ev => { const d = $("hide"); if (d.open && !d.contains(ev.target)) d.open = false; });
+
+const search = $("search");
+{
+  const dl = $("paths");
+  for (const m of mods) dl.append(el("option", { value: m.id }));
+  for (const f of files) dl.append(el("option", { value: f.path }));
+}
+function find(q) {
+  q = q.trim();
+  if (!q) return true;
+  let i = modIndex.get(q);
+  if (i !== undefined) { go({ type: "module", i }); return true; }
+  i = fileIndex.get(q);
+  if (i !== undefined) { go({ type: "file", i }); return true; }
+  const lq = q.toLowerCase();
+  i = mods.findIndex(m => m.id.toLowerCase().includes(lq));
+  if (i >= 0) { go({ type: "module", i }); return true; }
+  i = files.findIndex(f => f.path.toLowerCase().includes(lq));
+  if (i >= 0) { go({ type: "file", i }); return true; }
+  return false;
+}
+$("find").addEventListener("submit", ev => {
+  ev.preventDefault();
+  search.setAttribute("aria-invalid", String(!find(search.value)));
+});
+search.addEventListener("input", ev => {
+  search.removeAttribute("aria-invalid");
+  const v = search.value.trim();
+  if ((!ev.inputType || ev.inputType === "insertReplacementText") && (modIndex.has(v) || fileIndex.has(v))) find(v);
+});
+
+/* ---------- selection and panel ---------- */
+const panel = $("panel");
+function select(t) {
+  sel = t;
+  if (!t) hover = null;
+  applyFocus();
+  showPanel();
+  redraw();
+}
+function go(t) { select(t); zoomToTarget(t); }
+function btn(text, cls, on, title) {
+  const b = el("button", { type: "button", class: cls }, text);
+  if (title) b.title = title;
+  b.addEventListener("click", on);
+  return b;
+}
+const fileBtn = i => btn(short(files[i].path), "link mono", () => go({ type: "file", i }), files[i].path);
+function modBtn(i) {
+  const b = btn(mods[i].id, "link mono", () => go({ type: "module", i }));
+  b.prepend(el("i", { class: "sw h " + modHealth[i] }));
+  return b;
+}
+function head(kind, title, extra) {
+  panel.append(btn("← Findings", "back", () => select(null)));
+  const k = el("div", { class: "kicker" }, kind);
+  if (extra) k.append(extra);
+  panel.append(k, el("h2", {}, title));
+}
+function metrics(pairs) {
+  const dl = el("dl", { class: "metrics" });
+  for (const [k, v] of pairs) {
+    const d = el("div");
+    d.append(el("dt", {}, k), el("dd", {}, String(v)));
+    dl.append(d);
+  }
+  return dl;
+}
+function edgeItem(e, side) {
+  const li = el("li");
+  if (side !== "to") li.append(fileBtn(e.a));
+  if (!side) li.append(el("span", { class: "muted" }, " → "));
+  if (side !== "from") li.append(fileBtn(e.b));
+  const meta = el("span", { class: "meta" }, e.kind === "static" ? "" : `  ${e.kind}`);
+  if (e.verdict) meta.append(el("span", { class: "v " + e.verdict }, ` ${e.verdict}` + (e.rule ? ` by ${e.rule}` : "")));
+  li.append(meta);
+  li.addEventListener("mouseenter", () => setHover({ type: "fedge", i: e.i }));
+  li.addEventListener("mouseleave", () => setHover(null));
+  return li;
+}
+function edgeList(list, side) {
+  const ul = el("ul", { class: "edges" });
+  for (const j of list.slice(0, 300)) ul.append(edgeItem(edges[j], side));
+  if (list.length > 300) ul.append(el("li", { class: "muted" }, `and ${list.length - 300} more`));
+  return ul;
+}
+function bar(frac, tone) {
+  const b = el("span", { class: "bar" }), i = el("i", { class: tone });
+  i.style.width = Math.max(4, Math.round(frac * 100)) + "%";
+  b.append(i);
+  return b;
+}
+function meRows(list, other) {
+  const box = el("div");
+  const max = Math.max(1, ...list.map(me => me.imports));
+  for (const me of list) {
+    const o = other(me), d = el("details", { class: "row" }), sum = el("summary");
+    sum.append(el("i", { class: "sw h " + modHealth[o] }), el("span", { class: "mono name" }, mods[o].id), bar(me.imports / max, me.tone),
+      el("span", { class: "num" }, String(me.imports)));
+    const tags = el("span", { class: "tags" });
+    if (me.v.forbidden) tags.append(el("span", { class: "forbidden" }, `${me.v.forbidden} forbidden`));
+    if (me.v.unplanned) tags.append(el("span", { class: "unplanned" }, `${me.v.unplanned} unplanned`));
+    if (me.typeOnly) tags.append(el("span", { class: "muted" }, "type-only"));
+    if (tags.childNodes.length) sum.append(tags);
+    d.append(sum);
+    d.addEventListener("mouseenter", () => setHover({ type: "medge", i: me.i }));
+    d.addEventListener("mouseleave", () => setHover(null));
+    d.addEventListener("toggle", () => {
+      if (!d.open || d.childNodes.length > 1) return;
+      const inner = el("div", { class: "inner" });
+      const acts = el("div", { class: "actions" });
+      acts.append(btn(`Select ${mods[o].id}`, "act", () => go({ type: "module", i: o })), btn("Show these imports", "act", () => go({ type: "medge", i: me.i })));
+      inner.append(acts, edgeList(me.list));
+      d.append(inner);
+    });
+    box.append(d);
+  }
+  return box;
+}
+function findingList(list) {
+  const ul = el("ul", { class: "flist" });
+  for (const fd of list) {
+    const li = el("li");
+    const b = btn("", "finding", () => go({ type: "finding", i: fd.i }), fd.f.subject);
+    const t = el("span", { class: "clamp" });
+    t.append(el("span", { class: "muted" }, fd.f.kind + "  "), document.createTextNode(subjectText(fd.f)));
+    b.append(t);
+    li.append(b);
+    ul.append(li);
+  }
+  return ul;
+}
+
+function overview() {
+  panel.append(el("div", { class: "kicker" }, "Overview"));
+  panel.append(el("h2", {}, findings.length ? count(findings.length, "finding", "findings") : "No findings"));
+  panel.append(el("p", { class: "muted" }, "Hover a module for its importers and imports; click to keep it. Zoom in for files and their imports. Click a finding to see what it names."));
+  const byKind = new Map();
+  for (const fd of findings) { if (!byKind.has(fd.f.kind)) byKind.set(fd.f.kind, []); byKind.get(fd.f.kind).push(fd); }
+  for (const [kind, list] of byKind) {
+    const d = el("details", { class: "kind" });
+    if (list.length <= 6) d.open = true;
+    const sum = el("summary");
+    sum.append(el("span", {}, kind), el("span", { class: "badge" }, String(list.length)));
+    d.append(sum);
+    if (KIND_TEXT[kind]) d.append(el("p", { class: "muted" }, KIND_TEXT[kind]));
+    const ul = el("ul", { class: "flist" });
+    for (const fd of list) {
+      const li = el("li");
+      const b = btn("", "", () => go({ type: "finding", i: fd.i }), fd.f.subject);
+      b.append(el("span", { class: "clamp" }, subjectText(fd.f)));
+      li.append(b);
+      ul.append(li);
+    }
+    d.append(ul);
+    panel.append(d);
+  }
+}
+function modulePanel(i) {
+  const m = mods[i];
+  const chip = el("span", { class: "pill" });
+  chip.append(el("i", { class: "sw h " + modHealth[i] }), document.createTextNode(HEALTH_TEXT[modHealth[i]]));
+  head("Module", m.id, chip);
+  panel.append(metrics([["files", m.files], ["Ca, importers", m.ca], ["Ce, imports", m.ce], ["instability", fmt(m.instability)],
+    ["cohesion", fmt(m.cohesion)], ["internal edges", m.internal_edges], ["outgoing edges", m.outgoing_edges]]));
+  const acts = el("div", { class: "actions" });
+  acts.append(btn("Zoom to module", "act", () => zoomToModule(i)),
+    btn(hiddenMods[i] ? "Show its links" : "Hide its links", "act", () => setHidden(i, !hiddenMods[i])));
+  panel.append(acts);
+  const importers = medges.filter(e => e.b === i).sort((a, b) => b.imports - a.imports);
+  const imports = medges.filter(e => e.a === i).sort((a, b) => b.imports - a.imports);
+  panel.append(el("h3", {}, importers.length ? `Imported by ${count(importers.length, "module", "modules")}` : "Imported by no module"));
+  panel.append(meRows(importers, me => me.a));
+  panel.append(el("h3", {}, imports.length ? `Imports ${count(imports.length, "module", "modules")}` : "Imports no module"));
+  panel.append(meRows(imports, me => me.b));
+  const fl = findingsOfModule[i];
+  if (fl.length) { panel.append(el("h3", {}, count(fl.length, "finding", "findings"))); panel.append(findingList(fl)); }
+}
+function filePanel(i) {
+  const f = files[i];
+  head(f.barrel ? "File · barrel" : "File", short(f.path));
+  if (short(f.path) !== f.path) panel.append(el("p", { class: "muted mono" }, f.path));
+  const p = el("p");
+  p.append(el("span", { class: "muted" }, "module "), modBtn(f.mod));
+  panel.append(p);
+  panel.append(el("h3", {}, f.outs.length ? `Imports ${count(f.outs.length, "file", "files")}` : "Imports no file"));
+  panel.append(edgeList(f.outs, "to"));
+  panel.append(el("h3", {}, f.ins.length ? `Imported by ${count(f.ins.length, "file", "files")}` : "Imported by no file"));
+  panel.append(edgeList(f.ins, "from"));
+  const fl = findingsOfFile.get(i) || [];
+  if (fl.length) { panel.append(el("h3", {}, count(fl.length, "finding", "findings"))); panel.append(findingList(fl)); }
+}
+function medgePanel(j) {
+  const me = medges[j];
+  head("Module imports", `${mods[me.a].id} → ${mods[me.b].id}`);
+  panel.append(metrics([["imports", me.imports], ["forbidden", me.v.forbidden], ["unplanned", me.v.unplanned], ["in a cycle", me.cycle ? "yes" : "no"]]));
+  const p = el("p");
+  p.append(modBtn(me.a), el("span", { class: "muted" }, "  imports  "), modBtn(me.b));
+  panel.append(p);
+  panel.append(el("h3", {}, count(me.list.length, "file import", "file imports")), edgeList(me.list));
+}
+function ruleReason(id) {
+  const r = doc.config.rules && doc.config.rules.doc;
+  if (!r || !id) return null;
+  for (const x of [...(r.forbid || []), ...(r.allow || [])]) if (x.id === id && x.reason) return x.reason;
+  return null;
+}
+function fedgePanel(j) {
+  const e = edges[j];
+  head(`${e.kind} import`, `${files[e.a].name} → ${files[e.b].name}`);
+  const ul = el("ul", { class: "edges" });
+  const a = el("li"), b = el("li");
+  a.append(el("span", { class: "muted" }, "from "), fileBtn(e.a));
+  b.append(el("span", { class: "muted" }, "to "), fileBtn(e.b));
+  ul.append(a, b);
+  panel.append(ul);
+  if (e.verdict) {
+    const p = el("p");
+    p.append(el("span", { class: "v " + e.verdict }, e.verdict), document.createTextNode(e.rule ? ` by rule ${e.rule}` : ""));
+    panel.append(p);
+    const why = ruleReason(e.rule);
+    if (why) panel.append(el("p", { class: "muted" }, why));
+  } else panel.append(el("p", { class: "muted" }, "No rules, so no verdict."));
+  if (e.cycle) panel.append(el("p", { class: "muted" }, "Part of an import cycle" + (breaks.has(files[e.a].path + "\n" + files[e.b].path) ? "; removing it is part of the suggested break." : ".")));
+}
+function simTable(after) {
+  const before = doc.summary;
+  const t = el("table", { class: "sim" });
+  const hr = el("tr");
+  for (const h of ["", "before", "after"]) hr.append(el("th", {}, h));
+  t.append(hr);
+  const row = (name, a, b, better) => {
+    const tr = el("tr");
+    const cls = a === b || a === null || b === null || better === 0 ? "" : (b > a) === (better > 0) ? "better" : "worse";
+    tr.append(el("td", {}, name), el("td", {}, fmt(a)), el("td", cls ? { class: cls } : {}, fmt(b)));
+    t.append(tr);
+  };
+  row("forbidden", before.forbidden, after.forbidden, -1);
+  row("unplanned", before.unplanned, after.unplanned, -1);
+  row("cycles", before.cycles, after.cycles, -1);
+  for (const [m, a] of Object.entries(after.modules)) {
+    const b = before.modules[m];
+    const tr = el("tr", { class: "mod" });
+    const td = el("td", { colspan: "3" }, m + (a === null ? ": emptied by the move" : b ? "" : ": new module"));
+    tr.append(td);
+    t.append(tr);
+    if (a === null) continue;
+    row("cohesion", b ? b.cohesion : null, a.cohesion, 1);
+    row("Ca", b ? b.ca : null, a.ca, 0);
+    row("Ce", b ? b.ce : null, a.ce, 0);
+    row("instability", b ? b.instability : null, a.instability, 0);
+  }
+  return t;
+}
+function findingPanel(j) {
+  const fd = findings[j], f = fd.f, ev = f.evidence || {};
+  head(f.kind, subjectText(f));
+  if (KIND_TEXT[f.kind]) panel.append(el("p", { class: "muted" }, KIND_TEXT[f.kind]));
+  const line = t => panel.append(el("p", {}, t));
+  const acts = el("div", { class: "actions" });
+  acts.append(btn("Zoom to it", "act", () => zoomToFinding(fd)));
+  panel.append(acts);
+  if (f.kind === "cycle") {
+    line(`${ev.level === "module" ? "Modules" : "Files"} in the cycle: ${ev.members.length}. ` +
+      `${ev.exact ? "The break is the smallest." : "The break is a heuristic, not proven smallest."}`);
+    panel.append(el("h3", {}, `Break: remove ${count(ev.break.length, "import", "imports")}`));
+    const ul = el("ul", { class: "edges" });
+    for (const l of ev.break.slice(0, 200)) {
+      const a = fileIndex.get(l.from), b = fileIndex.get(l.to), li = el("li");
+      if (a !== undefined) li.append(fileBtn(a)); else li.append(document.createTextNode(l.from));
+      li.append(el("span", { class: "muted" }, " → "));
+      if (b !== undefined) li.append(fileBtn(b)); else li.append(document.createTextNode(l.to));
+      ul.append(li);
+    }
+    if (ev.break.length > 200) ul.append(el("li", { class: "muted" }, `and ${ev.break.length - 200} more`));
+    panel.append(ul);
+  } else if (f.kind === "misplaced-file") {
+    line(`Imported by ${count(ev.imports_from_target, "file", "files")} of ${ev.target_module}, ` +
+      `${count(ev.own_module_edges, "edge", "edges")} within its own module` + (ev.via_barrel ? ", through a barrel." : "."));
+  } else if (f.kind === "sink-split") {
+    line(`Imported by ${count(ev.ca, "module", "modules")}; its files serve ${count(ev.components.length, "separate group", "separate groups")}.`);
+    ev.components.forEach((c, n) => {
+      panel.append(el("h3", {}, `Group ${n + 1}: ${count(c.files.length, "file", "files")}, used by ${c.consumers.join(", ")}`));
+      const ids = c.files.map(p => fileIndex.get(p)).filter(x => x !== undefined);
+      const ul = el("ul", { class: "edges" });
+      for (const x of ids.slice(0, 40)) { const li = el("li"); li.append(fileBtn(x)); ul.append(li); }
+      panel.append(ul);
+    });
+  } else if (f.kind === "hidden-coupling") {
+    line(`Changed together in ${count(ev.commits, "commit", "commits")}, with no import between them (${ev.modules.join(" and ")}).`);
+  } else if (f.kind === "internals-reach") {
+    line(`Imports past the public entry of ${ev.module}.`);
+    if (ev.entries.length) line(`Entries: ${ev.entries.map(short).join(", ")}`);
+  } else if (f.kind === "unstable-dependency") {
+    line(`${ev.from} (instability ${ev.from_instability}) imports ${ev.to} (instability ${ev.to_instability}) ${count(ev.imports, "time", "times")}.`);
+  } else if (f.kind === "seam") {
+    line(`Modularity of the clusters ${ev.modularity}, of the folders ${ev.folder_modularity}.`);
+    ev.clusters.forEach((c, n) => line(`Cluster ${n + 1}: ${count(c.files.length, "file", "files")} across ${c.modules.join(", ")}`));
+    if (ev.hubs.length) line(`Hubs left out: ${ev.hubs.map(short).join(", ")}`);
+  } else if (f.kind === "small-repo") {
+    line(`${count(ev.files, "file", "files")}, ${count(ev.modules, "module", "modules")}.`);
+  }
+  if (fd.moves.length) {
+    panel.append(el("h3", {}, fd.moves.length === 1 ? "Suggested move" : `Suggested moves: ${fd.moves.length}`));
+    for (const mv of fd.moves) {
+      const n = el("div", { class: "note mono" });
+      n.append(document.createTextNode(short(files[mv.file].path)), el("br"), document.createTextNode("→ " + short(mv.to)));
+      panel.append(n);
+    }
+  }
+  if (f.simulation) {
+    panel.append(el("h3", {}, "After the move"));
+    panel.append(simTable(f.simulation.after));
+  }
+  const ms = [...fd.ms];
+  if (ms.length) {
+    panel.append(el("h3", {}, count(ms.length, "module", "modules")));
+    const p = el("div", { class: "actions" });
+    for (const m of ms.slice(0, 60)) p.append(modBtn(m));
+    panel.append(p);
+  }
+  const fs = [...fd.fs];
+  if (fs.length && f.kind !== "sink-split") {
+    panel.append(el("h3", {}, count(fs.length, "file", "files")));
+    const ul = el("ul", { class: "edges" });
+    for (const x of fs.slice(0, 60)) { const li = el("li"); li.append(fileBtn(x)); ul.append(li); }
+    if (fs.length > 60) ul.append(el("li", { class: "muted" }, `and ${fs.length - 60} more`));
+    panel.append(ul);
+  }
+}
+function showPanel() {
+  panel.replaceChildren();
+  panel.scrollTop = 0;
+  const t = sel;
+  if (!t) overview();
+  else if (t.type === "module") modulePanel(t.i);
+  else if (t.type === "file") filePanel(t.i);
+  else if (t.type === "medge") medgePanel(t.i);
+  else if (t.type === "fedge") fedgePanel(t.i);
+  else findingPanel(t.i);
+  /* Screen readers hear the new heading, not the whole panel. */
+  const h2 = panel.querySelector("h2");
+  $("announce").textContent = h2 ? h2.textContent : "";
+}
+
+/* ---------- start ---------- */
+readTheme();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readTheme(); redraw(); });
+new ResizeObserver(resize).observe(stage);
+resize();
+if (matchMedia("(max-width: 720px)").matches) $("legend-box").open = false;
+showPanel();
 </script>
 </body>
 </html>

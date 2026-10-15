@@ -36,6 +36,22 @@ fn render_is_self_contained_and_embeds_the_document() {
     assert!(html.contains(
         r#"<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">"#
     ));
+    // Same document, same picture; document text never reaches the page as markup or code.
+    // Checked on the template: the embedded document may hold any of these in a path.
+    let template = include_str!("../assets/graph.html");
+    for banned in [
+        "Math.random",
+        "Date.now",
+        "innerHTML",
+        "outerHTML",
+        "insertAdjacentHTML",
+        "document.write",
+        "eval(",
+        "new Function",
+        "fetch(",
+    ] {
+        assert!(!template.contains(banned), "{banned} in the page template");
+    }
     // The embedded scan is the input document recomputed with the same rules: identical.
     let doc: Value = serde_json::from_str(embedded(&html)).unwrap();
     let input: Value = serde_json::from_str(&fs::read_to_string(&graph).unwrap()).unwrap();

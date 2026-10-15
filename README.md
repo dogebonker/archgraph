@@ -50,7 +50,7 @@ forbidden src/shared/format.ts -> src/domains/cart/types.ts (shared-no-domain)
 archgraph simulate graph.json --move src/utils/dates.ts src/calendar/dates.ts
 ```
 
-**render** writes one self-contained HTML page: modules as circles colored by health, module imports as arrows (red when any file import is forbidden). Click a module to list the modules importing it and their file imports. The page makes no network requests.
+**render** writes one self-contained HTML page: a zoomable map of modules as circles colored by health, holding their files grouped by folder, with module imports as curved arrows (red forbidden, amber unplanned, dashed type-only). Zoom in (wheel, pinch, `+`/`-`) and the files, their imports and their names appear. Hover or click a module for its importers and imports, a file or an import for its verdict and rule; the side panel lists findings by kind and draws suggested moves with their before and after numbers. Search, filters for forbidden, unplanned and cycle imports, and hiding busy modules keep large graphs readable. The page makes no network requests.
 
 ```sh
 archgraph render graph.json -o graph.html
