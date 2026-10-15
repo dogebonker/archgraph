@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: rustup toolchain install stable --profile minimal --component rustfmt,clippy && rustup default stable
+      - run: rustup toolchain install
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: rustup toolchain install stable --profile minimal && rustup default stable
+      - run: rustup toolchain install
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
@@ -43,3 +43,120 @@ jobs:
         env:
           ARCHGRAPH_DEPCRUISE: ${{ runner.temp }}/tools/node_modules/.bin/depcruise
           ARCHGRAPH_PYTHON: ${{ runner.temp }}/venv/bin/python
+
+  binary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - run: cargo build --locked
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: archgraph-binary
+          path: target/debug/archgraph
+          if-no-files-found: error
+
+  install:
+    needs: binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: archgraph-binary
+          path: ${{ runner.temp }}/bin
+      - run: chmod +x "$RUNNER_TEMP/bin/archgraph"
+      - run: shellcheck install.sh ci/action.sh ci/test-install.sh
+      - name: npm/package.json version is Cargo.toml's
+        run: |
+          cargo=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)
+          npm=$(node -p 'require("./npm/package.json").version')
+          [ "$npm" = "$cargo" ] || { echo "::error::npm/package.json $npm, Cargo.toml $cargo"; exit 1; }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 18
+      - run: node --test
+        working-directory: npm
+        env:
+          ARCHGRAPH_TEST_BINARY: ${{ runner.temp }}/bin/archgraph
+      - name: install.sh against a fake release on a local server
+        run: |
+          mkdir "$RUNNER_TEMP/install-test"
+          sh ci/test-install.sh "$RUNNER_TEMP/bin/archgraph" "$RUNNER_TEMP/install-test"
+
+  action-push:
+    needs: binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: archgraph-binary
+          path: ${{ runner.temp }}/bin
+      - run: chmod +x "$RUNNER_TEMP/bin/archgraph" && cp -R tests/fixtures/ts-fda "$RUNNER_TEMP/fda"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - id: archgraph
+        uses: ./
+        continue-on-error: true
+        with:
+          path: ${{ runner.temp }}/fda
+          binary: ${{ runner.temp }}/bin/archgraph
+      - name: The step failed on the fixture's forbidden imports
+        run: |
+          echo "outcome=$OUTCOME forbidden=$FORBIDDEN"
+          [ "$OUTCOME" = failure ] && [ "$FORBIDDEN" -gt 0 ] && [ -f "$JSON" ]
+        env:
+          OUTCOME: ${{ steps.archgraph.outcome }}
+          FORBIDDEN: ${{ steps.archgraph.outputs.forbidden }}
+          JSON: ${{ steps.archgraph.outputs.json }}
+
+  action-pr:
+    needs: binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: archgraph-binary
+          path: ${{ runner.temp }}/bin
+      - run: chmod +x "$RUNNER_TEMP/bin/archgraph"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: A repository whose second commit adds a forbidden import
+        id: repo
+        run: |
+          repo=$RUNNER_TEMP/pr
+          cp -R tests/fixtures/ts-fda "$repo"
+          cd "$repo"
+          git init -q
+          git add -A
+          git -c user.name=ci -c user.email=ci@example.invalid commit -qm base
+          echo "base=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          printf 'import { TAX } from "../domains/checkout/types";\nexport const rate = TAX;\n' > src/shared/label.ts
+          git add -A
+          git -c user.name=ci -c user.email=ci@example.invalid commit -qm head
+      - id: archgraph
+        uses: ./
+        continue-on-error: true
+        with:
+          path: ${{ runner.temp }}/pr
+          binary: ${{ runner.temp }}/bin/archgraph
+          base-ref: ${{ steps.repo.outputs.base }}
+      - name: The step failed on the new forbidden import
+        run: |
+          echo "outcome=$OUTCOME new-forbidden=$NEW_FORBIDDEN"
+          [ "$OUTCOME" = failure ] && [ "$NEW_FORBIDDEN" -gt 0 ]
+        env:
+          OUTCOME: ${{ steps.archgraph.outcome }}
+          NEW_FORBIDDEN: ${{ steps.archgraph.outputs.new-forbidden }}

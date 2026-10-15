@@ -1,0 +1,238 @@
+#!/usr/bin/env bash
+# The archgraph GitHub Action (action.yml). Every input arrives as an INPUT_* environment
+# variable, so this runs outside Actions too, given RUNNER_TEMP, GITHUB_OUTPUT and
+# GITHUB_STEP_SUMMARY:
+#
+#   INPUT_PATH INPUT_RULES INPUT_DEPTH INPUT_LANGUAGE INPUT_PACKAGE INPUT_EXCLUDE INPUT_FAIL_ON
+#   INPUT_FAIL_ON_RULES_CHANGE INPUT_VERSION INPUT_BINARY INPUT_BASE_REF   as in action.yml
+#   ARCHGRAPH_DEPCRUISE, ARCHGRAPH_PYTHON   a collector to use instead of installing one
+#
+# Without a base ref: `report` on INPUT_PATH, its summary in the job summary, exit 1 when any
+# import is forbidden. With one: `report` on HEAD, a scan of the base commit (in a worktree) with
+# the same rules file and options, then `diff --fail-on` in markdown into the job summary, exit 1
+# when the diff has a --fail-on condition. Exit 2 on errors.
+set -euo pipefail
+
+# Everything printed below may hold text from the scanned repository (paths, collector and git
+# messages), which must not run as workflow commands: one stream, commands off until exit.
+exec 2>&1
+token=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+echo "::stop-commands::$token"
+worktree_added=
+failure=
+# shellcheck disable=SC2329 # run by the EXIT trap
+cleanup() {
+  local status=$?
+  if [[ -n $worktree_added ]]; then
+    git -C "$repo" worktree remove --force "$worktree" >/dev/null 2>&1 || true
+  fi
+  echo "::$token::"
+  # Exit 1 is a gate result the summary explains; 2 and above is a failure to run.
+  if ((status >= 2)); then
+    echo "::error::archgraph: ${failure:-failed with exit $status; see the log above}"
+  fi
+}
+trap cleanup EXIT
+die() {
+  failure="$*"
+  exit 2
+}
+
+here=$(cd "$(dirname "$0")/.." && pwd)
+: "${RUNNER_TEMP:?}" "${GITHUB_OUTPUT:?}" "${GITHUB_STEP_SUMMARY:?}"
+
+path=${INPUT_PATH:-.}
+[[ -d $path ]] || die "path $path is not a directory"
+lang=${INPUT_LANGUAGE:-}
+fail_on=${INPUT_FAIL_ON-new-forbidden,new-cycles}
+fail_on=${fail_on//[[:space:]]/}
+base_ref=${INPUT_BASE_REF:-}
+work=$RUNNER_TEMP/archgraph
+rm -rf "$work"
+mkdir -p "$work"
+
+if [[ -n ${INPUT_BINARY:-} ]]; then
+  archgraph=$INPUT_BINARY
+  command -v "$archgraph" >/dev/null || die "binary $archgraph is not an executable"
+else
+  # The release this checkout of the action was cut from.
+  version=${INPUT_VERSION:-$(sed -n 's/^version = "\(.*\)"$/\1/p' "$here/Cargo.toml" | head -n 1)}
+  ARCHGRAPH_VERSION=$version ARCHGRAPH_INSTALL_DIR=$work/bin sh "$here/install.sh"
+  archgraph=$work/bin/archgraph
+fi
+"$archgraph" --version
+
+# Options shared by the HEAD report and the base scan.
+opts=(--depth "${INPUT_DEPTH:-2}")
+rules=${INPUT_RULES:-}
+if [[ -z $rules && -f $path/layout.yaml ]]; then
+  rules=$path/layout.yaml
+fi
+if [[ -n $rules ]]; then
+  [[ -f $rules ]] || die "rules file $rules does not exist"
+  # Absolute and physical, so the base scan reads HEAD's rules file and it compares with git's
+  # top-level path.
+  rules=$(cd "$(dirname "$rules")" && pwd -P)/$(basename "$rules")
+  opts+=(--rules "$rules")
+fi
+if [[ -n $lang ]]; then
+  opts+=(--language "$lang")
+fi
+if [[ -n ${INPUT_PACKAGE:-} ]]; then
+  opts+=(--package "$INPUT_PACKAGE")
+fi
+# One glob per line or comma; commas inside {a,b} belong to the glob.
+while IFS= read -r glob; do
+  if [[ -n $glob ]]; then
+    opts+=(--exclude "$glob")
+  fi
+done < <(printf '%s\n' "${INPUT_EXCLUDE:-}" | awk '{
+  depth = 0; cur = ""
+  for (i = 1; i <= length($0); i++) {
+    c = substr($0, i, 1)
+    if (c == "{") depth++
+    else if (c == "}" && depth > 0) depth--
+    if (c == "," && depth == 0) { print cur; cur = "" } else cur = cur c
+  }
+  print cur
+}' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+
+has() {
+  local f
+  for f in "$@"; do
+    if [[ -e $path/$f ]]; then return 0; fi
+  done
+  return 1
+}
+if [[ $lang == typescript ]] || { [[ -z $lang ]] && has package.json tsconfig.json; }; then
+  depcruise=${ARCHGRAPH_DEPCRUISE:-}
+  if [[ -z $depcruise ]]; then
+    node_major=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null) ||
+      die "TypeScript scans need Node 22 or later on PATH: add actions/setup-node"
+    ((node_major >= 22)) ||
+      die "dependency-cruiser 18.4.0 needs Node 22 or later, found $(node --version): add actions/setup-node"
+    tools=$RUNNER_TEMP/archgraph-tools
+    mkdir -p "$tools"
+    cp "$here/ci/tools/package.json" "$here/ci/tools/package-lock.json" "$tools/"
+    npm ci --prefix "$tools" --ignore-scripts --no-audit --no-fund --loglevel=error
+    depcruise=$tools/node_modules/.bin/depcruise
+  fi
+  opts+=(--depcruise "$depcruise")
+fi
+if [[ $lang == python ]] || { [[ -z $lang ]] && has pyproject.toml setup.py setup.cfg; }; then
+  python=${ARCHGRAPH_PYTHON:-}
+  if [[ -z $python ]]; then
+    venv=$RUNNER_TEMP/archgraph-venv
+    python3 -m venv "$venv"
+    "$venv/bin/python" -c 'import sys; sys.exit(not (3, 10) <= sys.version_info[:2] <= (3, 14))' ||
+      die "grimp 3.17 has wheels for CPython 3.10 to 3.14, found $("$venv/bin/python" --version): add actions/setup-python"
+    "$venv/bin/pip" install --quiet --only-binary :all: --require-hashes \
+      -r "$here/ci/tools/requirements.txt"
+    python=$venv/bin/python
+  fi
+  opts+=(--python "$python")
+fi
+
+head=$work/head
+status=0
+"$archgraph" report "$path" "${opts[@]}" --out-dir "$head" >"$work/report.txt" || status=$?
+cat "$work/report.txt"
+((status <= 1)) || exit "$status"
+{
+  echo "json=$head/archgraph.json"
+  echo "html=$head/archgraph.html"
+  echo "forbidden=$(jq '.summary.forbidden' "$head/archgraph.json")"
+} >>"$GITHUB_OUTPUT"
+
+if [[ -z $base_ref ]]; then
+  # A fence longer than any backtick run in the text, which the repository controls.
+  fence='```'
+  longest=$(grep -o '``*' "$work/report.txt" | awk '{ if (length($0) > m) m = length($0) } END { print m + 0 }')
+  while ((${#fence} <= longest)); do fence+='`'; done
+  {
+    echo '### archgraph report'
+    echo
+    echo "${fence}text"
+    cat "$work/report.txt"
+    echo "$fence"
+  } >>"$GITHUB_STEP_SUMMARY"
+  exit "$status"
+fi
+
+[[ $base_ref != -* ]] || die "base-ref $base_ref is not a commit"
+repo=$(git -C "$path" rev-parse --show-toplevel)
+prefix=$(git -C "$path" rev-parse --show-prefix)
+if ! base=$(git -C "$repo" rev-parse --verify --quiet "$base_ref^{commit}"); then
+  # A shallow checkout (fetch-depth: 1) lacks the base commit: fetch that one commit.
+  git -C "$repo" fetch --no-tags --depth=1 origin "$base_ref" ||
+    die "could not fetch $base_ref; check out with fetch-depth: 0"
+  base=$(git -C "$repo" rev-parse --verify "FETCH_HEAD^{commit}")
+fi
+worktree=$RUNNER_TEMP/base
+git -C "$repo" worktree remove --force "$worktree" >/dev/null 2>&1 || rm -rf "$worktree"
+git -C "$repo" worktree add --force --detach "$worktree" "$base"
+worktree_added=1
+"$archgraph" scan "$worktree${prefix:+/${prefix%/}}" "${opts[@]}" -o "$work/base.json" ||
+  die "scanning the base commit $base failed"
+
+"$archgraph" diff "$work/base.json" "$head/archgraph.json" >"$work/diff.json"
+status=0
+"$archgraph" diff "$work/base.json" "$head/archgraph.json" ${fail_on:+--fail-on "$fail_on"} \
+  --format markdown >"$work/diff.md" || status=$?
+((status <= 1)) || exit "$status"
+
+# Both commits are judged by HEAD's rules, so a pull request that drops a forbid rule and adds
+# the import it forbade passes the diff: say so when the rules file differs from the base's.
+rules_rel=
+if [[ -z $rules ]]; then
+  rules_rel=${prefix}layout.yaml
+elif [[ $rules == "$repo"/* ]]; then
+  rules_rel=${rules#"$repo"/}
+fi
+base_rules=$worktree/$rules_rel
+rules_changed=false
+if [[ -n $rules_rel ]]; then
+  if [[ -n $rules && -f $base_rules ]]; then
+    cmp -s "$rules" "$base_rules" || rules_changed=true
+  elif [[ -n $rules || -f $base_rules ]]; then
+    rules_changed=true
+  fi
+fi
+{
+  if [[ $rules_changed == true ]]; then
+    echo "> [!WARNING]"
+    if [[ ! -f $base_rules ]]; then
+      echo "> **This pull request adds the rules file \`$rules_rel\`.** The base commit had none."
+    else
+      echo "> **This pull request changes the rules file \`$rules_rel\`.** The diff below judges both commits by HEAD's rules, so imports that a removed or loosened rule forbade do not show as new."
+      echo
+      # check exits 1 on forbidden imports; `?` when the base's rules do not load.
+      count() {
+        rm -f "$work/under-base.json"
+        "$archgraph" check "$1" --rules "$base_rules" -o "$work/under-base.json" >/dev/null || true
+        jq '.summary.forbidden' "$work/under-base.json" 2>/dev/null || echo '?'
+      }
+      echo "| forbidden imports | under the base's rules | under HEAD's rules |"
+      echo "| --- | --- | --- |"
+      echo "| base | $(count "$work/base.json") | $(jq '.summary.forbidden' "$work/base.json") |"
+      echo "| HEAD | $(count "$head/archgraph.json") | $(jq '.summary.forbidden' "$head/archgraph.json") |"
+    fi
+    if [[ ${INPUT_FAIL_ON_RULES_CHANGE:-false} == true ]]; then
+      echo
+      echo "Failing: \`fail-on-rules-change\` is set."
+    fi
+    echo
+  fi
+  cat "$work/diff.md"
+} >"$work/summary.md"
+cat "$work/summary.md"
+cat "$work/summary.md" >>"$GITHUB_STEP_SUMMARY"
+{
+  echo "new-forbidden=$(jq '.new_forbidden | length' "$work/diff.json")"
+  echo "new-cycles=$(jq '.new_cycles | length' "$work/diff.json")"
+  echo "rules-changed=$rules_changed"
+} >>"$GITHUB_OUTPUT"
+if [[ $rules_changed == true && ${INPUT_FAIL_ON_RULES_CHANGE:-false} == true ]]; then
+  status=1
+fi
+exit "$status"

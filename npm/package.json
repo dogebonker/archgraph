@@ -1,0 +1,25 @@
+{
+  "name": "archgraph-cli",
+  "version": "0.1.0",
+  "description": "Runs the archgraph CLI: import-graph evidence for architecture decisions",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dogebonker/archgraph.git",
+    "directory": "npm"
+  },
+  "homepage": "https://github.com/dogebonker/archgraph#readme",
+  "bin": {
+    "archgraph": "bin/archgraph.js"
+  },
+  "files": [
+    "bin/",
+    "SHA256SUMS"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

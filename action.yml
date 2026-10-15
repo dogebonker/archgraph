@@ -1,0 +1,90 @@
+name: archgraph
+description: Check a repository's imports against its layout rules, and fail a pull request that adds forbidden imports or cycles
+author: dogebonker
+branding:
+  icon: git-pull-request
+  color: blue
+
+inputs:
+  path:
+    description: Repository root to scan, relative to the workspace
+    default: "."
+  rules:
+    description: layout.yaml with the rules, relative to the workspace (default <path>/layout.yaml when it exists)
+    default: ""
+  depth:
+    description: Directory segments below the source root that form a module
+    default: "2"
+  language:
+    description: typescript or python (default detected)
+    default: ""
+  package:
+    description: Python package to scan (default the single package under the source root)
+    default: ""
+  exclude:
+    description: Additional globs to exclude, one per line or comma-separated
+    default: ""
+  fail-on:
+    description: "Pull requests: comma list of new-forbidden, new-cycles, new-unplanned that fail the step"
+    default: new-forbidden,new-cycles
+  fail-on-rules-change:
+    description: "Pull requests: true fails the step when the rules file differs from the base commit's"
+    default: "false"
+  version:
+    description: archgraph release to install (default the version in this action's own Cargo.toml)
+    default: ""
+  binary:
+    description: Path to an archgraph executable to use instead of downloading a release
+    default: ""
+  base-ref:
+    description: Commit to compare HEAD against (default the pull request's base commit on pull_request)
+    default: ""
+  artifact-name:
+    description: Name of the uploaded artifact with archgraph.html and archgraph.json; set a unique one per matrix job
+    default: archgraph-${{ github.job }}
+
+outputs:
+  json:
+    description: Path of archgraph.json, the HEAD scan document
+    value: ${{ steps.archgraph.outputs.json }}
+  html:
+    description: Path of archgraph.html, the HEAD graph page
+    value: ${{ steps.archgraph.outputs.html }}
+  forbidden:
+    description: Number of forbidden imports at HEAD
+    value: ${{ steps.archgraph.outputs.forbidden }}
+  new-forbidden:
+    description: Number of forbidden imports HEAD adds over the base (pull requests only)
+    value: ${{ steps.archgraph.outputs.new-forbidden }}
+  new-cycles:
+    description: Number of cycles HEAD adds over the base (pull requests only)
+    value: ${{ steps.archgraph.outputs.new-cycles }}
+  rules-changed:
+    description: true when the rules file differs from the base commit's (pull requests only)
+    value: ${{ steps.archgraph.outputs.rules-changed }}
+
+runs:
+  using: composite
+  steps:
+    - id: archgraph
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_RULES: ${{ inputs.rules }}
+        INPUT_DEPTH: ${{ inputs.depth }}
+        INPUT_LANGUAGE: ${{ inputs.language }}
+        INPUT_PACKAGE: ${{ inputs.package }}
+        INPUT_EXCLUDE: ${{ inputs.exclude }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_FAIL_ON_RULES_CHANGE: ${{ inputs.fail-on-rules-change }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_BINARY: ${{ inputs.binary }}
+        INPUT_BASE_REF: ${{ inputs.base-ref || github.event.pull_request.base.sha }}
+      run: '"$GITHUB_ACTION_PATH/ci/action.sh"'
+    - if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ runner.temp }}/archgraph/head/archgraph.json
+          ${{ runner.temp }}/archgraph/head/archgraph.html
