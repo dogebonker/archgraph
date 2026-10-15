@@ -103,6 +103,21 @@ aside h3 { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transf
 .metrics div { padding: 6px 8px; background: var(--raise); border-radius: 7px; border: 1px solid var(--line); }
 .metrics dt { font-size: 10.5px; color: var(--muted); }
 .metrics dd { margin: 0; font: 600 14px var(--mono); }
+.metrics dd.hint { font: 400 10.5px/1.3 var(--sans); color: var(--muted); margin-top: 2px; }
+.diag { margin: 4px 0 12px; line-height: 1.55; }
+.advice { margin: 4px 10px 6px; font-size: 12px; }
+aside > .advice { margin: 4px 0 6px; }
+.ref { border: 0; background: none; padding: 0; font: 600 12px var(--mono); color: inherit; cursor: pointer;
+  text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: 2px; overflow-wrap: anywhere; text-align: left; }
+.ref:hover { text-decoration-color: var(--fg); }
+.glue { white-space: nowrap; } .glue .ref { white-space: normal; }
+h3.sec { display: flex; align-items: center; gap: 8px; color: var(--fg); }
+h3.sec::before { content: ""; width: 8px; height: 8px; border-radius: 2px; }
+h3.good::before { background: var(--green); } h3.bad::before { background: var(--forbidden); } h3.next::before { background: var(--move); }
+.assess { margin: 0; padding: 0 0 0 18px; }
+.assess li { margin: 0 0 8px; padding-left: 2px; line-height: 1.5; overflow-wrap: anywhere; }
+ul.assess.good li::marker { color: var(--green); } ul.assess.bad li::marker { color: var(--forbidden); }
+ol.assess li::marker { color: var(--move); font: 600 12px var(--mono); }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .act { height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--raise); cursor: pointer; font-size: 12px; }
 .act:hover { border-color: var(--fg); }
@@ -469,7 +484,41 @@ const KIND_TEXT = {
   "small-repo": "Few files or modules: findings carry little signal.",
   "unstable-dependency": "Imports of a module more unstable than the importer.",
 };
-const subjectText = f => f.subject === "." ? "the whole source tree" : shortText(f.subject);
+/* Why each kind matters and what to do about it, in the README's and the skill's words. */
+const KIND_ADVICE = {
+  "cycle": ["Modules in a cycle cannot be changed, tested or split off alone: a change can come back around.",
+    "Remove or invert the lighter side of a two-way pair (or an import of the break), re-scan, repeat while the cycle remains."],
+  "hidden-coupling": ["Something the imports do not show links these files, so changing one quietly needs the other.",
+    "Find what links them (events, DI, shared data), then make it an explicit import or move the files together."],
+  "internals-reach": ["Importers depend on a module's internals, which it may change without warning.",
+    "Import the module's public entry instead."],
+  "misplaced-file": ["Another module uses the file more than its own does, so the boundary sits in the wrong place.",
+    "Move it as suggested: the simulation shows the cohesion before and after, with no new forbidden import or cycle."],
+  "seam": ["The folders do not match how the code is used: the import clusters fit better.",
+    "Read the clusters as candidate boundaries, not as a plan."],
+  "sink-split": ["Unrelated importers share one module, so a change for one group touches the others.",
+    "Split the module along its groups of importers; single-consumer groups move to their consumer."],
+  "small-repo": ["With so few files or modules the other findings carry little signal.",
+    "Read the findings as hints."],
+  "unstable-dependency": ["A stable module imports a more volatile one, so the volatile side's changes reach it and all that import it.",
+    "Depend on an abstraction the stable module owns, or move the code it needs."],
+};
+function advice(kind, f) {
+  const a = kind === "misplaced-file" && f && !f.suggestion ? [KIND_ADVICE[kind][0],
+    "No move is suggested: a file of that name already sits at the destination, or the destination would fall in another module. Pick a new name there and run archgraph simulate on that move before proposing it."]
+    : KIND_ADVICE[kind];
+  if (!a) return [];
+  const why = el("p", { class: "advice" }), what = el("p", { class: "advice" });
+  why.append(el("b", {}, "Why it matters: "), document.createTextNode(a[0]));
+  what.append(el("b", {}, "What to do: "), document.createTextNode(a[1]));
+  return [why, what];
+}
+const subjectText = f => {
+  if (f.subject === ".") return "the whole source tree";
+  /* A long member list (a 96-module cycle) names a few and counts the rest. */
+  const parts = shortText(f.subject).split(", ");
+  return parts.length > 8 ? `${parts.slice(0, 6).join(", ")} and ${parts.length - 6} more` : parts.join(", ");
+};
 const edgeBetween = (a, b) => files[a].outs.find(e => edges[e].b === b);
 function destination(to) {
   const dir = dirname(to);
@@ -561,6 +610,341 @@ const findingsOfModule = mods.map(() => []), findingsOfFile = new Map();
 for (const fd of findings) {
   for (const m of fd.ms) findingsOfModule[m].push(fd);
   for (const j of fd.fs) { if (!findingsOfFile.has(j)) findingsOfFile.set(j, []); findingsOfFile.get(j).push(fd); }
+}
+
+/* ---------- assessment: what holds up, what hurts, what to do next ----------
+   Read from the document alone. Sentences name modules, files, imports and findings with their
+   numbers; there is no overall score. Each threshold says why it sits where it does. */
+const MANY_SHARE = 0.15;    /* imported by about 1 in 7 modules or more: a change there reaches a good part of the code */
+const MANY_MIN = 3;         /* fewer than 3 importers is never "many", however small the repository */
+const STABLE_MAX = 0.3;     /* instability up to 0.3: it imports little compared with how much imports it */
+const COHESIVE_MIN = 0.5;   /* at least half of a module's file imports stay inside it */
+const LOOSE_MAX = 0.25;     /* under a quarter stay inside: its files lean on other modules more than on each other */
+const REAL_SIZE = 5;        /* below 5 files, cohesion says little about a module */
+const NAMES = 3;            /* names per sentence, so a sentence stays readable */
+const MAX_NEXT = 7;         /* a list short enough to start on */
+const MANY = Math.max(MANY_MIN, Math.ceil(N * MANY_SHARE));
+const n2 = x => x === null || x === undefined ? "n/a" : (Math.round(x * 100) / 100).toFixed(2);
+const nf = n => n.toLocaleString("en-US");
+const times = n => n === 1 ? "once" : n === 2 ? "twice" : `${nf(n)} times`;
+const ids = n => [...Array(n).keys()];
+const filesIn = ms => [...ms].reduce((s, i) => s + modFiles[i].length, 0);
+function roleOf(i) {
+  const m = mods[i];
+  if (!m.ca && !m.ce) return "isolated";
+  if (!m.ca && m.files > 1 && !m.internal_edges) return "collection";
+  if (!m.ca) return "entry";
+  if (m.ca >= MANY && m.ce >= MANY) return "hub";
+  if (m.ca >= MANY && m.instability !== null && m.instability <= STABLE_MAX) return "foundation";
+  return "regular";
+}
+const ofKind = k => findings.filter(fd => fd.f.kind === k);
+/* "a, b and c", each name a part, followed by "and N more" past NAMES. */
+function names(list, part) {
+  const out = [];
+  const shown = list.slice(0, NAMES);
+  shown.forEach((x, j) => {
+    if (j) out.push(j === shown.length - 1 && list.length <= NAMES ? " and " : ", ");
+    out.push(...[].concat(part(x)));
+  });
+  if (list.length > NAMES) out.push(` and ${list.length - NAMES} more`);
+  return out;
+}
+/* Cohesion as the assessment judges it: imports into foundations are the intended design, not
+   scatter, so they count neither for nor against a module. Same basis as the document's
+   cohesion: internal_edges / (internal_edges + outgoing_edges - outgoing_to[foundation]).
+   A document without outgoing_to (older archgraph) is judged on its own cohesion. */
+const foundations = ids(N).filter(i => roleOf(i) === "foundation").sort((a, b) => mods[b].ca - mods[a].ca);
+const isFoundation = new Uint8Array(N);
+for (const i of foundations) isFoundation[i] = 1;
+const hasOutgoingTo = N > 0 && mods.every(m => m.outgoing_to);
+const adjusted = hasOutgoingTo && foundations.length > 0;
+/* The foundations each module imports, most imports first. */
+const foundationsOf = mods.map(m => !hasOutgoingTo ? [] : Object.entries(m.outgoing_to)
+  .filter(([id]) => modIndex.has(id) && isFoundation[modIndex.get(id)] && id !== m.id)
+  .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).map(([id]) => modIndex.get(id)));
+const cohesionX = mods.map((m, i) => {
+  if (!adjusted) return m.cohesion;
+  const out = m.outgoing_edges - foundationsOf[i].reduce((s, f) => s + m.outgoing_to[mods[f].id], 0);
+  return m.internal_edges + out ? m.internal_edges / (m.internal_edges + out) : null;
+});
+/* The module imports into a more volatile module, with the instabilities on both sides. */
+const moreVolatile = mods.map((m, i) => medges.filter(me => me.a === i && m.instability !== null && mods[me.b].instability !== null &&
+  mods[me.b].instability > m.instability).map(me => me.b));
+const foundationNames = () => names(foundations, i => ({ m: i }));
+/* Modules with an unstable-dependency finding: a more volatile import by 0.25 or more. */
+const pullsVolatile = new Set(ofKind("unstable-dependency").map(fd => modIndex.get(fd.f.evidence.from)));
+const modCycles = doc.cycles.filter(c => c.level === "module").sort((a, b) => b.members.length - a.members.length);
+const fileCycles = doc.cycles.filter(c => c.level === "file").sort((a, b) => b.members.length - a.members.length);
+const cycleFinding = c => findings.findIndex(fd => fd.f.kind === "cycle" && fd.f.evidence.members.join("\n") === c.members.join("\n"));
+const inModCycle = new Set();
+for (const c of modCycles) for (const id of c.members) if (modIndex.has(id)) inModCycle.add(modIndex.get(id));
+const edgeOf = l => {
+  const a = fileIndex.get(l.from), b = fileIndex.get(l.to);
+  return a === undefined || b === undefined ? undefined : edgeBetween(a, b);
+};
+/* The cheapest cut of a module cycle: a two-way pair whose lighter side is a single import, the
+   one with the most imports the other way first; else the lightest pair. */
+function firstCut(c) {
+  const tw = (c.two_way || []).slice().sort((p, q) => p.imports - q.imports || q.reverse_imports - p.reverse_imports);
+  const p = tw[0];
+  if (!p) return null;
+  return { p, e: edgeOf(p.edges[0]), lone: tw.filter(x => x.imports === 1).length };
+}
+const cohesionGain = fd => {
+  const after = fd.f.simulation ? fd.f.simulation.after.modules : {};
+  let g = 0;
+  for (const [m, a] of Object.entries(after)) {
+    const b = doc.summary.modules[m];
+    const mi = modIndex.get(m);
+    if (a && b && a.cohesion !== null && b.cohesion !== null) g += (a.cohesion - b.cohesion) * (mi === undefined ? 1 : modFiles[mi].length);
+  }
+  return g;
+};
+const ruleGroups = verdict => {
+  const by = new Map();
+  for (const e of edges) if (e.verdict === verdict) { const r = e.rule || "no named rule"; if (!by.has(r)) by.set(r, []); by.get(r).push(e.i); }
+  return [...by.entries()].sort((a, b) => b[1].length - a[1].length || (a[0] < b[0] ? -1 : 1));
+};
+
+const assessment = (() => {
+  const good = [], bad = [], next = [];
+  const rules = doc.config.rules, E = edges.length, nForb = doc.summary.forbidden, nUnpl = doc.summary.unplanned;
+
+  /* What holds up */
+  const rulesSay = rules && E >= 1 && N >= 2;
+  if (rulesSay && !nForb && !nUnpl) good.push([E === 1 ? `The rules in ${rules.path} hold: a rule allows the one file import.`
+    : `The rules in ${rules.path} hold: none of the ${nf(E)} file imports is forbidden, and a rule allows every one of them.`]);
+  else if (rulesSay && !nForb) good.push([E === 1 ? `No import breaks the rules in ${rules.path}: the one file import is not forbidden.`
+    : `No import breaks the rules in ${rules.path}: 0 of ${nf(E)} file imports are forbidden.`]);
+  if (foundations.length) {
+    const one = foundations.length === 1;
+    const none = foundations.every(i => !moreVolatile[i].length), narrow = foundations.every(i => !pullsVolatile.has(i));
+    const tail = none ? (one ? ", and it imports nothing more volatile than itself." : ", and none imports anything more volatile than itself.")
+      : narrow ? (one ? ", and it imports nothing more volatile than itself by 0.25 or more." : ", and none imports anything more volatile than itself by 0.25 or more.")
+        : ".";
+    good.push([...names(foundations, i => [{ m: i }, ` (imported by ${mods[i].ca}, imports ${mods[i].ce})`]),
+      one ? " is a stable foundation: many modules rely on it" : " are stable foundations: many modules rely on them",
+      tail === "." ? (one ? " and it relies on little" : " and they rely on little") : (one ? ", it relies on little" : ", they rely on little"), tail]);
+  }
+  const real = ids(N).filter(i => mods[i].files >= REAL_SIZE);
+  const judged = real.filter(i => roleOf(i) !== "collection");
+  const cohesive = judged.filter(i => cohesionX[i] !== null && cohesionX[i] > COHESIVE_MIN).sort((a, b) => mods[b].files - mods[a].files);
+  if (cohesive.length) {
+    good.push([...names(cohesive, i => [{ m: i }, ` (${n2(cohesionX[i])})`]),
+      cohesive.length === 1 ? " is cohesive: most imports of its files stay inside" : " are cohesive: most imports of their files stay inside",
+      adjusted ? ", not counting imports of foundations" : "",
+      cohesive.length === 1 ? ", so its folder holds one unit of code" : ", so each folder holds one unit of code",
+      /* Only a majority is worth a count here: a minority would be bad news in the good list. */
+      cohesive.length > judged.length / 2 ? ` (${cohesive.length} of ${judged.length} modules with ${REAL_SIZE} or more files).` : "."]);
+  }
+  if (!modCycles.length && mods.length > 1) good.push(["No cycles between modules: each module can be read, tested and changed after the modules it imports."]);
+  else if (N - inModCycle.size >= N / 2) good.push([`${N - inModCycle.size} of ${N} modules are in no module cycle.`]);
+  const entriesChecked = rules ? !!(rules.doc.public && rules.doc.public.length) : doc.source.language === "typescript" && files.some(f => f.barrel);
+  if (entriesChecked && !ofKind("internals-reach").length) good.push(["No import reaches past a module's public entry."]);
+  if (!ofKind("unstable-dependency").length && N > 1) good.push(["No module imports a module that is more volatile than itself by 0.25 or more."]);
+  if (doc.cochange && !ofKind("hidden-coupling").length) good.push([`No files in different modules changed together without an import between them, over ${nf(doc.cochange.commits)} commits.`]);
+
+  /* What hurts, each with the number of files it touches */
+  modCycles.forEach((c, n) => {
+    const ms = c.members.map(id => modIndex.get(id)).filter(i => i !== undefined), touch = filesIn(ms), j = cycleFinding(c);
+    const label = `${c.members.length} of ${N} modules`;
+    if (n === 0 && c.members.length > 2) {
+      const tw = c.two_way || [], cut = firstCut(c);
+      const parts = [j >= 0 ? { fd: j, label } : label, `, holding ${nf(touch)} of ${nf(F)} files, are tied in one import cycle: through some chain of imports each depends on all the others, so none can be changed, tested or split off alone.`];
+      if (tw.length) parts.push(` ${tw.length === 1 ? "One pair imports" : tw.length + " pairs import"} each other directly${cut && cut.lone ? `, ${cut.lone} of them through a single import on one side` : ""}: the lighter sides are where to start.`);
+      bad.push({ parts, touch });
+    } else {
+      const cutLabel = `${count(c.break.length, "import", "imports")} to cut`;
+      const parts = [...names(ms, i => ({ m: i })), c.members.length === 2 ? " import each other (" : " import each other in a cycle (", j >= 0 ? { fd: j, label: cutLabel } : cutLabel, ")."];
+      bad.push({ parts, touch });
+    }
+  });
+  if (fileCycles.length) {
+    const big = fileCycles[0], j = cycleFinding(big), touch = fileCycles.reduce((s, c) => s + c.members.length, 0);
+    const where = mods[files[fileIndex.get(big.members[0])].mod].id;
+    const bigLabel = count(big.members.length, "file", "files");
+    const ofIts = `${big.members.length} of its files`;
+    bad.push({ touch, parts: fileCycles.length === 1
+      ? [`${where} has an import cycle between `, j >= 0 ? { fd: j, label: ofIts } : ofIts, "."]
+      : [`${fileCycles.length} import cycles run between files inside a module, the largest through `, j >= 0 ? { fd: j, label: bigLabel } : bigLabel, ` of ${where}.`] });
+  }
+  const hubs = ids(N).filter(i => roleOf(i) === "hub").sort((a, b) => mods[b].ca * mods[b].ce - mods[a].ca * mods[a].ce);
+  if (hubs.length) {
+    bad.push({ touch: filesIn(hubs), parts: [...names(hubs, i => [{ m: i }, ` (imported by ${mods[i].ca}, imports ${mods[i].ce})`]),
+      hubs.length === 1 ? " is a hub: many modules import it and it imports many, so a change can ripple both into it and out of it."
+        : ` are hubs: many modules import them and they import many (${MANY} or more each way), so a change can ripple both in and out.`] });
+  }
+  const loose = judged.filter(i => mods[i].ca > 0 && cohesionX[i] !== null && cohesionX[i] < LOOSE_MAX).sort((a, b) => mods[b].files - mods[a].files);
+  if (loose.length) {
+    bad.push({ touch: filesIn(loose), parts: [...names(loose, i => [{ m: i }, ` (${mods[i].files} files, cohesion ${n2(cohesionX[i])})`]),
+      loose.length === 1 ? " has" : " have", " low cohesion",
+      ...(adjusted ? [" even not counting imports of the foundations ", ...foundationNames()] : []),
+      ": most imports of ", loose.length === 1 ? "its" : "their", " files go to other modules, so the folder may hold several modules' worth of code."] });
+  }
+  for (const verdict of ["forbidden", "unplanned"]) {
+    const groups = ruleGroups(verdict);
+    if (!groups.length) continue;
+    const total = groups.reduce((s, g) => s + g[1].length, 0), touched = new Set();
+    for (const [, l] of groups) for (const e of l) { touched.add(edges[e].a); touched.add(edges[e].b); }
+    if (verdict === "unplanned") {
+      bad.push({ touch: touched.size, parts: [{ e: groups[0][1][0], label: count(total, "import is unplanned", "imports are unplanned") },
+        `: no rule covers ${total === 1 ? "it" : "them"}, so either the rules are incomplete or the import is unexpected.`] });
+      continue;
+    }
+    const parts = [`${count(total, "import is", "imports are")} forbidden: `];
+    groups.slice(0, 4).forEach(([rule, l], n) => {
+      if (n) parts.push(", ");
+      parts.push({ e: l[0], label: `${l.length} by ${rule}` });
+    });
+    if (groups.length > 4) parts.push(` and ${groups.length - 4} more rules`);
+    parts.push(".");
+    bad.push({ touch: touched.size, parts });
+  }
+  const unstable = ofKind("unstable-dependency").sort((p, q) =>
+    (q.f.evidence.to_instability - q.f.evidence.from_instability) - (p.f.evidence.to_instability - p.f.evidence.from_instability));
+  if (unstable.length) {
+    const ev = unstable[0].f.evidence;
+    bad.push({ touch: filesIn(new Set(unstable.map(fd => modIndex.get(fd.f.evidence.from)))), parts: [
+      `${count(unstable.length, "module import goes", "module imports go")} from a stable module to a more volatile one, the widest gap being `,
+      { fd: unstable[0].i, label: `${ev.from} (instability ${n2(ev.from_instability)}) → ${ev.to} (${n2(ev.to_instability)})` },
+      ": the volatile side's changes reach the stable side and everything that imports it."] });
+  }
+  const hidden = ofKind("hidden-coupling");
+  if (hidden.length) {
+    const freq = new Map();
+    for (const fd of hidden) for (const p of fd.f.evidence.files) freq.set(p, (freq.get(p) || 0) + 1);
+    const [top, k] = [...freq.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0];
+    const ti = fileIndex.get(top), first = hidden.find(fd => fd.f.evidence.files.includes(top));
+    bad.push({ touch: freq.size, parts: [{ fd: first.i, label: count(hidden.length, "pair of files", "pairs of files") },
+      " in different modules changed together in 3 or more commits without importing each other",
+      k > 1 && ti !== undefined ? ["; ", String(k), " of them involve ", { f: ti }] : [],
+      ". Something the imports do not show (events, DI, shared data) links them."].flat() });
+  }
+  const reachList = ofKind("internals-reach");
+  if (reachList.length) {
+    const by = new Map();
+    for (const fd of reachList) by.set(fd.f.evidence.module, (by.get(fd.f.evidence.module) || 0) + 1);
+    const [topMod, k] = [...by.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0];
+    const touched = new Set(reachList.map(fd => fd.f.evidence.from));
+    const mi = modIndex.get(topMod);
+    bad.push({ touch: touched.size, parts: [{ fd: reachList.find(fd => fd.f.evidence.module === topMod).i, label: count(reachList.length, "import reaches", "imports reach") },
+      " past a module's public entry", by.size > 1 ? `, ${k} of them into ` : " into ", mi !== undefined ? { m: mi } : topMod,
+      ": importers depend on details the module may change."] });
+  }
+  const seam = ofKind("seam")[0];
+  if (seam) {
+    const ev = seam.f.evidence, touched = new Set();
+    for (const c of ev.clusters) for (const p of c.files) touched.add(p);
+    /* A candidate boundary, not a defect: listed after the measured problems. */
+    bad.push({ touch: -1, parts: [{ fd: seam.i, label: "Import clusters" },
+      ` fit the code better than the folders do (modularity ${n2(ev.modularity)} against ${n2(ev.folder_modularity)}): some module boundaries do not match how the code is used.`] });
+  }
+  bad.sort((a, b) => b.touch - a.touch);
+
+  /* What to do next, in order of expected effect */
+  for (const [rule, l] of ruleGroups("forbidden").slice(0, 2)) {
+    const e = edges[l[0]];
+    const imp = { e: e.i, label: `${short(files[e.a].path)} → ${short(files[e.b].path)}` };
+    next.push(l.length === 1 ? ["Fix the import forbidden by ", rule, ": ", imp, "."]
+      : [`Fix the ${l.length} imports forbidden by ${rule}, starting with `, imp, "."]);
+  }
+  modCycles.forEach(c => {
+    const j = cycleFinding(c), cut = firstCut(c);
+    const cyc = j >= 0 ? { fd: j, label: `the ${c.members.length}-module cycle` } : `the ${c.members.length}-module cycle`;
+    if (cut && cut.e !== undefined) {
+      const { p } = cut, e = edges[cut.e];
+      const lone = p.imports === 1;
+      next.push([lone ? "Cut " : "Start on ", cyc, " where it is thinnest: remove or invert ", { e: e.i, label: `${short(files[e.a].path)} → ${short(files[e.b].path)}` },
+        lone ? `, the only import from ${p.from} into ${p.to}, while ${p.to} imports ${p.from} ${times(p.reverse_imports)}.`
+          : `: ${p.from} imports ${p.to} ${times(p.imports)}, against ${times(p.reverse_imports)} back.`,
+        cut.lone > 1 ? ` ${count(cut.lone - 1, "more pair has", "more pairs have")} a single import on one side; re-scan after each cut.` : " Re-scan after the cut."]);
+    } else if (c.break.length) {
+      const e = edgeOf(c.break[0]);
+      if (e !== undefined) next.push(["Start on ", cyc, " by removing or inverting ", { e, label: `${short(files[edges[e].a].path)} → ${short(files[edges[e].b].path)}` }, "."]);
+    }
+  });
+  const moves = ofKind("misplaced-file").filter(fd => fd.f.simulation).sort((p, q) => cohesionGain(q) - cohesionGain(p));
+  for (const fd of moves.slice(0, 2)) {
+    const after = fd.f.simulation.after.modules, parts = [];
+    for (const [m, a] of Object.entries(after)) {
+      const b = doc.summary.modules[m];
+      if (a && b && n2(a.cohesion) !== n2(b.cohesion)) parts.push(`${m} cohesion ${n2(b.cohesion)} → ${n2(a.cohesion)}`);
+    }
+    next.push([{ fd: fd.i, label: `Move ${short(fd.f.subject)}` }, ` into ${fd.f.evidence.target_module} as ${short(fd.f.suggestion.move.to)}: `,
+      parts.join(", "), parts.length ? "; " : "", `${fd.f.evidence.imports_from_target} of its importers are there, and the move adds no forbidden import or cycle.`]);
+  }
+  /* The split that moves the most files out first: the size of its second-largest group. */
+  const minority = fd => fd.f.evidence.components.map(c => c.files.length).sort((a, b) => b - a)[1] || 0;
+  const sinks = ofKind("sink-split").sort((p, q) => minority(q) - minority(p) || q.f.evidence.ca - p.f.evidence.ca);
+  for (const fd of sinks.slice(0, 1)) {
+    const groups = fd.f.evidence.components.map(c => `${count(c.files.length, "file", "files")} ${c.files.length === 1 ? "serves" : "serve"} ${c.consumers.length === 1 ? "only " + c.consumers[0] : c.consumers.length > 2 ? c.consumers.slice(0, 2).join(", ") + ` and ${c.consumers.length - 2} more` : c.consumers.join(" and ")}`);
+    next.push([{ fd: fd.i, label: `Split ${fd.f.subject}` }, ` along its ${fd.f.evidence.components.length} groups of importers: ${groups.slice(0, 3).join("; ")}.`]);
+  }
+  if (reachList.length) {
+    const by = new Map();
+    for (const fd of reachList) by.set(fd.f.evidence.module, [...(by.get(fd.f.evidence.module) || []), fd]);
+    const [m, l] = [...by.entries()].sort((a, b) => b[1].length - a[1].length || (a[0] < b[0] ? -1 : 1))[0];
+    const entry = l[0].f.evidence.entries[0];
+    next.push([{ fd: l[0].i, label: `Import ${m} through its entry` }, entry ? ` (${short(entry)})` : "", l.length === 1 ? " in the one place that reaches past it." : ` in the ${l.length} places that reach past it.`]);
+  }
+  if (!doc.config.rules && N > 2) next.push(["Write a layout.yaml with layers and public entries for the boundaries you agree on, so archgraph check can hold them in CI."]);
+  if (unstable.length) {
+    const fd = unstable[0], ev = fd.f.evidence;
+    next.push([{ fd: fd.i, label: `Untie ${ev.from} from ${ev.to}` }, `: stable ${ev.from} imports volatile ${ev.to} ${times(ev.imports)}; depend on an abstraction ${ev.from} owns, or move the code it needs.`]);
+  }
+  return { good, bad, next: next.slice(0, MAX_NEXT) };
+})();
+
+/* One paragraph per module: its role, what is good, what is risky, the next step a finding names. */
+function diagnosis(i) {
+  const m = mods[i], role = roleOf(i), out = [];
+  const listed = l => l.length > NAMES ? `${l.slice(0, NAMES).join(", ")} and ${l.length - NAMES} more` : l.length > 1 ? `${l.slice(0, -1).join(", ")} and ${l[l.length - 1]}` : l[0];
+  const say = (...p) => out.push(...p, " ");
+  if (role === "foundation") say(`${m.id} is a foundation: ${m.ca} modules import it and it imports ${m.ce}, so it is stable (instability ${n2(m.instability)}).`);
+  else if (role === "hub") say(`${m.id} is a hub: ${m.ca} modules import it and it imports ${m.ce}, so a change can ripple both into it and out of it.`);
+  else if (role === "entry") say(`${m.id} is an entry point: no module imports it, and it imports ${count(m.ce, "module", "modules")}.`);
+  else if (role === "isolated") say(`${m.id} is isolated: it imports no other module and none imports it.`);
+  else if (role === "collection") say(`${m.id} is a collection of ${m.files} entry files: no module imports it and its files do not import each other, so cohesion does not apply; together they import ${count(m.ce, "module", "modules")}.`);
+  else say(`${m.id} is imported by ${count(m.ca, "module", "modules")} and imports ${m.ce}.`);
+  const good = [], risky = [];
+  const viaF = adjusted ? foundationsOf[i] : [];
+  const notCounting = viaF.length ? ` not counting imports of ${listed(viaF.map(j => mods[j].id))}` : "";
+  const cx = cohesionX[i];
+  if (role !== "collection" && m.files >= REAL_SIZE && cx !== null && cx > COHESIVE_MIN) good.push(`most imports of its files stay inside (cohesion ${n2(cx)}${notCounting})`);
+  if (modCycles.length && !inModCycle.has(i)) good.push("it is in no module cycle");
+  if (role === "foundation" && !moreVolatile[i].length) good.push("it imports nothing more volatile than itself");
+  else if (role === "foundation" && !pullsVolatile.has(i)) good.push(`what it imports is less than 0.25 more volatile (${listed(moreVolatile[i].map(j => `${mods[j].id} ${n2(mods[j].instability)}`))}, against its ${n2(m.instability)})`);
+  const out_ = medges.filter(me => me.a === i);
+  const forb = out_.reduce((s, me) => s + me.v.forbidden, 0), unpl = out_.reduce((s, me) => s + me.v.unplanned, 0);
+  if (doc.config.rules && !forb && !unpl && m.ce) good.push("every import out of it is allowed by a rule");
+  const c = modCycles.find(c => c.members.includes(m.id));
+  if (c) risky.push(`it is one of the ${c.members.length} modules in an import cycle`);
+  if (role !== "collection" && m.files >= REAL_SIZE && m.ca > 0 && cx !== null && cx < LOOSE_MAX) risky.push(`most imports of its files go to other modules (cohesion ${n2(cx)}${notCounting}), so it may hold several modules' worth of code`);
+  if (forb) risky.push(`${count(forb, "import", "imports")} out of it ${forb === 1 ? "is" : "are"} forbidden`);
+  if (unpl) risky.push(`${count(unpl, "import", "imports")} out of it ${unpl === 1 ? "is" : "are"} unplanned`);
+  const unst = ofKind("unstable-dependency").filter(fd => fd.f.evidence.from === m.id);
+  if (unst.length) risky.push(`it imports the more volatile ${listed(unst.map(fd => fd.f.evidence.to))}`);
+  const reach = ofKind("internals-reach").filter(fd => fd.f.evidence.module === m.id);
+  if (reach.length) risky.push(`${count(reach.length, "import reaches", "imports reach")} past its public entry`);
+  const hid = ofKind("hidden-coupling").filter(fd => fd.f.evidence.modules.includes(m.id));
+  if (hid.length) risky.push(`${count(hid.length, "file pair changes", "file pairs change")} together with other modules without an import`);
+  const join = l => l.length > 1 ? l.slice(0, -1).join(", ") + " and " + l[l.length - 1] : l[0];
+  if (good.length) say({ b: "Good:" }, ` ${join(good)}.`);
+  if (risky.length) say({ b: "Risky:" }, ` ${risky.length > 1 ? risky.join("; ") : risky[0]}.`);
+  /* The next step: the first finding about this module, most effective kind first. */
+  const mine = findingsOfModule[i];
+  const pick = kind => mine.filter(fd => fd.f.kind === kind);
+  const mv = pick("misplaced-file").find(fd => fd.f.suggestion);
+  const cyc = c ? firstCut(c) : null;
+  const cutHere = cyc && cyc.e !== undefined && (cyc.p.from === m.id || cyc.p.to === m.id) ? cyc : null;
+  const sink = pick("sink-split").find(fd => fd.f.subject === m.id);
+  if (mv) say({ b: "Next:" }, " ", { fd: mv.i, label: `move ${short(mv.f.subject)} into ${mv.f.evidence.target_module}` }, ".");
+  else if (cutHere) say({ b: "Next:" }, " ", { e: cutHere.e, label: `cut ${short(files[edges[cutHere.e].a].path)} → ${short(files[edges[cutHere.e].b].path)}` }, `, the lighter side of ${cutHere.p.from} and ${cutHere.p.to} importing each other.`);
+  else if (sink) say({ b: "Next:" }, " ", { fd: sink.i, label: `split it along its ${sink.f.evidence.components.length} groups of importers` }, ".");
+  else if (unst.length) say({ b: "Next:" }, " ", { fd: unst[0].i, label: `untie it from ${unst[0].f.evidence.to}` }, ".");
+  else if (reach.length) say({ b: "Next:" }, " ", { fd: reach[0].i, label: "point those imports at its entry" }, ".");
+  return out;
 }
 
 /* ---------- state ---------- */
@@ -738,6 +1122,10 @@ function zoomToTarget(t) {
   if (t.type === "module") zoomToModule(t.i);
   else if (t.type === "file") zoomToFile(t.i);
   else if (t.type === "finding") zoomToFinding(findings[t.i]);
+  else if (t.type === "fedge") {
+    const a = files[edges[t.i].a], b = files[edges[t.i].b];
+    fitBox(Math.min(a.x, b.x) - 40, Math.min(a.y, b.y) - 40, Math.max(a.x, b.x) + 40, Math.max(a.y, b.y) + 40, K_LABEL * 1.05, true);
+  }
   else if (t.type === "medge") {
     const me = medges[t.i];
     fitBox(Math.min(mx[me.a] - modR[me.a], mx[me.b] - modR[me.b]) - 20, Math.min(my[me.a] - modR[me.a], my[me.b] - modR[me.b]) - 20,
@@ -1451,7 +1839,13 @@ function select(t) {
   showPanel();
   redraw();
 }
-function go(t) { select(t); zoomToTarget(t); }
+/* On narrow screens the panel sits below the graph: bring the graph back into view. */
+function reveal() {
+  const r = stage.getBoundingClientRect();
+  if (r.top >= 0 && r.top < window.innerHeight - 80) return;
+  window.scrollBy({ top: r.top, behavior: reduce.matches ? "auto" : "smooth" });
+}
+function go(t) { select(t); reveal(); zoomToTarget(t); }
 function btn(text, cls, on, title) {
   const b = el("button", { type: "button", class: cls }, text);
   if (title) b.title = title;
@@ -1465,16 +1859,17 @@ function modBtn(i) {
   return b;
 }
 function head(kind, title, extra) {
-  panel.append(btn("← Findings", "back", () => select(null)));
+  panel.append(btn("← Assessment", "back", () => select(null)));
   const k = el("div", { class: "kicker" }, kind);
   if (extra) k.append(extra);
   panel.append(k, el("h2", {}, title));
 }
 function metrics(pairs) {
   const dl = el("dl", { class: "metrics" });
-  for (const [k, v] of pairs) {
-    const d = el("div");
+  for (const [k, v, hint, long] of pairs) {
+    const d = el("div", long ? { title: long } : {});
     d.append(el("dt", {}, k), el("dd", {}, String(v)));
+    if (hint) d.append(el("dd", { class: "hint" }, hint));
     dl.append(d);
   }
   return dl;
@@ -1544,19 +1939,62 @@ function findingList(list) {
   return ul;
 }
 
+/* A sentence of text and references; each reference highlights its target on hover and selects
+   and shows it on click. */
+function refTarget(p) {
+  return p.m !== undefined ? { type: "module", i: p.m } : p.f !== undefined ? { type: "file", i: p.f }
+    : p.e !== undefined ? { type: "fedge", i: p.e } : { type: "finding", i: p.fd };
+}
+function sentence(parts, tag) {
+  const node = el(tag || "li");
+  let glue = null;
+  for (const p of parts) {
+    if (typeof p === "string") {
+      /* Punctuation after a reference stays on its line. */
+      if (glue && /^[.,;:)]/.test(p)) { glue.append(document.createTextNode(p[0])); node.append(document.createTextNode(p.slice(1))); }
+      else node.append(document.createTextNode(p));
+      glue = null;
+      continue;
+    }
+    glue = null;
+    if (p.b) { node.append(el("b", {}, p.b)); continue; }
+    const t = refTarget(p);
+    const label = p.label || (t.type === "module" ? mods[t.i].id : t.type === "file" ? short(files[t.i].path) : "");
+    const b = btn(label, "ref", () => go(t));
+    b.addEventListener("mouseenter", () => setHover(t));
+    b.addEventListener("mouseleave", () => setHover(null));
+    glue = el("span", { class: "glue" });
+    glue.append(b);
+    node.append(glue);
+  }
+  return node;
+}
 function overview() {
-  panel.append(el("div", { class: "kicker" }, "Overview"));
-  panel.append(el("h2", {}, findings.length ? count(findings.length, "finding", "findings") : "No findings"));
-  panel.append(el("p", { class: "muted" }, "Hover a module for its importers and imports; click to keep it. Zoom in for files and their imports. Click a finding to see what it names."));
+  panel.append(el("div", { class: "kicker" }, "Assessment"));
+  panel.append(el("h2", {}, `${nf(F)} ${F === 1 ? "file" : "files"} in ${nf(N)} ${N === 1 ? "module" : "modules"}`));
+  panel.append(el("p", { class: "muted" }, "Read from the imports alone; every line names its evidence. Click a name to see it on the graph."));
+  if (ofKind("small-repo").length) panel.append(el("p", { class: "note" }, "Few files or modules: read the lines below as hints, the signal is weak."));
+  if (foundations.length && !hasOutgoingTo) panel.append(el("p", { class: "note" }, "This scan has no outgoing_to per module (an older archgraph), so cohesion here also counts imports of foundations. Rescan to judge it without them."));
+  const section = (title, cls, items, empty) => {
+    panel.append(el("h3", { class: "sec " + cls }, title));
+    const ul = el(cls === "next" ? "ol" : "ul", { class: "assess " + cls });
+    if (!items.length) ul.append(el("li", { class: "muted" }, empty));
+    for (const parts of items) ul.append(sentence(parts));
+    panel.append(ul);
+  };
+  section("What holds up", "good", assessment.good, "Checked rules, stable foundations, cohesion, cycles and entries: none stands out as solid.");
+  section("What hurts", "bad", assessment.bad.map(b => b.parts), "Checked cycles, hubs, cohesion, rules, unstable imports, co-change and entries: nothing stands out.");
+  section("What to do next", "next", assessment.next, "No finding suggests a change.");
+  panel.append(el("h3", {}, findings.length ? `All findings: ${findings.length}` : "No findings"));
   const byKind = new Map();
   for (const fd of findings) { if (!byKind.has(fd.f.kind)) byKind.set(fd.f.kind, []); byKind.get(fd.f.kind).push(fd); }
   for (const [kind, list] of byKind) {
     const d = el("details", { class: "kind" });
-    if (list.length <= 6) d.open = true;
     const sum = el("summary");
     sum.append(el("span", {}, kind), el("span", { class: "badge" }, String(list.length)));
     d.append(sum);
     if (KIND_TEXT[kind]) d.append(el("p", { class: "muted" }, KIND_TEXT[kind]));
+    d.append(...advice(kind));
     const ul = el("ul", { class: "flist" });
     for (const fd of list) {
       const li = el("li");
@@ -1574,10 +2012,20 @@ function modulePanel(i) {
   const chip = el("span", { class: "pill" });
   chip.append(el("i", { class: "sw h " + modHealth[i] }), document.createTextNode(HEALTH_TEXT[modHealth[i]]));
   head("Module", m.id, chip);
-  panel.append(metrics([["files", m.files], ["Ca, importers", m.ca], ["Ce, imports", m.ce], ["instability", fmt(m.instability)],
-    ["cohesion", fmt(m.cohesion)], ["internal edges", m.internal_edges], ["outgoing edges", m.outgoing_edges]]));
+  panel.append(sentence(diagnosis(i), "p"));
+  panel.lastChild.className = "diag";
+  panel.append(metrics([
+    ["files", m.files, "in the module", "Files in the module."],
+    ["Ca, importers", m.ca, "more: more rely on it", "Modules that import it. More importers means more code relies on it, so it should change rarely."],
+    ["Ce, imports", m.ce, "fewer: fewer reasons to change", "Modules it imports. Fewer imports means fewer reasons for it to change."],
+    ["instability", fmt(m.instability), "0 stable, 1 volatile", "Ce / (Ca + Ce): near 0 it is stable, near 1 volatile. Neither is bad; a stable module should not import a volatile one."],
+    ["cohesion", fmt(m.cohesion), adjusted && cohesionX[i] !== null && n2(cohesionX[i]) !== n2(m.cohesion)
+      ? `${n2(cohesionX[i])} not counting imports of foundations` : "higher: imports stay inside",
+      "Share of its files' imports that stay inside the module. Higher means the folder holds one unit of code. The assessment does not count imports of foundations, which are the intended design."],
+    ["internal edges", m.internal_edges, "between its files", "Imports between its own files."],
+    ["outgoing edges", m.outgoing_edges, "to other modules", "Imports from its files to other modules."]]));
   const acts = el("div", { class: "actions" });
-  acts.append(btn("Zoom to module", "act", () => zoomToModule(i)),
+  acts.append(btn("Zoom to module", "act", () => { reveal(); zoomToModule(i); }),
     btn(hiddenMods[i] ? "Show its links" : "Hide its links", "act", () => setHidden(i, !hiddenMods[i])));
   panel.append(acts);
   const importers = medges.filter(e => e.b === i).sort((a, b) => b.imports - a.imports);
@@ -1669,9 +2117,10 @@ function findingPanel(j) {
   const fd = findings[j], f = fd.f, ev = f.evidence || {};
   head(f.kind, subjectText(f));
   if (KIND_TEXT[f.kind]) panel.append(el("p", { class: "muted" }, KIND_TEXT[f.kind]));
+  panel.append(...advice(f.kind, f));
   const line = t => panel.append(el("p", {}, t));
   const acts = el("div", { class: "actions" });
-  acts.append(btn("Zoom to it", "act", () => zoomToFinding(fd)));
+  acts.append(btn("Zoom to it", "act", () => { reveal(); zoomToFinding(fd); }));
   panel.append(acts);
   if (f.kind === "cycle") {
     line(`${ev.level === "module" ? "Modules" : "Files"} in the cycle: ${ev.members.length}. ` +

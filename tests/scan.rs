@@ -58,13 +58,16 @@ fn ts_basic_metrics_by_hand() {
         doc["modules"],
         json!([
             { "id": "app/shell", "files": 2, "ca": 1, "ce": 2, "instability": 0.6667,
-              "internal_edges": 1, "outgoing_edges": 4, "cohesion": 0.2 },
+              "internal_edges": 1, "outgoing_edges": 4, "cohesion": 0.2,
+              "outgoing_to": { "core/model": 2, "core/util": 2 } },
             { "id": "core/model", "files": 2, "ca": 1, "ce": 1, "instability": 0.5,
-              "internal_edges": 1, "outgoing_edges": 1, "cohesion": 0.5 },
+              "internal_edges": 1, "outgoing_edges": 1, "cohesion": 0.5,
+              "outgoing_to": { "core/util": 1 } },
             { "id": "core/util", "files": 1, "ca": 2, "ce": 0, "instability": 0.0,
-              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null },
+              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null, "outgoing_to": {} },
             { "id": "main.ts", "files": 1, "ca": 0, "ce": 1, "instability": 1.0,
-              "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0 }
+              "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0,
+              "outgoing_to": { "app/shell": 1 } }
         ])
     );
     assert_eq!(
@@ -285,11 +288,13 @@ fn ts_excludes_and_barrel_attribution() {
         doc["modules"],
         json!([
             { "id": "app", "files": 1, "ca": 0, "ce": 2, "instability": 1.0,
-              "internal_edges": 0, "outgoing_edges": 4, "cohesion": 0.0 },
+              "internal_edges": 0, "outgoing_edges": 4, "cohesion": 0.0,
+              "outgoing_to": { "feature": 3, "shared": 1 } },
             { "id": "feature", "files": 4, "ca": 1, "ce": 1, "instability": 0.5,
-              "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0 },
+              "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0,
+              "outgoing_to": { "shared": 1 } },
             { "id": "shared", "files": 1, "ca": 2, "ce": 0, "instability": 0.0,
-              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null }
+              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null, "outgoing_to": {} }
         ])
     );
     // Module edges are raw imports, as cycles and their break sets need.

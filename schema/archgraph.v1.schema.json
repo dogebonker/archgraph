@@ -112,7 +112,12 @@
               "instability": { "$ref": "#/$defs/ratio" },
               "internal_edges": { "$ref": "#/$defs/count" },
               "outgoing_edges": { "$ref": "#/$defs/count" },
-              "cohesion": { "$ref": "#/$defs/ratio" }
+              "cohesion": { "$ref": "#/$defs/ratio" },
+              "outgoing_to": {
+                "description": "outgoing_edges split by target module id, counted the same way (barrel-attributed file pairs); the values sum to outgoing_edges. Optional: absent in documents written before it was added.",
+                "type": "object",
+                "additionalProperties": { "$ref": "#/$defs/count" }
+              }
             }
           }
         },

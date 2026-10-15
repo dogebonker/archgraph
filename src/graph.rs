@@ -24,6 +24,7 @@ pub fn modules(
         ce: BTreeSet<&'a str>,
         internal: usize,
         outgoing: usize,
+        outgoing_to: BTreeMap<String, usize>,
     }
     let mut acc: BTreeMap<&str, Acc> = BTreeMap::new();
     for module in module_of.values() {
@@ -36,6 +37,7 @@ pub fn modules(
         } else {
             let a = acc.get_mut(mf).unwrap();
             a.outgoing += 1;
+            *a.outgoing_to.entry(mt.to_owned()).or_default() += 1;
             a.ce.insert(mt);
             acc.get_mut(mt).unwrap().ca.insert(mf);
         }
@@ -50,6 +52,7 @@ pub fn modules(
             internal_edges: a.internal,
             outgoing_edges: a.outgoing,
             cohesion: ratio(a.internal, a.internal + a.outgoing),
+            outgoing_to: a.outgoing_to,
         })
         .collect()
 }

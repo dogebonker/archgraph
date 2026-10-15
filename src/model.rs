@@ -143,6 +143,8 @@ pub struct Module {
     pub internal_edges: usize,
     pub outgoing_edges: usize,
     pub cohesion: Option<f64>,
+    /// `outgoing_edges` split by target module, counted the same way (barrel-attributed).
+    pub outgoing_to: BTreeMap<String, usize>,
 }
 
 #[derive(Debug, Serialize)]

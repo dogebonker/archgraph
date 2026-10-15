@@ -52,6 +52,14 @@ pub fn validate(doc: &Value) {
         .map(|e| format!("{e} at {}", e.instance_path()))
         .collect();
     assert!(errors.is_empty(), "schema violations: {errors:#?}");
+    // `outgoing_to` splits `outgoing_edges` by target module.
+    for m in doc["modules"].as_array().into_iter().flatten() {
+        let split: u64 = m["outgoing_to"]
+            .as_object()
+            .map(|o| o.values().map(|n| n.as_u64().unwrap()).sum())
+            .unwrap_or(0);
+        assert_eq!(split, m["outgoing_edges"].as_u64().unwrap(), "{}", m["id"]);
+    }
 }
 
 /// Output with the `generated_at` line removed: the only part two scans of one tree in one

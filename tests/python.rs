@@ -49,15 +49,19 @@ fn py_cycles_mapping_barrels_and_cycle() {
         doc["modules"],
         json!([
             { "id": "__init__.py", "files": 1, "ca": 0, "ce": 0, "instability": null,
-              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null },
+              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null, "outgoing_to": {} },
             { "id": "api", "files": 3, "ca": 1, "ce": 1, "instability": 0.5,
-              "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0 },
+              "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0,
+              "outgoing_to": { "core": 1 } },
             { "id": "cli.py", "files": 1, "ca": 0, "ce": 1, "instability": 1.0,
-              "internal_edges": 0, "outgoing_edges": 2, "cohesion": 0.0 },
+              "internal_edges": 0, "outgoing_edges": 2, "cohesion": 0.0,
+              "outgoing_to": { "api": 2 } },
             { "id": "core", "files": 2, "ca": 2, "ce": 1, "instability": 0.3333,
-              "internal_edges": 0, "outgoing_edges": 2, "cohesion": 0.0 },
+              "internal_edges": 0, "outgoing_edges": 2, "cohesion": 0.0,
+              "outgoing_to": { "db": 2 } },
             { "id": "db", "files": 3, "ca": 1, "ce": 1, "instability": 0.5,
-              "internal_edges": 1, "outgoing_edges": 1, "cohesion": 0.5 }
+              "internal_edges": 1, "outgoing_edges": 1, "cohesion": 0.5,
+              "outgoing_to": { "core": 1 } }
         ])
     );
     assert_eq!(
