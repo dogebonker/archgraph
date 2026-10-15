@@ -1,0 +1,13 @@
+# Modular monolith, TypeScript (kit/layouts/modular-monolith.md). Module b has no index.ts.
+version: 1
+modules:
+  - { id: "<name>", path: "src/modules/<name>/**" }
+layers:
+  - "src/shared/**"
+  - "src/modules/*/domain/**"
+  - "src/modules/*/application/**"
+  - "src/modules/*/infrastructure/**"
+  - "src/modules/*/interfaces/**"
+  - "src/main.ts"
+public:
+  - { module: "src/modules/<name>/**", entries: ["src/modules/<name>/index.ts"] }

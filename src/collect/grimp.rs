@@ -1,0 +1,136 @@
+//! grimp 3.17 through the embedded grimp_dump.py helper.
+
+use std::fs;
+use std::path::Path;
+use std::process::Command;
+
+use anyhow::{Context, Result, bail};
+use globset::GlobSet;
+use serde::Deserialize;
+
+use super::{RawGraph, join};
+use crate::model::{Collector, Edge, EdgeKind};
+
+const DUMP: &str = include_str!("grimp_dump.py");
+
+#[derive(Deserialize)]
+struct Dump {
+    grimp_version: String,
+    modules: Vec<String>,
+    imports: Vec<Import>,
+}
+
+#[derive(Deserialize)]
+struct Import {
+    importer: String,
+    imported: String,
+}
+
+/// `explicit`, else the single package directly under `source_dir`: a directory with an
+/// `__init__.py` or, for a namespace package, with `.py` files, and not excluded.
+pub fn package(
+    root: &Path,
+    source_dir: &str,
+    explicit: Option<&str>,
+    excludes: &GlobSet,
+) -> Result<String> {
+    if let Some(package) = explicit {
+        return Ok(package.to_owned());
+    }
+    let dir = root.join(source_dir);
+    let mut found = Vec::new();
+    for entry in fs::read_dir(&dir).with_context(|| format!("reading {}", dir.display()))? {
+        let path = entry?.path();
+        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        // An excluded directory excludes every file in it, so a probe file stands for it.
+        if !path.is_dir()
+            || name.starts_with('.')
+            || excludes.is_match(join(source_dir, &format!("{name}/x.py")))
+        {
+            continue;
+        }
+        let has_python = fs::read_dir(&path)?
+            .filter_map(|e| e.ok())
+            .any(|e| e.path().extension().is_some_and(|x| x == "py") && e.path().is_file());
+        if has_python {
+            found.push(name);
+        }
+    }
+    found.sort();
+    match found.as_slice() {
+        [one] => Ok(one.clone()),
+        [] => bail!(
+            "no Python package (directory with .py files) in {}; pass --package",
+            dir.display()
+        ),
+        many => bail!(
+            "several Python packages in {}: {}; pass --package",
+            dir.display(),
+            many.join(", ")
+        ),
+    }
+}
+
+/// `-I` keeps the environment, the working directory and user site-packages off `sys.path`; the
+/// helper appends the source root itself after importing what it needs. `-B` writes no bytecode.
+pub fn run(root: &Path, source_dir: &str, package: &str, python: &str) -> Result<Vec<u8>> {
+    let src = fs::canonicalize(root.join(source_dir))?;
+    let out = Command::new(python)
+        .args(["-I", "-B", "-c", DUMP])
+        .arg(src)
+        .arg(package)
+        .output()
+        .with_context(|| format!("running {python}"))?;
+    if !out.status.success() {
+        bail!(
+            "grimp helper failed: {}\ngrimp 3.17 is required: pip install grimp==3.17, \
+             or run archgraph under uv run --with grimp==3.17",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    Ok(out.stdout)
+}
+
+/// Maps dotted module names to `a/b.py` or, for packages, `a/b/__init__.py`. A namespace
+/// package (a directory without `__init__.py`) is no file and is left out.
+pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
+    let dump: Dump = serde_json::from_slice(json).context("reading grimp JSON")?;
+    let path = |module: &str| {
+        let base = join(source_dir, &module.replace('.', "/"));
+        let init = format!("{base}/__init__.py");
+        let file = format!("{base}.py");
+        if root.join(&init).is_file() {
+            Some(init)
+        } else if root.join(&base).is_dir() && !root.join(&file).is_file() {
+            None
+        } else {
+            Some(file)
+        }
+    };
+    let edges = dump
+        .imports
+        .iter()
+        .filter_map(|i| {
+            Some(Edge {
+                from: path(&i.importer)?,
+                to: path(&i.imported)?,
+                kind: EdgeKind::Static,
+                verdict: None,
+                rule: None,
+                reach: None,
+            })
+        })
+        .collect();
+    let files: Vec<String> = dump.modules.iter().filter_map(|m| path(m)).collect();
+    let collector = Collector {
+        name: "grimp".to_owned(),
+        version: Some(dump.grimp_version),
+        cruised: files.len(),
+        unresolved: None,
+    };
+    Ok(RawGraph {
+        files,
+        edges,
+        collector,
+    })
+}

@@ -1,0 +1,12 @@
+# Hexagonal, Python (kit/layouts/hexagonal.md): adapters and entrypoints share a layer and do
+# not import each other.
+version: 1
+# Layers bind no capture: Factory's `<pkg>` becomes `*`.
+layers:
+  - "src/*/domain/**"
+  - "src/*/service_layer/**"
+  - "src/*/{adapters,entrypoints}/**"
+  - "src/*/bootstrap.py"
+forbid:
+  - { id: adapters-no-entrypoints, from: "src/<pkg>/adapters/**", to: "src/<pkg>/entrypoints/**" }
+  - { id: entrypoints-no-adapters, from: "src/<pkg>/entrypoints/**", to: "src/<pkg>/adapters/**" }

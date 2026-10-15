@@ -1,0 +1,55 @@
+{
+ "grimp_version": "3.17",
+ "modules": [
+  "mypkg",
+  "mypkg.api",
+  "mypkg.api.handlers",
+  "mypkg.api.schemas",
+  "mypkg.cli",
+  "mypkg.core",
+  "mypkg.core.service",
+  "mypkg.db",
+  "mypkg.db.repo",
+  "mypkg.db.session",
+  "mypkg.tests",
+  "mypkg.tests.test_service"
+ ],
+ "imports": [
+  {
+   "importer": "mypkg.api",
+   "imported": "mypkg.api.handlers"
+  },
+  {
+   "importer": "mypkg.api",
+   "imported": "mypkg.api.schemas"
+  },
+  {
+   "importer": "mypkg.api.handlers",
+   "imported": "mypkg.core.service"
+  },
+  {
+   "importer": "mypkg.cli",
+   "imported": "mypkg.api"
+  },
+  {
+   "importer": "mypkg.core",
+   "imported": "mypkg.db.session"
+  },
+  {
+   "importer": "mypkg.core.service",
+   "imported": "mypkg.db.repo"
+  },
+  {
+   "importer": "mypkg.db.repo",
+   "imported": "mypkg.core"
+  },
+  {
+   "importer": "mypkg.db.repo",
+   "imported": "mypkg.db.session"
+  },
+  {
+   "importer": "mypkg.tests.test_service",
+   "imported": "mypkg.core.service"
+  }
+ ]
+}

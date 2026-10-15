@@ -1,0 +1,52 @@
+{
+ "grimp_version": "3.17",
+ "modules": [
+  "app",
+  "app.adapters",
+  "app.adapters.notify",
+  "app.adapters.repository",
+  "app.bootstrap",
+  "app.domain",
+  "app.domain.events",
+  "app.domain.model",
+  "app.entrypoints",
+  "app.entrypoints.api",
+  "app.entrypoints.cli",
+  "app.service_layer",
+  "app.service_layer.services"
+ ],
+ "imports": [
+  {
+   "importer": "app.adapters.notify",
+   "imported": "app.entrypoints.cli"
+  },
+  {
+   "importer": "app.adapters.repository",
+   "imported": "app.domain.model"
+  },
+  {
+   "importer": "app.bootstrap",
+   "imported": "app.adapters.repository"
+  },
+  {
+   "importer": "app.bootstrap",
+   "imported": "app.entrypoints.api"
+  },
+  {
+   "importer": "app.domain.events",
+   "imported": "app.adapters.repository"
+  },
+  {
+   "importer": "app.entrypoints.api",
+   "imported": "app.adapters.repository"
+  },
+  {
+   "importer": "app.entrypoints.api",
+   "imported": "app.service_layer.services"
+  },
+  {
+   "importer": "app.service_layer.services",
+   "imported": "app.domain.model"
+  }
+ ]
+}

@@ -1,0 +1,21 @@
+# FDA, Next.js App Router layers and rules (kit/layouts/fda.md).
+version: 1
+modules:
+  - { id: "domains/<name>", path: "src/domains/<name>/**" }
+layers:
+  - "src/shared/**"
+  - "src/domains/*/{types,constants}.ts"
+  - "src/domains/*/repo.server.ts"
+  - "src/domains/*/model.server.ts"
+  - "src/domains/*/client.ts"
+  - "src/domains/*/controller.ts"
+  - "src/domains/*/ui/**"
+  - "app/**"
+public:
+  - { module: "src/domains/<name>/**", entries: ["src/domains/<name>/index.ts", "src/domains/<name>/server.ts"] }
+forbid:
+  - { id: shared-no-domain, from: "src/shared/**", to: "src/domains/**", reason: "shared imports no domain" }
+  - { id: browser-no-server, from: "src/domains/*/{client,controller,index}.ts", to: "**/*.server.ts",
+      reachable: true, reason: "browser graph never reaches server code" }
+allow:
+  - { from: "app/**", to: "**", reason: "composition" }
