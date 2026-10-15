@@ -906,6 +906,52 @@ fn report_without_rules_exits_0_and_writes_into_the_root_by_default() {
     assert!(out_dir.join("archgraph.html").is_file());
 }
 
+#[cfg(unix)]
+#[test]
+fn report_refuses_to_write_through_symlinks_the_scanned_repository_planted() {
+    use std::os::unix::fs::symlink;
+    let base = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("report/symlinks");
+    let _ = fs::remove_dir_all(&base);
+    let input = fixture("ts-cycles").join("depcruise.json");
+    let victim = base.join("victim");
+    fs::create_dir_all(&victim).unwrap();
+    fs::write(victim.join("keep.txt"), "untouched").unwrap();
+    let run = |root: &std::path::Path| {
+        report(&[
+            root.to_str().unwrap(),
+            "--language",
+            "typescript",
+            "--collector-input",
+            input.to_str().unwrap(),
+        ])
+    };
+
+    // The repository ships .archgraph as a link to a folder elsewhere.
+    let root = base.join("dir-link");
+    fs::create_dir_all(&root).unwrap();
+    symlink(&victim, root.join(".archgraph")).unwrap();
+    let (_, stderr, code) = run(&root);
+    assert_eq!(code, Some(2), "{stderr}");
+    assert!(stderr.contains("symbolic link"), "{stderr}");
+    assert!(!victim.join("archgraph.html").exists());
+
+    // The repository ships .archgraph/archgraph.html as a link to a file elsewhere.
+    let root = base.join("file-link");
+    fs::create_dir_all(root.join(".archgraph")).unwrap();
+    symlink(
+        victim.join("keep.txt"),
+        root.join(".archgraph/archgraph.html"),
+    )
+    .unwrap();
+    let (_, stderr, code) = run(&root);
+    assert_eq!(code, Some(2), "{stderr}");
+    assert!(stderr.contains("symbolic link"), "{stderr}");
+    assert_eq!(
+        fs::read_to_string(victim.join("keep.txt")).unwrap(),
+        "untouched"
+    );
+}
+
 #[test]
 fn report_with_unreadable_rules_is_an_error() {
     let dir = fixture("ts-cycles");

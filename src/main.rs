@@ -277,11 +277,22 @@ fn report(args: Report) -> Result<ExitCode> {
     });
     let doc = scan_doc(root, &args.opts, rules.as_deref())?;
     let out_dir = args.out_dir.unwrap_or_else(|| root.join(".archgraph"));
-    fs::create_dir_all(&out_dir).with_context(|| format!("creating {}", out_dir.display()))?;
     let (json, html) = (
         out_dir.join("archgraph.json"),
         out_dir.join("archgraph.html"),
     );
+    // The default folder lives in the scanned repository, which may ship it (or the files in it)
+    // as links that would make this write land outside it.
+    // ponytail: checked, not opened with O_NOFOLLOW; a link swapped in during the scan still wins.
+    for path in [&out_dir, &json, &html] {
+        if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()) {
+            bail!(
+                "{} is a symbolic link; refusing to write through it (pass --out-dir)",
+                path.display()
+            );
+        }
+    }
+    fs::create_dir_all(&out_dir).with_context(|| format!("creating {}", out_dir.display()))?;
     write(Some(&json), &doc)?;
     fs::write(&html, render::render(&doc)?)
         .with_context(|| format!("writing {}", html.display()))?;
