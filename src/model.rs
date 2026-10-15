@@ -160,6 +160,21 @@ pub struct Cycle {
     pub exact: bool,
     #[serde(rename = "break")]
     pub break_set: Vec<Link>,
+    /// Module cycles only: every pair of members importing each other, as its lighter direction.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub two_way: Option<Vec<TwoWay>>,
+}
+
+/// The lighter direction of two modules importing each other (the names' order on a tie): the
+/// cheapest cut a person can act on.
+#[derive(Debug, Clone, Serialize)]
+pub struct TwoWay {
+    pub from: String,
+    pub to: String,
+    pub imports: usize,
+    pub reverse_imports: usize,
+    /// The file imports from `from` to `to`, at most `graph::TWO_WAY_EDGES` of them.
+    pub edges: Vec<Link>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -228,6 +243,10 @@ pub enum Evidence {
         to: String,
         module: String,
         entries: Vec<String>,
+        /// Without rules: the share of the cross-module imports into `module` that go through
+        /// one of its barrels.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        barrel_share: Option<f64>,
     },
     UnstableDependency {
         from: String,

@@ -158,7 +158,22 @@
         "level": { "enum": ["module", "file"] },
         "members": { "type": "array", "minItems": 2, "items": {"type": "string"} },
         "exact": { "type": "boolean" },
-        "break": { "type": "array", "minItems": 1, "items": {"$ref": "#/$defs/link"} }
+        "break": { "type": "array", "minItems": 1, "items": {"$ref": "#/$defs/link"} },
+        "two_way": {
+          "description": "Module cycles only: every pair of members that import each other, as the lighter direction (the names' order on a tie), sorted by imports, then from, then to. edges lists at most 20 of its file imports; imports counts them all.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "imports", "reverse_imports", "edges"],
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "imports": { "type": "integer", "minimum": 1 },
+              "reverse_imports": { "type": "integer", "minimum": 1 },
+              "edges": { "type": "array", "minItems": 1, "maxItems": 20, "items": {"$ref": "#/$defs/link"} }
+            }
+          }
+        }
       }
     },
     "rules": {
@@ -361,7 +376,8 @@
         "from": { "$ref": "#/$defs/path" },
         "to": { "$ref": "#/$defs/path" },
         "module": { "type": "string" },
-        "entries": { "type": "array", "items": {"$ref": "#/$defs/path"} }
+        "entries": { "type": "array", "items": {"$ref": "#/$defs/path"} },
+        "barrel_share": { "description": "Without rules: the share of the cross-module imports into module that go through one of its barrels, at least 0.5 for the finding to be reported. Absent with rules.", "type": "number", "minimum": 0.5, "maximum": 1 }
       }
     },
     "evidence-unstable-dependency": {

@@ -76,15 +76,23 @@ fn ts_sink_splits_into_its_consumer_groups() {
 
 #[test]
 fn ts_internals_reach_past_a_barrel() {
+    // Without rules a barrel is a module's public entry only when at least half the imports into
+    // the module go through it. Two of the three imports into b do, so use.ts reaching make.ts
+    // is reported; both imports into c bypass its barrel, so none is.
     let (doc, _, _) = scan_recorded("ts-internals", &[]);
+    let reach: Vec<&Value> = doc["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|f| f["kind"] == "internals-reach")
+        .collect();
     assert_eq!(
-        doc["findings"],
-        json!([
-            { "kind": "internals-reach", "subject": "src/a/use.ts -> src/b/make.ts",
-              "evidence": { "from": "src/a/use.ts", "to": "src/b/make.ts", "module": "b",
-                            "entries": ["src/b/index.ts"] } },
-            { "kind": "small-repo", "subject": ".", "evidence": { "files": 5, "modules": 2 } }
-        ])
+        reach,
+        [
+            &json!({ "kind": "internals-reach", "subject": "src/a/use.ts -> src/b/make.ts",
+                  "evidence": { "from": "src/a/use.ts", "to": "src/b/make.ts", "module": "b",
+                                "entries": ["src/b/index.ts"], "barrel_share": 0.6667 } })
+        ]
     );
 }
 

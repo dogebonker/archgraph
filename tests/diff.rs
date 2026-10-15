@@ -31,7 +31,7 @@ fn diff_shows_a_resolved_cycle() {
     assert_eq!(
         diff["resolved_cycles"],
         json!([{ "level": "module", "members": ["a", "b", "c"], "exact": true,
-                 "break": [{ "from": "src/c/z.ts", "to": "src/a/x.ts" }] }])
+                 "break": [{ "from": "src/c/z.ts", "to": "src/a/x.ts" }], "two_way": [] }])
     );
     assert_eq!(diff["new_cycles"], json!([]));
     assert_eq!(diff["added_modules"], json!([]));

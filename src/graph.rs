@@ -3,11 +3,14 @@
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::model::{Cycle, CycleLevel, Edge, Link, Module, ModuleEdge, Verdict};
+use crate::model::{Cycle, CycleLevel, Edge, Link, Module, ModuleEdge, TwoWay, Verdict};
 
 /// Above this many edges in one SCC the break set comes from the greedy heuristic: the exact
 /// search tries every subset, 2^16 = 65536 of them at the limit.
 const EXACT_LIMIT: usize = 16;
+/// A two-way pair lists at most this many of its lighter direction's file imports; `imports`
+/// counts them all.
+pub const TWO_WAY_EDGES: usize = 20;
 
 /// Ca, Ce, instability and cohesion from barrel-attributed file pairs.
 pub fn modules(
@@ -105,6 +108,7 @@ pub fn cycles(
             .collect();
         cycles.push(Cycle {
             level: CycleLevel::Module,
+            two_way: Some(two_way(module_of, edges, &weighted, &members)),
             members: owned(&members),
             exact,
             break_set,
@@ -129,11 +133,67 @@ pub fn cycles(
             members: owned(&members),
             exact,
             break_set,
+            two_way: None,
         });
     }
 
     cycles.sort_by(|a, b| a.members.cmp(&b.members));
     cycles
+}
+
+/// Pairs of `members` with module edges both ways, as the lighter direction, sorted by its
+/// imports, then names.
+fn two_way(
+    module_of: &BTreeMap<String, String>,
+    edges: &[Edge],
+    weighted: &[(&str, &str, usize)],
+    members: &[&str],
+) -> Vec<TwoWay> {
+    let imports: BTreeMap<(&str, &str), usize> =
+        weighted.iter().map(|&(a, b, n)| ((a, b), n)).collect();
+    let mut pairs = Vec::new();
+    for (i, &a) in members.iter().enumerate() {
+        for &b in &members[i + 1..] {
+            let (Some(&ab), Some(&ba)) = (imports.get(&(a, b)), imports.get(&(b, a))) else {
+                continue;
+            };
+            let (from, to, n, reverse) = if ab <= ba {
+                (a, b, ab, ba)
+            } else {
+                (b, a, ba, ab)
+            };
+            pairs.push(TwoWay {
+                from: from.to_owned(),
+                to: to.to_owned(),
+                imports: n,
+                reverse_imports: reverse,
+                edges: Vec::new(),
+            });
+        }
+    }
+    // One pass over the file edges fills every pair, instead of one pass per pair.
+    let slot: BTreeMap<(&str, &str), usize> = pairs
+        .iter()
+        .enumerate()
+        .map(|(i, p): (usize, &TwoWay)| ((p.from.as_str(), p.to.as_str()), i))
+        .collect();
+    let mut links: Vec<Vec<Link>> = vec![Vec::new(); pairs.len()];
+    for e in edges {
+        let key = (module_of[&e.from].as_str(), module_of[&e.to].as_str());
+        if let Some(&i) = slot.get(&key)
+            && links[i].len() < TWO_WAY_EDGES
+        {
+            links[i].push(Link {
+                from: e.from.clone(),
+                to: e.to.clone(),
+            });
+        }
+    }
+    for (p, l) in pairs.iter_mut().zip(links) {
+        p.edges = l;
+    }
+    pairs.sort_by(|x, y| (x.imports, &x.from, &x.to).cmp(&(y.imports, &y.from, &y.to)));
+    pairs
 }
 
 fn owned(names: &[&str]) -> Vec<String> {

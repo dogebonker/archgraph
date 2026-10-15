@@ -165,9 +165,11 @@ fn ts_cycles_with_minimum_break_sets() {
         doc["cycles"],
         json!([
             { "level": "module", "members": ["a", "b", "c"], "exact": true,
-              "break": [{ "from": "src/c/z.ts", "to": "src/a/x.ts" }] },
+              "break": [{ "from": "src/c/z.ts", "to": "src/a/x.ts" }], "two_way": [] },
             { "level": "module", "members": ["d", "e"], "exact": true,
-              "break": [{ "from": "src/e/n.ts", "to": "src/d/m.ts" }] },
+              "break": [{ "from": "src/e/n.ts", "to": "src/d/m.ts" }],
+              "two_way": [{ "from": "e", "to": "d", "imports": 1, "reverse_imports": 2,
+                            "edges": [{ "from": "src/e/n.ts", "to": "src/d/m.ts" }] }] },
             { "level": "file", "members": ["src/f/p.ts", "src/f/q.ts", "src/f/r.ts"], "exact": true,
               "break": [{ "from": "src/f/p.ts", "to": "src/f/q.ts" }] }
         ])
@@ -633,9 +635,61 @@ fn file_cycle_inside_a_module_is_reported_alongside_a_module_cycle() {
         doc["cycles"],
         json!([
             { "level": "module", "members": ["x", "y"], "exact": true,
-              "break": [{ "from": "x/a.ts", "to": "y/c.ts" }] },
+              "break": [{ "from": "x/a.ts", "to": "y/c.ts" }],
+              "two_way": [{ "from": "x", "to": "y", "imports": 1, "reverse_imports": 1,
+                            "edges": [{ "from": "x/a.ts", "to": "y/c.ts" }] }] },
             { "level": "file", "members": ["x/a.ts", "x/b.ts"], "exact": true,
               "break": [{ "from": "x/a.ts", "to": "x/b.ts" }] }
+        ])
+    );
+}
+
+#[test]
+fn module_cycle_lists_its_two_way_pairs_lighter_side_first() {
+    // x -> y 3, y -> x 1; x -> z 2, z -> x 1; y <-> z 2 each (a tie goes to the names' order);
+    // p -> q 22, q -> p 21. Sorted by the lighter side's imports, then names; at most 20 edges.
+    let mut edges: Vec<(String, String)> = Vec::new();
+    let mut imports = |from: &str, to: &str, n: usize| {
+        for i in 0..n {
+            edges.push((format!("{from}/f{i:02}.ts"), format!("{to}/g.ts")));
+        }
+    };
+    imports("x", "y", 3);
+    imports("y", "x", 1);
+    imports("x", "z", 2);
+    imports("z", "x", 1);
+    imports("y", "z", 2);
+    imports("z", "y", 2);
+    imports("p", "q", 22);
+    imports("q", "p", 21);
+    let (dir, input) = synthetic("two-way-pairs", edges.len(), &edges);
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let link = |from: &str, i: usize, to: &str| {
+        let (from, to) = (format!("{from}/f{i:02}.ts"), format!("{to}/g.ts"));
+        json!({ "from": from, "to": to })
+    };
+    let pq: Vec<Value> = (0..20).map(|i| link("q", i, "p")).collect();
+    assert_eq!(doc["cycles"][0]["members"], json!(["p", "q"]));
+    assert_eq!(
+        doc["cycles"][0]["two_way"],
+        json!([{ "from": "q", "to": "p", "imports": 21, "reverse_imports": 22, "edges": pq }])
+    );
+    assert_eq!(doc["cycles"][1]["members"], json!(["x", "y", "z"]));
+    assert_eq!(
+        doc["cycles"][1]["two_way"],
+        json!([
+            { "from": "y", "to": "x", "imports": 1, "reverse_imports": 3,
+              "edges": [link("y", 0, "x")] },
+            { "from": "z", "to": "x", "imports": 1, "reverse_imports": 2,
+              "edges": [link("z", 0, "x")] },
+            { "from": "y", "to": "z", "imports": 2, "reverse_imports": 2,
+              "edges": [link("y", 0, "z"), link("y", 1, "z")] }
         ])
     );
 }

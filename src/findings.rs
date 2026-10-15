@@ -33,6 +33,10 @@ const SEAM_MIN_COVERAGE: f64 = 0.5;
 /// Below either size, findings carry little signal.
 const SMALL_FILES: usize = 20;
 const SMALL_MODULES: usize = 3;
+/// Without rules, a module's barrels are its public entry only when at least this share of the
+/// cross-module imports into it go through one of them: a barrel most importers bypass is not
+/// the API the codebase uses.
+const BARREL_MIN_SHARE: f64 = 0.5;
 /// Absorbs float error in threshold comparisons of rounded ratios.
 const EPSILON: f64 = 1e-9;
 
@@ -391,29 +395,45 @@ fn cohesion(doc: &Document, modules: &[&str]) -> f64 {
 }
 
 /// With rules: imports forbidden by a `public` rule. Without, TypeScript only: cross-module
-/// imports of a non-barrel file in a module that has a barrel.
+/// imports of a non-barrel file in a module that has a barrel, when at least `BARREL_MIN_SHARE`
+/// of the cross-module imports into that module go through one of its barrels.
 fn internals_reach(g: &Graph, out: &mut Vec<Finding>) {
     let mut barrels: BTreeMap<&str, Vec<String>> = BTreeMap::new();
     for f in g.doc.files.iter().filter(|f| f.barrel) {
         barrels.entry(&f.module).or_default().push(f.path.clone());
     }
     let is_barrel: HashSet<&str> = barrels.values().flatten().map(String::as_str).collect();
+    // Per module: (cross-module imports into it, of which into one of its barrels).
+    let mut into: BTreeMap<&str, (usize, usize)> = BTreeMap::new();
     for e in &g.doc.edges {
         let module = g.module_of[e.to.as_str()];
-        let entries = match g.rules {
+        if g.module_of[e.from.as_str()] != module {
+            let count = into.entry(module).or_default();
+            count.0 += 1;
+            count.1 += usize::from(is_barrel.contains(e.to.as_str()));
+        }
+    }
+    for e in &g.doc.edges {
+        let module = g.module_of[e.to.as_str()];
+        let (entries, barrel_share) = match g.rules {
             Some(rules)
                 if e.verdict == Some(Verdict::Forbidden) && e.rule.as_deref() == Some("public") =>
             {
-                rules.entries_for(&e.to).unwrap_or_default()
+                (rules.entries_for(&e.to).unwrap_or_default(), None)
             }
             None if g.doc.source.language == Language::Typescript
                 && g.module_of[e.from.as_str()] != module
                 && !is_barrel.contains(e.to.as_str()) =>
             {
-                match barrels.get(module) {
-                    Some(b) => b.clone(),
-                    None => continue,
+                let Some(b) = barrels.get(module) else {
+                    continue;
+                };
+                let (total, via) = into[module];
+                let share = via as f64 / total as f64;
+                if share < BARREL_MIN_SHARE - EPSILON {
+                    continue;
                 }
+                (b.clone(), Some(round(share)))
             }
             _ => continue,
         };
@@ -425,6 +445,7 @@ fn internals_reach(g: &Graph, out: &mut Vec<Finding>) {
                 to: e.to.clone(),
                 module: module.to_owned(),
                 entries,
+                barrel_share,
             },
         ));
     }

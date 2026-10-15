@@ -1676,7 +1676,7 @@ function findingPanel(j) {
   if (f.kind === "cycle") {
     line(`${ev.level === "module" ? "Modules" : "Files"} in the cycle: ${ev.members.length}. ` +
       `${ev.exact ? "The break is the smallest." : "The break is a heuristic, not proven smallest."}`);
-    panel.append(el("h3", {}, `Break: remove ${count(ev.break.length, "import", "imports")}`));
+    const breakHead = el("h3", {}, `Break: remove ${count(ev.break.length, "import", "imports")}`);
     const ul = el("ul", { class: "edges" });
     for (const l of ev.break.slice(0, 200)) {
       const a = fileIndex.get(l.from), b = fileIndex.get(l.to), li = el("li");
@@ -1686,7 +1686,19 @@ function findingPanel(j) {
       ul.append(li);
     }
     if (ev.break.length > 200) ul.append(el("li", { class: "muted" }, `and ${ev.break.length - 200} more`));
-    panel.append(ul);
+    const twoWay = [];
+    if (ev.two_way && ev.two_way.length) {
+      twoWay.push(el("h3", {}, `Two-way pairs: ${ev.two_way.length}, lighter side first`));
+      const tw = el("ul", { class: "edges" });
+      for (const p of ev.two_way.slice(0, 50)) {
+        tw.append(el("li", {}, `${p.from} → ${p.to}: ${count(p.imports, "import", "imports")}, ${p.reverse_imports} back`));
+      }
+      if (ev.two_way.length > 50) tw.append(el("li", { class: "muted" }, `and ${ev.two_way.length - 50} more`));
+      twoWay.push(tw);
+    }
+    // A heuristic break set can run to hundreds of imports; the two-way pairs are where to start.
+    if (ev.exact) panel.append(breakHead, ul, ...twoWay);
+    else panel.append(...twoWay, breakHead, ul);
   } else if (f.kind === "misplaced-file") {
     line(`Imported by ${count(ev.imports_from_target, "file", "files")} of ${ev.target_module}, ` +
       `${count(ev.own_module_edges, "edge", "edges")} within its own module` + (ev.via_barrel ? ", through a barrel." : "."));
@@ -1704,6 +1716,7 @@ function findingPanel(j) {
   } else if (f.kind === "internals-reach") {
     line(`Imports past the public entry of ${ev.module}.`);
     if (ev.entries.length) line(`Entries: ${ev.entries.map(short).join(", ")}`);
+    if (ev.barrel_share !== undefined) line(`Share of imports into ${ev.module} through its barrels: ${ev.barrel_share}.`);
   } else if (f.kind === "unstable-dependency") {
     line(`${ev.from} (instability ${ev.from_instability}) imports ${ev.to} (instability ${ev.to_instability}) ${count(ev.imports, "time", "times")}.`);
   } else if (f.kind === "seam") {

@@ -75,7 +75,10 @@ fn py_cycles_mapping_barrels_and_cycle() {
         doc["cycles"],
         json!([
             { "level": "module", "members": ["core", "db"], "exact": true,
-              "break": [{ "from": "mypkg/db/repo.py", "to": "mypkg/core/__init__.py" }] }
+              "break": [{ "from": "mypkg/db/repo.py", "to": "mypkg/core/__init__.py" }],
+              "two_way": [{ "from": "db", "to": "core", "imports": 1, "reverse_imports": 2,
+                            "edges": [{ "from": "mypkg/db/repo.py",
+                                        "to": "mypkg/core/__init__.py" }] }] }
         ])
     );
 

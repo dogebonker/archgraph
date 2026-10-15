@@ -1,18 +1,18 @@
 {
   "modules": [
     {
-      "source": "src/a/main.ts",
+      "source": "src/a/edit.ts",
       "dependencies": [
         {
           "dynamic": false,
-          "module": "./use",
+          "module": "../b",
           "moduleSystem": "es6",
           "exoticallyRequired": false,
           "dependencyTypes": [
             "local",
             "import"
           ],
-          "resolved": "src/a/use.ts",
+          "resolved": "src/b/index.ts",
           "coreModule": false,
           "followable": true,
           "couldNotResolve": false,
@@ -22,71 +22,6 @@
         }
       ],
       "dependents": [],
-      "orphan": false,
-      "valid": true
-    },
-    {
-      "source": "src/a/use.ts",
-      "dependencies": [
-        {
-          "dynamic": false,
-          "module": "../b/make",
-          "moduleSystem": "es6",
-          "exoticallyRequired": false,
-          "dependencyTypes": [
-            "local",
-            "import"
-          ],
-          "resolved": "src/b/make.ts",
-          "coreModule": false,
-          "followable": true,
-          "couldNotResolve": false,
-          "matchesDoNotFollow": false,
-          "circular": false,
-          "valid": true
-        }
-      ],
-      "dependents": [
-        "src/a/main.ts"
-      ],
-      "orphan": false,
-      "valid": true
-    },
-    {
-      "source": "src/b/make.ts",
-      "dependencies": [
-        {
-          "dynamic": false,
-          "module": "./shape",
-          "moduleSystem": "es6",
-          "exoticallyRequired": false,
-          "dependencyTypes": [
-            "local",
-            "import"
-          ],
-          "resolved": "src/b/shape.ts",
-          "coreModule": false,
-          "followable": true,
-          "couldNotResolve": false,
-          "matchesDoNotFollow": false,
-          "circular": false,
-          "valid": true
-        }
-      ],
-      "dependents": [
-        "src/a/use.ts",
-        "src/b/index.ts"
-      ],
-      "orphan": false,
-      "valid": true
-    },
-    {
-      "source": "src/b/shape.ts",
-      "dependencies": [],
-      "dependents": [
-        "src/b/make.ts",
-        "src/b/index.ts"
-      ],
       "orphan": false,
       "valid": true
     },
@@ -128,6 +63,213 @@
           "valid": true
         }
       ],
+      "dependents": [
+        "src/a/edit.ts",
+        "src/a/view.ts"
+      ],
+      "orphan": false,
+      "valid": true
+    },
+    {
+      "source": "src/b/make.ts",
+      "dependencies": [
+        {
+          "dynamic": false,
+          "module": "./shape",
+          "moduleSystem": "es6",
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "local",
+            "import"
+          ],
+          "resolved": "src/b/shape.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        }
+      ],
+      "dependents": [
+        "src/b/index.ts",
+        "src/a/use.ts"
+      ],
+      "orphan": false,
+      "valid": true
+    },
+    {
+      "source": "src/b/shape.ts",
+      "dependencies": [],
+      "dependents": [
+        "src/b/index.ts",
+        "src/b/make.ts"
+      ],
+      "orphan": false,
+      "valid": true
+    },
+    {
+      "source": "src/a/main.ts",
+      "dependencies": [
+        {
+          "dynamic": false,
+          "module": "./use",
+          "moduleSystem": "es6",
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "local",
+            "import"
+          ],
+          "resolved": "src/a/use.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        },
+        {
+          "dynamic": false,
+          "module": "./view",
+          "moduleSystem": "es6",
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "local",
+            "import"
+          ],
+          "resolved": "src/a/view.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        }
+      ],
+      "dependents": [],
+      "orphan": false,
+      "valid": true
+    },
+    {
+      "source": "src/a/use.ts",
+      "dependencies": [
+        {
+          "dynamic": false,
+          "module": "../b/make",
+          "moduleSystem": "es6",
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "local",
+            "import"
+          ],
+          "resolved": "src/b/make.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        },
+        {
+          "dynamic": false,
+          "module": "../c/tool",
+          "moduleSystem": "es6",
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "local",
+            "import"
+          ],
+          "resolved": "src/c/tool.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        }
+      ],
+      "dependents": [
+        "src/a/main.ts"
+      ],
+      "orphan": false,
+      "valid": true
+    },
+    {
+      "source": "src/c/tool.ts",
+      "dependencies": [],
+      "dependents": [
+        "src/a/use.ts",
+        "src/a/view.ts",
+        "src/c/index.ts"
+      ],
+      "orphan": false,
+      "valid": true
+    },
+    {
+      "source": "src/a/view.ts",
+      "dependencies": [
+        {
+          "dynamic": false,
+          "module": "../b",
+          "moduleSystem": "es6",
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "local",
+            "import"
+          ],
+          "resolved": "src/b/index.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        },
+        {
+          "dynamic": false,
+          "module": "../c/tool",
+          "moduleSystem": "es6",
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "local",
+            "import"
+          ],
+          "resolved": "src/c/tool.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        }
+      ],
+      "dependents": [
+        "src/a/main.ts"
+      ],
+      "orphan": false,
+      "valid": true
+    },
+    {
+      "source": "src/c/index.ts",
+      "dependencies": [
+        {
+          "dynamic": false,
+          "module": "./tool",
+          "moduleSystem": "es6",
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "local",
+            "export"
+          ],
+          "resolved": "src/c/tool.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        }
+      ],
       "dependents": [],
       "orphan": false,
       "valid": true
@@ -140,8 +282,8 @@
     "info": 0,
     "ignore": 0,
     "advisedExitCode": 0,
-    "totalCruised": 5,
-    "totalDependenciesCruised": 5,
+    "totalCruised": 9,
+    "totalDependenciesCruised": 11,
     "optionsUsed": {
       "combinedDependencies": false,
       "detectJSDocImports": false,
