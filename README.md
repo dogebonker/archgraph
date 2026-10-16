@@ -19,7 +19,7 @@
 </p>
 
 <a href="https://dogebonker.github.io/archgraph/next.js.html">
-  <img alt="The archgraph map of Next.js: 85 modules as dark discs with health rings, the server module selected with its 48 importers in blue and 39 imports in purple, and the assessment panel beside the map" src="docs/assets/hero.png" width="100%">
+  <img alt="The archgraph map of Next.js: 85 modules as dark discs with rings that mark cycles and findings, the server module selected with its 48 importers in blue and 39 imports in purple, and the assessment panel beside the map" src="docs/assets/hero.png" width="100%">
 </a>
 <p align="center"><sub>Next.js (<code>packages/next</code> at <code>00c4ba8</code>): 1,542 files, 85 modules, 6,058 imports. Click it for the live map. Made with <code>archgraph report</code> (<a href="showcase/">how</a>).</sub></p>
 
@@ -90,7 +90,7 @@ forbidden src/domain/user.ts -> src/adapters/out/pg.ts (layers)
 ```
 
 <p align="center">
-  <img alt="Zooming into the shared/lib module of Next.js until its files appear, dragging the server module across the map while its imports follow, then clicking it for its diagnosis: a hub imported by 48 modules that imports 39" src="docs/assets/demo.webp" width="100%">
+  <img alt="Zooming into the shared/lib module of Next.js until its files appear, dragging the server module across the map while its imports follow, then clicking it for its diagnosis: a hub imported by 48 modules that imports 23 less stable ones, with a red ring for imports to cut to break a cycle" src="docs/assets/demo.webp" width="100%">
 </p>
 
 The map is one HTML file with no network requests. Zoom until files appear, drag modules to make sense of a cluster (your layout is remembered), click anything for who imports it and what to do about it.

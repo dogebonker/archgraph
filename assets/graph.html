@@ -30,7 +30,7 @@
   --grid: rgba(235, 235, 245, .07); --edge: rgba(235, 235, 245, .42);
   --forbidden: var(--red-s); --unplanned: var(--orange); --in: var(--blue); --out: var(--purple);
   --move: var(--teal); --cochange: var(--label2); --focus: var(--blue);
-  --green: var(--green-s); --amber: var(--orange); --red: var(--red-s); --grey: rgba(235, 235, 245, .3);
+  --amber: var(--orange); --red: var(--red-s); --grey: rgba(235, 235, 245, .3);
 }
 @media (prefers-contrast: more) {
   :root { --label2: rgba(235, 235, 245, .82); --label3: rgba(235, 235, 245, .55); --sep: rgba(255, 255, 255, .38);
@@ -81,7 +81,12 @@ svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
 .line { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .line > * { pointer-events: auto; }
 .spacer { flex: 1; pointer-events: none !important; }
-.brand-cap { display: flex; align-items: center; gap: 8px 20px; flex-wrap: wrap; min-height: 40px; padding: 6px 18px 6px 12px; min-width: 0; }
+/* Labels float over the map as plain text; only controls sit in glass. A soft halo keeps them
+   legible over busy parts of the map, and the header fade below sits behind them. */
+.brand-cap { display: flex; align-items: center; gap: 8px 22px; flex-wrap: wrap; min-height: 40px; padding: 0 8px; min-width: 0;
+  text-shadow: 0 0 2px #000, 0 1px 8px rgba(0, 0, 0, .9); }
+.headfade { position: fixed; z-index: 4; top: 0; left: 0; right: var(--pw); height: calc(var(--top) + 40px); pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, .72) 0, rgba(0, 0, 0, .62) calc(100% - 64px), rgba(0, 0, 0, 0) 100%); }
 .brand { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; line-height: 1.2; font-weight: 600; letter-spacing: -0.01em; }
 .brand svg { width: 20px; height: 20px; color: var(--blue); }
 .meta { display: flex; flex-wrap: wrap; gap: 2px 18px; margin: 0; min-width: 0; font-size: 12px; letter-spacing: .01em; }
@@ -101,8 +106,8 @@ svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
 #search::-webkit-search-cancel-button { filter: invert(1) opacity(.5); }
 kbd { position: absolute; right: 14px; min-width: 18px; padding: 0 5px; border-radius: 4px; background: rgba(118, 118, 128, .3);
   font: 500 11px/16px var(--sans); letter-spacing: .01em; color: var(--label2); text-align: center; }
-.stats { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin: 0; min-height: 36px; padding: 6px 14px; color: var(--label2);
-  font-size: 12px; font-weight: 500; letter-spacing: .01em; }
+.stats { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; margin: 0; min-height: 38px; padding: 0 8px; color: var(--label2);
+  font-size: 12px; font-weight: 500; letter-spacing: .01em; text-shadow: 0 0 2px #000, 0 1px 8px rgba(0, 0, 0, .9); }
 .stats b { color: var(--label); font-weight: 600; margin-right: 4px; }
 .stats .bad b { color: var(--red-s); }
 .seg { position: relative; display: inline-flex; padding: 4px; gap: 2px; }
@@ -161,7 +166,7 @@ kbd { position: absolute; right: 14px; min-width: 18px; padding: 0 5px; border-r
 .legend p { grid-column: 1 / -1; margin: 8px 0 0; }
 .sw { display: inline-block; flex: none; }
 .sw.h { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid currentColor; background: var(--fill1); }
-.green { color: var(--green-s); } .amber { color: var(--orange); } .red { color: var(--red-s); } .grey { color: rgba(235, 235, 245, .4); }
+.amber { color: var(--orange); } .red { color: var(--red-s); } .grey { color: rgba(235, 235, 245, .4); }
 .sw.ln { width: 20px; border-top: 1px solid var(--edge); }
 .sw.ln.forbidden { border-color: var(--red-s); border-top-width: 1.5px; } .sw.ln.unplanned { border-color: var(--orange); border-top-width: 1.5px; }
 .sw.ln.dash { border-top-style: dashed; } .sw.ln.in { border-color: var(--blue); border-top-width: 2px; } .sw.ln.out { border-color: var(--purple); border-top-width: 2px; }
@@ -307,8 +312,9 @@ details.row > summary:hover { background: rgba(118, 118, 128, .14); }
 .tv span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .tv.forbidden { color: var(--red-s); } .tv.unplanned { color: var(--orange); }
 .tv + .tcount { margin-left: 4px; }
-[role="group"] { background: linear-gradient(var(--sep), var(--sep)) no-repeat calc(15px + var(--lvl, 0) * 16px) 0 / 1px 100%; }
-.tgroup:hover > [role="group"] { background-image: linear-gradient(rgba(235, 235, 245, .4), rgba(235, 235, 245, .4)); }
+/* Indentation guides, for tree groups only: the zoom capsule is a role="group" too. */
+[role="tree"] [role="group"] { background: linear-gradient(var(--sep), var(--sep)) no-repeat calc(15px + var(--lvl, 0) * 16px) 0 / 1px 100%; }
+[role="tree"] .tgroup:hover > [role="group"] { background-image: linear-gradient(rgba(235, 235, 245, .4), rgba(235, 235, 245, .4)); }
 .tempty { padding: 4px 12px; color: var(--label2); font-size: 12px; }
 .tmore { display: block; width: 100%; margin-top: 4px; padding: 4px 8px; border: 0; border-radius: 6px; background: none; color: var(--blue);
   font-size: 12px; font-weight: 500; text-align: left; }
@@ -372,7 +378,7 @@ p { margin: 6px 0; }
   .chrome .line:nth-child(2) { display: none; }
   .meta, #find, .stats { display: none; }
   .compact-only { display: inline-flex; }
-  .brand-cap { min-height: 44px; padding: 6px 16px 6px 12px; }
+  .brand-cap { min-height: 44px; padding: 0 8px; }
   .cbtn { align-items: center; justify-content: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 12px; border: 0; color: var(--label);
     font-size: 13px; font-weight: 600; letter-spacing: 0; transition: transform .12s ease-out; }
   .cbtn:active { transform: scale(.96); }
@@ -485,9 +491,10 @@ p { margin: 6px 0; }
   <feTurbulence type="fractalNoise" baseFrequency="0.008 0.011" numOctaves="1" seed="7" result="noise"/>
   <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" xChannelSelector="R" yChannelSelector="G"/>
 </filter></svg>
+<div class="headfade" aria-hidden="true"></div>
 <header class="chrome" id="chrome">
   <div class="line">
-    <div class="glass capsule brand-cap">
+    <div class="brand-cap">
       <h1 class="brand" id="title"><svg class="i" viewBox="0 0 20 20" aria-hidden="true"><circle cx="5" cy="13.5" r="2.6"/><circle cx="14.5" cy="6" r="3.4"/><circle cx="15" cy="15.5" r="1.8"/><path d="M7.2 12l4.4-3.7M13.2 15.1l-5.6-1"/></svg>archgraph</h1>
       <dl class="meta" id="meta"></dl>
     </div>
@@ -505,7 +512,7 @@ p { margin: 6px 0; }
     <button type="button" class="cancel compact-only" id="search-cancel">Cancel</button>
   </div>
   <div class="line">
-    <p class="stats glass capsule" id="stats" aria-hidden="true"></p>
+    <p class="stats" id="stats" aria-hidden="true"></p>
     <p class="sr" id="stats-text"></p>
     <span class="spacer"></span>
     <div class="seg glass capsule" role="radiogroup" aria-label="Which imports to show" id="seg">
@@ -531,10 +538,11 @@ p { margin: 6px 0; }
         <div class="pop" id="legend" hidden>
           <div class="legend">
             <h2>Modules</h2>
-            <span><i class="sw h green"></i>cohesive, few links</span>
-            <span><i class="sw h amber"></i>mixed</span>
-            <span><i class="sw h red"></i>low cohesion, many links</span>
-            <span><i class="sw h grey"></i>fewer than 2 files</span>
+            <span><i class="sw h red"></i>forbidden import</span>
+            <span><i class="sw h red"></i>imports to cut to break a cycle</span>
+            <span><i class="sw h amber"></i>in a cycle</span>
+            <span><i class="sw h amber"></i>has a finding</span>
+            <span><i class="sw h grey"></i>no issues found</span>
             <span><i class="sw dia"></i>barrel file</span>
             <span><i class="sw pin"></i>moved by you</span>
             <h2>Imports</h2>
@@ -716,18 +724,6 @@ for (const e of edges) {
   e.fileCycle = !e.me && runtime(e) && fileCycle[e.a] >= 0 && fileCycle[e.a] === fileCycle[e.b];
   e.cycle = e.me ? e.me.cycle && runtime(e) : e.fileCycle;
 }
-
-const degree = m => m.ca + m.ce;
-const sortedDeg = mods.map(degree).sort((a, b) => a - b);
-const median = N === 0 ? 0 : N % 2 ? sortedDeg[(N - 1) / 2] : (sortedDeg[N / 2 - 1] + sortedDeg[N / 2]) / 2;
-function health(m) {
-  if (m.files < 2) return "grey";
-  if (m.cohesion !== null && m.cohesion >= 0.5 && degree(m) <= median) return "green";
-  if (m.cohesion !== null && m.cohesion < 0.3 && degree(m) > median) return "red";
-  return "amber";
-}
-const modHealth = mods.map(health);
-const HEALTH_TEXT = { green: "cohesive, few links", amber: "mixed", red: "low cohesion, many links", grey: "fewer than 2 files" };
 
 /* ---------- layout (deterministic: no randomness, fixed iteration counts) ---------- */
 const R_DOT = 2.6, SP = 10, GAP = 34, GOLDEN = Math.PI * (3 - Math.sqrt(5));
@@ -1093,6 +1089,22 @@ for (const fd of findings) {
   for (const j of fd.fs) { if (!findingsOfFile.has(j)) findingsOfFile.set(j, []); findingsOfFile.get(j).push(fd); }
 }
 
+/* Ring colour comes only from what archgraph checked, the strongest signal first. Red: either end
+   of a forbidden import, or the module an import to cut (a cycle's break set) or a registrar move
+   changes. Amber: the other members of a module cycle, and any module a finding names. Grey: none.
+   Cohesion and link counts are shown as numbers, not colour: nearly every real folder has cohesion
+   near 0, and being imported a lot marks stable code, not a problem. */
+const forbiddenMod = new Uint8Array(N), cutMod = new Uint8Array(N);
+for (const e of edges) if (e.verdict === "forbidden") forbiddenMod[files[e.a].mod] = forbiddenMod[files[e.b].mod] = 1;
+for (const c of doc.cycles) if (c.level === "module") {
+  for (const l of c.break) if (fileIndex.has(l.from)) cutMod[files[fileIndex.get(l.from)].mod] = 1;
+  for (const r of c.registrar_moves || []) if (modIndex.has(r.module)) cutMod[modIndex.get(r.module)] = 1;
+}
+const modSignal = mods.map((m, i) => forbiddenMod[i] ? "forbidden" : cutMod[i] ? "cut" : modCycle[i] >= 0 ? "cycle" : findingsOfModule[i].length ? "finding" : "none");
+const RING = { forbidden: "red", cut: "red", cycle: "amber", finding: "amber", none: "grey" };
+const HEALTH_TEXT = { forbidden: "forbidden import", cut: "imports to cut to break a cycle", cycle: "in a cycle", finding: "has a finding", none: "no issues found" };
+const modHealth = modSignal.map(k => RING[k]);
+
 /* ---------- assessment: what holds up, what hurts, what to do next ----------
    Read from the document alone. Sentences name modules, files, imports and findings with their
    numbers; there is no overall score. Each threshold says why it sits where it does. */
@@ -1110,12 +1122,20 @@ const nf = n => n.toLocaleString("en-US");
 const times = n => n === 1 ? "once" : n === 2 ? "twice" : `${nf(n)} times`;
 const ids = n => [...Array(n).keys()];
 const filesIn = ms => [...ms].reduce((s, i) => s + modFiles[i].length, 0);
+/* The module imports into a more volatile module, with the instabilities on both sides. */
+const moreVolatile = mods.map((m, i) => medges.filter(me => me.a === i && m.instability !== null && mods[me.b].instability !== null &&
+  mods[me.b].instability > m.instability).map(me => me.b));
+/* The modules a module imports that are less stable than itself (higher instability), counted on
+   outgoing_to like ca and ce: a change in them can reach it, a change in a more stable one rarely
+   does. A document without outgoing_to (older archgraph) falls back to the module edges. */
+const lessStable = mods.map((m, i) => !m.outgoing_to ? moreVolatile[i] : m.instability === null ? [] :
+  Object.keys(m.outgoing_to).filter(id => id !== m.id && modIndex.has(id) && mods[modIndex.get(id)].instability > m.instability).map(id => modIndex.get(id)));
 function roleOf(i) {
   const m = mods[i];
   if (!m.ca && !m.ce) return "isolated";
   if (!m.ca && m.files > 1 && !m.internal_edges) return "collection";
   if (!m.ca) return "entry";
-  if (m.ca >= MANY && m.ce >= MANY) return "hub";
+  if (m.ca >= MANY && lessStable[i].length >= MANY) return "hub";
   if (m.ca >= MANY && m.instability !== null && m.instability <= STABLE_MAX) return "foundation";
   return "regular";
 }
@@ -1149,9 +1169,6 @@ const cohesionX = mods.map((m, i) => {
   const out = m.outgoing_edges - foundationsOf[i].reduce((s, f) => s + m.outgoing_to[mods[f].id], 0);
   return m.internal_edges + out ? m.internal_edges / (m.internal_edges + out) : null;
 });
-/* The module imports into a more volatile module, with the instabilities on both sides. */
-const moreVolatile = mods.map((m, i) => medges.filter(me => me.a === i && m.instability !== null && mods[me.b].instability !== null &&
-  mods[me.b].instability > m.instability).map(me => me.b));
 const foundationNames = () => names(foundations, i => ({ m: i }));
 /* Modules with an unstable-dependency finding: a more volatile import by 0.25 or more. */
 const pullsVolatile = new Set(ofKind("unstable-dependency").map(fd => modIndex.get(fd.f.evidence.from)));
@@ -1252,11 +1269,11 @@ const assessment = (() => {
       ? [`${where} has an import cycle between `, j >= 0 ? { fd: j, label: ofIts } : ofIts, "."]
       : [`${fileCycles.length} import cycles run between files inside a module, the largest through `, j >= 0 ? { fd: j, label: bigLabel } : bigLabel, ` of ${where}.`] });
   }
-  const hubs = ids(N).filter(i => roleOf(i) === "hub").sort((a, b) => mods[b].ca * mods[b].ce - mods[a].ca * mods[a].ce);
+  const hubs = ids(N).filter(i => roleOf(i) === "hub").sort((a, b) => mods[b].ca * lessStable[b].length - mods[a].ca * lessStable[a].length);
   if (hubs.length) {
-    bad.push({ touch: filesIn(hubs), parts: [...names(hubs, i => [{ m: i }, ` (imported by ${mods[i].ca}, imports ${mods[i].ce})`]),
-      hubs.length === 1 ? " is a hub: many modules import it and it imports many, so a change can ripple both into it and out of it."
-        : ` are hubs: many modules import them and they import many (${MANY} or more each way), so a change can ripple both in and out.`] });
+    bad.push({ touch: filesIn(hubs), parts: [...names(hubs, i => [{ m: i }, ` (imported by ${mods[i].ca}, imports ${lessStable[i].length} less stable modules)`]),
+      hubs.length === 1 ? " is a hub: many modules import it and it imports many less stable modules, so a change can ripple both into it and out of it."
+        : ` are hubs: many modules import them and they import many less stable modules (${MANY} or more each way), so a change can ripple both in and out.`] });
   }
   const loose = judged.filter(i => mods[i].ca > 0 && cohesionX[i] !== null && cohesionX[i] < LOOSE_MAX).sort((a, b) => mods[b].files - mods[a].files);
   if (loose.length) {
@@ -1400,11 +1417,12 @@ const assessment = (() => {
     const ev = fd.f.evidence, entry = ev.entries[0];
     next.push([{ fd: fd.i, label: `Import ${ev.module} through its entry` }, entry ? ` (${short(entry)})` : "", ev.imports === 1 ? " in the one place that reaches past it." : ` in the ${ev.imports} places that reach past it.`]);
   }
-  if (!doc.config.rules && N > 2) next.push(["Write a layout.yaml with layers and public entries for the boundaries you agree on, so archgraph check can hold them in CI."]);
   if (unstable.length) {
     const fd = unstable[0], ev = fd.f.evidence;
     next.push([{ fd: fd.i, label: `Untie ${ev.from} from ${ev.to}` }, `: stable ${ev.from} imports volatile ${ev.to} ${times(ev.imports)}; depend on an abstraction ${ev.from} owns, or move the code it needs.`]);
   }
+  /* The generic advice comes after every concrete step. */
+  if (!doc.config.rules && N > 2) next.push(["Write a layout.yaml with layers and public entries for the boundaries you agree on, so archgraph check can hold them in CI."]);
   return { good, bad, next: next.slice(0, MAX_NEXT) };
 })();
 
@@ -1414,7 +1432,7 @@ function diagnosis(i) {
   const listed = l => l.length > NAMES ? `${l.slice(0, NAMES).join(", ")} and ${l.length - NAMES} more` : l.length > 1 ? `${l.slice(0, -1).join(", ")} and ${l[l.length - 1]}` : l[0];
   const say = (...p) => out.push(...p, " ");
   if (role === "foundation") say(`${m.id} is a foundation: ${m.ca} modules import it and it imports ${m.ce}, so it is stable (instability ${n2(m.instability)}).`);
-  else if (role === "hub") say(`${m.id} is a hub: ${m.ca} modules import it and it imports ${m.ce}, so a change can ripple both into it and out of it.`);
+  else if (role === "hub") say(`${m.id} is a hub: ${m.ca} modules import it and it imports ${lessStable[i].length} less stable modules, so a change can ripple both into it and out of it.`);
   else if (role === "entry") say(`${m.id} is an entry point: no module imports it, and it imports ${count(m.ce, "module", "modules")}.`);
   else if (role === "isolated") say(`${m.id} is isolated: it imports no other module and none imports it.`);
   else if (role === "collection") say(`${m.id} is a collection of ${m.files} entry files: no module imports it and its files do not import each other, so cohesion does not apply; together they import ${count(m.ce, "module", "modules")}.`);
@@ -1540,7 +1558,7 @@ let MONO = "monospace", SANS = "sans-serif", TONE = {};
 function readTheme() {
   const s = getComputedStyle(document.documentElement);
   for (const n of ["bg", "surface", "fg", "muted", "grid", "edge", "forbidden", "unplanned", "in", "out", "move",
-    "cochange", "focus", "green", "amber", "red", "grey"]) C[n] = s.getPropertyValue("--" + n).trim();
+    "cochange", "focus", "amber", "red", "grey"]) C[n] = s.getPropertyValue("--" + n).trim();
   MONO = s.getPropertyValue("--mono").trim() || "monospace";
   SANS = s.getPropertyValue("--sans").trim() || "sans-serif";
   TONE = { forbidden: C.forbidden, unplanned: C.unplanned, neutral: C.edge };
@@ -1744,7 +1762,7 @@ function fitLabels() {
 function measureChrome() {
   let bottom = 0;
   chromeRects = [];
-  for (const node of document.querySelectorAll(".chrome .line > .glass, .chrome .line > .cancel, .ctrl, #level, #mini, #sheet, #side-open")) {
+  for (const node of document.querySelectorAll(".chrome .line > .glass, .chrome .line > .brand-cap, .chrome .line > .stats, .chrome .line > .cancel, .ctrl, #level, #mini, #sheet, #side-open")) {
     if (node.hidden || (node === sheet && sideHidden)) continue;
     const r = node.getBoundingClientRect();
     if (!r.width || !r.height) continue;
@@ -2296,7 +2314,7 @@ function verdictLine(v) {
 function tipLines(h) {
   if (h.type === "module") {
     const m = mods[h.i];
-    return [m.id, `${count(m.files, "file", "files")}, ${HEALTH_TEXT[modHealth[h.i]]}`,
+    return [m.id, `${count(m.files, "file", "files")}, ${HEALTH_TEXT[modSignal[h.i]]}`,
       `imported by ${count(m.ca, "module", "modules")}, imports ${count(m.ce, "module", "modules")}`,
       `instability ${n2(m.instability)}, cohesion ${n2(m.cohesion)}`];
   }
@@ -2660,7 +2678,7 @@ document.addEventListener("keydown", ev => {
 const modsEl = $("mods");
 const modButtons = mods.map((m, i) => {
   const b = el("button", { type: "button",
-    "aria-label": `module ${m.id}, ${count(m.files, "file", "files")}, ${HEALTH_TEXT[modHealth[i]]}` }, m.id);
+    "aria-label": `module ${m.id}, ${count(m.files, "file", "files")}, ${HEALTH_TEXT[modSignal[i]]}` }, m.id);
   b.addEventListener("focus", () => {
     kb = { type: "module", i };
     applyFocus();
@@ -3595,7 +3613,7 @@ function overview() {
 function modulePanel(i) {
   const m = mods[i];
   const chip = el("span", { class: "pill" });
-  chip.append(el("i", { class: "sw h " + modHealth[i] }), document.createTextNode(HEALTH_TEXT[modHealth[i]]));
+  chip.append(el("i", { class: "sw h " + modHealth[i] }), document.createTextNode(HEALTH_TEXT[modSignal[i]]));
   head("Module", m.id, chip);
   panel.append(sentence(diagnosis(i), "p"));
   panel.lastChild.className = "diag";

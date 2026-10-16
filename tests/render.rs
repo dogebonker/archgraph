@@ -52,6 +52,10 @@ fn render_is_self_contained_and_embeds_the_document() {
     ] {
         assert!(!template.contains(banned), "{banned} in the page template");
     }
+    // The ring colour comes only from cycles, forbidden imports and findings.
+    for gone in ["low cohesion, many links", "cohesive, few links"] {
+        assert!(!template.contains(gone), "{gone} in the page template");
+    }
     // The embedded scan is the input document recomputed with the same rules: identical.
     let doc: Value = serde_json::from_str(embedded(&html)).unwrap();
     let input: Value = serde_json::from_str(&fs::read_to_string(&graph).unwrap()).unwrap();
