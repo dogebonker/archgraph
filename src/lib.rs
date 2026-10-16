@@ -11,7 +11,7 @@ pub mod render;
 pub mod rules;
 pub mod simulate;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::Result;
 use model::{Cochange, Config, Document, Edge, File, SCHEMA, Source, Summary, Tool};
@@ -25,10 +25,19 @@ pub fn analyze(
     config: Config,
     files: Vec<String>,
     edges: Vec<Edge>,
+    package_entries: Vec<String>,
     cochange: Option<Cochange>,
 ) -> Result<Document> {
     let rules = rules::compile(&config)?;
-    let mut doc = build(source, config, files, edges, rules.as_ref());
+    let mut doc = build(
+        source,
+        config,
+        files,
+        edges,
+        package_entries,
+        rules.as_ref(),
+    );
+    findings::place_registrars(&mut doc, rules.as_ref());
     doc.cochange = cochange;
     doc.findings = findings::find(&doc, rules.as_ref());
     Ok(doc)
@@ -40,8 +49,11 @@ pub fn build(
     config: Config,
     files: Vec<String>,
     mut edges: Vec<Edge>,
+    mut package_entries: Vec<String>,
     rules: Option<&Compiled>,
 ) -> Document {
+    package_entries.sort();
+    package_entries.dedup();
     edges.sort_by(|a, b| (&a.from, &a.to).cmp(&(&b.from, &b.to)));
     let module_of: BTreeMap<String, String> = files
         .into_iter()
@@ -62,6 +74,21 @@ pub fn build(
     }
     let barrels = modules::barrels(&edges);
     let pairs = modules::attribute(&edges, &barrels);
+    // Public entries for cycle cuts: what a package.json publishes and the source root's index
+    // (`index.ts`, a Python package's `__init__.py`). Other barrels are internal.
+    let root_index = |f: &str| {
+        let name = match config.source_root.as_str() {
+            "." => Some(f),
+            root => f.strip_prefix(root).and_then(|r| r.strip_prefix('/')),
+        };
+        name.is_some_and(|n| n == "__init__.py" || modules::TS_INDEX.contains(&n))
+    };
+    let entries: BTreeSet<String> = module_of
+        .keys()
+        .filter(|f| root_index(f))
+        .chain(&package_entries)
+        .cloned()
+        .collect();
     let module_edges = graph::module_edges(&module_of, &edges);
     let mut doc = Document {
         schema: SCHEMA,
@@ -71,7 +98,7 @@ pub fn build(
             version: env!("CARGO_PKG_VERSION"),
         },
         modules: graph::modules(&module_of, &pairs),
-        cycles: graph::cycles(&module_of, &edges, &module_edges),
+        cycles: graph::cycles(&module_of, &edges, &entries, &barrels),
         files: module_of
             .iter()
             .map(|(path, module)| File {
@@ -83,6 +110,7 @@ pub fn build(
         source,
         config,
         edges,
+        package_entries,
         module_edges,
         summary: Summary::default(),
         findings: Vec::new(),

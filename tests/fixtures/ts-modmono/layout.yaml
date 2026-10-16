@@ -1,4 +1,4 @@
-# Modular monolith, TypeScript (kit/layouts/modular-monolith.md). Module b has no index.ts.
+# Modular monolith layout, TypeScript. Module b has no index.ts.
 version: 1
 modules:
   - { id: "<name>", path: "src/modules/<name>/**" }

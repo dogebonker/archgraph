@@ -67,7 +67,8 @@
         }
       ],
       "dependents": [
-        "src/core/api.ts"
+        "src/core/api.ts",
+        "src/core/boot.ts"
       ],
       "orphan": false,
       "valid": true
@@ -87,6 +88,31 @@
       "dependents": [
         "src/plugins/loader.ts"
       ],
+      "orphan": false,
+      "valid": true
+    },
+    {
+      "source": "src/core/boot.ts",
+      "dependencies": [
+        {
+          "dynamic": false,
+          "module": "../plugins/loader",
+          "moduleSystem": "es6",
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "local",
+            "import"
+          ],
+          "resolved": "src/plugins/loader.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        }
+      ],
+      "dependents": [],
       "orphan": false,
       "valid": true
     },
@@ -148,8 +174,8 @@
     "info": 0,
     "ignore": 0,
     "advisedExitCode": 0,
-    "totalCruised": 6,
-    "totalDependenciesCruised": 5,
+    "totalCruised": 7,
+    "totalDependenciesCruised": 6,
     "optionsUsed": {
       "combinedDependencies": false,
       "detectJSDocImports": false,

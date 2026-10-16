@@ -1,7 +1,7 @@
-# Hexagonal, Python (kit/layouts/hexagonal.md): adapters and entrypoints share a layer and do
+# Hexagonal layout, Python: adapters and entrypoints share a layer and do
 # not import each other.
 version: 1
-# Layers bind no capture: Factory's `<pkg>` becomes `*`.
+# Layers bind no capture: a `<pkg>` segment is written `*`.
 layers:
   - "src/*/domain/**"
   - "src/*/service_layer/**"

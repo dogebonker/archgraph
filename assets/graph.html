@@ -599,7 +599,8 @@ function el(tag, attrs, text) {
   if (text !== undefined) e.textContent = text;
   return e;
 }
-const fmt = x => x === null || x === undefined ? "n/a" : String(x);
+/* Ratios show with 2 decimals on the page (the document keeps 4); counts as they are. */
+const fmt = x => x === null || x === undefined ? "n/a" : typeof x === "number" && !Number.isInteger(x) ? x.toFixed(2) : String(x);
 /* "1 cycle", "2 cycles": the count with its noun in the matching number. */
 const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const dirname = p => p.slice(0, Math.max(p.lastIndexOf("/"), 0));
@@ -688,7 +689,7 @@ const edges = doc.edges.map((e, i) => {
   if (r.me) {
     r.me.list.push(i);
     r.me.v[e.verdict || "none"]++;
-    if (e.kind === "type") r.me.types++;
+    if (e.kind === "type" || e.kind === "type-reexport") r.me.types++;
   }
   return r;
 });
@@ -708,10 +709,12 @@ doc.cycles.forEach((c, k) => {
   }
   for (const l of c.break) breaks.add(l.from + "\n" + l.to);
 });
-for (const me of medges) me.cycle = modCycle[me.a] >= 0 && modCycle[me.a] === modCycle[me.b];
+/* Cycles run over runtime imports only: type-only and dynamic imports close none. */
+const runtime = e => e.kind === "static" || e.kind === "reexport";
+for (const me of medges) me.cycle = modCycle[me.a] >= 0 && modCycle[me.a] === modCycle[me.b] && me.list.some(i => runtime(edges[i]));
 for (const e of edges) {
-  e.fileCycle = !e.me && fileCycle[e.a] >= 0 && fileCycle[e.a] === fileCycle[e.b];
-  e.cycle = e.me ? e.me.cycle : e.fileCycle;
+  e.fileCycle = !e.me && runtime(e) && fileCycle[e.a] >= 0 && fileCycle[e.a] === fileCycle[e.b];
+  e.cycle = e.me ? e.me.cycle && runtime(e) : e.fileCycle;
 }
 
 const degree = m => m.ca + m.ce;
@@ -952,9 +955,9 @@ relayoutAll();
 
 /* ---------- findings ---------- */
 const KIND_TEXT = {
-  "cycle": "Import cycles, with the fewest imports to remove.",
+  "cycle": "Runtime import cycles (type-only and dynamic imports left out), with the fewest imports to remove.",
   "hidden-coupling": "Files in different modules changed together without importing each other.",
-  "internals-reach": "Imports past a module's public entry.",
+  "internals-reach": "Modules whose public entry other modules import past.",
   "misplaced-file": "Files the module that imports them would hold better.",
   "seam": "File clusters that fit the imports better than the folders do.",
   "sink-split": "Modules whose files serve separate groups of importers.",
@@ -969,7 +972,7 @@ const KIND_ADVICE = {
     "Find what links them (events, DI, shared data), then make it an explicit import or move the files together."],
   "internals-reach": ["Importers depend on a module's internals, which it may change without warning.",
     "Import the module's public entry instead."],
-  "misplaced-file": ["Another module uses the file more than its own does, so the boundary sits in the wrong place.",
+  "misplaced-file": ["Another module uses the file more than twice as much as its own does, so the boundary sits in the wrong place.",
     "Move it as suggested: the simulation shows the cohesion before and after, with no new forbidden import or cycle."],
   "seam": ["The folders do not match how the code is used: the import clusters fit better.",
     "Read the clusters as candidate boundaries, not as a plan."],
@@ -1029,10 +1032,10 @@ const findings = doc.findings.map((f, i) => {
     case "cycle":
       if (ev.level === "module") {
         ev.members.forEach(addM);
-        for (const me of medges) if (ms.has(me.a) && ms.has(me.b)) { mes.add(me.i); for (const e of me.list) fe.add(e); }
+        for (const me of medges) if (ms.has(me.a) && ms.has(me.b) && me.cycle) { mes.add(me.i); for (const e of me.list) if (edges[e].cycle) fe.add(e); }
       } else {
         ev.members.forEach(addF);
-        for (const e of edges) if (fs.has(e.a) && fs.has(e.b)) fe.add(e.i);
+        for (const e of edges) if (fs.has(e.a) && fs.has(e.b) && e.cycle) fe.add(e.i);
       }
       for (const l of ev.break || []) {
         const a = fileIndex.get(l.from), b = fileIndex.get(l.to);
@@ -1048,7 +1051,7 @@ const findings = doc.findings.map((f, i) => {
     case "internals-reach":
       addM(ev.module);
       (ev.entries || []).forEach(addF);
-      addE(addF(ev.from), addF(ev.to), true);
+      for (const l of ev.edges || []) addE(addF(l.from), addF(l.to), true);
       break;
     case "misplaced-file": {
       const a = addF(f.subject);
@@ -1162,9 +1165,11 @@ const edgeOf = l => {
   return a === undefined || b === undefined ? undefined : edgeBetween(a, b);
 };
 /* The cheapest cut of a module cycle: a two-way pair whose lighter side is a single import, the
-   one with the most imports the other way first; else the lightest pair. */
+   one with the most imports the other way first; else the lightest pair. A registry pair (only
+   composition roots and registrars), an entry pair (public re-exports) or an even pair (both sides
+   tiny and close: a mutual dependency) is never the cut. */
 function firstCut(c) {
-  const tw = (c.two_way || []).slice().sort((p, q) => p.imports - q.imports || q.reverse_imports - p.reverse_imports);
+  const tw = (c.two_way || []).filter(p => !p.registry && !p.entry && !p.even && !p.resolved_by_move).sort((p, q) => p.imports - q.imports || q.reverse_imports - p.reverse_imports);
   const p = tw[0];
   if (!p) return null;
   return { p, e: edgeOf(p.edges[0]), lone: tw.filter(x => x.imports === 1).length };
@@ -1220,7 +1225,7 @@ const assessment = (() => {
   else if (N - inModCycle.size >= N / 2) good.push([`${N - inModCycle.size} of ${N} modules are in no module cycle.`]);
   const entriesChecked = rules ? !!(rules.doc.public && rules.doc.public.length) : doc.source.language === "typescript" && files.some(f => f.barrel);
   if (entriesChecked && !ofKind("internals-reach").length) good.push(["No import reaches past a module's public entry."]);
-  if (!ofKind("unstable-dependency").length && N > 1) good.push(["No module imports a module that is more volatile than itself by 0.25 or more."]);
+  if (!ofKind("unstable-dependency").length && N > 1) good.push(["No module imports a module that is more volatile than itself by 0.25 or more, at least twice at runtime."]);
   if (doc.cochange && !ofKind("hidden-coupling").length) good.push([`No files in different modules changed together without an import between them, over ${nf(doc.cochange.commits)} commits.`]);
 
   /* What hurts, each with the number of files it touches */
@@ -1229,7 +1234,7 @@ const assessment = (() => {
     const label = `${c.members.length} of ${N} modules`;
     if (n === 0 && c.members.length > 2) {
       const tw = c.two_way || [], cut = firstCut(c);
-      const parts = [j >= 0 ? { fd: j, label } : label, `, holding ${nf(touch)} of ${nf(F)} files, are tied in one import cycle: through some chain of imports each depends on all the others, so none can be changed, tested or split off alone.`];
+      const parts = [j >= 0 ? { fd: j, label } : label, `, holding ${nf(touch)} of ${nf(F)} files, are tied in one import cycle: through some chain of runtime imports each depends on all the others, so none can be changed, tested or split off alone.`];
       if (tw.length) parts.push(` ${tw.length === 1 ? "One pair imports" : tw.length + " pairs import"} each other directly${cut && cut.lone ? `, ${cut.lone} of them through a single import on one side` : ""}: the lighter sides are where to start.`);
       bad.push({ parts, touch });
     } else {
@@ -1301,13 +1306,14 @@ const assessment = (() => {
   }
   const reachList = ofKind("internals-reach");
   if (reachList.length) {
-    const by = new Map();
-    for (const fd of reachList) by.set(fd.f.evidence.module, (by.get(fd.f.evidence.module) || 0) + 1);
-    const [topMod, k] = [...by.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0];
-    const touched = new Set(reachList.map(fd => fd.f.evidence.from));
-    const mi = modIndex.get(topMod);
-    bad.push({ touch: touched.size, parts: [{ fd: reachList.find(fd => fd.f.evidence.module === topMod).i, label: count(reachList.length, "import reaches", "imports reach") },
-      " past a module's public entry", by.size > 1 ? `, ${k} of them into ` : " into ", mi !== undefined ? { m: mi } : topMod,
+    /* One finding per module; the one bypassed most leads. */
+    const top = [...reachList].sort((p, q) => q.f.evidence.imports - p.f.evidence.imports || (p.f.subject < q.f.subject ? -1 : 1))[0];
+    const total = reachList.reduce((s, fd) => s + fd.f.evidence.imports, 0), k = top.f.evidence.imports;
+    const mi = modIndex.get(top.f.evidence.module);
+    /* Ranked like the others by files touched: the importing files, summed over the modules. */
+    const touch = reachList.reduce((s, fd) => s + (fd.f.evidence.importing_files || 0), 0);
+    bad.push({ touch, parts: [{ fd: top.i, label: count(total, "import reaches", "imports reach") },
+      reachList.length > 1 ? ` past the public entries of ${reachList.length} modules, ${k} of them into ` : " past the public entry of ", mi !== undefined ? { m: mi } : top.f.evidence.module,
       ": importers depend on details the module may change."] });
   }
   const seam = ofKind("seam")[0];
@@ -1330,17 +1336,47 @@ const assessment = (() => {
   modCycles.forEach(c => {
     const j = cycleFinding(c), cut = firstCut(c);
     const cyc = j >= 0 ? { fd: j, label: `the ${c.members.length}-module cycle` } : `the ${c.members.length}-module cycle`;
+    /* A registrar alone forming the other side of several pairs, with its simulated move. It
+       leads only when it removes more two-way pairs than a single-import cut would (one) and the
+       cycle shrinks (RegistrarMove::leads in src/model.rs); the others follow the cut. */
+    const regMove = r => {
+      const fi = fileIndex.get(r.file), dest = r.to.slice(0, r.to.lastIndexOf("/") + 1) || r.to;
+      return ["Move ", fi !== undefined ? { f: fi, label: short(r.file) } : short(r.file), ` to ${short(dest)}: it alone forms the other side of ${count(r.pairs, "two-way pair", "two-way pairs")} in `, cyc,
+        ` (${r.module} ↔ ${r.with.slice(0, 3).join(", ")}${r.with.length > 3 ? ` and ${r.with.length - 3} more` : ""}); the move removes ${count(r.pairs_removed, "two-way pair", "two-way pairs")}, ` +
+        (!r.cycle_after ? `the cycle of ${r.cycle_before} modules goes` : r.cycle_after < r.cycle_before ? `the cycle drops from ${r.cycle_before} to ${r.cycle_after} modules`
+          : r.cycle_after === r.cycle_before ? `the cycle stays at ${r.cycle_before} modules`
+          : `the cycle goes from ${r.cycle_before} to ${r.cycle_after} modules (the file's new folder stays in it)`) + ", and adds no new cycle."];
+    };
+    const singleCut = cut && cut.p.imports === 1 ? 1 : 0;
+    const placedMoves = (c.registrar_moves || []).filter(r => r.to && r.pairs_removed > 0);
+    const leading = placedMoves.filter(r => r.pairs_removed > singleCut && r.cycle_after < r.cycle_before);
+    for (const r of leading) next.push(regMove(r));
+    const trailing = () => { for (const r of placedMoves.filter(r => !leading.includes(r))) next.push(regMove(r)); };
     if (cut && cut.e !== undefined) {
       const { p } = cut, e = edges[cut.e];
       const lone = p.imports === 1;
+      /* An internal barrel re-exporting the other module's file: drop the re-export. */
+      if (e.kind === "reexport" && files[e.a].barrel) {
+        next.push([lone ? "Cut " : "Start on ", cyc, " where it is thinnest: drop the re-export of ", { e: e.i, label: short(files[e.b].path) }, ` from ${short(files[e.a].path)}`,
+          `, ${p.from}'s only way into ${p.to}, while ${p.to} imports ${p.from} ${times(p.reverse_imports)}. Its importers then import ${short(files[e.b].path)} directly.`]);
+        trailing();
+        return;
+      }
       next.push([lone ? "Cut " : "Start on ", cyc, " where it is thinnest: remove or invert ", { e: e.i, label: `${short(files[e.a].path)} → ${short(files[e.b].path)}` },
         lone ? `, the only import from ${p.from} into ${p.to}, while ${p.to} imports ${p.from} ${times(p.reverse_imports)}.`
           : `: ${p.from} imports ${p.to} ${times(p.imports)}, against ${times(p.reverse_imports)} back.`,
         cut.lone > 1 ? ` ${count(cut.lone - 1, "more pair has", "more pairs have")} a single import on one side; re-scan after each cut.` : " Re-scan after the cut."]);
+      trailing();
     } else if (c.break.length) {
-      const e = edgeOf(c.break[0]);
+      /* Prefer a break import into a package entry or the root index: a version or registry
+         lookup in the public API, not part of it. */
+      const root = doc.config.source_root === "." ? "" : doc.config.source_root + "/";
+      const entryLike = l => (doc.package_entries || []).includes(l.to) ||
+        /^(index\.[cm]?[jt]sx?|__init__\.py)$/.test(l.to.startsWith(root) ? l.to.slice(root.length) : "\0");
+      const e = edgeOf(c.break.find(entryLike) || c.break[0]);
       if (e !== undefined) next.push(["Start on ", cyc, " by removing or inverting ", { e, label: `${short(files[edges[e].a].path)} → ${short(files[edges[e].b].path)}` }, "."]);
-    }
+      trailing();
+    } else trailing();
   });
   const moves = ofKind("misplaced-file").filter(fd => fd.f.simulation).sort((p, q) => cohesionGain(q) - cohesionGain(p));
   for (const fd of moves.slice(0, 2)) {
@@ -1360,11 +1396,9 @@ const assessment = (() => {
     next.push([{ fd: fd.i, label: `Split ${fd.f.subject}` }, ` along its ${fd.f.evidence.components.length} groups of importers: ${groups.slice(0, 3).join("; ")}.`]);
   }
   if (reachList.length) {
-    const by = new Map();
-    for (const fd of reachList) by.set(fd.f.evidence.module, [...(by.get(fd.f.evidence.module) || []), fd]);
-    const [m, l] = [...by.entries()].sort((a, b) => b[1].length - a[1].length || (a[0] < b[0] ? -1 : 1))[0];
-    const entry = l[0].f.evidence.entries[0];
-    next.push([{ fd: l[0].i, label: `Import ${m} through its entry` }, entry ? ` (${short(entry)})` : "", l.length === 1 ? " in the one place that reaches past it." : ` in the ${l.length} places that reach past it.`]);
+    const fd = [...reachList].sort((p, q) => q.f.evidence.imports - p.f.evidence.imports || (p.f.subject < q.f.subject ? -1 : 1))[0];
+    const ev = fd.f.evidence, entry = ev.entries[0];
+    next.push([{ fd: fd.i, label: `Import ${ev.module} through its entry` }, entry ? ` (${short(entry)})` : "", ev.imports === 1 ? " in the one place that reaches past it." : ` in the ${ev.imports} places that reach past it.`]);
   }
   if (!doc.config.rules && N > 2) next.push(["Write a layout.yaml with layers and public entries for the boundaries you agree on, so archgraph check can hold them in CI."]);
   if (unstable.length) {
@@ -1404,7 +1438,7 @@ function diagnosis(i) {
   const unst = ofKind("unstable-dependency").filter(fd => fd.f.evidence.from === m.id);
   if (unst.length) risky.push(`it imports the more volatile ${listed(unst.map(fd => fd.f.evidence.to))}`);
   const reach = ofKind("internals-reach").filter(fd => fd.f.evidence.module === m.id);
-  if (reach.length) risky.push(`${count(reach.length, "import reaches", "imports reach")} past its public entry`);
+  if (reach.length) risky.push(`${count(reach[0].f.evidence.imports, "import reaches", "imports reach")} past its public entry`);
   const hid = ofKind("hidden-coupling").filter(fd => fd.f.evidence.modules.includes(m.id));
   if (hid.length) risky.push(`${count(hid.length, "file pair changes", "file pairs change")} together with other modules without an import`);
   const join = l => l.length > 1 ? l.slice(0, -1).join(", ") + " and " + l[l.length - 1] : l[0];
@@ -1435,7 +1469,7 @@ const filt = { problems: false, cycles: false, types: false };
 const showME = me => !(hiddenMods[me.a] || hiddenMods[me.b]) && (!filt.problems || me.tone !== "neutral") &&
   (!filt.cycles || me.cycle) && (!filt.types || !me.typeOnly);
 const showFE = e => !(e.me && (hiddenMods[files[e.a].mod] || hiddenMods[files[e.b].mod])) &&
-  (!filt.problems || e.tone !== "neutral") && (!filt.cycles || e.cycle) && (!filt.types || e.kind !== "type");
+  (!filt.problems || e.tone !== "neutral") && (!filt.cycles || e.cycle) && (!filt.types || (e.kind !== "type" && e.kind !== "type-reexport"));
 const same = (p, q) => p === q || (p && q && p.type === q.type && p.i === q.i);
 const raise = (arr, j, s) => { if (arr[j] < s) arr[j] = s; };
 
@@ -1753,7 +1787,7 @@ function resize() {
   canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
   if (sheetMode && !wasSheet) { sheetDetent = 0; stopSheet(); root.classList.remove("open-sheet"); }
   if (compact && !levelEl.classList.contains("spent")) setTimeout(() => levelEl.classList.add("spent"), 3200);
-  if (!sheetMode) sheet.style.removeProperty("--sheet-y");
+  if (!sheetMode) { sheet.style.removeProperty("--sheet-y"); const c = document.querySelector(".ctrl"); c.style.removeProperty("bottom"); c.style.removeProperty("visibility"); }
   $("search").placeholder = compact ? "Search" : "Search modules and files";
   fitLabels();
   measureChrome();
@@ -1930,7 +1964,7 @@ function draw() {
         w = s === S_SELF ? 2.2 : 1.5;
         if (!problem) color = s === S_IN ? C.in : s === S_OUT ? C.out : C.fg;
       }
-      put(FE, e.i, s === S_DIM ? 0 : s === S_NORM ? (problem ? 2 : 1) : 3, color, alpha * fileT, w, e.kind === "type",
+      put(FE, e.i, s === S_DIM ? 0 : s === S_NORM ? (problem ? 2 : 1) : 3, color, alpha * fileT, w, e.kind === "type" || e.kind === "type-reexport",
         arrows && s !== S_DIM ? 4 + w * 1.6 : 0);
       if (e.fileCycle && s !== S_DIM && k >= K_FILE1) marks.push([FE, e.i, color, alpha * fileT]);
     }
@@ -2264,7 +2298,7 @@ function tipLines(h) {
     const m = mods[h.i];
     return [m.id, `${count(m.files, "file", "files")}, ${HEALTH_TEXT[modHealth[h.i]]}`,
       `imported by ${count(m.ca, "module", "modules")}, imports ${count(m.ce, "module", "modules")}`,
-      `instability ${fmt(m.instability)}, cohesion ${fmt(m.cohesion)}`];
+      `instability ${n2(m.instability)}, cohesion ${n2(m.cohesion)}`];
   }
   if (h.type === "file") {
     const f = files[h.i];
@@ -2921,7 +2955,17 @@ function detentY(d) {
   const h = sheet.offsetHeight;
   return d === 2 ? 0 : d === 1 ? Math.max(0, h - Math.round(window.innerHeight * 0.45)) : Math.max(0, h - PEEK);
 }
-function setSheetY(y) { sheetY = y; sheet.style.setProperty("--sheet-y", y.toFixed(1) + "px"); }
+function setSheetY(y) {
+  sheetY = y;
+  sheet.style.setProperty("--sheet-y", y.toFixed(1) + "px");
+  /* The floating fit button rides just above the sheet's top edge at every detent and while it
+     moves; when the sheet covers most of the screen there is no map to fit, so it hides. */
+  const ctrlEl = document.querySelector(".ctrl");
+  if (!sheetMode) { ctrlEl.style.removeProperty("bottom"); ctrlEl.style.removeProperty("visibility"); return; }
+  const shown = window.innerHeight - (sheet.offsetTop + y);
+  ctrlEl.style.bottom = Math.max(0, shown) + 12 + "px";
+  ctrlEl.style.visibility = shown > window.innerHeight * 0.62 ? "hidden" : "";
+}
 /* The sheet keeps its full height and slides down: pad the content by the part below the screen so
    its last rows can be scrolled into view at every detent. */
 function padSheet() { panel.style.paddingBottom = sheetMode ? (40 + detentY(sheetDetent)) + "px" : ""; }
@@ -3504,6 +3548,7 @@ function overview() {
   panel.append(el("p", { class: "sub" }, `${nf(F)} ${F === 1 ? "file" : "files"} in ${nf(N)} ${N === 1 ? "module" : "modules"}`));
   panel.append(el("p", { class: "intro" }, "Read from the imports alone; every line names its evidence. Select a name to see it on the map."));
   if (ofKind("small-repo").length) panel.append(el("p", { class: "note" }, "Few files or modules: read the lines below as hints, the signal is weak."));
+  if (doc.source.collector.type_marking === "unavailable") panel.append(el("p", { class: "note" }, "Type-only imports could not be told apart in this repository, so some cycles may include imports TypeScript removes."));
   if (foundations.length && !hasOutgoingTo) panel.append(el("p", { class: "note" }, "This scan has no outgoing_to per module (an older archgraph), so cohesion here also counts imports of foundations. Rescan to judge it without them."));
   const MARK = { good: "holds", bad: "hurts", next: "next" };
   const section = (title, cls, items, empty) => {
@@ -3558,8 +3603,8 @@ function modulePanel(i) {
     ["files", m.files, "in the module", "Files in the module."],
     ["Ca, importers", m.ca, "more: more rely on it", "Modules that import it. More importers means more code relies on it, so it should change rarely."],
     ["Ce, imports", m.ce, "fewer: fewer reasons to change", "Modules it imports. Fewer imports means fewer reasons for it to change."],
-    ["instability", fmt(m.instability), "0 stable, 1 volatile", "Ce / (Ca + Ce): near 0 it is stable, near 1 volatile. Neither is bad; a stable module should not import a volatile one."],
-    ["cohesion", fmt(m.cohesion), adjusted && cohesionX[i] !== null && n2(cohesionX[i]) !== n2(m.cohesion)
+    ["instability", n2(m.instability), "0 stable, 1 volatile", "Ce / (Ca + Ce): near 0 it is stable, near 1 volatile. Neither is bad; a stable module should not import a volatile one."],
+    ["cohesion", n2(m.cohesion), adjusted && cohesionX[i] !== null && n2(cohesionX[i]) !== n2(m.cohesion)
       ? `${n2(cohesionX[i])} not counting imports of foundations` : "higher: imports stay inside",
       "Share of its files' imports that stay inside the module. Higher means the folder holds one unit of code. The assessment does not count imports of foundations, which are the intended design."],
     ["internal edges", m.internal_edges, "between its files", "Imports between its own files."],
@@ -3625,10 +3670,12 @@ function simTable(after) {
   const hr = el("tr");
   for (const h of ["", "before", "after"]) hr.append(el("th", {}, h));
   t.append(hr);
+  const ratio = new Set(["cohesion", "instability"]);
   const row = (name, a, b, better) => {
+    const f = ratio.has(name) ? n2 : fmt;
     const tr = el("tr");
     const cls = a === b || a === null || b === null || better === 0 ? "" : (b > a) === (better > 0) ? "better" : "worse";
-    tr.append(el("td", {}, name), el("td", {}, fmt(a)), el("td", cls ? { class: cls } : {}, fmt(b)));
+    tr.append(el("td", {}, name), el("td", {}, f(a)), el("td", cls ? { class: cls } : {}, f(b)));
     t.append(tr);
   };
   row("forbidden", before.forbidden, after.forbidden, -1);
@@ -3674,8 +3721,11 @@ function findingPanel(j) {
       const pairRow = p => {
         const d = el("details", { class: "row" }), sum = el("summary");
         const line = el("span", { class: "fpair", style: "grid-column: 1 / -1" });
-        line.append(el("span", { class: "name" }, `${p.from} → ${p.to}`),
-          el("span", { class: "fcount" }, `${count(p.imports, "import", "imports")}, ${p.reverse_imports} back`));
+        line.append(el("span", { class: "name" }, p.even ? `${p.from} ↔ ${p.to}` : `${p.from} → ${p.to}`),
+          el("span", { class: "fcount" }, p.even
+            ? `${p.imports} and ${p.reverse_imports} imports, no lighter side`
+            : `${count(p.imports, "import", "imports")}, ${p.reverse_imports} back` +
+              (p.resolved_by_move ? ", resolved by the registrar move" : p.registry ? ", registry wiring" : p.entry ? ", public re-exports" : "")));
         sum.append(line);
         d.append(sum);
         d.addEventListener("toggle", () => {
@@ -3713,13 +3763,18 @@ function findingPanel(j) {
   } else if (f.kind === "hidden-coupling") {
     line(`Changed together in ${count(ev.commits, "commit", "commits")}, with no import between them (${ev.modules.join(" and ")}).`);
   } else if (f.kind === "internals-reach") {
-    line(`Imports past the public entry of ${ev.module}.`);
+    line(`${count(ev.imports, "import", "imports")} from ${count(ev.importers, "module", "modules")} past the public entry of ${ev.module}.`);
     if (ev.entries.length) line(`Entries: ${ev.entries.map(short).join(", ")}`);
-    if (ev.barrel_share !== undefined) line(`Share of imports into ${ev.module} through its barrels: ${ev.barrel_share}.`);
+    if (ev.barrel_share !== undefined) line(`Share of imports into ${ev.module} through its barrels: ${fmt(ev.barrel_share)}.`);
+    panel.append(el("h3", {}, ev.edges.length < ev.imports ? `Imports: the first ${ev.edges.length} of ${ev.imports}` : "Imports"));
+    panel.append(importList(ev.edges.map(l => {
+      const a = fileIndex.get(l.from), b = fileIndex.get(l.to);
+      return a === undefined || b === undefined ? undefined : edgeBetween(a, b);
+    }).filter(x => x !== undefined)));
   } else if (f.kind === "unstable-dependency") {
-    line(`${ev.from} (instability ${ev.from_instability}) imports ${ev.to} (instability ${ev.to_instability}) ${count(ev.imports, "time", "times")}.`);
+    line(`${ev.from} (instability ${fmt(ev.from_instability)}) imports ${ev.to} (instability ${fmt(ev.to_instability)}) ${count(ev.imports, "time", "times")} at runtime.`);
   } else if (f.kind === "seam") {
-    line(`Modularity of the clusters ${ev.modularity}, of the folders ${ev.folder_modularity}.`);
+    line(`Modularity of the clusters ${fmt(ev.modularity)}, of the folders ${fmt(ev.folder_modularity)}.`);
     ev.clusters.forEach((c, n) => line(`Cluster ${n + 1}: ${count(c.files.length, "file", "files")} across ${c.modules.join(", ")}`));
     if (ev.hubs.length) line(`Hubs left out: ${ev.hubs.map(short).join(", ")}`);
   } else if (f.kind === "small-repo") {

@@ -224,11 +224,13 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
     let excludes_set = collect::globset(&excludes)?;
     let (raw, source_root) = match language {
         Language::Typescript => {
-            let json = match input {
-                Some(json) => json,
+            let (json, type_marking) = match input {
+                Some(json) => (json, None),
                 None => depcruise::run(root, source_dir, depcruise.as_deref())?,
             };
-            (depcruise::parse(&json)?, source_dir.to_owned())
+            let mut raw = depcruise::parse(&json)?;
+            raw.collector.type_marking = type_marking.map(str::to_owned);
+            (raw, source_dir.to_owned())
         }
         Language::Python => {
             let package = grimp::package(root, source_dir, args.package.as_deref(), &excludes_set)?;
@@ -242,7 +244,10 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
             )
         }
     };
-    let raw = raw.exclude(&excludes_set);
+    let mut raw = raw.exclude(&excludes_set);
+    if !args.no_default_excludes {
+        raw = raw.exclude_ignored_output(root)?;
+    }
     if let Some(n) = raw.collector.unresolved.filter(|&n| n > 0) {
         eprintln!(
             "warning: {n} unresolved import(s) reported by dependency-cruiser; their edges are missing"
@@ -266,7 +271,11 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         .cochange
         .map(|n| cochange::collect(root, n, &raw.files))
         .transpose()?;
-    archgraph::analyze(source, config, raw.files, raw.edges, cochange)
+    let entries = match language {
+        Language::Typescript => depcruise::package_entries(root, &raw.files),
+        Language::Python => Vec::new(),
+    };
+    archgraph::analyze(source, config, raw.files, raw.edges, entries, cochange)
 }
 
 fn report(args: Report) -> Result<ExitCode> {
@@ -313,6 +322,9 @@ fn report(args: Report) -> Result<ExitCode> {
         Some(path) => out += &format!("rules: {}\n", path.display()),
         None => out += "rules: none (pass --rules, or add layout.yaml to the root)\n",
     }
+    if doc.source.collector.type_marking.as_deref() == Some("unavailable") {
+        out += "note: type-only imports could not be told apart; some cycles may include imports TypeScript removes\n";
+    }
     out += &format!(
         "\n{}\n  {}, {}, {}\n",
         heading("Graph"),
@@ -356,10 +368,56 @@ fn report(args: Report) -> Result<ExitCode> {
                 count(module_cycles.len(), "module cycle"),
                 count(largest, "module")
             );
+            // A registrar move leads when it beats the cycle's single-import cut and the cycle
+            // shrinks; the others follow the cut.
+            let single_cut = |c: &&archgraph::model::Cycle| {
+                c.two_way.iter().flatten().any(|t| {
+                    t.imports == 1 && !t.registry && !t.entry && !t.even && !t.resolved_by_move
+                })
+            };
+            let mut trailing = String::new();
+            for c in &module_cycles {
+                for r in &c.registrar_moves {
+                    let (Some(to), Some(removed)) = (&r.to, r.pairs_removed) else {
+                        continue;
+                    };
+                    if removed <= 0 {
+                        continue;
+                    }
+                    let out = if r.leads(single_cut(c)) {
+                        &mut out
+                    } else {
+                        &mut trailing
+                    };
+                    let cycle = match (r.cycle_before, r.cycle_after) {
+                        (Some(b), Some(0)) => format!("the {b}-module cycle goes"),
+                        (Some(b), Some(a)) if a < b => {
+                            format!("the cycle drops from {b} to {a} modules")
+                        }
+                        (Some(b), Some(a)) if a == b => format!("the cycle stays at {b} modules"),
+                        (Some(b), Some(a)) => format!("the cycle goes from {b} to {a} modules"),
+                        _ => String::new(),
+                    };
+                    *out += &format!(
+                        "  move {} to {to}: removes {}; {cycle}; no new cycle\n",
+                        r.file,
+                        count(removed as usize, "two-way pair")
+                    );
+                }
+            }
             let lightest = module_cycles
                 .iter()
                 .flat_map(|c| c.two_way.iter().flatten())
+                .filter(|t| !t.registry && !t.entry && !t.even && !t.resolved_by_move)
                 .min_by_key(|t| (t.imports, t.reverse_imports));
+            let moved = module_cycles.iter().any(|c| {
+                c.registrar_moves
+                    .iter()
+                    .any(|r| r.pairs_removed.is_some_and(|n| n > 0))
+            });
+            let pairs = module_cycles
+                .iter()
+                .any(|c| c.two_way.iter().flatten().next().is_some());
             out += &match lightest {
                 Some(t) => format!(
                     "  lightest two-way cut: {} -> {}, {} ({} the other way)\n",
@@ -368,8 +426,14 @@ fn report(args: Report) -> Result<ExitCode> {
                     count(t.imports, "import"),
                     t.reverse_imports
                 ),
+                // The move is the step: no other cut remains.
+                None if moved => String::new(),
+                None if pairs => {
+                    "  no lighter side to cut: the two-way pairs are even or wiring; see the cycles' break sets\n".into()
+                }
                 None => "  no two modules import each other; see the cycles' break sets\n".into(),
             };
+            out += &trailing;
         }
     }
     out += &format!("\n{}\n", heading("Findings"));
@@ -389,6 +453,12 @@ fn report(args: Report) -> Result<ExitCode> {
     for (kind, subjects) in &by_kind {
         out += &format!("  {kind} ({})\n", subjects.len());
         for subject in subjects.iter().take(3) {
+            // Whole-tree findings have subject `.`: name what they are about.
+            let subject = match (kind.as_str(), *subject) {
+                ("seam", ".") => "clusters across folders",
+                ("small-repo", ".") => "the whole source tree",
+                (_, s) => s,
+            };
             out += &format!("    {subject}\n");
         }
         if subjects.len() > 3 {
@@ -461,7 +531,14 @@ fn simulate(args: Simulate) -> Result<()> {
     }
     let rules = rules::compile(&config)?;
     let files = input.files.into_iter().map(|f| f.path).collect();
-    let doc = archgraph::build(input.source, config, files, input.edges, rules.as_ref());
+    let doc = archgraph::build(
+        input.source,
+        config,
+        files,
+        input.edges,
+        input.package_entries,
+        rules.as_ref(),
+    );
     write(None, &simulate::simulate(&doc, rules.as_ref(), file, to)?)
 }
 
@@ -508,7 +585,14 @@ fn recompute(path: &Path, rules: Option<&Path>) -> Result<Document> {
         config.rules = Some(rules::load(path)?);
     }
     let files = input.files.into_iter().map(|f| f.path).collect();
-    archgraph::analyze(input.source, config, files, input.edges, input.cochange)
+    archgraph::analyze(
+        input.source,
+        config,
+        files,
+        input.edges,
+        input.package_entries,
+        input.cochange,
+    )
 }
 
 fn read_scan(path: &Path) -> Result<ScanInput> {
@@ -548,6 +632,11 @@ fn consistent(input: &ScanInput) -> Result<()> {
                 f.path,
                 f.module
             );
+        }
+    }
+    for entry in &input.package_entries {
+        if !paths.contains(entry.as_str()) {
+            bail!("package entry {entry} is not in files");
         }
     }
     for e in &input.edges {

@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::model::{Edge, EdgeKind};
 
-const TS_INDEX: &[&str] = &[
+pub const TS_INDEX: &[&str] = &[
     "index.ts",
     "index.tsx",
     "index.js",
@@ -55,7 +55,10 @@ pub fn barrels(edges: &[Edge]) -> BTreeSet<String> {
                 let own = format!("{dir}/");
                 out.iter().all(|e| e.to.starts_with(&own))
             } else {
-                TS_INDEX.contains(&name) && out.iter().all(|e| e.kind == EdgeKind::Reexport)
+                TS_INDEX.contains(&name)
+                    && out
+                        .iter()
+                        .all(|e| matches!(e.kind, EdgeKind::Reexport | EdgeKind::TypeReexport))
             }
         })
         .map(|(file, _)| file.to_owned())

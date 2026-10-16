@@ -5,14 +5,15 @@
       "dependencies": [
         {
           "dynamic": false,
-          "module": "../utils/money",
+          "module": "../shared/money",
           "moduleSystem": "es6",
           "exoticallyRequired": false,
           "dependencyTypes": [
             "local",
             "import"
           ],
-          "resolved": "src/utils/money.ts",
+          "preCompilationOnly": false,
+          "resolved": "src/shared/money.ts",
           "coreModule": false,
           "followable": true,
           "couldNotResolve": false,
@@ -26,7 +27,7 @@
       "valid": true
     },
     {
-      "source": "src/utils/money.ts",
+      "source": "src/shared/money.ts",
       "dependencies": [
         {
           "dynamic": false,
@@ -37,7 +38,8 @@
             "local",
             "import"
           ],
-          "resolved": "src/utils/round.ts",
+          "preCompilationOnly": false,
+          "resolved": "src/shared/round.ts",
           "coreModule": false,
           "followable": true,
           "couldNotResolve": false,
@@ -55,10 +57,10 @@
       "valid": true
     },
     {
-      "source": "src/utils/round.ts",
+      "source": "src/shared/round.ts",
       "dependencies": [],
       "dependents": [
-        "src/utils/money.ts"
+        "src/shared/money.ts"
       ],
       "orphan": false,
       "valid": true
@@ -68,14 +70,15 @@
       "dependencies": [
         {
           "dynamic": false,
-          "module": "../utils/money",
+          "module": "../shared/money",
           "moduleSystem": "es6",
           "exoticallyRequired": false,
           "dependencyTypes": [
             "local",
             "import"
           ],
-          "resolved": "src/utils/money.ts",
+          "preCompilationOnly": false,
+          "resolved": "src/shared/money.ts",
           "coreModule": false,
           "followable": true,
           "couldNotResolve": false,
@@ -93,14 +96,33 @@
       "dependencies": [
         {
           "dynamic": false,
-          "module": "../utils/dates",
+          "module": "../shared/clock",
           "moduleSystem": "es6",
           "exoticallyRequired": false,
           "dependencyTypes": [
             "local",
             "import"
           ],
-          "resolved": "src/utils/dates.ts",
+          "preCompilationOnly": false,
+          "resolved": "src/shared/clock.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        },
+        {
+          "dynamic": false,
+          "module": "../shared/dates",
+          "moduleSystem": "es6",
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "local",
+            "import"
+          ],
+          "preCompilationOnly": false,
+          "resolved": "src/shared/dates.ts",
           "coreModule": false,
           "followable": true,
           "couldNotResolve": false,
@@ -114,7 +136,17 @@
       "valid": true
     },
     {
-      "source": "src/utils/dates.ts",
+      "source": "src/shared/clock.ts",
+      "dependencies": [],
+      "dependents": [
+        "src/calendar/pick.ts",
+        "src/calendar/view.ts"
+      ],
+      "orphan": false,
+      "valid": true
+    },
+    {
+      "source": "src/shared/dates.ts",
       "dependencies": [],
       "dependents": [
         "src/calendar/pick.ts",
@@ -128,14 +160,33 @@
       "dependencies": [
         {
           "dynamic": false,
-          "module": "../utils/dates",
+          "module": "../shared/clock",
           "moduleSystem": "es6",
           "exoticallyRequired": false,
           "dependencyTypes": [
             "local",
             "import"
           ],
-          "resolved": "src/utils/dates.ts",
+          "preCompilationOnly": false,
+          "resolved": "src/shared/clock.ts",
+          "coreModule": false,
+          "followable": true,
+          "couldNotResolve": false,
+          "matchesDoNotFollow": false,
+          "circular": false,
+          "valid": true
+        },
+        {
+          "dynamic": false,
+          "module": "../shared/dates",
+          "moduleSystem": "es6",
+          "exoticallyRequired": false,
+          "dependencyTypes": [
+            "local",
+            "import"
+          ],
+          "preCompilationOnly": false,
+          "resolved": "src/shared/dates.ts",
           "coreModule": false,
           "followable": true,
           "couldNotResolve": false,
@@ -153,14 +204,15 @@
       "dependencies": [
         {
           "dynamic": false,
-          "module": "../utils/money",
+          "module": "../shared/money",
           "moduleSystem": "es6",
           "exoticallyRequired": false,
           "dependencyTypes": [
             "local",
             "import"
           ],
-          "resolved": "src/utils/money.ts",
+          "preCompilationOnly": false,
+          "resolved": "src/shared/money.ts",
           "coreModule": false,
           "followable": true,
           "couldNotResolve": false,
@@ -181,8 +233,8 @@
     "info": 0,
     "ignore": 0,
     "advisedExitCode": 0,
-    "totalCruised": 8,
-    "totalDependenciesCruised": 6,
+    "totalCruised": 9,
+    "totalDependenciesCruised": 8,
     "optionsUsed": {
       "combinedDependencies": false,
       "detectJSDocImports": false,
@@ -206,10 +258,12 @@
       "tsConfig": {
         "fileName": "tsconfig.json"
       },
-      "tsPreCompilationDeps": true,
+      "tsPreCompilationDeps": "specify",
       "args": "src"
     },
-    "ruleSetUsed": {},
+    "ruleSetUsed": {
+      "forbidden": []
+    },
     "environment": {
       "version": "18.4.0",
       "nodeVersionSupported": "^22||^24||>=26",

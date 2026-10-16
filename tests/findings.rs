@@ -39,37 +39,37 @@ fn ts_misplaced_file_that_only_imports_another_module_stays() {
 #[test]
 fn ts_sink_splits_into_its_consumer_groups() {
     let (doc, _, _) = scan_recorded("ts-sink", &[]);
-    let dates_moved = json!({
-        "after": summary(0, 0, 0, json!({
-            "calendar": m(json!(1.0), 0, 0, Value::Null),
-            "utils": m(json!(1.0), 2, 0, json!(0.0)) })) });
-    // round.ts is imported only from inside utils, so it joins money.ts and its consumers.
-    // money.ts serves billing and cart, two modules: a shared provider, not misplaced. Without
-    // utils' files as hubs, label propagation finds the same two groups as the sink split.
+    let moved = |file: &str| {
+        let to = file.replace("shared", "calendar");
+        json!({ "file": file, "to": to })
+    };
+    // round.ts is imported only from inside shared, so it joins money.ts and its consumers.
+    // money.ts serves billing and cart, two modules: a shared provider. Both groups hold two
+    // files. clock.ts and dates.ts import nothing and sit in shared: leaf utilities, not misplaced,
+    // though the sink split moves them with their group. Without shared' files as hubs, label
+    // propagation finds the same two groups as the sink split.
     assert_eq!(
         doc["findings"],
         json!([
-            { "kind": "misplaced-file", "subject": "src/utils/dates.ts",
-              "evidence": { "own_module_edges": 0, "target_module": "calendar",
-                            "imports_from_target": 2, "via_barrel": false },
-              "suggestion": { "move": { "file": "src/utils/dates.ts", "to": "src/calendar/dates.ts" } },
-              "simulation": dates_moved },
             { "kind": "seam", "subject": ".",
-              "evidence": { "modularity": 0.4444, "folder_modularity": -0.2361, "hubs": [],
+              "evidence": { "modularity": 0.5, "folder_modularity": -0.2734, "hubs": [],
                             "via_barrel": false, "clusters": [
                   { "files": ["src/billing/invoice.ts", "src/billing/tax.ts", "src/cart/total.ts",
-                              "src/utils/money.ts", "src/utils/round.ts"],
-                    "modules": ["billing", "cart", "utils"] },
-                  { "files": ["src/calendar/pick.ts", "src/calendar/view.ts", "src/utils/dates.ts"],
-                    "modules": ["calendar", "utils"] } ] } },
-            { "kind": "sink-split", "subject": "utils",
+                              "src/shared/money.ts", "src/shared/round.ts"],
+                    "modules": ["billing", "cart", "shared"] },
+                  { "files": ["src/calendar/pick.ts", "src/calendar/view.ts", "src/shared/clock.ts",
+                              "src/shared/dates.ts"],
+                    "modules": ["calendar", "shared"] } ] } },
+            { "kind": "sink-split", "subject": "shared",
               "evidence": { "ca": 3, "via_barrel": false, "components": [
-                  { "files": ["src/utils/dates.ts"], "consumers": ["calendar"],
-                    "moves": [{ "file": "src/utils/dates.ts", "to": "src/calendar/dates.ts" }] },
-                  { "files": ["src/utils/money.ts", "src/utils/round.ts"],
+                  { "files": ["src/shared/clock.ts", "src/shared/dates.ts"], "consumers": ["calendar"],
+                    "moves": [moved("src/shared/clock.ts"), moved("src/shared/dates.ts")] },
+                  { "files": ["src/shared/money.ts", "src/shared/round.ts"],
                     "consumers": ["billing", "cart"], "moves": [] } ] },
-              "simulation": dates_moved },
-            { "kind": "small-repo", "subject": ".", "evidence": { "files": 8, "modules": 4 } }
+              "simulation": { "after": summary(0, 0, 0, json!({
+                  "calendar": m(json!(1.0), 0, 0, Value::Null),
+                  "shared": m(json!(1.0), 2, 0, json!(0.0)) })) } },
+            { "kind": "small-repo", "subject": ".", "evidence": { "files": 9, "modules": 4 } }
         ])
     );
 }
@@ -88,25 +88,25 @@ fn ts_internals_reach_past_a_barrel() {
         .collect();
     assert_eq!(
         reach,
-        [
-            &json!({ "kind": "internals-reach", "subject": "src/a/use.ts -> src/b/make.ts",
-                  "evidence": { "from": "src/a/use.ts", "to": "src/b/make.ts", "module": "b",
-                                "entries": ["src/b/index.ts"], "barrel_share": 0.6667 } })
-        ]
+        [&json!({ "kind": "internals-reach", "subject": "b",
+                  "evidence": { "module": "b", "entries": ["src/b/index.ts"], "imports": 1,
+                                "importers": 1, "importing_files": 1, "barrel_share": 0.6667,
+                                "edges": [{ "from": "src/a/use.ts", "to": "src/b/make.ts" }] } })]
     );
 }
 
 #[test]
 fn ts_sdp_stable_module_depends_on_a_volatile_one() {
     let (doc, _, _) = scan_recorded("ts-sdp", &[]);
-    // core: Ca 2 (x, y), Ce 1 (plugins), I = 1/3. plugins: Ca 1, Ce 2 (z, w), I = 2/3.
+    // core: Ca 2 (x, y), Ce 1 (plugins), I = 1/3. plugins: Ca 1, Ce 2 (z, w), I = 2/3. api.ts and
+    // boot.ts both import plugins: two imports, the minimum.
     assert_eq!(
         doc["findings"],
         json!([
-            { "kind": "small-repo", "subject": ".", "evidence": { "files": 6, "modules": 6 } },
+            { "kind": "small-repo", "subject": ".", "evidence": { "files": 7, "modules": 6 } },
             { "kind": "unstable-dependency", "subject": "core -> plugins",
               "evidence": { "from": "core", "to": "plugins", "from_instability": 0.3333,
-                            "to_instability": 0.6667, "imports": 1 } }
+                            "to_instability": 0.6667, "imports": 2 } }
         ])
     );
 }
@@ -217,11 +217,11 @@ fn sink_split_skips_moves_that_collide() {
         "sink-collision",
         6,
         &[
-            ("src/x/main.ts", "src/utils/a/fmt.ts"),
-            ("src/x/main.ts", "src/utils/b/fmt.ts"),
-            ("src/utils/a/fmt.ts", "src/utils/c.ts"),
-            ("src/y/m.ts", "src/utils/c.ts"),
-            ("src/z/m.ts", "src/utils/c.ts"),
+            ("src/x/main.ts", "src/shared/a/fmt.ts"),
+            ("src/x/main.ts", "src/shared/b/fmt.ts"),
+            ("src/y/m.ts", "src/shared/c.ts"),
+            ("src/z/m.ts", "src/shared/c.ts"),
+            ("src/z/m.ts", "src/shared/d.ts"),
         ]
         .map(|(f, t)| (f.to_owned(), t.to_owned())),
     );
@@ -235,55 +235,380 @@ fn sink_split_skips_moves_that_collide() {
         "--language",
         "typescript",
     ]);
-    let sink = common::finding(&doc, "sink-split", "utils");
+    let sink = common::finding(&doc, "sink-split", "shared");
     assert_eq!(
         sink["evidence"]["components"],
         json!([
-            { "files": ["src/utils/a/fmt.ts", "src/utils/b/fmt.ts"], "consumers": ["x"], "moves": [] },
-            { "files": ["src/utils/c.ts"], "consumers": ["y", "z"], "moves": [] }
+            { "files": ["src/shared/a/fmt.ts", "src/shared/b/fmt.ts"], "consumers": ["x"], "moves": [] },
+            { "files": ["src/shared/c.ts", "src/shared/d.ts"], "consumers": ["y", "z"], "moves": [] }
         ])
     );
     assert!(sink.get("simulation").is_none(), "{sink:#}");
 }
 
 #[test]
-fn sink_split_suggests_no_move_out_of_the_consumer_module() {
-    // boot.ts serves only main.ts, a module of its own: src/boot.ts would be another one.
+fn sink_split_needs_two_groups_of_two_files() {
+    // shared serves x with two files and y, z with one: a lone file is no second group.
     let doc = scan_edges(
-        "sink-root-consumer",
+        "sink-one-real-group",
         &[
-            ("src/main.ts", "src/utils/boot.ts"),
-            ("src/w/m.ts", "src/utils/c.ts"),
-            ("src/y/m.ts", "src/utils/c.ts"),
-            ("src/z/m.ts", "src/utils/c.ts"),
+            ("src/x/m.ts", "src/shared/a.ts"),
+            ("src/x/m.ts", "src/shared/b.ts"),
+            ("src/y/m.ts", "src/shared/c.ts"),
+            ("src/z/m.ts", "src/shared/c.ts"),
         ],
         &["--depth", "1"],
     );
-    let sink = common::finding(&doc, "sink-split", "utils");
+    assert!(
+        !doc["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f["kind"] == "sink-split"),
+        "{:#}",
+        doc["findings"]
+    );
+}
+
+/// The sink-split components of `doc`'s shared, as (files, consumers).
+fn components(doc: &Value) -> Value {
+    let sink = common::finding(doc, "sink-split", "shared");
+    let c: Vec<Value> = sink["evidence"]["components"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| json!([c["files"], c["consumers"]]))
+        .collect();
+    json!(c)
+}
+
+#[test]
+fn sink_split_leaves_out_composition_roots() {
+    // main.ts, which nobody imports, wires shared, y and z together; it uses u1 and u3 only to
+    // register them. Without it shared serves y with u1, u2 and w, z with u3, u4.
+    let doc = scan_edges(
+        "sink-root",
+        &[
+            ("src/y/a.ts", "src/shared/u1.ts"),
+            ("src/y/a.ts", "src/shared/u2.ts"),
+            ("src/z/b.ts", "src/shared/u3.ts"),
+            ("src/w/c.ts", "src/shared/u4.ts"),
+            ("src/z/b.ts", "src/shared/u4.ts"),
+            ("src/main.ts", "src/shared/u1.ts"),
+            ("src/main.ts", "src/shared/u3.ts"),
+            ("src/main.ts", "src/y/a.ts"),
+            ("src/main.ts", "src/z/b.ts"),
+        ],
+        &["--depth", "1"],
+    );
+    assert_eq!(
+        components(&doc),
+        json!([
+            [["src/shared/u1.ts", "src/shared/u2.ts"], ["y"]],
+            [["src/shared/u3.ts", "src/shared/u4.ts"], ["w", "z"]]
+        ])
+    );
+}
+
+#[test]
+fn sink_split_counts_runtime_consumers_only() {
+    // x's type-only import of b1.ts uses no code of that group.
+    let import: &[&str] = &["local", "import"];
+    let (dir, input) = common::synthetic_typed(
+        "sink-type-consumer",
+        8,
+        &[
+            ("src/x/m.ts", "src/shared/a1.ts", import),
+            ("src/x/m.ts", "src/shared/a2.ts", import),
+            ("src/y/m.ts", "src/shared/b1.ts", import),
+            ("src/z/m.ts", "src/shared/b2.ts", import),
+            ("src/y/m.ts", "src/shared/b2.ts", import),
+            (
+                "src/x/m.ts",
+                "src/shared/b1.ts",
+                &["local", "type-only", "import"],
+            ),
+        ],
+    );
+    std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
+    let (doc, _, _) = common::scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+        "--depth",
+        "1",
+    ]);
+    assert_eq!(
+        components(&doc),
+        json!([
+            [["src/shared/a1.ts", "src/shared/a2.ts"], ["x"]],
+            [["src/shared/b1.ts", "src/shared/b2.ts"], ["y", "z"]]
+        ])
+    );
+}
+
+#[test]
+fn sink_split_never_moves_public_api() {
+    // The package's entry re-exports a1.ts: it stays where importers of the package find it,
+    // and only a2.ts moves to x.
+    let import: &[&str] = &["local", "import"];
+    let (dir, input) = common::synthetic_typed(
+        "sink-public",
+        9,
+        &[
+            ("src/index.ts", "src/shared/a1.ts", &["local", "export"]),
+            ("src/x/m.ts", "src/shared/a1.ts", import),
+            ("src/x/m.ts", "src/shared/a2.ts", import),
+            ("src/y/m.ts", "src/shared/b1.ts", import),
+            ("src/z/m.ts", "src/shared/b2.ts", import),
+            ("src/y/m.ts", "src/shared/b2.ts", import),
+        ],
+    );
+    let root = std::path::Path::new(&dir);
+    std::fs::create_dir_all(root.join("src")).unwrap();
+    std::fs::write(
+        root.join("package.json"),
+        r#"{ "main": "./dist/index.js" }"#,
+    )
+    .unwrap();
+    let (doc, _, _) = common::scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+        "--depth",
+        "1",
+    ]);
+    let sink = common::finding(&doc, "sink-split", "shared");
+    assert_eq!(
+        sink["evidence"]["components"][0]["moves"],
+        json!([{ "file": "src/shared/a2.ts", "to": "src/x/a2.ts" }])
+    );
+}
+
+#[test]
+fn unstable_dependency_leaves_out_composition_roots() {
+    // boot (Ca 4, Ce 3, I 0.4286) imports commands (I 0.75) twice, but only from cli.ts, which
+    // nobody imports and which wires commands, lib and util together: no finding.
+    let doc = scan_edges(
+        "sdp-root",
+        &[
+            ("src/x/a.ts", "src/boot/env.ts"),
+            ("src/y/a.ts", "src/boot/env.ts"),
+            ("src/z/a.ts", "src/boot/env.ts"),
+            ("src/w/a.ts", "src/boot/env.ts"),
+            ("src/boot/cli.ts", "src/commands/a.ts"),
+            ("src/boot/cli.ts", "src/commands/b.ts"),
+            ("src/boot/cli.ts", "src/lib/l.ts"),
+            ("src/boot/cli.ts", "src/util/u.ts"),
+            ("src/commands/a.ts", "src/p/p.ts"),
+            ("src/commands/a.ts", "src/q/q.ts"),
+            ("src/commands/b.ts", "src/r/r.ts"),
+        ],
+        &["--depth", "1"],
+    );
+    let instability = |id: &str| {
+        doc["modules"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|m| m["id"] == id)
+            .unwrap()["instability"]
+            .clone()
+    };
+    assert_eq!(
+        (instability("boot"), instability("commands")),
+        (json!(0.4286), json!(0.75))
+    );
+    assert!(
+        !doc["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f["kind"] == "unstable-dependency"),
+        "{:#}",
+        doc["findings"]
+    );
+}
+
+fn has_sink_split(doc: &Value) -> bool {
+    doc["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|f| f["kind"] == "sink-split")
+}
+
+#[test]
+fn sink_split_ignores_the_parent_module_as_a_consumer() {
+    // app/main.ts registers app/t's controller files; app is the folder above app/t. Without
+    // it, app/t serves one group: no split.
+    let doc = scan_edges(
+        "sink-parent",
+        &[
+            ("src/app/main.ts", "src/app/t/reg.ts"),
+            ("src/app/main.ts", "src/app/t/ctl.ts"),
+            ("src/app/a/m.ts", "src/app/t/t1.ts"),
+            ("src/app/b/m.ts", "src/app/t/t2.ts"),
+            ("src/app/c/m.ts", "src/app/t/t1.ts"),
+            ("src/app/a/m.ts", "src/app/t/t2.ts"),
+        ],
+        &[],
+    );
+    assert!(!has_sink_split(&doc), "{:#}", doc["findings"]);
+}
+
+#[test]
+fn sink_split_ignores_a_wiring_file_that_imports_only_the_entry() {
+    // main.ts imports shared only through its barrel, alongside x and y: it registers shared, it
+    // does not consume a1 or b1. Without it, a1, a2 serve x and b1, b2 serve y and z.
+    let import: &[&str] = &["local", "import"];
+    let export: &[&str] = &["local", "export"];
+    let (dir, input) = common::synthetic_typed(
+        "sink-entry-wiring",
+        12,
+        &[
+            ("src/shared/index.ts", "src/shared/a1.ts", export),
+            ("src/shared/index.ts", "src/shared/b1.ts", export),
+            ("src/boot.ts", "src/main.ts", import),
+            ("src/main.ts", "src/shared/index.ts", import),
+            ("src/main.ts", "src/x/m.ts", import),
+            ("src/main.ts", "src/y/m.ts", import),
+            ("src/x/m.ts", "src/shared/a1.ts", import),
+            ("src/x/m.ts", "src/shared/a2.ts", import),
+            ("src/y/m.ts", "src/shared/b1.ts", import),
+            ("src/z/m.ts", "src/shared/b2.ts", import),
+            ("src/y/m.ts", "src/shared/b2.ts", import),
+        ],
+    );
+    std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
+    let (doc, _, _) = common::scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+        "--depth",
+        "1",
+    ]);
+    assert_eq!(
+        components(&doc),
+        json!([
+            [["src/shared/a1.ts", "src/shared/a2.ts"], ["x"]],
+            [["src/shared/b1.ts", "src/shared/b2.ts"], ["y", "z"]]
+        ])
+    );
+}
+
+#[test]
+fn sink_split_skips_a_module_named_by_kind() {
+    // services and errors are folders of one kind of code: their files serve whoever needs
+    // that kind, and separate groups of importers are expected. A domain folder splits.
+    for (sink, reported) in [("services", false), ("errors", false), ("billing", true)] {
+        let f = |n: &str| format!("src/{sink}/{n}.ts");
+        let (s1, s2, s3, s4) = (f("s1"), f("s2"), f("s3"), f("s4"));
+        let doc = scan_edges(
+            &format!("sink-kind-{sink}"),
+            &[
+                ("src/p/p.ts", s1.as_str()),
+                ("src/p/p.ts", s2.as_str()),
+                ("src/x/m.ts", s3.as_str()),
+                ("src/y/m.ts", s4.as_str()),
+                ("src/x/m.ts", s4.as_str()),
+            ],
+            &["--depth", "1"],
+        );
+        assert_eq!(
+            has_sink_split(&doc),
+            reported,
+            "{sink}: {:#}",
+            doc["findings"]
+        );
+    }
+}
+
+#[test]
+fn sink_split_drops_groups_that_import_each_other() {
+    // a1.ts imports b1.ts: splitting shared along the groups would make the halves import each
+    // other.
+    let doc = scan_edges(
+        "sink-cross-group",
+        &[
+            ("src/x/m.ts", "src/shared/a1.ts"),
+            ("src/x/m.ts", "src/shared/a2.ts"),
+            ("src/y/m.ts", "src/shared/b1.ts"),
+            ("src/z/m.ts", "src/shared/b2.ts"),
+            ("src/y/m.ts", "src/shared/b2.ts"),
+            ("src/shared/a1.ts", "src/shared/b1.ts"),
+        ],
+        &["--depth", "1"],
+    );
+    assert!(!has_sink_split(&doc), "{:#}", doc["findings"]);
+}
+
+#[test]
+fn unstable_dependency_skips_a_facade_over_its_private_implementation() {
+    // pkg/api (I 1/3) imports pkg/_impl (I 2/3) twice: a facade over its own private code.
+    // Named pkg/impl the same imports are reported.
+    for (imp, reported) in [("_impl", false), ("impl", true)] {
+        let i = format!("src/pkg/{imp}/i.ts");
+        let edges = [
+            ("src/x/a.ts", "src/pkg/api/f.ts"),
+            ("src/y/b.ts", "src/pkg/api/f.ts"),
+            ("src/pkg/api/f.ts", i.as_str()),
+            ("src/pkg/api/g.ts", i.as_str()),
+            (i.as_str(), "src/z/c.ts"),
+            (i.as_str(), "src/w/d.ts"),
+        ];
+        let doc = scan_edges(&format!("sdp-facade{imp}"), &edges, &[]);
+        let found = doc["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f["kind"] == "unstable-dependency");
+        assert_eq!(found, reported, "{imp}: {:#}", doc["findings"]);
+    }
+}
+
+#[test]
+fn sink_split_suggests_no_move_out_of_the_consumer_module() {
+    // boot.ts and env.ts serve only main.ts, a module of its own: src/boot.ts would be another.
+    let doc = scan_edges(
+        "sink-root-consumer",
+        &[
+            ("src/main.ts", "src/shared/boot.ts"),
+            ("src/main.ts", "src/shared/env.ts"),
+            ("src/w/m.ts", "src/shared/c2.ts"),
+            ("src/w/m.ts", "src/shared/c.ts"),
+            ("src/y/m.ts", "src/shared/c.ts"),
+            ("src/z/m.ts", "src/shared/c.ts"),
+        ],
+        &["--depth", "1"],
+    );
+    let sink = common::finding(&doc, "sink-split", "shared");
     assert_eq!(
         sink["evidence"]["components"][0],
-        json!({ "files": ["src/utils/boot.ts"], "consumers": ["main.ts"], "moves": [] })
+        json!({ "files": ["src/shared/boot.ts", "src/shared/env.ts"], "consumers": ["main.ts"],
+                "moves": [] })
     );
     assert!(sink.get("simulation").is_none(), "{sink:#}");
 }
 
-#[test]
-fn unstable_dependency_follows_barrels_like_ca_and_ce() {
-    // s imports b's barrel, which re-exports v: for Ca and Ce s depends on v, not on b.
-    // s: Ca 2 (p, q), Ce 1 (v), I = 1/3. v: Ca 1, Ce 2 (w, z), I = 2/3.
+/// Unstable-dependency findings of x, y -> core -> plugins -> z, w (core I = 1/3, plugins I =
+/// 2/3, as in ts-sdp) plus `extra` edges.
+fn unstable(name: &str, extra: &[(&str, &str, &[&str])]) -> Vec<Value> {
     let import: &[&str] = &["local", "import"];
-    let (dir, input) = common::synthetic_typed(
-        "sdp-barrel",
-        7,
-        &[
-            ("p/a.ts", "s/f.ts", import),
-            ("q/a.ts", "s/f.ts", import),
-            ("s/f.ts", "b/index.ts", import),
-            ("b/index.ts", "v/x.ts", &["local", "export"]),
-            ("v/x.ts", "w/y.ts", import),
-            ("v/x.ts", "z/k.ts", import),
-        ],
-    );
+    let mut edges = vec![
+        ("x/a.ts", "core/api.ts", import),
+        ("y/b.ts", "core/api.ts", import),
+        ("plugins/loader.ts", "z/c.ts", import),
+        ("plugins/loader.ts", "w/d.ts", import),
+    ];
+    edges.extend_from_slice(extra);
+    let (dir, input) = common::synthetic_typed(name, edges.len() + 1, &edges);
     let (doc, _, _) = common::scan(&[
         &dir,
         "--collector-input",
@@ -291,17 +616,439 @@ fn unstable_dependency_follows_barrels_like_ca_and_ce() {
         "--language",
         "typescript",
     ]);
+    doc["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|f| f["kind"] == "unstable-dependency")
+        .cloned()
+        .collect()
+}
+
+#[test]
+fn unstable_dependency_counts_at_least_two_runtime_imports() {
+    let import: &[&str] = &["local", "import"];
+    let (type_only, dynamic): (&[&str], &[&str]) = (
+        &["local", "type-only", "import"],
+        &["local", "dynamic-import"],
+    );
+    // One import is below the minimum.
+    let one = unstable("sdp-one", &[("core/api.ts", "plugins/loader.ts", import)]);
+    assert_eq!(one, Vec::<Value>::new());
+
+    // A type-only and a dynamic import set core's Ce, but only the static one is counted.
+    let mixed = unstable(
+        "sdp-mixed",
+        &[
+            ("core/api.ts", "plugins/loader.ts", import),
+            ("core/boot.ts", "plugins/loader.ts", dynamic),
+            ("core/kinds.ts", "plugins/loader.ts", type_only),
+        ],
+    );
+    assert_eq!(mixed, Vec::<Value>::new());
+
+    // Through a barrel: Ca and Ce count core -> plugins, but no file of core imports plugins.
+    let barrel = unstable(
+        "sdp-barrel",
+        &[
+            ("core/api.ts", "b/index.ts", import),
+            ("core/boot.ts", "b/index.ts", import),
+            ("b/index.ts", "plugins/loader.ts", &["local", "export"]),
+        ],
+    );
+    assert_eq!(barrel, Vec::<Value>::new());
+
+    // Value re-exports run at load time: they count.
+    let reexports = unstable(
+        "sdp-reexport",
+        &[
+            ("core/api.ts", "plugins/loader.ts", &["local", "export"]),
+            ("core/boot.ts", "plugins/loader.ts", &["local", "export"]),
+        ],
+    );
+    assert_eq!(reexports.len(), 1, "{reexports:#?}");
+    assert_eq!(reexports[0]["evidence"]["imports"], 2);
+
+    let two = unstable(
+        "sdp-two",
+        &[
+            ("core/api.ts", "plugins/loader.ts", import),
+            ("core/boot.ts", "plugins/loader.ts", import),
+        ],
+    );
+    assert_eq!(
+        two,
+        [
+            json!({ "kind": "unstable-dependency", "subject": "core -> plugins",
+                 "evidence": { "from": "core", "to": "plugins", "from_instability": 0.3333,
+                               "to_instability": 0.6667, "imports": 2 } })
+        ]
+    );
+}
+
+#[test]
+fn unstable_dependency_skips_a_module_and_its_own_subfolder() {
+    // core's own files importing core/plugins is the folder's depth, not a dependency between
+    // two modules: same instabilities as ts-sdp, no finding.
+    let import: &[&str] = &["local", "import"];
+    let edges = [
+        ("x/a.ts", "core/api.ts", import),
+        ("y/b.ts", "core/api.ts", import),
+        ("core/api.ts", "core/plugins/loader.ts", import),
+        ("core/boot.ts", "core/plugins/loader.ts", import),
+        ("core/plugins/loader.ts", "z/c.ts", import),
+        ("core/plugins/loader.ts", "w/d.ts", import),
+    ];
+    let (dir, input) = common::synthetic_typed("sdp-subfolder", 8, &edges);
+    let (doc, _, _) = common::scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let instability = |id: &str| {
+        doc["modules"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|m| m["id"] == id)
+            .unwrap()["instability"]
+            .clone()
+    };
+    assert_eq!(
+        (instability("core"), instability("core/plugins")),
+        (json!(0.3333), json!(0.6667))
+    );
+    assert!(
+        !doc["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f["kind"] == "unstable-dependency"),
+        "{:#}",
+        doc["findings"]
+    );
+
+    // The other way round: core/plugins' files importing core's own files, same numbers.
+    let edges = [
+        ("x/a.ts", "core/plugins/api.ts", import),
+        ("y/b.ts", "core/plugins/api.ts", import),
+        ("core/plugins/api.ts", "core/loader.ts", import),
+        ("core/plugins/boot.ts", "core/loader.ts", import),
+        ("core/loader.ts", "z/c.ts", import),
+        ("core/loader.ts", "w/d.ts", import),
+    ];
+    let (dir, input) = common::synthetic_typed("sdp-parent", 8, &edges);
+    let (doc, _, _) = common::scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    assert!(
+        !doc["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f["kind"] == "unstable-dependency"),
+        "{:#}",
+        doc["findings"]
+    );
+}
+
+#[test]
+fn folder_ancestry_ignores_the_root_ids() {
+    // With --depth 0, lib/p.ts and lib/q.ts outside src are module `..`, tool.ts outside src is
+    // `../tool.ts`: a root file, not a folder below `..`. `..` (I 1/3) imports it (I 2/3) twice.
+    let doc = scan_edges(
+        "ancestry-root-ids",
+        &[
+            ("src/x/a.ts", "lib/p.ts"),
+            ("src/y.ts", "lib/q.ts"),
+            ("lib/p.ts", "tool.ts"),
+            ("lib/q.ts", "tool.ts"),
+            ("tool.ts", "src/z.ts"),
+            ("tool.ts", "src/w.ts"),
+        ],
+        &["--depth", "0"],
+    );
     let unstable: Vec<&Value> = doc["findings"]
         .as_array()
         .unwrap()
         .iter()
         .filter(|f| f["kind"] == "unstable-dependency")
+        .map(|f| &f["subject"])
         .collect();
     assert_eq!(
         unstable,
-        [&json!({ "kind": "unstable-dependency", "subject": "s -> v",
-                  "evidence": { "from": "s", "to": "v", "from_instability": 0.3333,
-                                "to_instability": 0.6667, "imports": 1 } })]
+        [&json!(".. -> ../tool.ts")],
+        "{:#}",
+        doc["modules"]
+    );
+}
+
+#[test]
+fn internals_reach_counts_only_imports_the_entry_re_exports() {
+    // b's barrel re-exports make.ts, not helper.ts: importing make.ts bypasses the barrel,
+    // importing helper.ts uses something the barrel does not offer.
+    let import: &[&str] = &["local", "import"];
+    let (dir, input) = common::synthetic_typed(
+        "reach-re-exported",
+        8,
+        &[
+            ("src/b/index.ts", "src/b/make.ts", &["local", "export"]),
+            ("src/a/x.ts", "src/b/make.ts", import),
+            ("src/a/y.ts", "src/b/helper.ts", import),
+            ("src/c/p.ts", "src/b/index.ts", import),
+            ("src/c/q.ts", "src/b/index.ts", import),
+        ],
+    );
+    std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
+    let (doc, _, _) = common::scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let reach: Vec<&Value> = doc["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|f| f["kind"] == "internals-reach")
+        .map(|f| &f["evidence"]["edges"])
+        .collect();
+    assert_eq!(
+        reach,
+        [&json!([{ "from": "src/a/x.ts", "to": "src/b/make.ts" }])]
+    );
+}
+
+#[test]
+fn internals_reach_treats_package_entries_as_public() {
+    // package.json exports b/internal.ts as "./internal": importing it is using an entry, and it
+    // counts toward the share of imports through entries (3 of 4).
+    let import: &[&str] = &["local", "import"];
+    let export: &[&str] = &["local", "export"];
+    let (dir, input) = common::synthetic_typed(
+        "reach-package-entry",
+        8,
+        &[
+            ("src/b/index.ts", "src/b/make.ts", export),
+            ("src/b/index.ts", "src/b/internal.ts", export),
+            ("src/a/x.ts", "src/b/internal.ts", import),
+            ("src/a/y.ts", "src/b/make.ts", import),
+            ("src/c/p.ts", "src/b/index.ts", import),
+            ("src/c/q.ts", "src/b/index.ts", import),
+        ],
+    );
+    let root = std::path::Path::new(&dir);
+    std::fs::create_dir_all(root.join("src")).unwrap();
+    std::fs::write(
+        root.join("package.json"),
+        r#"{ "exports": { "./internal": "./dist/b/internal.js" } }"#,
+    )
+    .unwrap();
+    let (doc, _, _) = common::scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let reach: Vec<&Value> = doc["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|f| f["kind"] == "internals-reach")
+        .collect();
+    assert_eq!(
+        reach,
+        [&json!({ "kind": "internals-reach", "subject": "b",
+                  "evidence": { "module": "b", "entries": ["src/b/index.ts", "src/b/internal.ts"],
+                                "imports": 1, "importers": 1, "importing_files": 1,
+                                "barrel_share": 0.75,
+                                "edges": [{ "from": "src/a/y.ts", "to": "src/b/make.ts" }] } })]
+    );
+}
+
+#[test]
+fn internals_reach_is_one_finding_per_module_listing_at_most_twenty_imports() {
+    // 22 files of a and one of c import b's internals, 23 files of d its barrel (share 0.5):
+    // one finding for b counting all 23 imports from 2 modules, listing the first 20.
+    let import: &[&str] = &["local", "import"];
+    let names: Vec<(String, String)> = (0..23)
+        .map(|i| (format!("src/a/u{i:02}.ts"), format!("src/d/w{i:02}.ts")))
+        .collect();
+    let mut edges: Vec<(&str, &str, &[&str])> = vec![
+        ("src/b/index.ts", "src/b/make.ts", &["local", "export"]),
+        ("src/b/index.ts", "src/b/k.ts", &["local", "export"]),
+        ("src/c/v.ts", "src/b/k.ts", import),
+    ];
+    for (i, (a, d)) in names.iter().enumerate() {
+        if i < 22 {
+            edges.push((a, "src/b/make.ts", import));
+        }
+        edges.push((d, "src/b/index.ts", import));
+    }
+    let (dir, input) = common::synthetic_typed("reach-grouped", edges.len() + 1, &edges);
+    std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
+    let (doc, _, _) = common::scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let reach: Vec<&Value> = doc["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|f| f["kind"] == "internals-reach")
+        .collect();
+    let listed: Vec<Value> = names[..20]
+        .iter()
+        .map(|(a, _)| json!({ "from": a, "to": "src/b/make.ts" }))
+        .collect();
+    assert_eq!(
+        reach,
+        [&json!({ "kind": "internals-reach", "subject": "b",
+                  "evidence": { "module": "b", "entries": ["src/b/index.ts"], "imports": 23,
+                                "importers": 2, "importing_files": 23, "barrel_share": 0.5,
+                                "edges": listed } })]
+    );
+}
+
+/// Internals-reach findings of a TypeScript scan of `edges` under `rules` (YAML).
+fn reach_with_rules(name: &str, rules: &str, edges: &[(&str, &str, &[&str])]) -> Vec<Value> {
+    let rules = common::write_tmp(&format!("rules/{name}.yaml"), rules);
+    let (dir, input) = common::synthetic_typed(name, edges.len() + 1, edges);
+    std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
+    let (doc, _, _) = common::scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+        "--depth",
+        "1",
+        "--rules",
+        &rules,
+    ]);
+    doc["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|f| f["kind"] == "internals-reach")
+        .cloned()
+        .collect()
+}
+
+#[test]
+fn internals_reach_with_rules_reports_what_check_forbids() {
+    let import: &[&str] = &["local", "import"];
+    let export: &[&str] = &["local", "export"];
+    // The public module is common's own files only, so catch.ts below it is outside: `check`
+    // forbids its import of constants.ts, and so does the finding, though common is a folder
+    // above the importer's module.
+    let reach = reach_with_rules(
+        "reach-rules-subfolder",
+        "version: 1\npublic:\n  - { module: \"src/common/*\", entries: [\"src/common/index.ts\"] }\n",
+        &[
+            ("src/common/index.ts", "src/common/constants.ts", export),
+            (
+                "src/common/decorators/core/catch.ts",
+                "src/common/constants.ts",
+                import,
+            ),
+        ],
+    );
+    assert_eq!(
+        reach,
+        [
+            json!({ "kind": "internals-reach", "subject": "src/common/*",
+                 "evidence": { "module": "common", "entries": ["src/common/index.ts"],
+                               "imports": 1, "importers": 1, "importing_files": 1,
+                               "edges": [{ "from": "src/common/decorators/core/catch.ts",
+                                           "to": "src/common/constants.ts" }] } })
+        ]
+    );
+
+    // One finding per bound public module, though both sit in module features.
+    let reach = reach_with_rules(
+        "reach-rules-instances",
+        "version: 1\npublic:\n  - { module: \"src/features/<name>/**\", \
+         entries: [\"src/features/<name>/index.ts\"] }\n",
+        &[
+            ("src/features/a/index.ts", "src/features/a/impl.ts", export),
+            ("src/features/b/index.ts", "src/features/b/impl.ts", export),
+            ("src/app/x.ts", "src/features/a/impl.ts", import),
+            ("src/app/x.ts", "src/features/b/impl.ts", import),
+            ("src/app/y.ts", "src/features/a/index.ts", import),
+        ],
+    );
+    let found = |n: &str| {
+        json!({ "kind": "internals-reach", "subject": format!("src/features/{n}/**"),
+                "evidence": { "module": "features",
+                              "entries": [format!("src/features/{n}/index.ts")],
+                              "imports": 1, "importers": 1, "importing_files": 1,
+                              "edges": [{ "from": "src/app/x.ts",
+                                          "to": format!("src/features/{n}/impl.ts") }] } })
+    };
+    assert_eq!(reach, [found("a"), found("b")]);
+}
+
+#[test]
+fn internals_reach_skips_imports_from_a_subfolder_of_the_module() {
+    // Half the imports into common use its barrel. catch.ts sits in common/decorators/core, below
+    // common: importing common's barrel, which re-exports constants.ts, would be a cycle, so its
+    // import of constants.ts is not reported. z.ts, in app, is.
+    let import: &[&str] = &["local", "import"];
+    let (dir, input) = common::synthetic_typed(
+        "reach-subfolder",
+        7,
+        &[
+            (
+                "src/common/index.ts",
+                "src/common/constants.ts",
+                &["local", "export"],
+            ),
+            (
+                "src/common/decorators/core/catch.ts",
+                "src/common/constants.ts",
+                import,
+            ),
+            ("src/app/x.ts", "src/common/index.ts", import),
+            ("src/app/y.ts", "src/common/index.ts", import),
+            ("src/app/z.ts", "src/common/constants.ts", import),
+        ],
+    );
+    std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
+    let (doc, _, _) = common::scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+        "--depth",
+        "3",
+    ]);
+    let reach: Vec<&Value> = doc["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|f| f["kind"] == "internals-reach")
+        .collect();
+    assert_eq!(
+        reach,
+        [&json!({ "kind": "internals-reach", "subject": "common",
+                  "evidence": { "module": "common", "entries": ["src/common/index.ts"],
+                                "imports": 1, "importers": 1, "importing_files": 1,
+                                "barrel_share": 0.5,
+                                "edges": [{ "from": "src/app/z.ts",
+                                            "to": "src/common/constants.ts" }] } })]
     );
 }
 
@@ -348,13 +1095,14 @@ fn misplaced_file_is_pulled_by_its_importers_not_by_its_imports() {
     );
     assert_eq!(misplaced(&doc), Vec::<&Value>::new());
 
-    // f.ts is imported by two files of t and by one of its own module: t pulls it.
+    // f.ts is imported by three files of t and by one of its own module: t pulls it.
     let doc = scan_edges(
         "misplaced-imported-by-target",
         &[
             ("src/a/g.ts", "src/a/f.ts"),
             ("src/t/t1.ts", "src/a/f.ts"),
             ("src/t/t2.ts", "src/a/f.ts"),
+            ("src/t/t3.ts", "src/a/f.ts"),
         ],
         &[],
     );
@@ -362,12 +1110,24 @@ fn misplaced_file_is_pulled_by_its_importers_not_by_its_imports() {
         misplaced(&doc),
         [&json!({ "kind": "misplaced-file", "subject": "src/a/f.ts",
                   "evidence": { "own_module_edges": 1, "target_module": "t",
-                                "imports_from_target": 2, "via_barrel": false },
+                                "imports_from_target": 3, "via_barrel": false },
                   "suggestion": { "move": { "file": "src/a/f.ts", "to": "src/t/f.ts" } },
                   "simulation": { "after": summary(0, 0, 0, json!({
                       "a": m(json!(0.0), 0, 1, json!(1.0)),
                       "t": m(json!(1.0), 1, 0, json!(0.0)) })) } })]
     );
+
+    // Two imports from t are not more than twice the one edge within a: f.ts stays.
+    let doc = scan_edges(
+        "misplaced-two-against-one",
+        &[
+            ("src/a/g.ts", "src/a/f.ts"),
+            ("src/t/t1.ts", "src/a/f.ts"),
+            ("src/t/t2.ts", "src/a/f.ts"),
+        ],
+        &[],
+    );
+    assert_eq!(misplaced(&doc), Vec::<&Value>::new());
 
     // Two imports from t do not outweigh three edges within a: f.ts stays.
     let doc = scan_edges(
@@ -385,6 +1145,178 @@ fn misplaced_file_is_pulled_by_its_importers_not_by_its_imports() {
 }
 
 #[test]
+fn misplaced_file_stays_when_both_folders_name_a_kind_of_code() {
+    // f.ts is imported by three files of `to` and imports g.ts of its own module, which pulls it
+    // to `to`
+    // between domain folders. Between two folders named by kind (repositories/, services/), the
+    // codebase is organised by kind and the move would change what the file is: no finding.
+    // Kinds match in either case, singular or plural.
+    for (i, (from, to, reported)) in [
+        ("repositories", "services", false),
+        ("Repository", "Controller", false),
+        ("migrations", "management", false),
+        ("menus", "components", false),
+        ("Layout", "containers", false),
+        ("widgets", "icons", false),
+        ("styles", "ui", false),
+        ("chains", "signer", true),
+        ("utils", "calendar", true),
+        ("chains", "services", true),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let (f, g, t1, t2, t3) = (
+            format!("src/{from}/f.ts"),
+            format!("src/{from}/g.ts"),
+            format!("src/{to}/t1.ts"),
+            format!("src/{to}/t2.ts"),
+            format!("src/{to}/t3.ts"),
+        );
+        let doc = scan_edges(
+            &format!("misplaced-kind-{i}"),
+            &[(&f, &g), (&t1, &f), (&t2, &f), (&t3, &f)],
+            &[],
+        );
+        let subjects: Vec<&Value> = misplaced(&doc).iter().map(|m| &m["subject"]).collect();
+        let expected = if reported { vec![json!(f)] } else { vec![] };
+        assert_eq!(
+            subjects,
+            expected.iter().collect::<Vec<_>>(),
+            "{from} -> {to}"
+        );
+    }
+}
+
+#[test]
+fn misplaced_file_skips_leaf_utilities() {
+    // f.ts is pulled to t by three importers. In utils/ and importing nothing it is a leaf
+    // utility, kept where shared helpers live; once it imports a file it is not; in billing/ the
+    // folder is no utility folder.
+    for (name, folder, imports, reported) in [
+        ("leaf-utils", "utils", false, false),
+        ("leaf-storage", "Storage", false, false),
+        ("leaf-imports", "utils", true, true),
+        ("leaf-domain", "billing", false, true),
+    ] {
+        let (f, g) = (format!("src/{folder}/f.ts"), format!("src/{folder}/g.ts"));
+        let mut edges = vec![
+            ("src/t/t1.ts", f.as_str()),
+            ("src/t/t2.ts", f.as_str()),
+            ("src/t/t3.ts", f.as_str()),
+        ];
+        edges.push(if imports {
+            (f.as_str(), g.as_str())
+        } else {
+            (g.as_str(), "src/x/k.ts")
+        });
+        let doc = scan_edges(name, &edges, &[]);
+        assert_eq!(
+            !misplaced(&doc).is_empty(),
+            reported,
+            "{name}: {:#}",
+            doc["findings"]
+        );
+    }
+}
+
+/// `n` internal imports in a chain through module `m`'s files k0 .. kn.
+fn chain(m: &str, n: usize) -> Vec<(String, String)> {
+    (0..n)
+        .map(|i| (format!("src/{m}/k{i}.ts"), format!("src/{m}/k{}.ts", i + 1)))
+        .collect()
+}
+
+#[test]
+fn misplaced_file_needs_a_cohesion_gain_of_two_hundredths() {
+    // f.ts in a imports a/k0.ts and three files of t import it, each module with `n` internal
+    // imports. t, receiving f.ts, goes from n / (n + 3) to (n + 3) / (n + 4): +0.0242 at n = 80,
+    // +0.0195 at n = 100, below 0.02.
+    for (n, reported) in [(80, true), (100, false)] {
+        let mut edges = chain("a", n);
+        edges.extend(chain("t", n));
+        for (f, t) in [
+            ("src/a/f.ts", "src/a/k0.ts"),
+            ("src/t/k0.ts", "src/a/f.ts"),
+            ("src/t/k1.ts", "src/a/f.ts"),
+            ("src/t/k2.ts", "src/a/f.ts"),
+        ] {
+            edges.push((f.to_owned(), t.to_owned()));
+        }
+        let edges: Vec<(&str, &str)> = edges
+            .iter()
+            .map(|(f, t)| (f.as_str(), t.as_str()))
+            .collect();
+        let doc = scan_edges(&format!("misplaced-gain-{n}"), &edges, &[]);
+        let subjects: Vec<&Value> = misplaced(&doc).iter().map(|f| &f["subject"]).collect();
+        let expected = if reported {
+            vec![json!("src/a/f.ts")]
+        } else {
+            vec![]
+        };
+        assert_eq!(subjects, expected.iter().collect::<Vec<_>>(), "n = {n}");
+    }
+}
+
+#[test]
+fn sink_split_moves_need_a_cohesion_gain_of_two_hundredths() {
+    // shared serves x with a1.ts and a2.ts, y and z with b1.ts and b2.ts. Moving a1 and a2 into
+    // x takes x from n / (n + 2) to 1: +0.0323 at n = 60, +0.0164 at n = 120.
+    for (n, moved) in [(60, true), (120, false)] {
+        let mut edges = chain("x", n);
+        for (f, t) in [
+            ("src/x/k0.ts", "src/shared/a1.ts"),
+            ("src/x/k1.ts", "src/shared/a2.ts"),
+            ("src/y/m.ts", "src/shared/b1.ts"),
+            ("src/z/m.ts", "src/shared/b2.ts"),
+            ("src/y/m.ts", "src/shared/b2.ts"),
+        ] {
+            edges.push((f.to_owned(), t.to_owned()));
+        }
+        let edges: Vec<(&str, &str)> = edges
+            .iter()
+            .map(|(f, t)| (f.as_str(), t.as_str()))
+            .collect();
+        let doc = scan_edges(&format!("sink-gain-{n}"), &edges, &["--depth", "1"]);
+        let sink = common::finding(&doc, "sink-split", "shared");
+        let moves = sink["evidence"]["components"][0]["moves"]
+            .as_array()
+            .unwrap();
+        assert_eq!(!moves.is_empty(), moved, "n = {n}: {sink:#}");
+        assert_eq!(sink.get("simulation").is_some(), moved, "n = {n}");
+    }
+}
+
+#[test]
+fn misplaced_file_never_moves_between_a_module_and_its_subfolder() {
+    // server/lib/x.ts is pulled by three files of server, the folder above its module; lib/f.ts
+    // by three files of lib/typescript, the folder below. Either move only changes folder depth.
+    for (name, edges) in [
+        (
+            "misplaced-to-parent",
+            [
+                ("src/server/lib/g.ts", "src/server/lib/x.ts"),
+                ("src/server/a.ts", "src/server/lib/x.ts"),
+                ("src/server/b.ts", "src/server/lib/x.ts"),
+                ("src/server/c.ts", "src/server/lib/x.ts"),
+            ],
+        ),
+        (
+            "misplaced-to-child",
+            [
+                ("src/lib/g.ts", "src/lib/f.ts"),
+                ("src/lib/typescript/a.ts", "src/lib/f.ts"),
+                ("src/lib/typescript/b.ts", "src/lib/f.ts"),
+                ("src/lib/typescript/c.ts", "src/lib/f.ts"),
+            ],
+        ),
+    ] {
+        let doc = scan_edges(name, &edges, &[]);
+        assert_eq!(misplaced(&doc), Vec::<&Value>::new(), "{name}");
+    }
+}
+
+#[test]
 fn misplaced_file_keeps_its_folder_within_the_module() {
     let to = |doc: &Value| {
         misplaced(doc)
@@ -392,13 +1324,14 @@ fn misplaced_file_keeps_its_folder_within_the_module() {
             .map(|f| f["suggestion"]["move"]["to"].as_str().unwrap().to_owned())
             .collect::<Vec<_>>()
     };
-    // a/domain/f.ts is imported by two files of t, which has a domain/ folder: it goes there.
+    // a/domain/f.ts is imported by three files of t, which has a domain/ folder: it goes there.
     let edges = |t1: &'static str, t2: &'static str| {
         vec![
             ("src/a/api/h.ts", "src/a/domain/g.ts"),
             ("src/a/domain/g.ts", "src/a/domain/f.ts"),
             (t1, "src/a/domain/f.ts"),
             (t2, "src/a/domain/f.ts"),
+            ("src/t/t3.ts", "src/a/domain/f.ts"),
         ]
     };
     let doc = scan_edges(
@@ -429,6 +1362,7 @@ fn misplaced_file_keeps_its_folder_within_the_module() {
             ("src/a/ui/g.ts", "src/a/ui/f.ts"),
             ("src/t/t1.ts", "src/a/ui/f.ts"),
             ("src/t/api/t2.ts", "src/a/ui/f.ts"),
+            ("src/t/t3.ts", "src/a/ui/f.ts"),
             ("src/t/ui/u.ts", "src/t/ui/v.ts"),
         ],
         &["--rules", &rules],
@@ -438,12 +1372,13 @@ fn misplaced_file_keeps_its_folder_within_the_module() {
 
 #[test]
 fn misplaced_file_needs_a_move_that_adds_no_forbidden_import_or_dependency() {
-    // t1.ts and t2.ts import a/f.ts, g.ts in a does too; f.ts imports x/y.ts and w/v.ts.
+    // t1.ts, t2.ts and t3.ts import a/f.ts, g.ts in a does too; f.ts imports x/y.ts and w/v.ts.
     let edges = |t_uses_x_and_w: bool| {
         let mut edges = vec![
             ("src/a/g.ts", "src/a/f.ts"),
             ("src/t/t1.ts", "src/a/f.ts"),
             ("src/t/t2.ts", "src/a/f.ts"),
+            ("src/t/t3.ts", "src/a/f.ts"),
             ("src/a/f.ts", "src/x/y.ts"),
             ("src/a/f.ts", "src/w/v.ts"),
         ];
@@ -483,6 +1418,7 @@ fn misplaced_file_whose_name_is_taken_has_no_suggestion() {
         &[
             ("src/a/g.ts", "src/a/f.ts"),
             ("src/t/t1.ts", "src/a/f.ts"),
+            ("src/t/t2.ts", "src/a/f.ts"),
             ("src/t/f.ts", "src/a/f.ts"),
         ],
         &[],
@@ -491,7 +1427,132 @@ fn misplaced_file_whose_name_is_taken_has_no_suggestion() {
         common::finding(&doc, "misplaced-file", "src/a/f.ts"),
         &json!({ "kind": "misplaced-file", "subject": "src/a/f.ts",
                  "evidence": { "own_module_edges": 1, "target_module": "t",
-                               "imports_from_target": 2, "via_barrel": false } })
+                               "imports_from_target": 3, "via_barrel": false } })
+    );
+}
+
+#[test]
+fn seam_skips_a_layout_by_kind() {
+    // Two triangles, all of a and b1 in one folder, b2 and b3 in another (folders Q 0.1111,
+    // clusters Q 0.5). Named data/ and ui/ the clusters are a seam; named controllers/ and
+    // services/ the codebase is organised by kind, and clusters across kinds restate it.
+    for (data, ui, reported) in [("data", "ui", true), ("controllers", "services", false)] {
+        let (a, b) = (
+            |f: &str| format!("src/{data}/{f}.ts"),
+            |f: &str| format!("src/{ui}/{f}.ts"),
+        );
+        let edges = [
+            (a("a1"), a("a2")),
+            (a("a1"), a("a3")),
+            (a("a3"), a("a2")),
+            (b("b2"), a("b1")),
+            (b("b2"), b("b3")),
+            (a("b1"), b("b3")),
+        ];
+        let edges: Vec<(&str, &str)> = edges
+            .iter()
+            .map(|(f, t)| (f.as_str(), t.as_str()))
+            .collect();
+        let doc = scan_edges(&format!("seam-kind-{data}"), &edges, &[]);
+        let seam = doc["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f["kind"] == "seam");
+        assert_eq!(seam, reported, "{data}, {ui}");
+    }
+}
+
+#[test]
+fn seam_skips_a_flat_package_of_single_file_modules() {
+    // Two triangles with every file directly in src/: six modules of one file each.
+    // The clusters beat the folders (0.5 against -0.1667), but with more than half the files in
+    // single-file modules the folders say nothing to compare with: no seam.
+    let doc = scan_edges(
+        "seam-flat",
+        &[
+            ("src/a1.ts", "src/a2.ts"),
+            ("src/a1.ts", "src/a3.ts"),
+            ("src/a3.ts", "src/a2.ts"),
+            ("src/b2.ts", "src/b1.ts"),
+            ("src/b2.ts", "src/b3.ts"),
+            ("src/b1.ts", "src/b3.ts"),
+        ],
+        &[],
+    );
+    assert!(
+        !doc["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f["kind"] == "seam"),
+        "{:#}",
+        doc["findings"]
+    );
+}
+
+#[test]
+fn seam_counts_files_not_modules_in_single_file_modules() {
+    // ts-seams' triangles in data/ and ui/ plus three root files, modules of their own: three of
+    // five modules hold one file, but only three of nine files sit in them. The package is not
+    // flat, so the seam stands. Each root file imports only its test file, which is excluded.
+    let mut edges = vec![
+        ("src/ui/a1.ts", "src/data/a2.ts"),
+        ("src/ui/a1.ts", "src/ui/a3.ts"),
+        ("src/ui/a3.ts", "src/data/a2.ts"),
+        ("src/ui/b2.ts", "src/data/b1.ts"),
+        ("src/ui/b2.ts", "src/data/b3.ts"),
+        ("src/data/b1.ts", "src/data/b3.ts"),
+    ];
+    edges.extend([
+        ("src/r1.ts", "src/r1.test.ts"),
+        ("src/r2.ts", "src/r2.test.ts"),
+        ("src/r3.ts", "src/r3.test.ts"),
+    ]);
+    let doc = scan_edges("seam-root-files", &edges, &[]);
+    assert_eq!(doc["modules"].as_array().unwrap().len(), 5);
+    assert!(
+        doc["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f["kind"] == "seam"),
+        "{:#}",
+        doc["findings"]
+    );
+}
+
+#[test]
+fn seam_stands_with_exactly_half_the_files_in_single_file_modules() {
+    // The triangles of the test above plus six root files: 6 of 12 files are loose,
+    // not more than half, and the clusters hold the other half.
+    let mut edges: Vec<(String, String)> = [
+        ("src/ui/a1.ts", "src/data/a2.ts"),
+        ("src/ui/a1.ts", "src/ui/a3.ts"),
+        ("src/ui/a3.ts", "src/data/a2.ts"),
+        ("src/ui/b2.ts", "src/data/b1.ts"),
+        ("src/ui/b2.ts", "src/data/b3.ts"),
+        ("src/data/b1.ts", "src/data/b3.ts"),
+    ]
+    .iter()
+    .map(|(f, t)| (f.to_string(), t.to_string()))
+    .collect();
+    for i in 0..6 {
+        edges.push((format!("src/r{i}.ts"), format!("src/r{i}.test.ts")));
+    }
+    let edges: Vec<(&str, &str)> = edges
+        .iter()
+        .map(|(f, t)| (f.as_str(), t.as_str()))
+        .collect();
+    let doc = scan_edges("seam-half-loose", &edges, &[]);
+    assert!(
+        doc["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f["kind"] == "seam"),
+        "{:#}",
+        doc["findings"]
     );
 }
 

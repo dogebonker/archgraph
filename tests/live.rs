@@ -56,6 +56,7 @@ fn depcruise_live_matches_recorded() {
         "ts-internals",
         "ts-sdp",
         "ts-seams",
+        "ts-elided",
     ] {
         let copy = Path::new(env!("CARGO_TARGET_TMPDIR"))
             .join("live")
@@ -115,7 +116,11 @@ fn depcruise_path_runs_a_pinned_install_outside_the_scanned_repository() {
 #[ignore = "needs depcruise 18.4.0 / grimp 3.17; run with --ignored"]
 fn grimp_live_matches_recorded() {
     let python = tool("ARCHGRAPH_PYTHON", "python3");
-    for (name, package) in [("py-cycles", "mypkg"), ("py-clean", "src/app")] {
+    for (name, package) in [
+        ("py-cycles", "mypkg"),
+        ("py-clean", "src/app"),
+        ("py-deferred", "deferred"),
+    ] {
         let dir = fixture(name);
         let (_, live_out, _) = scan(&[dir.to_str().unwrap(), "--python", python.to_str().unwrap()]);
         let (_, recorded_out, _) = scan_recorded(name, &[]);

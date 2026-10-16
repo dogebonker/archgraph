@@ -1,4 +1,4 @@
-# FDA, Next.js App Router layers and rules (kit/layouts/fda.md).
+# FDA layout with Next.js App Router: layers and rules.
 version: 1
 modules:
   - { id: "domains/<name>", path: "src/domains/<name>/**" }

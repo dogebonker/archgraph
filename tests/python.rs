@@ -73,16 +73,17 @@ fn py_cycles_mapping_barrels_and_cycle() {
             { "from": "db", "to": "core", "imports": 1, "forbidden": 0 }
         ])
     );
-    // core -> db carries 2 imports, db -> core 1. No file cycle: service -> repo -> core/__init__
+    // core -> db carries 2 imports, db -> core 1: an even pair, with no lighter side. No file cycle: service -> repo -> core/__init__
     // never returns to service.
     assert_eq!(
         doc["cycles"],
         json!([
             { "level": "module", "members": ["core", "db"], "exact": true,
               "break": [{ "from": "mypkg/db/repo.py", "to": "mypkg/core/__init__.py" }],
-              "two_way": [{ "from": "db", "to": "core", "imports": 1, "reverse_imports": 2,
-                            "edges": [{ "from": "mypkg/db/repo.py",
-                                        "to": "mypkg/core/__init__.py" }] }] }
+              "two_way": [{ "from": "core", "to": "db", "imports": 2, "reverse_imports": 1,
+                            "even": true,
+                            "edges": [{ "from": "mypkg/core/__init__.py", "to": "mypkg/db/session.py" },
+                                      { "from": "mypkg/core/service.py", "to": "mypkg/db/repo.py" }] }] }
         ])
     );
 
@@ -171,4 +172,45 @@ fn namespace_packages_are_not_files() {
     assert_eq!(paths, ["app/a.py", "app/b.py", "app/sub/c.py"]);
     assert_eq!(doc["edges"].as_array().unwrap().len(), 2);
     assert_eq!(doc["source"]["collector"]["cruised"], 3);
+}
+
+#[test]
+fn python_deferred_imports_are_type_or_dynamic_and_close_no_cycle() {
+    // b/y.py imports a/x.py only under `if TYPE_CHECKING:` (type) and c/z.py only inside a method
+    // (dynamic); c/z.py imports d/w.py only inside a method (dynamic); d/w.py imports c/z.py at
+    // module level and inside a method: one load-time occurrence makes it static. Every would-be
+    // cycle (a <-> b, b <-> c, c <-> d) closes only through a deferred import: no cycle.
+    let (doc, _, _) = scan_recorded("py-deferred", &[]);
+    let kinds: Vec<(&str, &str, &str)> = doc["edges"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| {
+            (
+                e["from"].as_str().unwrap(),
+                e["to"].as_str().unwrap(),
+                e["kind"].as_str().unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        kinds,
+        [
+            ("deferred/a/x.py", "deferred/b/y.py", "static"),
+            ("deferred/b/y.py", "deferred/a/x.py", "type"),
+            ("deferred/b/y.py", "deferred/c/z.py", "dynamic"),
+            ("deferred/c/z.py", "deferred/b/y.py", "static"),
+            ("deferred/c/z.py", "deferred/d/w.py", "dynamic"),
+            ("deferred/d/w.py", "deferred/c/z.py", "static"),
+        ]
+    );
+    assert_eq!(doc["cycles"], json!([]));
+    // They still count in metrics: b imports a and c.
+    let b = doc["modules"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["id"] == "b")
+        .unwrap();
+    assert_eq!(b["ce"], 2);
 }

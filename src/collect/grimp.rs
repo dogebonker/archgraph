@@ -24,6 +24,14 @@ struct Dump {
 struct Import {
     importer: String,
     imported: String,
+    /// `type` (only under `if TYPE_CHECKING:`), `dynamic` (only inside function bodies) or
+    /// `static`; recordings older than the field are all `static`.
+    #[serde(default = "static_kind")]
+    kind: EdgeKind,
+}
+
+fn static_kind() -> EdgeKind {
+    EdgeKind::Static
 }
 
 /// `explicit`, else the single package directly under `source_dir`: a directory with an
@@ -114,7 +122,7 @@ pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
             Some(Edge {
                 from: path(&i.importer)?,
                 to: path(&i.imported)?,
-                kind: EdgeKind::Static,
+                kind: i.kind,
                 verdict: None,
                 rule: None,
                 reach: None,
@@ -127,6 +135,7 @@ pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
         version: Some(dump.grimp_version),
         cruised: files.len(),
         unresolved: None,
+        type_marking: None,
     };
     Ok(RawGraph {
         files,

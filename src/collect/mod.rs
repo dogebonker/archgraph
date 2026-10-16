@@ -31,9 +31,15 @@ pub const DEFAULT_EXCLUDES: &[&str] = &[
     "**/*_pb2_grpc.py",
     "**/*.d.ts",
     "**/node_modules/**",
-    "**/dist/**",
-    "**/build/**",
+    // Build output at the scanned root. Deeper `build/` and `dist/` folders are often source
+    // (a bundler's build step); they are dropped only when git ignores them (OUTPUT_DIRS).
+    "dist/**",
+    "build/**",
 ];
+
+/// Build output folders below the root, dropped with the default excludes only when git
+/// ignores them.
+pub const OUTPUT_DIRS: &[&str] = &["**/dist/**", "**/build/**"];
 
 pub const TEST_EXCLUDES: &[&str] = &[
     "**/*.test.*",
@@ -46,6 +52,32 @@ pub const TEST_EXCLUDES: &[&str] = &[
 ];
 
 impl RawGraph {
+    /// Drops files under `OUTPUT_DIRS` that git ignores in `root`'s repository (nothing outside
+    /// a repository, or when git fails). Tracked files are never ignored.
+    pub fn exclude_ignored_output(self, root: &Path) -> Result<RawGraph> {
+        let output = globset(
+            &OUTPUT_DIRS
+                .iter()
+                .map(|g| g.to_string())
+                .collect::<Vec<_>>(),
+        )?;
+        let candidates: Vec<&str> = self
+            .files
+            .iter()
+            .map(String::as_str)
+            .filter(|f| output.is_match(f))
+            .collect();
+        if candidates.is_empty() {
+            return Ok(self);
+        }
+        let ignored: HashSet<String> = git_ignored(root, &candidates).into_iter().collect();
+        let mut kept = self;
+        kept.files.retain(|f| !ignored.contains(f));
+        kept.edges
+            .retain(|e| !ignored.contains(&e.from) && !ignored.contains(&e.to));
+        Ok(kept)
+    }
+
     /// Drops excluded files and every edge that does not join two kept files.
     pub fn exclude(mut self, excludes: &GlobSet) -> RawGraph {
         self.files.retain(|f| !excludes.is_match(f));
@@ -54,6 +86,44 @@ impl RawGraph {
             .retain(|e| kept.contains(e.from.as_str()) && kept.contains(e.to.as_str()));
         self
     }
+}
+
+/// The `paths` (relative to `root`) that git ignores, by `git check-ignore`: empty outside a
+/// repository or when git fails.
+fn git_ignored(root: &Path, paths: &[&str]) -> Vec<String> {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let child = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        // A repository's core.fsmonitor names a program git would run.
+        .args([
+            "-c",
+            "core.fsmonitor=false",
+            "check-ignore",
+            "--stdin",
+            "-z",
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn();
+    let Ok(mut child) = child else {
+        return Vec::new();
+    };
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(paths.join("\0").as_bytes());
+        let _ = stdin.write_all(b"\0");
+    }
+    // Exit 1 means none is ignored, 128 not a repository.
+    let Ok(out) = child.wait_with_output() else {
+        return Vec::new();
+    };
+    String::from_utf8_lossy(&out.stdout)
+        .split('\0')
+        .filter(|p| !p.is_empty())
+        .map(str::to_owned)
+        .collect()
 }
 
 /// `*` stays within one path segment, `**` crosses any number.

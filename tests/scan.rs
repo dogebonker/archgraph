@@ -161,7 +161,8 @@ fn copy_dir(from: &std::path::Path, to: &std::path::Path) {
 #[test]
 fn ts_cycles_with_minimum_break_sets() {
     let (doc, _, _) = scan_recorded("ts-cycles", &[]);
-    // a->b and b->c carry 2 imports each, c->a carries 1; d->e carries 2, e->d 1.
+    // a->b and b->c carry 2 imports each, c->a carries 1; d->e carries 2, e->d 1: an even pair,
+    // both sides tiny, listed in the names' order with no lighter side.
     // Inside f, p->q is the only single import whose removal breaks both p<->q and p->q->r->p.
     // The a/b/c and d/e file cycles cross modules, so only the module cycles report them.
     assert_eq!(
@@ -171,8 +172,9 @@ fn ts_cycles_with_minimum_break_sets() {
               "break": [{ "from": "src/c/z.ts", "to": "src/a/x.ts" }], "two_way": [] },
             { "level": "module", "members": ["d", "e"], "exact": true,
               "break": [{ "from": "src/e/n.ts", "to": "src/d/m.ts" }],
-              "two_way": [{ "from": "e", "to": "d", "imports": 1, "reverse_imports": 2,
-                            "edges": [{ "from": "src/e/n.ts", "to": "src/d/m.ts" }] }] },
+              "two_way": [{ "from": "d", "to": "e", "imports": 2, "reverse_imports": 1, "even": true,
+                            "edges": [{ "from": "src/d/m.ts", "to": "src/e/n.ts" },
+                                      { "from": "src/d/m2.ts", "to": "src/e/n.ts" }] }] },
             { "level": "file", "members": ["src/f/p.ts", "src/f/q.ts", "src/f/r.ts"], "exact": true,
               "break": [{ "from": "src/f/p.ts", "to": "src/f/q.ts" }] }
         ])
@@ -270,7 +272,8 @@ fn ts_excludes_and_barrel_attribution() {
             { "path": "src/shared/util.ts", "module": "shared", "barrel": false }
         ])
     );
-    // `export type { Kind } from "./kinds"` is a re-export too, so index.ts stays a barrel.
+    // `export type { Kind } from "./kinds"` is a type-only re-export: a re-export, so index.ts
+    // stays a barrel, but not a runtime import.
     assert_eq!(
         doc["edges"],
         json!([
@@ -279,7 +282,7 @@ fn ts_excludes_and_barrel_attribution() {
             { "from": "src/feature/b.ts", "to": "src/shared/util.ts", "kind": "static", "verdict": null, "rule": null },
             { "from": "src/feature/index.ts", "to": "src/feature/a.ts", "kind": "reexport", "verdict": null, "rule": null },
             { "from": "src/feature/index.ts", "to": "src/feature/b.ts", "kind": "reexport", "verdict": null, "rule": null },
-            { "from": "src/feature/index.ts", "to": "src/feature/kinds.ts", "kind": "reexport", "verdict": null, "rule": null }
+            { "from": "src/feature/index.ts", "to": "src/feature/kinds.ts", "kind": "type-reexport", "verdict": null, "rule": null }
         ])
     );
     // main -> index counts as main -> a, b and kinds; the barrel's own re-exports are dropped,
@@ -641,7 +644,7 @@ fn file_cycle_inside_a_module_is_reported_alongside_a_module_cycle() {
         json!([
             { "level": "module", "members": ["x", "y"], "exact": true,
               "break": [{ "from": "x/a.ts", "to": "y/c.ts" }],
-              "two_way": [{ "from": "x", "to": "y", "imports": 1, "reverse_imports": 1,
+              "two_way": [{ "from": "x", "to": "y", "imports": 1, "reverse_imports": 1, "even": true,
                             "edges": [{ "from": "x/a.ts", "to": "y/c.ts" }] }] },
             { "level": "file", "members": ["x/a.ts", "x/b.ts"], "exact": true,
               "break": [{ "from": "x/a.ts", "to": "x/b.ts" }] }
@@ -650,9 +653,539 @@ fn file_cycle_inside_a_module_is_reported_alongside_a_module_cycle() {
 }
 
 #[test]
+fn cycles_follow_runtime_imports_only() {
+    // a -> b and c/f -> c/g are static; the back edges decide. Type-only imports and re-exports
+    // and dynamic imports do not run at load time, so they close no cycle, though module_edges
+    // still count them. A value re-export runs and closes one.
+    let import: &[&str] = &["local", "import"];
+    for (name, back, cyclic) in [
+        (
+            "runtime-cycle-type",
+            &["local", "type-only", "import"][..],
+            false,
+        ),
+        (
+            "runtime-cycle-dynamic",
+            &["local", "dynamic-import"][..],
+            false,
+        ),
+        (
+            "runtime-cycle-type-export",
+            &["local", "type-only", "export"][..],
+            false,
+        ),
+        ("runtime-cycle-export", &["local", "export"][..], true),
+        ("runtime-cycle-static", import, true),
+    ] {
+        let (dir, input) = common::synthetic_typed(
+            name,
+            4,
+            &[
+                ("a/x.ts", "b/y.ts", import),
+                ("b/y.ts", "a/x.ts", back),
+                ("c/f.ts", "c/g.ts", import),
+                ("c/g.ts", "c/f.ts", back),
+            ],
+        );
+        let (doc, _, _) = scan(&[
+            &dir,
+            "--collector-input",
+            &input,
+            "--language",
+            "typescript",
+        ]);
+        let members: Vec<&Value> = doc["cycles"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| &c["members"])
+            .collect();
+        let expected = if cyclic {
+            vec![json!(["a", "b"]), json!(["c/f.ts", "c/g.ts"])]
+        } else {
+            vec![]
+        };
+        assert_eq!(members, expected.iter().collect::<Vec<_>>(), "{name}");
+        assert_eq!(doc["summary"]["cycles"], expected.len(), "{name}");
+        assert_eq!(
+            doc["module_edges"],
+            json!([
+                { "from": "a", "to": "b", "imports": 1, "forbidden": 0 },
+                { "from": "b", "to": "a", "imports": 1, "forbidden": 0 }
+            ]),
+            "{name}"
+        );
+    }
+}
+
+#[test]
+fn break_sets_and_two_way_pairs_count_runtime_imports_only() {
+    // a -> b: one static and one type-only import; b -> a: three static. Over runtime imports
+    // a -> b weighs 1, so it is the break and the lighter side, with only the static import.
+    let import: &[&str] = &["local", "import"];
+    let (dir, input) = common::synthetic_typed(
+        "runtime-break",
+        5,
+        &[
+            ("a/x.ts", "b/y.ts", import),
+            ("a/x2.ts", "b/y.ts", &["local", "type-only", "import"]),
+            ("b/y.ts", "a/x.ts", import),
+            ("b/y2.ts", "a/x.ts", import),
+            ("b/y3.ts", "a/x.ts", import),
+        ],
+    );
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    assert_eq!(
+        doc["cycles"],
+        json!([{ "level": "module", "members": ["a", "b"], "exact": true,
+                 "break": [{ "from": "a/x.ts", "to": "b/y.ts" }],
+                 "two_way": [{ "from": "a", "to": "b", "imports": 1, "reverse_imports": 3,
+                               "edges": [{ "from": "a/x.ts", "to": "b/y.ts" }] }] }])
+    );
+}
+
+#[test]
+fn package_json_entries_map_to_scanned_sources() {
+    // Output paths (dist/, lib/, .mjs, .d.ts) map back to the sources they are built from; a
+    // wildcard export and package.json itself map to nothing.
+    let (dir, input) = synthetic(
+        "pkg-entries",
+        5,
+        &[
+            ("src/index.ts", "src/a.ts"),
+            ("src/internal.ts", "src/a.ts"),
+            ("src/adapters/http/index.ts", "src/a.ts"),
+            ("src/sub/main.ts", "src/a.ts"),
+        ]
+        .map(|(f, t)| (f.to_owned(), t.to_owned())),
+    );
+    let root = std::path::Path::new(&dir);
+    fs::create_dir_all(root.join("src/sub")).unwrap();
+    fs::write(
+        root.join("package.json"),
+        r#"{ "main": "./dist/index.cjs", "types": "./dist/index.d.ts",
+             "exports": { ".": { "import": { "types": "./dist/index.d.mts", "default": "./dist/index.mjs" } },
+                          "./internal": "./internal.js",
+                          "./adapters/http": "./dist/adapters/http/index.mjs",
+                          "./package.json": "./package.json", "./*": "./*.js" } }"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("src/sub/package.json"),
+        r#"{ "main": "./lib/main.js" }"#,
+    )
+    .unwrap();
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    assert_eq!(
+        doc["package_entries"],
+        json!([
+            "src/adapters/http/index.ts",
+            "src/index.ts",
+            "src/internal.ts",
+            "src/sub/main.ts"
+        ])
+    );
+}
+
+#[test]
+fn a_cycle_is_never_cut_at_an_entry_re_export() {
+    // a's barrel re-exports b/x.ts (1 import), two files of b import a/k.ts. When package.json
+    // publishes the barrel, the re-export is public API: the cut goes to b -> a. An internal
+    // barrel re-exporting another module's file is itself the cut, though the pair is small.
+    let import: &[&str] = &["local", "import"];
+    for (name, published) in [("entry-cut-published", true), ("entry-cut-internal", false)] {
+        let (dir, input) = common::synthetic_typed(
+            name,
+            6,
+            &[
+                ("a/index.ts", "b/x.ts", &["local", "export"]),
+                ("b/y.ts", "a/k.ts", import),
+                ("b/z.ts", "a/k.ts", import),
+            ],
+        );
+        let package = std::path::Path::new(&dir).join("package.json");
+        if published {
+            fs::write(&package, r#"{ "main": "./dist/a/index.js" }"#).unwrap();
+        } else {
+            let _ = fs::remove_file(&package);
+        }
+        let (doc, _, _) = scan(&[
+            &dir,
+            "--collector-input",
+            &input,
+            "--language",
+            "typescript",
+        ]);
+        let expected = if published {
+            json!([{ "level": "module", "members": ["a", "b"], "exact": true,
+                     "break": [{ "from": "b/y.ts", "to": "a/k.ts" }, { "from": "b/z.ts", "to": "a/k.ts" }],
+                     "two_way": [{ "from": "b", "to": "a", "imports": 2, "reverse_imports": 1,
+                                   "edges": [{ "from": "b/y.ts", "to": "a/k.ts" },
+                                             { "from": "b/z.ts", "to": "a/k.ts" }] }] }])
+        } else {
+            json!([{ "level": "module", "members": ["a", "b"], "exact": true,
+                     "break": [{ "from": "a/index.ts", "to": "b/x.ts" }],
+                     "two_way": [{ "from": "a", "to": "b", "imports": 1, "reverse_imports": 2,
+                                   "edges": [{ "from": "a/index.ts", "to": "b/x.ts" }] }] }])
+        };
+        assert_eq!(doc["cycles"], expected, "{name}");
+    }
+}
+
+#[test]
+fn a_python_package_init_re_export_is_never_the_cut() {
+    // fapi/__init__.py re-exports fapi.app.a (the package's public API); app's two files import
+    // telemetry, whose _asgi.py imports the package for its version. The break leaves the
+    // re-export alone and takes telemetry -> __init__.py.
+    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("py-init-entry");
+    let _ = fs::remove_dir_all(&root);
+    for f in [
+        "fapi/__init__.py",
+        "fapi/app/__init__.py",
+        "fapi/app/a.py",
+        "fapi/app/b.py",
+        "fapi/telemetry/__init__.py",
+        "fapi/telemetry/_asgi.py",
+    ] {
+        fs::create_dir_all(root.join(f).parent().unwrap()).unwrap();
+        fs::write(root.join(f), "").unwrap();
+    }
+    let imports = [
+        ("fapi", "fapi.app.a"),
+        ("fapi.app.a", "fapi.telemetry._asgi"),
+        ("fapi.app.b", "fapi.telemetry._asgi"),
+        ("fapi.telemetry._asgi", "fapi"),
+    ];
+    let dump = json!({ "grimp_version": "3.17",
+        "modules": ["fapi", "fapi.app", "fapi.app.a", "fapi.app.b", "fapi.telemetry", "fapi.telemetry._asgi"],
+        "imports": imports.iter().map(|(a, b)| json!({ "importer": a, "imported": b, "kind": "static" }))
+            .collect::<Vec<_>>() });
+    let input = root.join("grimp.json");
+    fs::write(&input, dump.to_string()).unwrap();
+    let (doc, _, _) = scan(&[
+        root.to_str().unwrap(),
+        "--collector-input",
+        input.to_str().unwrap(),
+        "--language",
+        "python",
+        "--depth",
+        "1",
+    ]);
+    let cycle = doc["cycles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["level"] == "module")
+        .unwrap();
+    assert_eq!(
+        cycle["break"],
+        json!([{ "from": "fapi/telemetry/_asgi.py", "to": "fapi/__init__.py" }]),
+        "{cycle:#}"
+    );
+}
+
+#[test]
+fn a_failed_type_marking_run_is_recorded() {
+    // A depcruise that fails unless pre-compilation dependencies are on: the scan keeps the
+    // edges unmarked and says so in source.collector.
+    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("type-marking");
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(dir.join("src")).unwrap();
+    let recorded = fs::read_to_string(fixture("ts-elided").join("depcruise.json")).unwrap();
+    fs::write(dir.join("out.json"), &recorded).unwrap();
+    let script = dir.join("depcruise");
+    fs::write(
+        &script,
+        format!(
+            "#!/bin/sh\nwhile [ $# -gt 0 ]; do [ \"$1\" = --config ] && config=$2; shift; done\n\
+             grep -q '\"tsPreCompilationDeps\": true' \"$config\" || {{ echo crash >&2; exit 1; }}\n\
+             cat {}\n",
+            dir.join("out.json").display()
+        ),
+    )
+    .unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+    let (doc, _, stderr) = scan(&[
+        dir.to_str().unwrap(),
+        "--language",
+        "typescript",
+        "--depcruise",
+        script.to_str().unwrap(),
+    ]);
+    assert_eq!(doc["source"]["collector"]["type_marking"], "unavailable");
+    assert!(stderr.contains("imports of types only"), "{stderr}");
+}
+
+#[test]
+fn a_registrar_side_of_a_two_way_pair_is_not_the_cut() {
+    // a/drivers.ts imports five drivers of b (5 imports), each driver imports a/base.ts and
+    // b/x.ts does too (6). The lighter side only registers drivers: the pair is cut b -> a.
+    // Once b -> a also comes from one registrar, both sides are wiring: a registry pair.
+    for (name, registrar_back) in [("registrar-one-side", false), ("registrar-both", true)] {
+        let mut edges: Vec<(String, String)> = (1..=5)
+            .map(|i| ("a/drivers.ts".to_owned(), format!("b/d{i}.ts")))
+            .collect();
+        if registrar_back {
+            edges.extend((1..=6).map(|i| ("b/reg.ts".to_owned(), format!("a/k{i}.ts"))));
+        } else {
+            edges.extend((1..=5).map(|i| (format!("b/d{i}.ts"), "a/base.ts".to_owned())));
+            edges.push(("b/x.ts".to_owned(), "a/base.ts".to_owned()));
+        }
+        let (dir, input) = synthetic(name, edges.len() + 2, &edges);
+        let (doc, _, _) = scan(&[
+            &dir,
+            "--collector-input",
+            &input,
+            "--language",
+            "typescript",
+        ]);
+        let pair = &doc["cycles"][0]["two_way"][0];
+        let got = (
+            &pair["from"],
+            &pair["to"],
+            &pair["imports"],
+            pair.get("registry"),
+        );
+        if registrar_back {
+            assert_eq!(
+                got,
+                (&json!("a"), &json!("b"), &json!(5), Some(&json!(true))),
+                "{name}"
+            );
+        } else {
+            assert_eq!(got, (&json!("b"), &json!("a"), &json!(6), None), "{name}");
+        }
+    }
+}
+
+#[test]
+fn build_output_is_excluded_only_at_the_root_or_when_git_ignores_it() {
+    // src/build/x.ts is source (a bundler's build step), dist/y.ts at the root is output, and
+    // src/gen/build/z.ts is output the repository's .gitignore names.
+    let (dir, input) = synthetic(
+        "build-output",
+        4,
+        &[
+            ("src/a.ts", "src/build/x.ts"),
+            ("src/a.ts", "dist/y.ts"),
+            ("src/a.ts", "src/gen/build/z.ts"),
+        ]
+        .map(|(f, t)| (f.to_owned(), t.to_owned())),
+    );
+    let root = std::path::Path::new(&dir);
+    fs::create_dir_all(root.join("src")).unwrap();
+    let _ = fs::remove_dir_all(root.join(".git"));
+    git(root, &["init", "-q"]);
+    fs::write(root.join(".gitignore"), "src/gen/build/\n").unwrap();
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    assert_eq!(files(&doc), ["src/a.ts", "src/build/x.ts"]);
+}
+
+#[test]
+fn a_fan_out_registrar_side_is_not_the_cut() {
+    // driver/pick.ts makes one import into each of five sibling modules under driver/, each of
+    // which imports driver/base.ts three times. The single imports only pick a driver: every
+    // pair is cut driver/<x> -> driver.
+    // app/use.ts imports pick.ts, so it is no composition root.
+    let mut edges = vec![("app/use.ts".to_owned(), "driver/pick.ts".to_owned())];
+    for m in ["pg", "my", "sq", "ms", "or"] {
+        edges.push(("driver/pick.ts".to_owned(), format!("driver/{m}/a.ts")));
+        for f in ["a", "b", "c"] {
+            edges.push((format!("driver/{m}/{f}.ts"), "driver/base.ts".to_owned()));
+        }
+    }
+    let (dir, input) = synthetic("fan-out", edges.len() + 2, &edges);
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let pairs: Vec<(&Value, &Value)> = doc["cycles"][0]["two_way"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| (&p["to"], &p["imports"]))
+        .collect();
+    assert_eq!(pairs.len(), 5, "{:#}", doc["cycles"]);
+    assert!(
+        pairs.iter().all(|p| *p == (&json!("driver"), &json!(3))),
+        "{pairs:?}"
+    );
+    // The move resolves every pair: none is a cut to offer.
+    assert!(
+        doc["cycles"][0]["two_way"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|p| p["resolved_by_move"] == true),
+        "{:#}",
+        doc["cycles"][0]["two_way"]
+    );
+    // report prints the move and no cut.
+    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("report/fan-out");
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).unwrap();
+    let (stdout, stderr, _) = report(&[
+        root.to_str().unwrap(),
+        "--language",
+        "typescript",
+        "--collector-input",
+        &input,
+    ]);
+    assert!(
+        stdout.contains("move driver/pick.ts to driver/pick/pick.ts: removes 5 two-way pairs"),
+        "{stdout}{stderr}"
+    );
+    assert!(!stdout.contains("lightest two-way cut"), "{stdout}");
+    assert!(!stdout.contains("no lighter side to cut"), "{stdout}");
+    // pick.ts alone forms the other side of all five pairs: moved to a folder of its own
+    // (driver/pick/, a module of its own at depth 2) it takes all five pairs and the cycle away.
+    assert_eq!(
+        doc["cycles"][0]["registrar_moves"],
+        json!([{ "file": "driver/pick.ts", "module": "driver", "pairs": 5,
+                 "with": ["driver/ms", "driver/my", "driver/or", "driver/pg", "driver/sq"],
+                 "to": "driver/pick/pick.ts", "pairs_removed": 5,
+                 "cycle_before": 6, "cycle_after": 0 }])
+    );
+
+    // A file nobody imports is an entry point build config names: never proposed for a move.
+    let edges: Vec<(String, String)> = edges
+        .into_iter()
+        .filter(|(f, _)| f != "app/use.ts")
+        .collect();
+    let (dir, input) = synthetic("fan-out-entry", edges.len() + 2, &edges);
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    assert!(
+        doc["cycles"][0].get("registrar_moves").is_none(),
+        "{:#}",
+        doc["cycles"][0]
+    );
+
+    // Nor is a module's index: moving it would move the module's entry.
+    let edges: Vec<(String, String)> = edges
+        .iter()
+        .map(|(f, t)| (f.replace("pick.ts", "index.ts"), t.clone()))
+        .chain([("app/use.ts".to_owned(), "driver/index.ts".to_owned())])
+        .collect();
+    let (dir, input) = synthetic("fan-out-index", edges.len() + 2, &edges);
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    assert!(
+        doc["cycles"][0].get("registrar_moves").is_none(),
+        "{:#}",
+        doc["cycles"][0]
+    );
+
+    // Top-level modules share no parent folder: a file using five of them picks nothing, and
+    // core -> a stays the lighter side.
+    let mut edges = vec![("app/use.ts".to_owned(), "core/x.ts".to_owned())];
+    for m in ["a", "b", "c", "d", "e"] {
+        edges.push(("core/x.ts".to_owned(), format!("{m}/one.ts")));
+    }
+    for f in ["one", "two", "three"] {
+        edges.push((format!("a/{f}.ts"), "core/y.ts".to_owned()));
+    }
+    let (dir, input) = synthetic("fan-out-top", edges.len() + 2, &edges);
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let pair = &doc["cycles"][0]["two_way"][0];
+    assert_eq!(
+        (&pair["from"], &pair["to"], pair.get("registry")),
+        (&json!("core"), &json!("a"), None)
+    );
+}
+
+#[test]
+fn a_near_even_two_way_pair_names_no_lighter_side() {
+    // a -> b once, b -> a twice: both sides are tiny and close, a mutual dependency rather
+    // than a soft side. 1 against 3 still has a lighter side.
+    for (name, back, even) in [("even-1-2", 2, true), ("uneven-1-3", 3, false)] {
+        let mut edges = vec![("a/x.ts".to_owned(), "b/y.ts".to_owned())];
+        edges.extend((0..back).map(|i| (format!("b/z{i}.ts"), "a/x.ts".to_owned())));
+        let (dir, input) = synthetic(name, edges.len() + 1, &edges);
+        let (doc, _, _) = scan(&[
+            &dir,
+            "--collector-input",
+            &input,
+            "--language",
+            "typescript",
+        ]);
+        let pair = &doc["cycles"][0]["two_way"][0];
+        assert_eq!(
+            pair.get("even") == Some(&json!(true)),
+            even,
+            "{name}: {pair:#}"
+        );
+        assert_eq!(
+            (&pair["from"], &pair["to"]),
+            (&json!("a"), &json!("b")),
+            "{name}"
+        );
+    }
+}
+
+#[test]
+fn an_import_of_types_only_is_type_without_import_type() {
+    // use.ts imports the interface ParamData without `import type`: the compiler drops the
+    // import, so it is `type`. version.ts imports a value: `static`.
+    let (doc, _, _) = scan_recorded("ts-elided", &[]);
+    let kinds: Vec<(&Value, &Value)> = doc["edges"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| (&e["from"], &e["kind"]))
+        .collect();
+    assert_eq!(
+        kinds,
+        [
+            (&json!("src/use.ts"), &json!("type")),
+            (&json!("src/version.ts"), &json!("static"))
+        ]
+    );
+}
+
+#[test]
 fn module_cycle_lists_its_two_way_pairs_lighter_side_first() {
-    // x -> y 3, y -> x 1; x -> z 2, z -> x 1; y <-> z 2 each (a tie goes to the names' order);
-    // p -> q 22, q -> p 21. Sorted by the lighter side's imports, then names; at most 20 edges.
+    // x -> y 3, y -> x 1; x -> z 2, z -> x 1; y <-> z 2 each; p -> q 22, q -> p 21. x/z and y/z
+    // are even (both sides at most 2), in the names' order and after the others. Sorted by the
+    // lighter side's imports, then names; at most 20 edges.
     let mut edges: Vec<(String, String)> = Vec::new();
     let mut imports = |from: &str, to: &str, n: usize| {
         for i in 0..n {
@@ -691,9 +1224,9 @@ fn module_cycle_lists_its_two_way_pairs_lighter_side_first() {
         json!([
             { "from": "y", "to": "x", "imports": 1, "reverse_imports": 3,
               "edges": [link("y", 0, "x")] },
-            { "from": "z", "to": "x", "imports": 1, "reverse_imports": 2,
-              "edges": [link("z", 0, "x")] },
-            { "from": "y", "to": "z", "imports": 2, "reverse_imports": 2,
+            { "from": "x", "to": "z", "imports": 2, "reverse_imports": 1, "even": true,
+              "edges": [link("x", 0, "z"), link("x", 1, "z")] },
+            { "from": "y", "to": "z", "imports": 2, "reverse_imports": 2, "even": true,
               "edges": [link("y", 0, "z"), link("y", 1, "z")] }
         ])
     );
@@ -851,7 +1384,7 @@ fn report_finds_layout_yaml_writes_both_files_and_exits_1_on_forbidden() {
         "1 unplanned: none 1",
         "no module cycles",
         "internals-reach (1)",
-        "src/domains/cart/ui/Cart.tsx -> src/domains/checkout/client.ts",
+        "    src/domains/checkout/**\n",
     ] {
         assert!(stdout.contains(line), "{line:?} missing from\n{stdout}");
     }
@@ -893,10 +1426,11 @@ fn report_without_rules_exits_0_and_writes_into_the_root_by_default() {
         "rules: none",
         "11 files, 6 modules, 12 imports",
         "2 module cycles, largest 3 modules",
-        "lightest two-way cut: src/e -> src/d, 1 import (2 the other way)",
+        "no lighter side to cut: the two-way pairs are even or wiring",
         "cycle (3)",
         "src/a, src/b, src/c",
         "misplaced-file (1)",
+        "seam (1)\n    clusters across folders\n",
     ] {
         assert!(stdout.contains(line), "{line:?} missing from\n{stdout}");
     }

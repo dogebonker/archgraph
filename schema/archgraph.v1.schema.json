@@ -46,6 +46,7 @@
                 "name": { "enum": ["dependency-cruiser", "grimp"] },
                 "version": { "type": ["string", "null"] },
                 "cruised": { "$ref": "#/$defs/count" },
+                "type_marking": { "description": "unavailable when dependency-cruiser could not tell imports of types only (written without import type) from value imports; they are then static. Absent otherwise.", "enum": ["unavailable"] },
                 "unresolved": { "$ref": "#/$defs/count" }
               }
             },
@@ -99,6 +100,7 @@
           }
         },
         "edges": { "type": "array", "items": {"$ref": "#/$defs/edge"} },
+        "package_entries": { "description": "TypeScript: files a package.json in the scanned tree publishes (exports, main, module, types), mapped from build output back to their sources. Public entries like barrels. Absent in older documents.", "type": "array", "items": {"$ref": "#/$defs/path"} },
         "modules": {
           "type": "array",
           "items": {
@@ -146,7 +148,7 @@
       "properties": {
         "from": { "$ref": "#/$defs/path" },
         "to": { "$ref": "#/$defs/path" },
-        "kind": { "enum": ["static", "reexport", "dynamic", "type"] },
+        "kind": { "description": "type is an import the compiler erases: import type, an import of types or interfaces only, or in Python one only under if TYPE_CHECKING. type-reexport is export type ... from: a re-export for barrels, erased at runtime like type. dynamic is import() or, in Python, an import only inside function bodies.", "enum": ["static", "reexport", "dynamic", "type", "type-reexport"] },
         "verdict": { "enum": ["allowed", "forbidden", "unplanned", null] },
         "rule": { "type": ["string", "null"] }
       }
@@ -157,6 +159,7 @@
       "properties": { "from": {"$ref": "#/$defs/path"}, "to": {"$ref": "#/$defs/path"} }
     },
     "cycle": {
+      "description": "A strongly connected component of runtime imports (kinds static and reexport; type and dynamic imports close no load-time cycle and are left out). break and two_way count runtime imports only.",
       "type": "object",
       "required": ["level", "members", "exact", "break"],
       "properties": {
@@ -164,8 +167,26 @@
         "members": { "type": "array", "minItems": 2, "items": {"type": "string"} },
         "exact": { "type": "boolean" },
         "break": { "type": "array", "minItems": 1, "items": {"$ref": "#/$defs/link"} },
+        "registrar_moves": {
+          "description": "Module cycles only, absent when empty: registrars (files wiring many modules, imported by at least one file) whose imports alone form the other side of 3 or more two-way pairs, each with a simulated move that adds no new cycle; with lists the other modules of those pairs. A file nobody imports, or an index file, is never listed.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["file", "module", "pairs", "with"],
+            "properties": {
+              "file": { "$ref": "#/$defs/path" },
+              "module": { "type": "string" },
+              "pairs": { "type": "integer", "minimum": 3 },
+              "with": { "type": "array", "items": {"type": "string"} },
+              "to": { "description": "The simulated destination: a new folder named after the file (DriverFactory.ts into driver-factory/), in the file's folder when that is a module of its own at the scan's depth, else beside the module's folder; or the folder of the file's one importer. The move adds no new cycle.", "$ref": "#/$defs/path" },
+              "pairs_removed": { "description": "Two-way pairs over all module cycles before the move minus after.", "type": "integer" },
+              "cycle_before": { "description": "Modules in this cycle before the move.", "$ref": "#/$defs/count" },
+              "cycle_after": { "description": "Modules in the cycle holding module after the move, 0 when it is in none.", "$ref": "#/$defs/count" }
+            }
+          }
+        },
         "two_way": {
-          "description": "Module cycles only: every pair of members that import each other, as the lighter direction (the names' order on a tie), sorted by imports, then from, then to. edges lists at most 20 of its file imports; imports counts them all.",
+          "description": "Module cycles only: every pair of members that import each other, as the direction to cut: the lighter one (the names' order on a tie), unless it holds only wiring (registry) or a public entry's re-export (entry) and the other direction does not; an even pair names no lighter side. Sorted ordinary pairs first, then even, registry and entry pairs, each by imports, then from, then to. edges lists at most 20 of its file imports; imports counts them all.",
           "type": "array",
           "items": {
             "type": "object",
@@ -175,6 +196,10 @@
               "to": { "type": "string" },
               "imports": { "type": "integer", "minimum": 1 },
               "reverse_imports": { "type": "integer", "minimum": 1 },
+              "even": { "description": "Present and true when both directions have at most 2 imports, within a factor of 2: a mutual dependency with no lighter side to cut. from and to are then in the names' order, and imports counts from -> to.", "const": true },
+              "registry": { "description": "Present and true when the direction holds only imports of composition roots (a file nobody imports that imports 3 or more modules) and registrars (a file with 5 or more imports into the module), and the other direction holds no ordinary imports either: wiring, not a cut to offer.", "const": true },
+              "resolved_by_move": { "description": "Present and true when the other direction is only a registrar this cycle's registrar_moves moves: the move resolves the pair, which is not a cut to offer.", "const": true },
+              "entry": { "description": "Present and true when both directions hold a re-export by a public entry (a barrel or a package.json entry): public API, not a cut to offer.", "const": true },
               "edges": { "type": "array", "minItems": 1, "maxItems": 20, "items": {"$ref": "#/$defs/link"} }
             }
           }
@@ -375,14 +400,17 @@
       }
     },
     "evidence-internals-reach": {
+      "description": "Imports that bypass public entries, with every bypassing import counted: one finding per module without rules (subject: the module id), per bound public module with rules (subject: its pattern, such as src/domains/cart/**; module: the module of its first import's target).",
       "type": "object",
-      "required": ["from", "to", "module", "entries"],
+      "required": ["module", "entries", "imports", "importers", "importing_files", "edges"],
       "properties": {
-        "from": { "$ref": "#/$defs/path" },
-        "to": { "$ref": "#/$defs/path" },
         "module": { "type": "string" },
         "entries": { "type": "array", "items": {"$ref": "#/$defs/path"} },
-        "barrel_share": { "description": "Without rules: the share of the cross-module imports into module that go through one of its barrels, at least 0.5 for the finding to be reported. Absent with rules.", "type": "number", "minimum": 0.5, "maximum": 1 }
+        "imports": { "description": "Imports that bypass the entries.", "type": "integer", "minimum": 1 },
+        "importers": { "description": "Distinct modules those imports come from.", "type": "integer", "minimum": 1 },
+        "importing_files": { "description": "Distinct files those imports come from.", "type": "integer", "minimum": 1 },
+        "barrel_share": { "description": "Without rules: the share of the cross-module imports into module that go through one of its barrels, at least 0.5 for the finding to be reported. Absent with rules.", "type": "number", "minimum": 0.5, "maximum": 1 },
+        "edges": { "description": "The bypassing imports, at most 20; imports counts them all.", "type": "array", "minItems": 1, "maxItems": 20, "items": {"$ref": "#/$defs/link"} }
       }
     },
     "evidence-unstable-dependency": {
@@ -393,7 +421,7 @@
         "to": { "type": "string" },
         "from_instability": { "$ref": "#/$defs/ratio" },
         "to_instability": { "$ref": "#/$defs/ratio" },
-        "imports": { "$ref": "#/$defs/count" }
+        "imports": { "description": "Runtime file imports (static and reexport, not through barrels) from a file of from to a file of to, at least 2.", "type": "integer", "minimum": 2 }
       }
     },
     "evidence-seam": {

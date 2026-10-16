@@ -1,3 +1,4 @@
-import { today } from "../utils/dates";
+import { hour } from "../shared/clock";
+import { today } from "../shared/dates";
 
-export const pick = (): string => today();
+export const pick = (): string => `${today()} ${hour()}`;

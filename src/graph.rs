@@ -3,7 +3,9 @@
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::model::{Cycle, CycleLevel, Edge, Link, Module, ModuleEdge, TwoWay, Verdict};
+use crate::model::{
+    Cycle, CycleLevel, Edge, EdgeKind, Link, Module, ModuleEdge, RegistrarMove, TwoWay, Verdict,
+};
 
 /// Above this many edges in one SCC the break set comes from the greedy heuristic: the exact
 /// search tries every subset, 2^16 = 65536 of them at the limit.
@@ -11,6 +13,19 @@ const EXACT_LIMIT: usize = 16;
 /// A two-way pair lists at most this many of its lighter direction's file imports; `imports`
 /// counts them all.
 pub const TWO_WAY_EDGES: usize = 20;
+/// A file nobody imports that imports this many other modules is a composition root.
+pub const ROOT_MIN_MODULES: usize = 3;
+/// A file importing this many files of one module registers them (a driver registry, a router).
+const REGISTRAR_MIN_IMPORTS: usize = 5;
+/// A file importing from this many sibling modules (one parent folder) picks among them: a
+/// registrar too, though it imports each only once.
+const FANOUT_MIN_SIBLINGS: usize = 5;
+/// A two-way pair whose directions both have at most this many imports, within this ratio of
+/// each other, is a mutual dependency with no lighter side to cut.
+const EVEN_MAX_IMPORTS: usize = 2;
+/// One registrar forming the other side of this many two-way pairs is worth moving out.
+const REGISTRAR_MOVE_MIN_PAIRS: usize = 3;
+const EVEN_MAX_RATIO: usize = 2;
 
 /// Ca, Ce, instability and cohesion from barrel-attributed file pairs.
 pub fn modules(
@@ -84,17 +99,81 @@ pub fn module_edges(module_of: &BTreeMap<String, String>, edges: &[Edge]) -> Vec
 }
 
 /// Module-level cycles, plus file-level cycles over the imports within each module (a file cycle
-/// across modules already shows as a module cycle).
+/// across modules already shows as a module cycle), over runtime imports only: break sets and
+/// two-way pairs count only those too. A re-export by one of `entries` (package entries, the
+/// source root's index, a package `__init__.py` importing its own submodules) is public API: no
+/// break removes it unless nothing else breaks the cycle, and a two-way side holding one comes
+/// last. A re-export by another of the `barrels` is internal: the side to cut first.
 pub fn cycles(
     module_of: &BTreeMap<String, String>,
     edges: &[Edge],
-    module_edges: &[ModuleEdge],
+    entries: &BTreeSet<String>,
+    barrels: &BTreeSet<String>,
 ) -> Vec<Cycle> {
+    let wiring = wiring(|p| module_of[p].as_str(), edges);
+    // A file nobody imports is an entry point build config names, and an index is its module's
+    // entry: neither is a move to propose.
+    let imported: BTreeSet<&str> = edges.iter().map(|e| e.to.as_str()).collect();
+    let edges: Vec<Edge> = edges
+        .iter()
+        .filter(|e| e.kind.is_runtime())
+        .cloned()
+        .collect();
+    let edges = edges.as_slice();
+    let public = |e: &Edge| {
+        entries.contains(&e.from)
+            && (e.kind == EdgeKind::Reexport || {
+                // Python has no re-export kind: a package `__init__.py` importing its own files.
+                let dir = e.from.strip_suffix("__init__.py");
+                dir.is_some_and(|d| e.to.starts_with(d))
+            })
+    };
+    // Heavier than every cuttable import together.
+    let keep = edges.len() + 1;
+    let module_edges = module_edges(module_of, edges);
+    let mut by_side: BTreeMap<(&str, &str), Vec<&Edge>> = BTreeMap::new();
+    for e in edges {
+        let key = (module_of[&e.from].as_str(), module_of[&e.to].as_str());
+        by_side.entry(key).or_default().push(e);
+    }
+    let sides: BTreeMap<(&str, &str), Side> = by_side
+        .iter()
+        .map(|(&key, side)| {
+            let kind = if side.iter().any(|e| public(e)) {
+                Side::Public
+            } else if side
+                .iter()
+                .all(|e| wiring.contains(&(e.from.as_str(), e.to.as_str())))
+            {
+                Side::Registry
+            } else if side
+                .iter()
+                .all(|e| e.kind == EdgeKind::Reexport && barrels.contains(&e.from))
+            {
+                Side::Reexport
+            } else {
+                Side::Cut
+            };
+            (key, kind)
+        })
+        .collect();
     let mut cycles = Vec::new();
 
+    let imports: BTreeMap<(&str, &str), usize> = module_edges
+        .iter()
+        .map(|m| ((m.from.as_str(), m.to.as_str()), m.imports))
+        .collect();
     let weighted: Vec<_> = module_edges
         .iter()
-        .map(|m| (m.from.as_str(), m.to.as_str(), m.imports))
+        .map(|m| {
+            let (a, b) = (m.from.as_str(), m.to.as_str());
+            let extra = if sides[&(a, b)] == Side::Public {
+                keep
+            } else {
+                0
+            };
+            (a, b, m.imports + extra)
+        })
         .collect();
     for (members, removed, exact) in cyclic_parts(&weighted) {
         let removed: BTreeSet<(&str, &str)> = removed
@@ -109,9 +188,43 @@ pub fn cycles(
                 to: e.to.clone(),
             })
             .collect();
+        let pairs = two_way(module_of, edges, &imports, &sides, &members);
+        // One registrar forming the other side of several pairs: moving it out of its module
+        // opens them all.
+        let mut by_registrar: BTreeMap<&str, Vec<String>> = BTreeMap::new();
+        for p in &pairs {
+            let back = (p.to.as_str(), p.from.as_str());
+            let files: BTreeSet<&str> = by_side[&back].iter().map(|e| e.from.as_str()).collect();
+            if let ([file], Side::Registry) = (
+                files.into_iter().collect::<Vec<_>>().as_slice(),
+                sides[&back],
+            ) && imported.contains(file)
+                && !is_index(file)
+            {
+                by_registrar.entry(file).or_default().push(p.from.clone());
+            }
+        }
+        let registrar_moves = by_registrar
+            .into_iter()
+            .filter(|(_, with)| with.len() >= REGISTRAR_MOVE_MIN_PAIRS)
+            .map(|(file, mut with)| {
+                with.sort();
+                RegistrarMove {
+                    file: file.to_owned(),
+                    module: module_of[file].clone(),
+                    pairs: with.len(),
+                    with,
+                    to: None,
+                    pairs_removed: None,
+                    cycle_before: None,
+                    cycle_after: None,
+                }
+            })
+            .collect();
         cycles.push(Cycle {
             level: CycleLevel::Module,
-            two_way: Some(two_way(module_of, edges, &weighted, &members)),
+            two_way: Some(pairs),
+            registrar_moves,
             members: owned(&members),
             exact,
             break_set,
@@ -121,7 +234,13 @@ pub fn cycles(
     let weighted: Vec<_> = edges
         .iter()
         .filter(|e| e.from != e.to && module_of[&e.from] == module_of[&e.to])
-        .map(|e| (e.from.as_str(), e.to.as_str(), 1))
+        .map(|e| {
+            (
+                e.from.as_str(),
+                e.to.as_str(),
+                if public(e) { keep } else { 1 },
+            )
+        })
         .collect();
     for (members, removed, exact) in cyclic_parts(&weighted) {
         let break_set = removed
@@ -137,6 +256,7 @@ pub fn cycles(
             exact,
             break_set,
             two_way: None,
+            registrar_moves: Vec::new(),
         });
     }
 
@@ -144,32 +264,124 @@ pub fn cycles(
     cycles
 }
 
-/// Pairs of `members` with module edges both ways, as the lighter direction, sorted by its
-/// imports, then names.
+/// A module's index (`index.ts`, `__init__.py`): its entry, which moves only with the module.
+fn is_index(file: &str) -> bool {
+    let name = file.rsplit('/').next().unwrap_or(file);
+    name == "__init__.py" || crate::modules::TS_INDEX.contains(&name)
+}
+
+/// What cutting one direction of a module pair would cut.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Side {
+    /// Only an internal barrel's re-exports of the other module's files: the first to drop.
+    Reexport,
+    /// Ordinary imports.
+    Cut,
+    /// Only imports from composition roots and registrars (`wiring`).
+    Registry,
+    /// A re-export by a public entry.
+    Public,
+}
+
+/// File imports that wire modules together rather than use them: every import of a composition
+/// root (a file nobody imports that imports `ROOT_MIN_MODULES` or more other modules: `app.ts`,
+/// `cli.ts`), a registrar's imports into a module it imports `REGISTRAR_MIN_IMPORTS` or more
+/// files of, and a fan-out registrar's imports into `FANOUT_MIN_SIBLINGS` or more sibling modules
+/// (code picking one of many drivers).
+pub fn wiring<'a, 'm>(
+    module_of: impl Fn(&str) -> &'m str,
+    edges: &'a [Edge],
+) -> BTreeSet<(&'a str, &'a str)> {
+    let imported: BTreeSet<&str> = edges.iter().map(|e| e.to.as_str()).collect();
+    let mut into: BTreeMap<&str, BTreeMap<&str, usize>> = BTreeMap::new();
+    for e in edges.iter().filter(|e| e.kind.is_runtime()) {
+        let (mf, mt) = (module_of(&e.from), module_of(&e.to));
+        if mf != mt {
+            *into.entry(&e.from).or_default().entry(mt).or_default() += 1;
+        }
+    }
+    let parent = |m: &str| m.rsplit_once('/').map_or("", |(p, _)| p).to_owned();
+    // Per file: the parents under which it imports `FANOUT_MIN_SIBLINGS` or more modules.
+    let fans: BTreeMap<&str, BTreeSet<String>> = into
+        .iter()
+        .map(|(&file, counts)| {
+            let mut siblings: BTreeMap<String, usize> = BTreeMap::new();
+            // Top-level modules and root files share no parent folder.
+            for m in counts
+                .keys()
+                .filter(|m| !parent(m).is_empty() && parent(m) != "..")
+            {
+                *siblings.entry(parent(m)).or_default() += 1;
+            }
+            let wide = siblings
+                .into_iter()
+                .filter(|(_, n)| *n >= FANOUT_MIN_SIBLINGS)
+                .map(|(p, _)| p)
+                .collect();
+            (file, wide)
+        })
+        .collect();
+    edges
+        .iter()
+        .filter(|e| {
+            let Some(counts) = into.get(e.from.as_str()) else {
+                return false;
+            };
+            let to = module_of(&e.to);
+            let root = !imported.contains(e.from.as_str()) && counts.len() >= ROOT_MIN_MODULES;
+            let registrar = counts.get(to).is_some_and(|&n| n >= REGISTRAR_MIN_IMPORTS);
+            let fan_out = counts.contains_key(to) && fans[e.from.as_str()].contains(&parent(to));
+            root || registrar || fan_out
+        })
+        .map(|e| (e.from.as_str(), e.to.as_str()))
+        .collect()
+}
+
+/// Pairs of `members` with module edges both ways, as the direction to cut: the lighter one,
+/// unless it is only wiring (`registry`) or holds a public re-export (`entry`) and the other is
+/// not; a near-even pair (`even`) names none and keeps the names' order. Sorted ordinary pairs
+/// first, then even, registry and entry pairs, each by imports, then names.
 fn two_way(
     module_of: &BTreeMap<String, String>,
     edges: &[Edge],
-    weighted: &[(&str, &str, usize)],
+    imports: &BTreeMap<(&str, &str), usize>,
+    sides: &BTreeMap<(&str, &str), Side>,
     members: &[&str],
 ) -> Vec<TwoWay> {
-    let imports: BTreeMap<(&str, &str), usize> =
-        weighted.iter().map(|&(a, b, n)| ((a, b), n)).collect();
     let mut pairs = Vec::new();
     for (i, &a) in members.iter().enumerate() {
         for &b in &members[i + 1..] {
             let (Some(&ab), Some(&ba)) = (imports.get(&(a, b)), imports.get(&(b, a))) else {
                 continue;
             };
-            let (from, to, n, reverse) = if ab <= ba {
-                (a, b, ab, ba)
+            let (sa, sb) = (sides[&(a, b)], sides[&(b, a)]);
+            let (lo, hi) = (ab.min(ba), ab.max(ba));
+            let even = sa == Side::Cut
+                && sb == Side::Cut
+                && hi <= EVEN_MAX_IMPORTS
+                && hi <= EVEN_MAX_RATIO * lo;
+            // Ordinary and re-export sides rank alike, the lighter first, a re-export on a tie.
+            let key = |s: Side, n: usize| match s {
+                Side::Reexport => (0, n, 0),
+                Side::Cut => (0, n, 1),
+                Side::Registry => (1, n, 0),
+                Side::Public => (2, n, 0),
+            };
+            // An even pair names no lighter side: the names' order.
+            let (from, to, n, reverse, side) = if even || key(sa, ab) <= key(sb, ba) {
+                (a, b, ab, ba, sa)
             } else {
-                (b, a, ba, ab)
+                (b, a, ba, ab, sb)
             };
             pairs.push(TwoWay {
                 from: from.to_owned(),
                 to: to.to_owned(),
                 imports: n,
                 reverse_imports: reverse,
+                even,
+                registry: side == Side::Registry,
+                entry: side == Side::Public,
+                resolved_by_move: false,
                 edges: Vec::new(),
             });
         }
@@ -195,7 +407,10 @@ fn two_way(
     for (p, l) in pairs.iter_mut().zip(links) {
         p.edges = l;
     }
-    pairs.sort_by(|x, y| (x.imports, &x.from, &x.to).cmp(&(y.imports, &y.from, &y.to)));
+    pairs.sort_by(|x, y| {
+        (x.entry, x.registry, x.even, x.imports, &x.from, &x.to)
+            .cmp(&(y.entry, y.registry, y.even, y.imports, &y.from, &y.to))
+    });
     pairs
 }
 

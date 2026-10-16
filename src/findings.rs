@@ -4,29 +4,58 @@ use std::cmp::Reverse;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use crate::model::{
-    Cluster, Component, Document, Evidence, Finding, FindingKind, Language, Move, Suggestion,
-    Verdict,
+    Cluster, Component, Document, Edge, EdgeKind, Evidence, Finding, FindingKind, Language, Link,
+    Move, RegistrarMove, Suggestion, Verdict,
 };
-use crate::modules;
 use crate::rules::Compiled;
 use crate::simulate;
+use crate::{graph, modules};
 
 /// A module imported by at least this many others is a shared sink.
 const SINK_CA: usize = 3;
+/// A sink splits only when at least two of its groups hold this many files: a lone file used by
+/// one consumer is a misplaced file, not a second module.
+const SINK_MIN_GROUP_FILES: usize = 2;
 /// A file looks misplaced only when at least this many files of one other module import it. A
 /// file's own imports never pull it: a router importing `app.deps` uses `app`, it does not belong
 /// there. A file nobody imports is an entry point a framework locates by path (`page.tsx`).
 const MISPLACED_MIN_IMPORTS: usize = 2;
+/// The target's imports of a file must exceed its edges within its own module this many times:
+/// two imports against one own edge is a tie of habits, not a misplaced file.
+const MISPLACED_OWN_FACTOR: usize = 2;
 /// A file imported from more other modules than this is a shared provider, not misplaced.
 const MISPLACED_MAX_IMPORTER_MODULES: usize = 1;
+/// Folder names that say what kind of code a file is, singular and space-separated
+/// (`kind_folder` also takes the plural). Moving a file between two such folders changes its
+/// kind, not its boundary.
+// ponytail: a fixed list; folders named by kind in other words (`dao`, `infra`) still count as
+// domains. Make it configurable when a repository needs that.
+const KIND_FOLDERS: &str = "component scene page screen view controller service repository \
+    model entity dto schema serializer type interface constant util helper lib hook store reducer \
+    action middleware guard pipe filter interceptor decorator handler route api ui migration \
+    management command adapter port provider module plugin config test menu layout container \
+    widget icon style exception error event";
+/// Folders of shared helpers: a file there that imports nothing is used from anywhere by design.
+const LEAF_UTILITY_FOLDERS: &str = "util utils helper helpers lib shared common storage";
+/// A suggested move must raise the cohesion of each module receiving files by this much: smaller
+/// gains are noise a reviewer would not act on.
+const MIN_COHESION_GAIN: f64 = 0.02;
 /// Stable dependencies principle: flag A -> B when B is this much less stable than A.
 const SDP_MARGIN: f64 = 0.25;
+/// Below this many runtime file imports from A to B a stable-dependencies violation is noise.
+const SDP_MIN_IMPORTS: usize = 2;
 /// Files with a degree above this percentile are hubs that would glue every cluster together.
 const HUB_PERCENTILE: f64 = 0.9;
 /// Label propagation usually settles in a handful of rounds; this bounds oscillation.
 const LP_MAX_ITERATIONS: usize = 50;
 /// The clustering must beat the folders' modularity by this much to be worth reporting.
 const SEAM_MIN_GAIN: f64 = 0.05;
+/// No seam when more than this share of the folder modules are named by kind (controllers,
+/// services, repositories): the codebase is laid out by kind, and clusters across kinds restate it.
+const SEAM_MAX_KIND_SHARE: f64 = 0.5;
+/// No seam when more than this share of the non-barrel files sit in single-file modules: a flat
+/// package's folders give the clusters nothing to compare with.
+const SEAM_MAX_LOOSE_SHARE: f64 = 0.5;
 /// Clusters must hold at least this share of the non-barrel files: a few clustered files among
 /// many loose ones propose no boundary.
 const SEAM_MIN_COVERAGE: f64 = 0.5;
@@ -37,6 +66,8 @@ const SMALL_MODULES: usize = 3;
 /// cross-module imports into it go through one of them: a barrel most importers bypass is not
 /// the API the codebase uses.
 const BARREL_MIN_SHARE: f64 = 0.5;
+/// An internals-reach finding lists at most this many of its imports; `imports` counts them all.
+const REACH_EDGES: usize = 20;
 /// Absorbs float error in threshold comparisons of rounded ratios.
 const EPSILON: f64 = 1e-9;
 
@@ -49,6 +80,23 @@ struct Graph<'a> {
     raw: HashSet<(&'a str, &'a str)>,
     /// Longest common directory of each module's files: where a file moved into it goes.
     dirs: BTreeMap<&'a str, String>,
+    /// Modules named by their one file (`main.ts`, `../tool.ts`): files directly in a root.
+    root_files: HashSet<&'a str>,
+    /// Files that import at least one other file.
+    importing: HashSet<&'a str>,
+    /// Each module's public entries: its barrels and the files a package.json publishes in it.
+    entries: BTreeMap<&'a str, BTreeSet<&'a str>>,
+    /// Each module's files its entries re-export, directly or through other re-exports.
+    offered: BTreeMap<&'a str, HashSet<&'a str>>,
+    /// Files that are public API, never proposed for a move: what a package.json publishes and
+    /// re-exports; in Python, every module without a leading underscore below the package.
+    public: HashSet<&'a str>,
+    /// Per file: the number of other modules it imports at runtime.
+    fanout: BTreeMap<&'a str, usize>,
+    /// Imports from composition roots and registrars (`graph::wiring`).
+    wiring: BTreeSet<(&'a str, &'a str)>,
+    /// `pairs` over runtime imports that are not wiring: who really consumes a file.
+    consuming: BTreeSet<(String, String)>,
 }
 
 impl Graph<'_> {
@@ -120,6 +168,21 @@ impl Graph<'_> {
             .map_or(root, |(p, _)| &p[..candidate.len()])
     }
 
+    /// Whether module `a` is a folder above module `b` (`db` above `db/backends`). The root ids
+    /// `.` and `..` and a file's own module (`../tool.ts`) are no folder of another module.
+    fn is_ancestor(&self, a: &str, b: &str) -> bool {
+        let folder = |m: &str| m != "." && m != ".." && !self.root_files.contains(m);
+        folder(a) && folder(b) && b.strip_prefix(a).is_some_and(|rest| rest.starts_with('/'))
+    }
+
+    /// Whether `file` is one of `module`'s entries or an index (`index.*`, `__init__.py`).
+    fn is_entry_or_index(&self, module: &str, file: &str) -> bool {
+        let name = file.rsplit('/').next().unwrap_or(file);
+        self.entries.get(module).is_some_and(|e| e.contains(file))
+            || name.starts_with("index.")
+            || name == "__init__.py"
+    }
+
     fn path_in(&self, dir: &str, name: &str) -> String {
         match dir {
             "" => name.to_owned(),
@@ -153,6 +216,61 @@ pub fn find(doc: &Document, rules: Option<&Compiled>) -> Vec<Finding> {
             .count();
         common.truncate(shared);
     }
+    // Re-exports of each file, for what an entry offers.
+    let mut reexports: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for e in doc
+        .edges
+        .iter()
+        .filter(|e| matches!(e.kind, EdgeKind::Reexport | EdgeKind::TypeReexport))
+    {
+        reexports.entry(&e.from).or_default().push(&e.to);
+    }
+    let reach = |starts: &mut dyn Iterator<Item = &'_ str>| -> HashSet<&str> {
+        let mut seen = HashSet::new();
+        let mut stack: Vec<&str> = starts.collect();
+        while let Some(file) = stack.pop() {
+            for &next in reexports.get(file).into_iter().flatten() {
+                if seen.insert(next) {
+                    stack.push(next);
+                }
+            }
+        }
+        seen
+    };
+    let mut entries: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
+    for f in doc.files.iter().filter(|f| f.barrel) {
+        entries.entry(&f.module).or_default().insert(&f.path);
+    }
+    for p in &doc.package_entries {
+        if let Some(&m) = module_of.get(p.as_str()) {
+            entries.entry(m).or_default().insert(p);
+        }
+    }
+    let offered = entries
+        .iter()
+        .map(|(&m, files)| (m, reach(&mut files.iter().copied())))
+        .collect();
+    let public = match doc.source.language {
+        Language::Typescript => {
+            let published = doc.package_entries.iter().map(String::as_str);
+            let mut public = reach(&mut published.clone());
+            public.extend(published);
+            public
+        }
+        Language::Python => doc
+            .files
+            .iter()
+            .map(|f| f.path.as_str())
+            .filter(|p| python_public(p, &doc.config.source_root))
+            .collect(),
+    };
+    let wiring = graph::wiring(|p| module_of[p], &doc.edges);
+    let consumed: Vec<Edge> = doc
+        .edges
+        .iter()
+        .filter(|e| e.kind.is_runtime() && !wiring.contains(&(e.from.as_str(), e.to.as_str())))
+        .cloned()
+        .collect();
     let g = Graph {
         doc,
         rules,
@@ -163,6 +281,28 @@ pub fn find(doc: &Document, rules: Option<&Compiled>) -> Vec<Finding> {
             .map(|e| (e.from.as_str(), e.to.as_str()))
             .collect(),
         dirs: dirs.into_iter().map(|(m, d)| (m, d.join("/"))).collect(),
+        root_files: doc
+            .files
+            .iter()
+            .filter(|f| f.module.rsplit('/').next() == f.path.rsplit('/').next())
+            .map(|f| f.module.as_str())
+            .collect(),
+        importing: doc.edges.iter().map(|e| e.from.as_str()).collect(),
+        entries,
+        offered,
+        public,
+        consuming: modules::attribute(&consumed, &barrels),
+        fanout: {
+            let mut into: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
+            for e in doc.edges.iter().filter(|e| e.kind.is_runtime()) {
+                let (mf, mt) = (module_of[e.from.as_str()], module_of[e.to.as_str()]);
+                if mf != mt {
+                    into.entry(&e.from).or_default().insert(mt);
+                }
+            }
+            into.into_iter().map(|(f, m)| (f, m.len())).collect()
+        },
+        wiring,
         module_of,
     };
     let mut findings = Vec::new();
@@ -203,12 +343,35 @@ fn finding(kind: FindingKind, subject: String, evidence: Evidence) -> Finding {
 
 /// Components of the bipartite graph between a sink's files and the modules importing them.
 fn sink_split(g: &Graph, out: &mut Vec<Finding>) {
-    for module in g.doc.modules.iter().filter(|m| m.ca >= SINK_CA) {
+    // A folder of one kind of code (services, errors) serves whoever needs that kind: separate
+    // groups of importers are its purpose, not a split.
+    for module in g
+        .doc
+        .modules
+        .iter()
+        .filter(|m| m.ca >= SINK_CA && !kind_folder(&m.id))
+    {
         let sink = module.id.as_str();
+        // Runtime imports only, and no wiring: a type import or a registrar consumes nothing.
+        // Nor does the folder above the sink, or a file that imports several modules and only
+        // the sink's entry or index of it: both register the sink rather than use its files.
+        let registers = |file: &str| {
+            g.fanout.get(file).copied().unwrap_or(0) >= graph::ROOT_MIN_MODULES
+                && g.doc
+                    .edges
+                    .iter()
+                    .filter(|e| e.from == file && g.module_of[e.to.as_str()] == sink)
+                    .all(|e| g.is_entry_or_index(sink, &e.to))
+        };
         let into: Vec<&(String, String)> = g
-            .pairs
+            .consuming
             .iter()
-            .filter(|(_, to)| g.module_of[to.as_str()] == sink)
+            .filter(|(from, to)| {
+                let from_module = g.module_of[from.as_str()];
+                g.module_of[to.as_str()] == sink
+                    && !g.is_ancestor(from_module, sink)
+                    && (from_module == sink || !registers(from))
+            })
             .collect();
         let outside = |from: &str| g.module_of[from] != sink;
         let imported_from_outside: HashSet<&str> = into
@@ -252,7 +415,13 @@ fn sink_split(g: &Graph, out: &mut Vec<Finding>) {
             files.sort();
             consumers.sort();
             let moves = match consumers.as_slice() {
-                [only] => files.iter().filter_map(|f| g.move_into(f, only)).collect(),
+                // Public API stays where its importers find it, and nothing moves between two
+                // folders named by kind.
+                [only] if !(kind_folder(sink) && kind_folder(only)) => files
+                    .iter()
+                    .filter(|f| !g.public.contains(f.as_str()))
+                    .filter_map(|f| g.move_into(f, only))
+                    .collect(),
                 _ => Vec::new(),
             };
             components.push(Component {
@@ -261,7 +430,24 @@ fn sink_split(g: &Graph, out: &mut Vec<Finding>) {
                 moves,
             });
         }
-        if components.len() < 2 {
+        // Groups that import each other at runtime would split into a cycle.
+        let group: BTreeMap<&str, usize> = components
+            .iter()
+            .enumerate()
+            .flat_map(|(i, c)| c.files.iter().map(move |f| (f.as_str(), i)))
+            .collect();
+        let entangled = g.doc.edges.iter().any(|e| {
+            e.kind.is_runtime()
+                && matches!((group.get(e.from.as_str()), group.get(e.to.as_str())),
+                            (Some(a), Some(b)) if a != b)
+        });
+        if entangled
+            || components
+                .iter()
+                .filter(|c| c.files.len() >= SINK_MIN_GROUP_FILES)
+                .count()
+                < 2
+        {
             continue;
         }
         // Two files of one name cannot both move into one directory: neither is suggested.
@@ -273,7 +459,26 @@ fn sink_split(g: &Graph, out: &mut Vec<Finding>) {
             c.moves.retain(|m| targets[&m.to] == 1);
         }
         components.sort_by(|a, b| a.files.cmp(&b.files));
-        let moves: Vec<Move> = components.iter().flat_map(|c| c.moves.clone()).collect();
+        let mut moves: Vec<Move> = components.iter().flat_map(|c| c.moves.clone()).collect();
+        // The moves must pay for themselves in every module receiving files.
+        let mut after = None;
+        if !moves.is_empty() {
+            let receivers: Vec<&str> = components
+                .iter()
+                .filter(|c| !c.moves.is_empty())
+                .flat_map(|c| c.consumers.iter().map(String::as_str))
+                .collect();
+            let affected: Vec<&str> = receivers.iter().copied().chain([sink]).collect();
+            after = simulate::apply(g.doc, g.rules, &moves)
+                .ok()
+                .filter(|a| gains(g.doc, a, &receivers, &affected));
+            if after.is_none() {
+                moves.clear();
+                for c in &mut components {
+                    c.moves.clear();
+                }
+            }
+        }
         let mut f = finding(
             FindingKind::SinkSplit,
             sink.to_owned(),
@@ -283,9 +488,7 @@ fn sink_split(g: &Graph, out: &mut Vec<Finding>) {
                 components,
             },
         );
-        if !moves.is_empty() {
-            f.simulation = simulate::compare(g.doc, g.rules, &moves).ok();
-        }
+        f.simulation = after.map(|a| simulate::changes(g.doc, &a));
         out.push(f);
     }
 }
@@ -328,11 +531,30 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
             .count();
         let Some((&target, used)) = imports_from
             .iter()
-            .filter(|(_, used)| used.len() >= MISPLACED_MIN_IMPORTS && used.len() > own)
+            .filter(|(_, used)| {
+                used.len() >= MISPLACED_MIN_IMPORTS && used.len() > MISPLACED_OWN_FACTOR * own
+            })
             .max_by_key(|(m, used)| (used.len(), Reverse(**m)))
         else {
             continue;
         };
+        // Between a module and its own subfolder the move only changes the folder's depth.
+        // A leaf utility (it imports nothing) belongs with the shared helpers, whoever uses it.
+        let leaf_utility = !g.importing.contains(path)
+            && LEAF_UTILITY_FOLDERS.split_whitespace().any(|f| {
+                module
+                    .rsplit('/')
+                    .next()
+                    .unwrap_or(module)
+                    .eq_ignore_ascii_case(f)
+            });
+        if leaf_utility
+            || (kind_folder(module) && kind_folder(target))
+            || g.is_ancestor(module, target)
+            || g.is_ancestor(target, module)
+        {
+            continue;
+        }
         let mut f = finding(
             FindingKind::MisplacedFile,
             file.path.clone(),
@@ -363,7 +585,7 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
         if is.forbidden > was.forbidden
             || is.cycles > was.cycles
             || ce(is) > ce(was)
-            || cohesion(&after, &modules) <= cohesion(g.doc, &modules) + EPSILON
+            || !gains(g.doc, &after, &[target], &modules)
         {
             continue;
         }
@@ -373,6 +595,15 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
         }
         out.push(f);
     }
+}
+
+/// Whether a move raises the cohesion of every module receiving files by `MIN_COHESION_GAIN`,
+/// and that of all the `modules` it touches, taken together, at all.
+fn gains(before: &Document, after: &Document, receivers: &[&str], modules: &[&str]) -> bool {
+    receivers
+        .iter()
+        .all(|r| cohesion(after, &[r]) >= cohesion(before, &[r]) + MIN_COHESION_GAIN - EPSILON)
+        && cohesion(after, modules) > cohesion(before, modules) + EPSILON
 }
 
 /// Internal over internal plus outgoing edges of `modules` taken together.
@@ -394,58 +625,128 @@ fn cohesion(doc: &Document, modules: &[&str]) -> f64 {
     }
 }
 
-/// With rules: imports forbidden by a `public` rule. Without, TypeScript only: cross-module
-/// imports of a non-barrel file in a module that has a barrel, when at least `BARREL_MIN_SHARE`
-/// of the cross-module imports into that module go through one of its barrels.
+/// Whether `to` is a private module (`_internal`) of the package `from` sits in: a public facade
+/// over its own implementation, as intended.
+fn private_of(from: &str, to: &str) -> bool {
+    let (parent, name) = to.rsplit_once('/').unwrap_or(("", to));
+    name.starts_with('_')
+        && (parent.is_empty()
+            || from == parent
+            || from
+                .strip_prefix(parent)
+                .is_some_and(|r| r.starts_with('/')))
+}
+
+/// Whether a Python file is public API: no path segment below the source root starts with `_`
+/// (a package's `__init__.py` stands for the package).
+fn python_public(path: &str, source_root: &str) -> bool {
+    let rel = match source_root {
+        "." => path,
+        root => path
+            .strip_prefix(root)
+            .and_then(|r| r.strip_prefix('/'))
+            .unwrap_or(path),
+    };
+    let module = rel.strip_suffix(".py").unwrap_or(rel);
+    let module = module.strip_suffix("__init__").unwrap_or(module);
+    module
+        .split('/')
+        .filter(|s| !s.is_empty())
+        .all(|s| !s.starts_with('_'))
+}
+
+/// Whether module `id`'s last path segment names a kind of code, in any case, singular or plural.
+fn kind_folder(id: &str) -> bool {
+    let name = id.rsplit('/').next().unwrap_or(id).to_lowercase();
+    let singular = match name.strip_suffix("ies") {
+        Some(stem) => format!("{stem}y"),
+        None => name.strip_suffix('s').unwrap_or(&name).to_owned(),
+    };
+    KIND_FOLDERS
+        .split_whitespace()
+        .any(|kind| kind == name || kind == singular)
+}
+
+/// With rules: imports forbidden by a `public` rule, one finding per bound `public` module
+/// (subject `src/domains/cart/**`), as `check` reports them. Without, TypeScript only: one
+/// finding per module, over cross-module imports of a file its entries (barrels, package.json
+/// entries) re-export, when at least `BARREL_MIN_SHARE` of the cross-module imports into that
+/// module go through one of its entries; never from a module below the target's: importing its
+/// entry, which re-exports the importer's own folder, would be a cycle. An import of a file no
+/// entry offers uses something the module does not export: not a bypass.
 fn internals_reach(g: &Graph, out: &mut Vec<Finding>) {
-    let mut barrels: BTreeMap<&str, Vec<String>> = BTreeMap::new();
-    for f in g.doc.files.iter().filter(|f| f.barrel) {
-        barrels.entry(&f.module).or_default().push(f.path.clone());
-    }
-    let is_barrel: HashSet<&str> = barrels.values().flatten().map(String::as_str).collect();
-    // Per module: (cross-module imports into it, of which into one of its barrels).
+    let is_entry: HashSet<&str> = g.entries.values().flatten().copied().collect();
+    // Per module: (cross-module imports into it, of which into one of its entries).
     let mut into: BTreeMap<&str, (usize, usize)> = BTreeMap::new();
     for e in &g.doc.edges {
         let module = g.module_of[e.to.as_str()];
         if g.module_of[e.from.as_str()] != module {
             let count = into.entry(module).or_default();
             count.0 += 1;
-            count.1 += usize::from(is_barrel.contains(e.to.as_str()));
+            count.1 += usize::from(is_entry.contains(e.to.as_str()));
         }
     }
+    // Per subject: the module, its entries, its barrel share, the imports that bypass them.
+    type Reach<'e> = (&'e str, BTreeSet<String>, Option<f64>, Vec<&'e Edge>);
+    let mut by_subject: BTreeMap<String, Reach> = BTreeMap::new();
     for e in &g.doc.edges {
         let module = g.module_of[e.to.as_str()];
-        let (entries, barrel_share) = match g.rules {
+        let (subject, entries, share) = match g.rules {
             Some(rules)
                 if e.verdict == Some(Verdict::Forbidden) && e.rule.as_deref() == Some("public") =>
             {
-                (rules.entries_for(&e.to).unwrap_or_default(), None)
+                let (public, entries) = rules.public_for(&e.to).unwrap_or_default();
+                (public, entries, None)
             }
             None if g.doc.source.language == Language::Typescript
                 && g.module_of[e.from.as_str()] != module
-                && !is_barrel.contains(e.to.as_str()) =>
+                && !is_entry.contains(e.to.as_str())
+                && g.offered
+                    .get(module)
+                    .is_some_and(|o| o.contains(e.to.as_str()))
+                && !g.is_ancestor(module, g.module_of[e.from.as_str()]) =>
             {
-                let Some(b) = barrels.get(module) else {
-                    continue;
-                };
+                let b: Vec<String> = g.entries[module].iter().map(|p| p.to_string()).collect();
                 let (total, via) = into[module];
                 let share = via as f64 / total as f64;
                 if share < BARREL_MIN_SHARE - EPSILON {
                     continue;
                 }
-                (b.clone(), Some(round(share)))
+                (module.to_owned(), b, Some(round(share)))
             }
             _ => continue,
         };
+        let group = by_subject
+            .entry(subject)
+            .or_insert_with(|| (module, BTreeSet::new(), None, Vec::new()));
+        group.1.extend(entries);
+        group.2 = share;
+        group.3.push(e);
+    }
+    for (subject, (module, entries, barrel_share, reaching)) in by_subject {
+        let importers: BTreeSet<&str> = reaching
+            .iter()
+            .map(|e| g.module_of[e.from.as_str()])
+            .collect();
+        let files: BTreeSet<&str> = reaching.iter().map(|e| e.from.as_str()).collect();
         out.push(finding(
             FindingKind::InternalsReach,
-            format!("{} -> {}", e.from, e.to),
+            subject,
             Evidence::InternalsReach {
-                from: e.from.clone(),
-                to: e.to.clone(),
                 module: module.to_owned(),
-                entries,
+                entries: entries.into_iter().collect(),
+                imports: reaching.len(),
+                importers: importers.len(),
+                importing_files: files.len(),
                 barrel_share,
+                edges: reaching
+                    .iter()
+                    .take(REACH_EDGES)
+                    .map(|e| Link {
+                        from: e.from.clone(),
+                        to: e.to.clone(),
+                    })
+                    .collect(),
             },
         ));
     }
@@ -479,7 +780,9 @@ fn hidden_coupling(g: &Graph, out: &mut Vec<Finding>) {
 }
 
 /// Over the barrel-attributed module pairs Ca and Ce count, so an import of a barrel is an
-/// import of what it re-exports.
+/// import of what it re-exports, with at least `SDP_MIN_IMPORTS` runtime file imports from A to
+/// B (no barrel attribution: an import of a barrel elsewhere is not an import of B), and neither
+/// module a folder above the other.
 fn unstable_dependency(g: &Graph, out: &mut Vec<Finding>) {
     let instability: BTreeMap<&str, Option<f64>> = g
         .doc
@@ -487,18 +790,29 @@ fn unstable_dependency(g: &Graph, out: &mut Vec<Finding>) {
         .iter()
         .map(|m| (m.id.as_str(), m.instability))
         .collect();
-    let mut imports: BTreeMap<(&str, &str), usize> = BTreeMap::new();
-    for (a, b) in &g.pairs {
-        let (ma, mb) = (g.module_of[a.as_str()], g.module_of[b.as_str()]);
-        if ma != mb {
-            *imports.entry((ma, mb)).or_default() += 1;
-        }
+    let mut runtime: BTreeMap<(&str, &str), usize> = BTreeMap::new();
+    for e in
+        g.doc.edges.iter().filter(|e| {
+            e.kind.is_runtime() && !g.wiring.contains(&(e.from.as_str(), e.to.as_str()))
+        })
+    {
+        *runtime
+            .entry((g.module_of[e.from.as_str()], g.module_of[e.to.as_str()]))
+            .or_default() += 1;
     }
-    for ((ma, mb), n) in imports {
+    let pairs: BTreeSet<(&str, &str)> = g
+        .pairs
+        .iter()
+        .map(|(a, b)| (g.module_of[a.as_str()], g.module_of[b.as_str()]))
+        .filter(|(ma, mb)| ma != mb && !g.is_ancestor(ma, mb) && !g.is_ancestor(mb, ma))
+        .filter(|(ma, mb)| !private_of(ma, mb))
+        .collect();
+    for (ma, mb) in pairs {
+        let n = runtime.get(&(ma, mb)).copied().unwrap_or(0);
         let (Some(from), Some(to)) = (instability[ma], instability[mb]) else {
             continue;
         };
-        if to - from >= SDP_MARGIN - EPSILON {
+        if n >= SDP_MIN_IMPORTS && to - from >= SDP_MARGIN - EPSILON {
             out.push(finding(
                 FindingKind::UnstableDependency,
                 format!("{ma} -> {mb}"),
@@ -619,7 +933,30 @@ fn seam(g: &Graph, out: &mut Vec<Finding>) {
     let non_barrel = g.doc.files.iter().filter(|f| !f.barrel).count();
     let covered = clusters.iter().map(|c| c.files.len()).sum::<usize>();
     // A single cluster proposes no boundary.
+    let single: HashSet<&str> = g
+        .doc
+        .modules
+        .iter()
+        .filter(|m| m.files == 1)
+        .map(|m| m.id.as_str())
+        .collect();
+    let loose = g
+        .doc
+        .files
+        .iter()
+        .filter(|f| !f.barrel && single.contains(f.module.as_str()))
+        .count();
+    let folder_modules: Vec<&str> = g
+        .doc
+        .modules
+        .iter()
+        .map(|m| m.id.as_str())
+        .filter(|m| !g.root_files.contains(m))
+        .collect();
+    let by_kind = folder_modules.iter().filter(|m| kind_folder(m)).count();
     if clusters.len() < 2
+        || loose as f64 > SEAM_MAX_LOOSE_SHARE * non_barrel as f64 + EPSILON
+        || by_kind as f64 > SEAM_MAX_KIND_SHARE * folder_modules.len() as f64 + EPSILON
         || clustered - folders < SEAM_MIN_GAIN - EPSILON
         || (covered as f64) < SEAM_MIN_COVERAGE * non_barrel as f64 - EPSILON
     {
@@ -646,4 +983,185 @@ fn seam(g: &Graph, out: &mut Vec<Finding>) {
 
 fn round(x: f64) -> f64 {
     (x * 10_000.0).round() / 10_000.0
+}
+
+/// Gives each registrar move of `doc`'s cycles a destination, simulated: a new folder named
+/// after the file (`driver/DriverFactory.ts` to `driver/driver-factory/DriverFactory.ts`), in the
+/// file's folder when that makes a module of its own at the scan's depth, else beside its
+/// module's folder; and the module of its one importer, when it has exactly one. The best by
+/// two-way pairs removed wins, among moves that add no new cycle; a move with none is dropped.
+pub fn place_registrars(doc: &mut Document, rules: Option<&Compiled>) {
+    let module_of = |path: &str| {
+        rules
+            .and_then(|r| r.module_of(path))
+            .unwrap_or_else(|| modules::module_of(path, &doc.config.source_root, doc.config.depth))
+    };
+    let exists: HashSet<&str> = doc.files.iter().map(|f| f.path.as_str()).collect();
+    let modules: HashSet<&str> = doc.modules.iter().map(|m| m.id.as_str()).collect();
+    let pairs = |d: &Document| -> i64 {
+        d.cycles
+            .iter()
+            .filter_map(|c| c.two_way.as_ref())
+            .map(|p| p.len() as i64)
+            .sum()
+    };
+    let module_cycles = |d: &Document| -> Vec<BTreeSet<String>> {
+        d.cycles
+            .iter()
+            .filter(|c| c.level == crate::model::CycleLevel::Module)
+            .map(|c| c.members.iter().cloned().collect())
+            .collect()
+    };
+    let before_pairs = pairs(doc);
+    let before_cycles = module_cycles(doc);
+    let mut placed: Vec<Vec<RegistrarMove>> = Vec::new();
+    for c in &doc.cycles {
+        let mut kept = Vec::new();
+        for r in &c.registrar_moves {
+            let (dir, name) = r.file.rsplit_once('/').unwrap_or(("", &r.file));
+            let stem = name.split('.').next().unwrap_or(name);
+            let folder = kebab(stem);
+            let mut candidates: Vec<String> = Vec::new();
+            let join = |d: &str, rest: &str| {
+                if d.is_empty() {
+                    rest.to_owned()
+                } else {
+                    format!("{d}/{rest}")
+                }
+            };
+            let parent = dir.rsplit_once('/').map_or("", |(p, _)| p);
+            for base in [dir, parent] {
+                let to = join(base, &format!("{folder}/{name}"));
+                let lands = module_of(&to);
+                if lands != r.module
+                    && !modules.contains(lands.as_str())
+                    && !exists.contains(to.as_str())
+                {
+                    candidates.push(to);
+                    break;
+                }
+            }
+            let importers: BTreeSet<&str> = doc
+                .edges
+                .iter()
+                .filter(|e| e.to == r.file)
+                .map(|e| e.from.as_str())
+                .collect();
+            if let [only] = importers.into_iter().collect::<Vec<_>>().as_slice() {
+                let to = join(only.rsplit_once('/').map_or("", |(d, _)| d), name);
+                if module_of(&to) != r.module && !exists.contains(to.as_str()) {
+                    candidates.push(to);
+                }
+            }
+            let mut best: Option<RegistrarMove> = None;
+            for to in candidates {
+                let moved = [Move {
+                    file: r.file.clone(),
+                    to: to.clone(),
+                }];
+                let Ok(after) = simulate::apply(doc, rules, &moved) else {
+                    continue;
+                };
+                let landed = module_of(&to);
+                // A cycle not inside one that existed (the new module aside) is new.
+                let new_cycle = module_cycles(&after).iter().any(|m| {
+                    let rest: BTreeSet<&String> = m.iter().filter(|x| **x != landed).collect();
+                    !before_cycles
+                        .iter()
+                        .any(|b| rest.iter().all(|x| b.contains(*x)))
+                });
+                if new_cycle {
+                    continue;
+                }
+                let removed = before_pairs - pairs(&after);
+                let cycle_after = module_cycles(&after)
+                    .iter()
+                    .find(|m| m.contains(&r.module))
+                    .map_or(0, BTreeSet::len);
+                if best
+                    .as_ref()
+                    .is_none_or(|b| removed > b.pairs_removed.unwrap_or(0))
+                {
+                    best = Some(RegistrarMove {
+                        to: Some(to),
+                        pairs_removed: Some(removed),
+                        cycle_before: Some(c.members.len()),
+                        cycle_after: Some(cycle_after),
+                        ..r.clone()
+                    });
+                }
+            }
+            kept.extend(best);
+        }
+        placed.push(kept);
+    }
+    for (c, moves) in doc.cycles.iter_mut().zip(placed) {
+        // A pair whose other side is only a moved registrar is resolved by the move.
+        if let Some(pairs) = &mut c.two_way {
+            for p in pairs.iter_mut() {
+                p.resolved_by_move = moves
+                    .iter()
+                    .any(|m| m.module == p.to && m.with.contains(&p.from));
+            }
+            pairs.sort_by_key(|p| p.resolved_by_move);
+        }
+        c.registrar_moves = moves;
+    }
+}
+
+/// `DriverFactory`, `LayerUI`, `HTTPServer` and `driver_factory` as `driver-factory`,
+/// `layer-ui`, `http-server`, `driver-factory`: a hyphen where a word starts.
+fn kebab(stem: &str) -> String {
+    let chars: Vec<char> = stem.chars().collect();
+    let mut out = String::new();
+    for (i, &ch) in chars.iter().enumerate() {
+        if ch == '_' {
+            out.push('-');
+            continue;
+        }
+        let prev = i.checked_sub(1).map(|p| chars[p]);
+        let next = chars.get(i + 1);
+        let starts_word = ch.is_uppercase()
+            && prev.is_some_and(|p| {
+                p.is_lowercase()
+                    || p.is_ascii_digit()
+                    || (p.is_uppercase() && next.is_some_and(|n| n.is_lowercase()))
+            });
+        if starts_word && !out.ends_with('-') {
+            out.push('-');
+        }
+        out.extend(ch.to_lowercase());
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::python_public;
+
+    #[test]
+    fn kebab_starts_a_word_at_each_capital_run() {
+        for (stem, want) in [
+            ("DriverFactory", "driver-factory"),
+            ("LayerUI", "layer-ui"),
+            ("HTTPServer", "http-server"),
+            ("database-connection", "database-connection"),
+            ("use_cache", "use-cache"),
+        ] {
+            assert_eq!(super::kebab(stem), want, "{stem}");
+        }
+    }
+
+    #[test]
+    fn python_public_is_every_module_without_a_leading_underscore() {
+        for (path, public) in [
+            ("django/core/files/uploadedfile.py", true),
+            ("django/__init__.py", true),
+            ("django/core/__init__.py", true),
+            ("django/_internal/x.py", false),
+            ("django/utils/_os.py", false),
+        ] {
+            assert_eq!(python_public(path, "django"), public, "{path}");
+        }
+    }
 }

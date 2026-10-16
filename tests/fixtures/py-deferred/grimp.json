@@ -1,0 +1,46 @@
+{
+ "grimp_version": "3.17",
+ "modules": [
+  "deferred",
+  "deferred.a",
+  "deferred.a.x",
+  "deferred.b",
+  "deferred.b.y",
+  "deferred.c",
+  "deferred.c.z",
+  "deferred.d",
+  "deferred.d.w"
+ ],
+ "imports": [
+  {
+   "importer": "deferred.a.x",
+   "imported": "deferred.b.y",
+   "kind": "static"
+  },
+  {
+   "importer": "deferred.b.y",
+   "imported": "deferred.a.x",
+   "kind": "type"
+  },
+  {
+   "importer": "deferred.b.y",
+   "imported": "deferred.c.z",
+   "kind": "dynamic"
+  },
+  {
+   "importer": "deferred.c.z",
+   "imported": "deferred.b.y",
+   "kind": "static"
+  },
+  {
+   "importer": "deferred.c.z",
+   "imported": "deferred.d.w",
+   "kind": "dynamic"
+  },
+  {
+   "importer": "deferred.d.w",
+   "imported": "deferred.c.z",
+   "kind": "static"
+  }
+ ]
+}

@@ -137,14 +137,12 @@ fn ts_fda_verdicts_follow_the_seven_steps() {
         ])
     );
     assert_eq!(
-        finding(
-            &doc,
-            "internals-reach",
-            "src/domains/cart/ui/Cart.tsx -> src/domains/checkout/client.ts"
-        )["evidence"],
-        json!({ "from": "src/domains/cart/ui/Cart.tsx", "to": "src/domains/checkout/client.ts",
-                "module": "domains/checkout",
-                "entries": ["src/domains/checkout/index.ts", "src/domains/checkout/server.ts"] })
+        finding(&doc, "internals-reach", "src/domains/checkout/**")["evidence"],
+        json!({ "module": "domains/checkout",
+                "entries": ["src/domains/checkout/index.ts", "src/domains/checkout/server.ts"],
+                "imports": 1, "importers": 1, "importing_files": 1,
+                "edges": [{ "from": "src/domains/cart/ui/Cart.tsx",
+                            "to": "src/domains/checkout/client.ts" }] })
     );
 }
 
@@ -282,12 +280,11 @@ fn ts_modmono_index_only_even_without_an_index() {
             .exists()
     );
     assert_eq!(
-        finding(
-            &doc,
-            "internals-reach",
-            "src/modules/a/application/x.ts -> src/modules/b/domain/y.ts"
-        )["evidence"]["entries"],
-        json!(["src/modules/b/index.ts"])
+        finding(&doc, "internals-reach", "src/modules/b/**")["evidence"],
+        json!({ "module": "b", "entries": ["src/modules/b/index.ts"],
+                "imports": 1, "importers": 1, "importing_files": 1,
+                "edges": [{ "from": "src/modules/a/application/x.ts",
+                            "to": "src/modules/b/domain/y.ts" }] })
     );
     let (_, _, code) = check(&[
         &scan_file("ts-modmono", &[]),

@@ -73,11 +73,13 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
             ..e.clone()
         })
         .collect();
+    let entries = doc.package_entries.iter().map(|p| rename(p)).collect();
     Ok(crate::build(
         doc.source.clone(),
         doc.config.clone(),
         files,
         edges,
+        entries,
         rules,
     ))
 }
@@ -192,6 +194,7 @@ mod tests {
                 version: None,
                 cruised: 3,
                 unresolved: None,
+                type_marking: None,
             },
             git: None,
             generated_at: String::new(),
@@ -204,7 +207,7 @@ mod tests {
             rules: None,
         };
         let files = ["a/x.ts", "a/y.ts", "b/z.ts"].map(String::from).to_vec();
-        crate::build(source, config, files, Vec::new(), None)
+        crate::build(source, config, files, Vec::new(), Vec::new(), None)
     }
 
     fn mv(file: &str, to: &str) -> Move {

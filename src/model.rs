@@ -17,6 +17,9 @@ pub struct Document {
     pub config: Config,
     pub files: Vec<File>,
     pub edges: Vec<Edge>,
+    /// Files a package.json publishes (`exports`, `main`, `module`, `types`), mapped back to
+    /// their sources: public entries like barrels. TypeScript only.
+    pub package_entries: Vec<String>,
     pub modules: Vec<Module>,
     pub module_edges: Vec<ModuleEdge>,
     pub cycles: Vec<Cycle>,
@@ -36,6 +39,8 @@ pub struct ScanInput {
     pub config: Config,
     pub files: Vec<File>,
     pub edges: Vec<Edge>,
+    #[serde(default)]
+    pub package_entries: Vec<String>,
     #[serde(default)]
     pub cochange: Option<Cochange>,
 }
@@ -69,6 +74,10 @@ pub struct Collector {
     /// Only dependency-cruiser reports unresolved imports.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unresolved: Option<usize>,
+    /// `unavailable` when dependency-cruiser could not tell imports of types only (written
+    /// without `import type`) from value imports: they are `static`. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub type_marking: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -120,9 +129,20 @@ pub struct Edge {
 #[serde(rename_all = "lowercase")]
 pub enum EdgeKind {
     Type,
+    /// `export type … from`: a re-export for barrels, erased at runtime.
+    #[serde(rename = "type-reexport")]
+    TypeReexport,
     Dynamic,
     Reexport,
     Static,
+}
+
+impl EdgeKind {
+    /// Static imports and value re-exports run when the importer loads; type-only imports and
+    /// re-exports are erased and dynamic ones run later, so none can close a load-time cycle.
+    pub fn is_runtime(self) -> bool {
+        matches!(self, EdgeKind::Static | EdgeKind::Reexport)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -165,6 +185,44 @@ pub struct Cycle {
     /// Module cycles only: every pair of members importing each other, as its lighter direction.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub two_way: Option<Vec<TwoWay>>,
+    /// Module cycles only: registrars that alone form the other side of several two-way pairs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub registrar_moves: Vec<RegistrarMove>,
+}
+
+/// A registrar (a file wiring many modules) whose imports alone form the other side of `pairs`
+/// two-way pairs of a cycle, with the modules in `with`: moving it out of `module` to `to` opens
+/// them. `pairs_removed` is the net change in two-way pairs over all module cycles, and the
+/// cycle shrinks from `cycle_before` to `cycle_after` modules (0: gone), as simulated.
+#[derive(Debug, Clone, Serialize)]
+pub struct RegistrarMove {
+    pub file: String,
+    pub module: String,
+    pub pairs: usize,
+    pub with: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pairs_removed: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cycle_before: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cycle_after: Option<usize>,
+}
+
+impl RegistrarMove {
+    /// Whether the move comes before the cycle's cut: it removes more two-way pairs than a
+    /// single-import cut would (one, when the cycle has one), and the cycle shrinks, since
+    /// removing pairs while the cycle keeps or grows its size only reroutes them into other rings.
+    /// The page applies the same rule.
+    pub fn leads(&self, single_cut: bool) -> bool {
+        let (Some(removed), Some(before), Some(after)) =
+            (self.pairs_removed, self.cycle_before, self.cycle_after)
+        else {
+            return false;
+        };
+        removed > i64::from(single_cut) && after < before
+    }
 }
 
 /// The lighter direction of two modules importing each other (the names' order on a tie): the
@@ -175,6 +233,21 @@ pub struct TwoWay {
     pub to: String,
     pub imports: usize,
     pub reverse_imports: usize,
+    /// Both directions have at most `graph::EVEN_MAX_IMPORTS` imports, within a factor of 2: a
+    /// mutual dependency with no lighter side, `from` and `to` in the names' order.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub even: bool,
+    /// `from` -> `to` is only composition roots and registrars wiring modules together: not a
+    /// cut to offer first.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub registry: bool,
+    /// `from` -> `to` holds a public entry's re-export, and so does the other way.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub entry: bool,
+    /// The other way is only a registrar the cycle's `registrar_moves` moves: that move resolves
+    /// the pair, and cutting `from` -> `to` would point the wrong way.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub resolved_by_move: bool,
     /// The file imports from `from` to `to`, at most `graph::TWO_WAY_EDGES` of them.
     pub edges: Vec<Link>,
 }
@@ -241,14 +314,19 @@ pub enum Evidence {
         commits: usize,
     },
     InternalsReach {
-        from: String,
-        to: String,
         module: String,
         entries: Vec<String>,
+        /// Imports that bypass the entries, from `importers` distinct modules and
+        /// `importing_files` distinct files.
+        imports: usize,
+        importers: usize,
+        importing_files: usize,
         /// Without rules: the share of the cross-module imports into `module` that go through
         /// one of its barrels.
         #[serde(skip_serializing_if = "Option::is_none")]
         barrel_share: Option<f64>,
+        /// At most `findings::REACH_EDGES` of the bypassing imports.
+        edges: Vec<Link>,
     },
     UnstableDependency {
         from: String,
@@ -396,4 +474,36 @@ pub struct ModuleDelta {
     pub ca: [usize; 2],
     pub ce: [usize; 2],
     pub instability: [Option<f64>; 2],
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RegistrarMove;
+
+    fn mv(removed: i64, before: usize, after: usize) -> RegistrarMove {
+        RegistrarMove {
+            file: "a/r.ts".into(),
+            module: "a".into(),
+            pairs: 3,
+            with: vec![],
+            to: Some("a/r/r.ts".into()),
+            pairs_removed: Some(removed),
+            cycle_before: Some(before),
+            cycle_after: Some(after),
+        }
+    }
+
+    #[test]
+    fn a_registrar_move_leads_only_when_it_beats_the_cut_and_the_cycle_shrinks() {
+        // Against a single-import cut (one pair) a move must remove more; with no such cut,
+        // any. Either way the cycle must shrink.
+        assert!(mv(10, 27, 5).leads(true));
+        assert!(!mv(2, 5, 5).leads(true));
+        assert!(mv(2, 5, 4).leads(true));
+        assert!(!mv(1, 5, 0).leads(true));
+        assert!(mv(1, 5, 0).leads(false));
+        assert!(!mv(13, 32, 33).leads(true));
+        assert!(!mv(13, 32, 33).leads(false));
+        assert!(!mv(0, 5, 5).leads(false));
+    }
 }

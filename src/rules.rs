@@ -387,7 +387,7 @@ impl Compiled {
         }
     }
 
-    /// The first matching step of the seven in docs/plan.md.
+    /// The first matching step of the seven in docs/guide.md ("Rules file" section).
     fn verdict<'a>(
         &self,
         e: &'a Edge,
@@ -460,17 +460,18 @@ impl Compiled {
         }
     }
 
-    /// The public entries that an import into `to` should use instead, when a `public` rule
-    /// covers `to`.
-    pub fn entries_for(&self, to: &str) -> Option<Vec<String>> {
+    /// The `public` module covering `to`, with its capture bound (`src/domains/cart/**`), and the
+    /// entries an import into `to` should use instead.
+    pub fn public_for(&self, to: &str) -> Option<(String, Vec<String>)> {
         self.public.iter().find_map(|(module, entries)| {
             let value = self.bind(module, to)?;
-            Some(
+            Some((
+                module.instance(&module.raw, value.as_deref()),
                 entries
                     .iter()
                     .map(|entry| module.instance(entry, value.as_deref()))
                     .collect(),
-            )
+            ))
         })
     }
 }

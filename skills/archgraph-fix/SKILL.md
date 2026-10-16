@@ -13,16 +13,16 @@ One run fixes one finding, as one reviewable change. Every step ends on evidence
 
 1. **Pick one finding.** Scan the repository (Setup and flags in [the archgraph skill](../archgraph/SKILL.md)) into a temporary directory. Take the finding the user named; otherwise take the first that exists, in this order:
    1. a forbidden import (`summary.forbidden` > 0; `archgraph check` lists them),
-   2. a two-way pair in a module cycle whose lighter side is a single import (`cycles[].two_way`, `imports: 1`),
+   2. a `registrar_moves` entry with `pairs_removed` above 1 and `cycle_after` below `cycle_before` (move `file` to `to`, then simulate), else a two-way pair in a module cycle whose cut side is a single import (`cycles[].two_way`, `imports: 1`, not flagged `even`, `registry`, `entry` or `resolved_by_move`),
    3. a `misplaced-file` finding with a `suggestion`,
-   4. an `internals-reach` finding,
+   4. an `internals-reach` finding (one module; fix its listed `edges` from one importing module when `imports` is large),
    5. a `sink-split` component whose `moves` are filled.
    
    State it to the user with its evidence (the JSON fields, quoted). When the scan carries a `small-repo` finding, say the signal is weak before proceeding. Done when one finding is chosen and stated.
 2. **Check the ground.** The git working tree must be clean (ask the user to commit or stash otherwise). Find the type check and test commands in the project (`package.json` scripts, `pyproject.toml`, `Makefile`, CI config) and run both; run Python with `PYTHONDONTWRITEBYTECODE=1` so the run leaves no `__pycache__` behind, and remove any other files the run created. Done when both pass and `git status` is clean again. If they fail before any change, stop: a red baseline cannot prove the fix safe.
 3. **Plan and simulate.**
    - Move (misplaced-file, sink-split): run `archgraph simulate <graph.json> --move <file> <dest>`. Proceed only when `new_forbidden` is empty, the cycle count does not grow, and the two modules' combined cohesion rises. Quote before and after.
-   - Cut (two-way pair, forbidden import, internals reach): decide the code change that removes the import, in this order of preference: import the module's public entry; move the used symbol to the module that should own it, re-exporting it from its old place when other code imports it there; take the needed value as a parameter, or depend on an interface the lower module owns and inject the implementation from the composition root. Prefer the smallest change that keeps existing public names importable. The prediction for a cut is the finding itself: the import named in `break` or `two_way.edges` disappears and its cycle with it. When the cut moves a file, simulate that move as above.
+   - Cut (two-way pair, forbidden import, internals reach): decide the code change that removes the import, in this order of preference: import the module's public entry; move the used symbol to the module that should own it, re-exporting it from its old place when other code imports it there; take the needed value as a parameter, or depend on an interface the lower module owns and inject the implementation from the composition root. Prefer the smallest change that keeps existing public names importable. The prediction for a cut is the finding itself: the import named in `break`, `two_way.edges` or an `internals-reach` finding's `edges` disappears and its cycle with it. When the cut moves a file, simulate that move as above.
    
    Done when the plan names every file to touch and, for moves, the simulation passes. When the user did not name the finding, present the plan with its evidence and wait for their approval before applying it.
 4. **Apply.**

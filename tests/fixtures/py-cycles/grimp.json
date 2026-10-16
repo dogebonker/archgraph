@@ -17,39 +17,48 @@
  "imports": [
   {
    "importer": "mypkg.api",
-   "imported": "mypkg.api.handlers"
+   "imported": "mypkg.api.handlers",
+   "kind": "static"
   },
   {
    "importer": "mypkg.api",
-   "imported": "mypkg.api.schemas"
+   "imported": "mypkg.api.schemas",
+   "kind": "static"
   },
   {
    "importer": "mypkg.api.handlers",
-   "imported": "mypkg.core.service"
+   "imported": "mypkg.core.service",
+   "kind": "static"
   },
   {
    "importer": "mypkg.cli",
-   "imported": "mypkg.api"
+   "imported": "mypkg.api",
+   "kind": "static"
   },
   {
    "importer": "mypkg.core",
-   "imported": "mypkg.db.session"
+   "imported": "mypkg.db.session",
+   "kind": "static"
   },
   {
    "importer": "mypkg.core.service",
-   "imported": "mypkg.db.repo"
+   "imported": "mypkg.db.repo",
+   "kind": "static"
   },
   {
    "importer": "mypkg.db.repo",
-   "imported": "mypkg.core"
+   "imported": "mypkg.core",
+   "kind": "static"
   },
   {
    "importer": "mypkg.db.repo",
-   "imported": "mypkg.db.session"
+   "imported": "mypkg.db.session",
+   "kind": "static"
   },
   {
    "importer": "mypkg.tests.test_service",
-   "imported": "mypkg.core.service"
+   "imported": "mypkg.core.service",
+   "kind": "static"
   }
  ]
 }

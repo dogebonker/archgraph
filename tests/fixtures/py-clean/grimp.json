@@ -18,35 +18,43 @@
  "imports": [
   {
    "importer": "app.adapters.notify",
-   "imported": "app.entrypoints.cli"
+   "imported": "app.entrypoints.cli",
+   "kind": "static"
   },
   {
    "importer": "app.adapters.repository",
-   "imported": "app.domain.model"
+   "imported": "app.domain.model",
+   "kind": "static"
   },
   {
    "importer": "app.bootstrap",
-   "imported": "app.adapters.repository"
+   "imported": "app.adapters.repository",
+   "kind": "static"
   },
   {
    "importer": "app.bootstrap",
-   "imported": "app.entrypoints.api"
+   "imported": "app.entrypoints.api",
+   "kind": "static"
   },
   {
    "importer": "app.domain.events",
-   "imported": "app.adapters.repository"
+   "imported": "app.adapters.repository",
+   "kind": "static"
   },
   {
    "importer": "app.entrypoints.api",
-   "imported": "app.adapters.repository"
+   "imported": "app.adapters.repository",
+   "kind": "static"
   },
   {
    "importer": "app.entrypoints.api",
-   "imported": "app.service_layer.services"
+   "imported": "app.service_layer.services",
+   "kind": "static"
   },
   {
    "importer": "app.service_layer.services",
-   "imported": "app.domain.model"
+   "imported": "app.domain.model",
+   "kind": "static"
   }
  ]
 }
