@@ -6,9 +6,10 @@
 </p>
 
 <p align="center">
-  An architecture linter for TypeScript and Python.<br>
+  An architecture linter for your codebase.<br>
   It finds the folders that import each other, names the import that breaks each loop,<br>
-  and simulates a suggested file move before you make it.
+  and simulates a suggested file move before you make it.<br>
+  <sub>Reads TypeScript, JavaScript and Python today. Go, Rust and Java/Kotlin are next.</sub>
 </p>
 
 <p align="center">
