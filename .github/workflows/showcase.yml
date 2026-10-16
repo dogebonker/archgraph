@@ -1,0 +1,65 @@
+name: showcase
+
+# Builds showcase/ (every repository in showcase/repos.json at its pinned commit) and publishes it
+# with GitHub Pages: index.html at the site root, <name>.html and <name>.json per repository.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [showcase/**, assets/graph.html, src/**]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - run: cargo build --release --locked
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install the pinned collectors
+        run: |
+          tools=$RUNNER_TEMP/tools
+          mkdir -p "$tools"
+          cp ci/tools/package.json ci/tools/package-lock.json "$tools/"
+          npm ci --prefix "$tools" --ignore-scripts --no-audit --no-fund --loglevel=error
+          python -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet --only-binary :all: --require-hashes \
+            -r ci/tools/requirements.txt
+      # build.sh exits 1 when any repository fails to fetch, scan or render: the job fails.
+      - name: Build the showcase
+        run: showcase/build.sh --work "$RUNNER_TEMP/work" --out site
+        env:
+          ARCHGRAPH_DEPCRUISE: ${{ runner.temp }}/tools/node_modules/.bin/depcruise
+          ARCHGRAPH_PYTHON: ${{ runner.temp }}/venv/bin/python
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

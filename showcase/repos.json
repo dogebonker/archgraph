@@ -1,0 +1,300 @@
+[
+  {
+    "name": "nest",
+    "repo": "https://github.com/nestjs/nest",
+    "commit": "1c2f689518412cbc6a6bc09662dd5cfed779f2bf",
+    "path": ".",
+    "language": "typescript",
+    "flags": [
+      "--depth",
+      "3",
+      "--exclude",
+      "sample/**",
+      "--exclude",
+      "integration/**",
+      "--exclude",
+      "tools/**",
+      "--exclude",
+      "scripts/**",
+      "--exclude",
+      "*.mjs",
+      "--exclude",
+      "**/test/**"
+    ],
+    "why": "Nine npm packages scanned from the root, whose tsconfig paths resolve imports between core, common, microservices and the platform adapters."
+  },
+  {
+    "name": "next.js",
+    "repo": "https://github.com/vercel/next.js",
+    "commit": "00c4ba8b6e268c792da64207fa9453132bfcec5f",
+    "path": "packages/next",
+    "language": "typescript",
+    "flags": [
+      "--depth",
+      "2",
+      "--exclude",
+      "src/compiled/**",
+      "--exclude",
+      "src/bundles/**",
+      "--exclude",
+      "src/.storybook/**",
+      "--exclude",
+      ".storybook/**"
+    ],
+    "why": "The framework runtime: server, client, shared and dev overlay code in one package, with vendored compiled code excluded."
+  },
+  {
+    "name": "excalidraw",
+    "repo": "https://github.com/excalidraw/excalidraw",
+    "commit": "4c37956ba5f04ec342a9d9d5891a38f22c5b7b4e",
+    "path": "packages/excalidraw",
+    "language": "typescript",
+    "flags": [
+      "--depth",
+      "2"
+    ],
+    "why": "A large React editor package whose components folder holds most of the code; sibling workspace packages stay outside the scan."
+  },
+  {
+    "name": "immich",
+    "repo": "https://github.com/immich-app/immich",
+    "commit": "3ae71117413cc0a79e4a0555df015e3ffde11786",
+    "path": "server",
+    "language": "typescript",
+    "flags": [
+      "--depth",
+      "1",
+      "--exclude",
+      "src/test/**",
+      "--exclude",
+      "test/**"
+    ],
+    "why": "A NestJS server laid out by kind (controllers, services, repositories, dtos): what a folder-per-layer layout looks like as modules."
+  },
+  {
+    "name": "activepieces",
+    "repo": "https://github.com/activepieces/activepieces",
+    "commit": "55134042a88da01be2229e06302a78c80f209ea0",
+    "path": "packages/server/api",
+    "language": "typescript",
+    "flags": [
+      "--depth",
+      "2",
+      "--exclude",
+      "src/app/database/migration/{postgres,sqlite}/**"
+    ],
+    "why": "Stands in for n8n: an open-source workflow automation server (Fastify, TypeORM) organized by feature under src/app, migrations excluded."
+  },
+  {
+    "name": "payload",
+    "repo": "https://github.com/payloadcms/payload",
+    "commit": "f177a26219996b75afc5d45cd07165001e9afd8c",
+    "path": "packages/payload",
+    "language": "typescript",
+    "flags": [
+      "--depth",
+      "1"
+    ],
+    "why": "A headless CMS core organized by feature folders (auth, collections, uploads, fields) with many type-only imports."
+  },
+  {
+    "name": "typeorm",
+    "repo": "https://github.com/typeorm/typeorm",
+    "commit": "fe92394287516feeada6e9c308ebe22deca2458e",
+    "path": "packages/typeorm/src",
+    "language": "typescript",
+    "flags": [
+      "--depth",
+      "2"
+    ],
+    "why": "An ORM with one folder per database driver, and decorators, metadata and query builders that reference each other."
+  },
+  {
+    "name": "vite",
+    "repo": "https://github.com/vitejs/vite",
+    "commit": "928e721b36690ac0f3f118290a21fc0cc4349055",
+    "path": "packages/vite",
+    "language": "typescript",
+    "flags": [
+      "--depth",
+      "2"
+    ],
+    "why": "A compact build tool core split into node, client, shared and module-runner."
+  },
+  {
+    "name": "outline",
+    "repo": "https://github.com/outline/outline",
+    "commit": "095b096c2197f35e57057e6cc6ae9d7ef562330a",
+    "path": ".",
+    "language": "typescript",
+    "flags": [
+      "--depth",
+      "2",
+      "--exclude",
+      "__mocks__/**",
+      "--exclude",
+      ".*/**",
+      "--exclude",
+      "*.{js,ts,mjs}"
+    ],
+    "why": "A full-stack app in one tree: React app, Koa server, shared code and plugins, imported mostly through barrels."
+  },
+  {
+    "name": "strapi",
+    "repo": "https://github.com/strapi/strapi",
+    "commit": "d764743be322a70b98cb7b43c5d1a3e0d67d7efd",
+    "path": "packages/core/core/src",
+    "language": "typescript",
+    "flags": [
+      "--depth",
+      "2"
+    ],
+    "why": "The Strapi core runtime (@strapi/core): services, registries, loaders and the document service."
+  },
+  {
+    "name": "trpc",
+    "repo": "https://github.com/trpc/trpc",
+    "commit": "10e2ef98f7842b94eb3026e4f9bcfe62cc39b088",
+    "path": "packages/server",
+    "language": "typescript",
+    "flags": [
+      "--depth",
+      "2"
+    ],
+    "why": "A small library with deliberately named internals (unstable-core-do-not-import) and one adapter per server framework."
+  },
+  {
+    "name": "django",
+    "repo": "https://github.com/django/django",
+    "commit": "d430084791a61b31cecec132bce3dca19194f7f2",
+    "path": ".",
+    "language": "python",
+    "flags": [
+      "--package",
+      "django",
+      "--depth",
+      "2",
+      "--exclude",
+      "django/conf/locale/**",
+      "--exclude",
+      "**/migrations/[0-9]*.py"
+    ],
+    "why": "The reference large Python framework: contrib apps, ORM, templates and management commands, with many function-level imports."
+  },
+  {
+    "name": "fastapi",
+    "repo": "https://github.com/fastapi/fastapi",
+    "commit": "0b919816378eaa773df7ce4204414c712c9fdbea",
+    "path": ".",
+    "language": "python",
+    "flags": [
+      "--package",
+      "fastapi",
+      "--depth",
+      "1"
+    ],
+    "why": "A thin, flat framework on top of Starlette and Pydantic."
+  },
+  {
+    "name": "flask",
+    "repo": "https://github.com/pallets/flask",
+    "commit": "d086db856be187255b8ec61ef409357393020f32",
+    "path": ".",
+    "language": "python",
+    "flags": [
+      "--package",
+      "flask",
+      "--depth",
+      "1"
+    ],
+    "why": "A small, flat package where nearly every module is one file."
+  },
+  {
+    "name": "pydantic",
+    "repo": "https://github.com/pydantic/pydantic",
+    "commit": "5adfeaaaea947f81f0f01868604f219084ec151a",
+    "path": ".",
+    "language": "python",
+    "flags": [
+      "--package",
+      "pydantic",
+      "--depth",
+      "1",
+      "--exclude",
+      "pydantic/v1/**"
+    ],
+    "why": "pydantic v2: a public surface over _internal; the vendored v1 copy is excluded."
+  },
+  {
+    "name": "httpx",
+    "repo": "https://github.com/encode/httpx",
+    "commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
+    "path": ".",
+    "language": "python",
+    "flags": [
+      "--package",
+      "httpx",
+      "--depth",
+      "1"
+    ],
+    "why": "A small client library of private underscore modules with pluggable transports."
+  },
+  {
+    "name": "scrapy",
+    "repo": "https://github.com/scrapy/scrapy",
+    "commit": "fbfc89ae7b72531a97fb4ef6d65ef3af392aa45c",
+    "path": ".",
+    "language": "python",
+    "flags": [
+      "--package",
+      "scrapy",
+      "--depth",
+      "1"
+    ],
+    "why": "A crawling framework of middlewares, extensions and signals, many loaded from settings by dotted path."
+  },
+  {
+    "name": "celery",
+    "repo": "https://github.com/celery/celery",
+    "commit": "ef37e616ef6726a2e08126635c000f3eacffcbc2",
+    "path": ".",
+    "language": "python",
+    "flags": [
+      "--package",
+      "celery",
+      "--depth",
+      "1"
+    ],
+    "why": "A distributed task queue whose parts are often wired by string names and bootsteps rather than imports."
+  },
+  {
+    "name": "zulip",
+    "repo": "https://github.com/zulip/zulip",
+    "commit": "fb4f7abc378de7308a572d9af375101707e0c1ee",
+    "path": ".",
+    "language": "python",
+    "flags": [
+      "--package",
+      "zerver",
+      "--depth",
+      "1",
+      "--exclude",
+      "**/migrations/[0-9]*.py"
+    ],
+    "why": "zerver, the Django app at the heart of Zulip: lib, actions, views and over a hundred webhook integrations."
+  },
+  {
+    "name": "sqlalchemy",
+    "repo": "https://github.com/sqlalchemy/sqlalchemy",
+    "commit": "262c0f0ef49a46fbc4c58df167a858d58313032b",
+    "path": "lib",
+    "language": "python",
+    "flags": [
+      "--package",
+      "sqlalchemy",
+      "--depth",
+      "2"
+    ],
+    "why": "Core and ORM in one package, with database dialects as plugins."
+  }
+]

@@ -1,0 +1,231 @@
+#!/usr/bin/env bash
+# Builds the archgraph showcase: for every entry of repos.json, a shallow fetch of its pinned
+# commit, an archgraph scan of its `path`, the rendered report and a stats row in index.json, then
+# index.html from index.template.html.
+#
+#   showcase/build.sh [--only <name>] [--work <dir>] [--out <dir>] [--keep]
+#
+#   ARCHGRAPH            archgraph binary (default: target/release/archgraph of this repository)
+#   ARCHGRAPH_DEPCRUISE  dependency-cruiser executable for TypeScript entries (required for them)
+#   ARCHGRAPH_PYTHON     Python with grimp 3.17 for Python entries (default: python3)
+#
+# Nothing is installed into the targets. Every entry is validated first; a bad one stops the build
+# (exit 2). A failed repository is recorded in index.json and the others still run; the exit status
+# is 1 when any failed. Work trees are deleted after their build, failed or not, and on interrupt,
+# unless --keep is given; a kept tree at the pinned commit is reused on the next run.
+set -euo pipefail
+
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+manifest=$here/repos.json
+template=$here/index.template.html
+archgraph=${ARCHGRAPH:-$here/../target/release/archgraph}
+python=${ARCHGRAPH_PYTHON:-python3}
+depcruise=${ARCHGRAPH_DEPCRUISE:-}
+work=${TMPDIR:-/tmp}/archgraph-showcase
+out=$here/out
+only=
+keep=
+
+die() {
+  echo "build.sh: $*" >&2
+  exit 2
+}
+
+while (($#)); do
+  case $1 in
+    --only) only=${2:?--only needs a name}; shift 2 ;;
+    --work) work=${2:?--work needs a directory}; shift 2 ;;
+    --out) out=${2:?--out needs a directory}; shift 2 ;;
+    --keep) keep=1; shift ;;
+    -h | --help) sed -n '2,15p' "$0"; exit 0 ;;
+    *) die "unknown option $1" ;;
+  esac
+done
+
+command -v jq >/dev/null || die "jq is required"
+command -v git >/dev/null || die "git is required"
+[[ -x $archgraph ]] || die "no archgraph binary at $archgraph (cargo build --release, or set ARCHGRAPH)"
+work=${work%/}
+mkdir -p "$work/.stats" "$out"
+work=$(cd "$work" && pwd)
+out=$(cd "$out" && pwd)
+# Logs and per-repository stats stay beside the clones, so --out holds exactly the site:
+# index.html, index.json and <name>.html and <name>.json per repository.
+stats=$work/.stats
+
+# Every entry is checked before anything runs: names become file names and paths, repo is
+# fetched and flags reach archgraph. Any bad entry stops the build.
+validate_manifest() {
+  local entry name repo i
+  local -a flags
+  jq -e 'type == "array" and all(.[]; type == "object" and (.name | type) == "string"
+    and (.repo | type) == "string" and (.flags | type) == "array"
+    and all(.flags[]; type == "string"))' "$manifest" >/dev/null ||
+    die "$manifest must be an array of entries with string name, repo and flags"
+  jq -e '[.[].name] | length == (unique | length)' "$manifest" >/dev/null ||
+    die "names in $manifest must be unique"
+  while IFS= read -r entry; do
+    name=$(jq -r .name <<<"$entry")
+    repo=$(jq -r .repo <<<"$entry")
+    [[ $name =~ ^[a-z0-9][a-z0-9._-]*$ && $name != *..* ]] || die "bad name: $name"
+    [[ $repo =~ ^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] ||
+      die "$name: repo must be https://github.com/<owner>/<name>"
+    flags=()
+    while IFS= read -r f; do flags+=("$f"); done < <(jq -r '.flags[]' <<<"$entry")
+    # Only the flags that choose what is scanned; --collector-input, --rules and the rest stay
+    # out of a manifest.
+    i=0
+    while ((i < ${#flags[@]})); do
+      case ${flags[i]} in
+        --include-tests | --no-default-excludes) i=$((i + 1)) ;;
+        --depth | --exclude | --package)
+          [[ $((i + 1)) -lt ${#flags[@]} && ${flags[i + 1]} != -* ]] ||
+            die "$name: ${flags[i]} needs a value"
+          [[ ${flags[i]} != --depth || ${flags[i + 1]} =~ ^[0-9]+$ ]] ||
+            die "$name: --depth takes a number"
+          i=$((i + 2)) ;;
+        *) die "$name: flag ${flags[i]} is not allowed" ;;
+      esac
+    done
+  done < <(jq -c '.[]' "$manifest")
+}
+validate_manifest
+
+if [[ -n $only ]] && ! jq -e --arg n "$only" 'any(.[]; .name == $n)' "$manifest" >/dev/null; then
+  die "no entry named $only in $manifest"
+fi
+
+# One repository: fetch, scan, render, stats. Prints why it failed and returns 1 on failure.
+build_one() {
+  local entry=$1 name repo commit path language dir log start end
+  local -a flags=()
+  name=$(jq -r .name <<<"$entry")
+  repo=$(jq -r .repo <<<"$entry")
+  commit=$(jq -r .commit <<<"$entry")
+  path=$(jq -r .path <<<"$entry")
+  language=$(jq -r .language <<<"$entry")
+  while IFS= read -r f; do flags+=("$f"); done < <(jq -r '.flags[]' <<<"$entry")
+  [[ $commit =~ ^[0-9a-f]{40}$ ]] || { echo "commit is not a full SHA"; return 1; }
+  [[ $path != /* && /$path/ != */../* ]] || { echo "path must stay inside the repository"; return 1; }
+
+  dir=$work/$name
+  log=$stats/$name.log
+  : >"$log" || return 1
+  if [[ ! -d $dir/.git ]] || [[ $(git -C "$dir" rev-parse HEAD 2>/dev/null) != "$commit" ]]; then
+    rm -rf "$dir" || return 1
+    mkdir -p "$dir" || return 1
+    # LFS objects are never needed: imports live in source files.
+    if ! { git -C "$dir" init -q &&
+      git -C "$dir" remote add origin "$repo" &&
+      GIT_LFS_SKIP_SMUDGE=1 git -C "$dir" fetch -q --depth 1 origin "$commit" &&
+      GIT_LFS_SKIP_SMUDGE=1 git -C "$dir" -c advice.detachedHead=false checkout -q FETCH_HEAD; } >>"$log" 2>&1; then
+      echo "fetch failed: $(tail -n 3 "$log" | tr '\n' ' ')"
+      return 1
+    fi
+  fi
+
+  local -a collector=()
+  case $language in
+    typescript)
+      [[ -n $depcruise ]] || { echo "ARCHGRAPH_DEPCRUISE is not set"; return 1; }
+      collector=(--depcruise "$depcruise") ;;
+    python) collector=(--python "$python") ;;
+    *) echo "unsupported language $language"; return 1 ;;
+  esac
+
+  # EPOCHREALTIME (bash 5) uses the locale's decimal separator.
+  start=${EPOCHREALTIME:-$(date +%s)}
+  start=${start/,/.}
+  if ! "$archgraph" scan "$dir/$path" --language "$language" "${collector[@]}" "${flags[@]}" \
+    -o "$out/$name.json" >>"$log" 2>&1; then
+    echo "scan failed: $(grep -v '^warning:' "$log" | tail -n 3 | tr '\n' ' ')"
+    return 1
+  fi
+  end=${EPOCHREALTIME:-$(date +%s)}
+  end=${end/,/.}
+  if ! "$archgraph" render "$out/$name.json" -o "$out/$name.html" >>"$log" 2>&1; then
+    echo "render failed: $(tail -n 3 "$log" | tr '\n' ' ')"
+    return 1
+  fi
+
+  jq --arg seconds "$(awk -v a="$start" -v b="$end" 'BEGIN { printf "%.1f", b - a }')" '{
+    files: (.files | length),
+    modules: (.modules | length),
+    imports: (.edges | length),
+    cruised: .source.collector.cruised,
+    unresolved: .source.collector.unresolved,
+    collector: { name: .source.collector.name, version: .source.collector.version },
+    archgraph: .tool.version,
+    depth: .config.depth,
+    source_root: .config.source_root,
+    module_cycles: ([.cycles[] | select(.level == "module")] | length),
+    largest_module_cycle: ([.cycles[] | select(.level == "module") | .members | length] | max // 0),
+    file_cycles: ([.cycles[] | select(.level == "file")] | length),
+    forbidden: .summary.forbidden,
+    findings: (.findings | group_by(.kind) | map({ key: .[0].kind, value: length }) | from_entries),
+    scan_seconds: ($seconds | tonumber)
+  }' "$out/$name.json" >"$stats/$name.json.tmp" || { echo "stats failed"; return 1; }
+  mv "$stats/$name.json.tmp" "$stats/$name.json" || return 1
+}
+
+# The work tree being built, removed after its build whatever the outcome (and on interrupt)
+# unless --keep. build_one runs in a subshell, so the caller cleans up.
+current=
+cleanup() {
+  if [[ -z $keep && -n $current ]]; then
+    rm -rf "$current"
+  fi
+  current=
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+
+failed=0
+while IFS= read -r entry; do
+  name=$(jq -r .name <<<"$entry")
+  [[ -z $only || $name == "$only" ]] || continue
+  echo "== $name" >&2
+  rm -f "$stats/$name.json" "$stats/$name.error"
+  current=$work/$name
+  if ! reason=$(build_one "$entry"); then
+    failed=1
+    echo "   $reason" >&2
+    printf '%s\n' "$reason" >"$stats/$name.error"
+    rm -f "$out/$name.json" "$out/$name.html"
+  else
+    jq -r '"   \(.files) files, \(.modules) modules, \(.imports) imports, \(.unresolved // 0) unresolved, \(.scan_seconds)s"' \
+      "$stats/$name.json" >&2
+  fi
+  cleanup
+done < <(jq -c '.[]' "$manifest")
+
+# index.json: every manifest entry, with its stats, its failure, or "not built" (--only runs keep
+# the other entries' earlier results).
+while IFS= read -r entry_name; do
+  if [[ -f $stats/$entry_name.json ]]; then
+    jq -n --arg n "$entry_name" --slurpfile s "$stats/$entry_name.json" '{ name: $n, status: "ok", stats: $s[0] }'
+  elif [[ -f $stats/$entry_name.error ]]; then
+    jq -n --arg n "$entry_name" --rawfile e "$stats/$entry_name.error" '{ name: $n, status: "failed", error: ($e | rtrimstr("\n")) }'
+  else
+    jq -n --arg n "$entry_name" '{ name: $n, status: "not built" }'
+  fi
+done < <(jq -r '.[].name' "$manifest") | jq -s --slurpfile m "$manifest" \
+  --arg generated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --arg commit "$(git -C "$here/.." rev-parse HEAD 2>/dev/null || echo unknown)" \
+  --arg version "$("$archgraph" --version | awk '{ print $2 }')" '
+  (map({ (.name): . }) | add) as $r
+  | {
+      generated_at: $generated,
+      archgraph: { version: $version, commit: $commit },
+      collectors: ([.[].stats.collector | select(.)] | unique),
+      cochange: false,
+      repos: [$m[0][] | . + $r[.name]]
+    }' >"$out/index.json"
+
+# The page: index.json embedded as JSON with every `<` escaped, as render.rs does.
+jq -rn --rawfile tpl "$template" --slurpfile idx "$out/index.json" \
+  '$tpl | split("{{INDEX}}") | if length == 2 then join($idx[0] | tojson | gsub("<"; "\\u003c")) else error("template needs exactly one {{INDEX}}") end' \
+  >"$out/index.html"
+
+echo "wrote $out/index.html" >&2
+exit "$failed"

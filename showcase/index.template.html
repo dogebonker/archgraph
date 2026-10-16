@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>archgraph showcase</title>
+<style>
+/* The visual language of assets/graph.html: Apple's dark system colours on black. */
+:root {
+  color-scheme: dark;
+  --base: #000000; --fill1: #1c1c1e; --fill2: #2c2c2e;
+  --label: #f5f5f7; --label2: rgba(235, 235, 245, .6);
+  --sep: rgba(84, 84, 88, .6);
+  --blue: #0a84ff; --orange: #ff9f0a; --red-s: #ff453a;
+  --sans: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-contrast: more) {
+  :root { --label2: rgba(235, 235, 245, .82); --sep: rgba(255, 255, 255, .38); }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--base); color: var(--label);
+  font: 400 14px/1.5 var(--sans); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+::selection { background: rgba(10, 132, 255, .42); }
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+.mono { font-family: var(--mono); font-size: 12px; }
+.muted { color: var(--label2); }
+main { max-width: 1080px; margin: 0 auto; padding: 48px 16px 64px; }
+header h1 { margin: 0 0 6px; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; }
+header p { margin: 0 0 24px; font-size: 17px; color: var(--label2); max-width: 720px; }
+.intro { background: var(--fill1); border-radius: 14px; padding: 18px 20px; margin-bottom: 32px; }
+.intro p { margin: 0 0 10px; max-width: 760px; }
+.intro p:last-child { margin-bottom: 0; }
+.intro dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 14px 0; font-size: 13px; }
+.intro dt { color: var(--label2); font-weight: 500; }
+.intro dd { margin: 0; overflow-wrap: anywhere; }
+h2 { margin: 32px 0 8px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--label2); }
+ul.repos { list-style: none; margin: 0; padding: 0; background: var(--fill1); border-radius: 14px; }
+ul.repos > li { padding: 16px 20px; border-top: 1px solid var(--sep); }
+ul.repos > li:first-child { border-top: 0; }
+.row1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.name { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+span.name { color: var(--label); }
+.scope { overflow-wrap: anywhere; }
+.why { margin: 4px 0 10px; color: var(--label2); }
+.nums { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; font-size: 13px; }
+.nums div { display: flex; gap: 6px; align-items: baseline; }
+.nums dt { color: var(--label2); }
+.nums dd { margin: 0; font-weight: 600; }
+.nums dd.bad { color: var(--orange); }
+.kinds { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.kinds li { padding: 2px 10px; border-radius: 999px; background: var(--fill2); font-size: 12px; font-weight: 500; }
+.kinds li b { font-weight: 600; margin-left: 6px; }
+.failed { margin: 4px 0 0; color: var(--red-s); font-weight: 500; overflow-wrap: anywhere; }
+footer { margin-top: 40px; font-size: 12px; color: var(--label2); }
+@media (max-width: 600px) {
+  main { padding-top: 28px; }
+  header h1 { font-size: 26px; }
+  ul.repos > li, .intro { padding: 14px 16px; }
+  .intro dl { grid-template-columns: 1fr; gap: 0; }
+  .intro dd { margin-bottom: 6px; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>archgraph showcase</h1>
+    <p>archgraph reports on well-known open-source repositories, each scanned at a pinned commit.</p>
+  </header>
+  <section class="intro" aria-label="How these reports were made">
+    <p><a href="https://github.com/dogebonker/archgraph">archgraph</a> turns a repository's import graph into evidence for architecture decisions: per-module coupling and cohesion, module cycles with their smallest break set, and findings that propose file moves backed by a simulation of each move. It collects file-level imports with dependency-cruiser (TypeScript/JavaScript) or grimp (Python); for Python it also parses files with the standard library's <span class="mono">ast</span>, without running them, to tell imports inside functions apart.</p>
+    <p>Each repository was fetched at the commit shown (a shallow fetch of exactly that commit) and one folder of it was scanned with the flags shown, with the default excludes (tests, generated code, and build output at the folder's root or ignored by git). Nothing was installed into the repositories, so imports of npm packages count as unresolved, and imports between workspace packages leave the scanned folder. A module is a folder truncated to the scan depth below the source root.</p>
+    <dl id="method"></dl>
+    <p>No co-change analysis: the clones are shallow, so <span class="mono">hidden-coupling</span> never appears here. Imports are not semantics: dependency injection, event buses, string lookups, reflection and dynamic imports without static strings are invisible to the graph. Findings are moves with evidence for a person to judge, not verdicts. The repositories are well-known examples chosen for their size and layout; these reports are reading aids, not endorsements or criticism of the projects.</p>
+  </section>
+  <div id="lists"></div>
+  <footer id="footer"></footer>
+</main>
+<script type="application/json" id="data">{{INDEX}}</script>
+<script>
+"use strict";
+const index = JSON.parse(document.getElementById("data").textContent);
+const $ = id => document.getElementById(id);
+
+/* Every piece of index text reaches the page through textContent, never markup. */
+function el(tag, attrs, text) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+const num = x => x === null || x === undefined ? "n/a" : Number(x).toLocaleString("en-US");
+/* Only GitHub repository links and report pages beside this one become links. */
+const repoUrl = u => typeof u === "string" && /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/.test(u) ? u : null;
+const pageUrl = name => /^[a-z0-9][a-z0-9._-]*$/.test(name) ? name + ".html" : null;
+
+function term(dl, dt, dd, cls) {
+  const d = el("div");
+  d.append(el("dt", {}, dt), el("dd", cls ? { class: cls } : {}, dd));
+  dl.append(d);
+}
+
+for (const [dt, dd] of [
+  ["archgraph", `${index.archgraph.version}, commit ${String(index.archgraph.commit).slice(0, 12)}`],
+  ["collectors", index.collectors.map(c => `${c.name} ${c.version}`).join(", ") || "n/a"],
+  ["built", index.generated_at],
+]) {
+  $("method").append(el("dt", {}, dt), el("dd", {}, dd));
+}
+
+function repoItem(r) {
+  const li = el("li");
+  const row = el("div", { class: "row1" });
+  const page = r.status === "ok" ? pageUrl(r.name) : null;
+  row.append(page ? el("a", { class: "name", href: page }, r.name) : el("span", { class: "name" }, r.name));
+  const slug = String(r.repo).replace(/^https:\/\/github\.com\//, "");
+  const repo = repoUrl(r.repo);
+  row.append(repo ? el("a", { href: repo, rel: "noopener noreferrer" }, slug) : el("span", { class: "muted" }, slug));
+  /* The scanned folder at the pinned commit, when commit and path are what build.sh accepts. */
+  const commit = String(r.commit), path = String(r.path);
+  const source = repo && /^[0-9a-f]{40}$/.test(commit) && /^[\w.\/-]+$/.test(path) && !path.split("/").includes("..")
+    ? `${repo}/tree/${commit}${path === "." ? "" : "/" + path}` : null;
+  row.append(source ? el("a", { class: "mono muted", href: source, title: commit, rel: "noopener noreferrer" }, commit.slice(0, 12))
+    : el("span", { class: "mono muted", title: commit }, commit.slice(0, 12)));
+  row.append(el("span", { class: "mono muted scope" }, [r.path, ...(r.flags || [])].join(" ")));
+  li.append(row);
+  if (r.why) li.append(el("p", { class: "why" }, r.why));
+
+  if (r.status !== "ok") {
+    li.append(el("p", { class: "failed" }, r.status === "failed" ? `Failed: ${r.error || "unknown error"}` : "Not built yet."));
+    return li;
+  }
+  const s = r.stats;
+  const nums = el("dl", { class: "nums" });
+  term(nums, "files", num(s.files));
+  term(nums, "modules", num(s.modules));
+  term(nums, "imports", num(s.imports));
+  term(nums, "module cycle", s.largest_module_cycle ? `${s.largest_module_cycle} modules` : "none", s.largest_module_cycle ? "bad" : "");
+  if (s.unresolved) term(nums, "unresolved", num(s.unresolved));
+  term(nums, "scan", `${s.scan_seconds} s`);
+  li.append(nums);
+
+  const kinds = Object.entries(s.findings || {}).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  if (kinds.length) {
+    const ul = el("ul", { class: "kinds", "aria-label": "Findings by kind" });
+    for (const [kind, count] of kinds.slice(0, 6)) {
+      const k = el("li", {}, kind);
+      k.append(el("b", {}, num(count)));
+      ul.append(k);
+    }
+    li.append(ul);
+  }
+  return li;
+}
+
+for (const [lang, title] of [["typescript", "TypeScript"], ["python", "Python"]]) {
+  const repos = index.repos.filter(r => r.language === lang);
+  if (!repos.length) continue;
+  const ul = el("ul", { class: "repos" });
+  repos.forEach(r => ul.append(repoItem(r)));
+  $("lists").append(el("h2", {}, title), ul);
+}
+const ok = index.repos.filter(r => r.status === "ok").length;
+$("footer").textContent = `${ok} of ${index.repos.length} repositories built. Unresolved counts come from dependency-cruiser: imports it could not resolve, mostly npm packages that were not installed.`;
+</script>
+</body>
+</html>
