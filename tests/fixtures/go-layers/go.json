@@ -1,0 +1,32 @@
+{
+ "bound": [],
+ "edges": [
+  {
+   "from": "app/service.go",
+   "to": "domain/order.go"
+  },
+  {
+   "from": "domain/order.go",
+   "to": "adapters/postgres/repo.go"
+  }
+ ],
+ "files": [
+  {
+   "path": "adapters/postgres/repo.go",
+   "generated": false
+  },
+  {
+   "path": "app/service.go",
+   "generated": false
+  },
+  {
+   "path": "domain/order.go",
+   "generated": false
+  }
+ ],
+ "go_version": "1.27.1",
+ "modules": [
+  "."
+ ],
+ "unresolved": 0
+}

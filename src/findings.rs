@@ -91,6 +91,8 @@ struct Graph<'a> {
     /// Files that are public API, never proposed for a move: what a package.json publishes and
     /// re-exports; in Python, every module without a leading underscore below the package.
     public: HashSet<&'a str>,
+    /// Go files bound to their package by methods (`source.collector.bound_files`): never moved.
+    bound: HashSet<&'a str>,
     /// Per file: the number of other modules it imports at runtime.
     fanout: BTreeMap<&'a str, usize>,
     /// Imports from composition roots and registrars (`graph::wiring`).
@@ -115,8 +117,14 @@ impl Graph<'_> {
         let lands = self
             .rules
             .and_then(|r| r.module_of(&to))
-            .unwrap_or_else(|| modules::module_of(&to, &config.source_root, config.depth));
-        (!self.module_of.contains_key(to.as_str()) && lands == module).then(|| Move {
+            .unwrap_or_else(|| {
+                let language = self.doc.source.language;
+                modules::module_of(&to, config, language)
+            });
+        (!self.module_of.contains_key(to.as_str())
+            && lands == module
+            && !self.crosses_module(file, &to))
+        .then(|| Move {
             file: file.to_owned(),
             to,
         })
@@ -181,6 +189,12 @@ impl Graph<'_> {
         self.entries.get(module).is_some_and(|e| e.contains(file))
             || name.starts_with("index.")
             || name == "__init__.py"
+    }
+
+    /// Whether moving `file` to `to` would take it into another Go module (go.mod directory).
+    fn crosses_module(&self, file: &str, to: &str) -> bool {
+        go_module(file, &self.doc.source.collector.go_modules)
+            != go_module(to, &self.doc.source.collector.go_modules)
     }
 
     fn path_in(&self, dir: &str, name: &str) -> String {
@@ -263,6 +277,12 @@ pub fn find(doc: &Document, rules: Option<&Compiled>) -> Vec<Finding> {
             .map(|f| f.path.as_str())
             .filter(|p| python_public(p, &doc.config.source_root))
             .collect(),
+        Language::Go => doc
+            .files
+            .iter()
+            .map(|f| f.path.as_str())
+            .filter(|p| go_public(p, &doc.source.collector.main_packages))
+            .collect(),
     };
     let wiring = graph::wiring(|p| module_of[p], &doc.edges);
     let consumed: Vec<Edge> = doc
@@ -292,6 +312,13 @@ pub fn find(doc: &Document, rules: Option<&Compiled>) -> Vec<Finding> {
         offered,
         public,
         consuming: modules::attribute(&consumed, &barrels),
+        bound: doc
+            .source
+            .collector
+            .bound_files
+            .iter()
+            .map(String::as_str)
+            .collect(),
         fanout: {
             let mut into: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
             for e in doc.edges.iter().filter(|e| e.kind.is_runtime()) {
@@ -318,7 +345,11 @@ pub fn find(doc: &Document, rules: Option<&Compiled>) -> Vec<Finding> {
     internals_reach(&g, &mut findings);
     hidden_coupling(&g, &mut findings);
     unstable_dependency(&g, &mut findings);
-    seam(&g, &mut findings);
+    // Go: clusters of files split packages, which Go cannot do, and clusters of packages are
+    // compared with folders that are the packages themselves: no seam.
+    if doc.source.language != Language::Go {
+        seam(&g, &mut findings);
+    }
     let modules = doc.modules.len();
     if doc.files.len() < SMALL_FILES || modules < SMALL_MODULES {
         let evidence = Evidence::SmallRepo {
@@ -419,7 +450,7 @@ fn sink_split(g: &Graph, out: &mut Vec<Finding>) {
                 // folders named by kind.
                 [only] if !(kind_folder(sink) && kind_folder(only)) => files
                     .iter()
-                    .filter(|f| !g.public.contains(f.as_str()))
+                    .filter(|f| !g.public.contains(f.as_str()) && !g.bound.contains(f.as_str()))
                     .filter_map(|f| g.move_into(f, only))
                     .collect(),
                 _ => Vec::new(),
@@ -505,9 +536,16 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
         .map(|m| (m.id.as_str(), m.files))
         .collect();
     for file in &g.doc.files {
-        // A package's __init__.py cannot move without the package, and moving a module's only
-        // file just renames the module.
-        if file.barrel || file.path.ends_with("__init__.py") || sizes[file.module.as_str()] == 1 {
+        // A package's __init__.py cannot move without the package, nor can a Go file bound to its
+        // package by methods, and moving a module's only file just renames the module.
+        // In Go a public file (outside internal/, not a command) may be imported by other
+        // modules: moving it to another package would break them.
+        if file.barrel
+            || file.path.ends_with("__init__.py")
+            || g.bound.contains(file.path.as_str())
+            || (g.doc.source.language == Language::Go && g.public.contains(file.path.as_str()))
+            || sizes[file.module.as_str()] == 1
+        {
             continue;
         }
         let (path, module) = (file.path.as_str(), file.module.as_str());
@@ -538,6 +576,22 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
         else {
             continue;
         };
+        // In Go a file working with its own package is a piece of the library the package offers,
+        // whoever uses it now: it is misplaced only when it uses the target itself or nothing
+        // of its own package.
+        if g.doc.source.language == Language::Go {
+            let dir = |p: &str| p.rsplit_once('/').map_or("", |(d, _)| d).to_owned();
+            let uses_target = g
+                .pairs
+                .iter()
+                .any(|(a, b)| a == path && g.module_of[b.as_str()] == target);
+            let in_package = g.pairs.iter().any(|(a, b)| {
+                (a == path && dir(b) == dir(path)) || (b == path && dir(a) == dir(path))
+            });
+            if !uses_target && in_package {
+                continue;
+            }
+        }
         // Between a module and its own subfolder the move only changes the folder's depth.
         // A leaf utility (it imports nothing) belongs with the shared helpers, whoever uses it.
         let leaf_utility = !g.importing.contains(path)
@@ -574,6 +628,9 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
         let probe = suggested
             .clone()
             .unwrap_or_else(|| g.free_move(path, target));
+        if g.crosses_module(path, &probe.to) {
+            continue;
+        }
         let Ok(after) = simulate::apply(g.doc, g.rules, std::slice::from_ref(&probe)) else {
             continue;
         };
@@ -653,6 +710,28 @@ fn python_public(path: &str, source_root: &str) -> bool {
         .split('/')
         .filter(|s| !s.is_empty())
         .all(|s| !s.starts_with('_'))
+}
+
+/// Whether a Go file is public API: no `internal` directory on its path (Go's own rule for what
+/// other modules may import) and not in a `package main` (a command, which nothing imports).
+fn go_public(path: &str, main_packages: &[String]) -> bool {
+    let dir = path.rsplit_once('/').map_or(".", |(d, _)| d);
+    !dir.split('/').any(|s| s == "internal") && !main_packages.iter().any(|m| m == dir)
+}
+
+/// The Go module (deepest of `go_modules`, go.mod directories) holding `path`; `None` outside
+/// all of them, and for every path when there are none (other languages).
+fn go_module<'m>(path: &str, go_modules: &'m [String]) -> Option<&'m str> {
+    go_modules
+        .iter()
+        .filter(|m| {
+            *m == "."
+                || path
+                    .strip_prefix(m.as_str())
+                    .is_some_and(|r| r.starts_with('/'))
+        })
+        .max_by_key(|m| if *m == "." { 0 } else { m.len() })
+        .map(String::as_str)
 }
 
 /// Whether module `id`'s last path segment names a kind of code, in any case, singular or plural.
@@ -992,9 +1071,10 @@ fn round(x: f64) -> f64 {
 /// two-way pairs removed wins, among moves that add no new cycle; a move with none is dropped.
 pub fn place_registrars(doc: &mut Document, rules: Option<&Compiled>) {
     let module_of = |path: &str| {
-        rules
-            .and_then(|r| r.module_of(path))
-            .unwrap_or_else(|| modules::module_of(path, &doc.config.source_root, doc.config.depth))
+        rules.and_then(|r| r.module_of(path)).unwrap_or_else(|| {
+            let (config, language) = (&doc.config, doc.source.language);
+            modules::module_of(path, config, language)
+        })
     };
     let exists: HashSet<&str> = doc.files.iter().map(|f| f.path.as_str()).collect();
     let modules: HashSet<&str> = doc.modules.iter().map(|m| m.id.as_str()).collect();
@@ -1014,10 +1094,20 @@ pub fn place_registrars(doc: &mut Document, rules: Option<&Compiled>) {
     };
     let before_pairs = pairs(doc);
     let before_cycles = module_cycles(doc);
+    let (bound, go_modules) = (
+        &doc.source.collector.bound_files,
+        &doc.source.collector.go_modules,
+    );
+    let other_module =
+        |file: &str, to: &str| go_module(file, go_modules) != go_module(to, go_modules);
     let mut placed: Vec<Vec<RegistrarMove>> = Vec::new();
     for c in &doc.cycles {
         let mut kept = Vec::new();
-        for r in &c.registrar_moves {
+        for r in c
+            .registrar_moves
+            .iter()
+            .filter(|r| !bound.contains(&r.file))
+        {
             let (dir, name) = r.file.rsplit_once('/').unwrap_or(("", &r.file));
             let stem = name.split('.').next().unwrap_or(name);
             let folder = kebab(stem);
@@ -1036,6 +1126,7 @@ pub fn place_registrars(doc: &mut Document, rules: Option<&Compiled>) {
                 if lands != r.module
                     && !modules.contains(lands.as_str())
                     && !exists.contains(to.as_str())
+                    && !other_module(&r.file, &to)
                 {
                     candidates.push(to);
                     break;
@@ -1049,7 +1140,10 @@ pub fn place_registrars(doc: &mut Document, rules: Option<&Compiled>) {
                 .collect();
             if let [only] = importers.into_iter().collect::<Vec<_>>().as_slice() {
                 let to = join(only.rsplit_once('/').map_or("", |(d, _)| d), name);
-                if module_of(&to) != r.module && !exists.contains(to.as_str()) {
+                if module_of(&to) != r.module
+                    && !exists.contains(to.as_str())
+                    && !other_module(&r.file, &to)
+                {
                     candidates.push(to);
                 }
             }
@@ -1074,10 +1168,18 @@ pub fn place_registrars(doc: &mut Document, rules: Option<&Compiled>) {
                     continue;
                 }
                 let removed = before_pairs - pairs(&after);
-                let cycle_after = module_cycles(&after)
-                    .iter()
-                    .find(|m| m.contains(&r.module))
-                    .map_or(0, BTreeSet::len);
+                // The registrar's module's cycle (0: it left every cycle); when the move empties
+                // that module, the largest cycle the other members are left in.
+                let after_cycles = module_cycles(&after);
+                let cycle_after = if after.modules.iter().any(|m| m.id == r.module) {
+                    after_cycles.iter().find(|m| m.contains(&r.module))
+                } else {
+                    after_cycles
+                        .iter()
+                        .filter(|m| c.members.iter().any(|x| m.contains(x)))
+                        .max_by_key(|m| m.len())
+                }
+                .map_or(0, BTreeSet::len);
                 if best
                     .as_ref()
                     .is_none_or(|b| removed > b.pairs_removed.unwrap_or(0))
@@ -1137,7 +1239,7 @@ fn kebab(stem: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::python_public;
+    use super::{go_public, python_public};
 
     #[test]
     fn kebab_starts_a_word_at_each_capital_run() {
@@ -1162,6 +1264,22 @@ mod tests {
             ("django/utils/_os.py", false),
         ] {
             assert_eq!(python_public(path, "django"), public, "{path}");
+        }
+    }
+
+    #[test]
+    fn go_public_is_every_file_outside_internal_folders_and_commands() {
+        let main = [".".to_owned(), "cmd/tool".to_owned()];
+        for (path, public) in [
+            ("store/db.go", true),
+            ("internal/db.go", false),
+            ("store/internal/x/db.go", false),
+            ("internals/db.go", true),
+            ("cmd/tool/main.go", false),
+            ("cmd/tool/sub/x.go", true),
+            ("main.go", false),
+        ] {
+            assert_eq!(go_public(path, &main), public, "{path}");
         }
     }
 }

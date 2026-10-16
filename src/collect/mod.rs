@@ -1,6 +1,7 @@
 //! Collectors turn a tool's output into files and file edges inside the scanned root.
 
 pub mod depcruise;
+pub mod go;
 pub mod grimp;
 
 use std::collections::HashSet;
@@ -50,6 +51,15 @@ pub const TEST_EXCLUDES: &[&str] = &[
     "**/conftest.py",
     "**/tests/**",
 ];
+
+/// Go's generated code by name, appended to the default excludes for Go scans only. The helper
+/// also marks every file with a `Code generated ... DO NOT EDIT.` header.
+pub const GO_EXCLUDES: &[&str] = &["**/*.pb.go", "**/*.pb.gw.go", "**/zz_generated*.go"];
+
+pub const GO_TEST_EXCLUDES: &[&str] = &["**/*_test.go"];
+
+/// Files a root marker makes count for Go in language detection.
+const GO_MARKERS: &[&str] = &["go.mod", "go.work"];
 
 impl RawGraph {
     /// Drops files under `OUTPUT_DIRS` that git ignores in `root`'s repository (nothing outside
@@ -157,7 +167,9 @@ pub fn join(dir: &str, rest: &str) -> String {
     }
 }
 
-/// The language with more source files under `source_dir`, after the default excludes.
+/// The language with the most source files after the default excludes: TypeScript and Python
+/// under `source_dir`, Go under the root, and Go only when the root has a `go.mod` or `go.work`.
+/// A tie keeps TypeScript, then Python, then Go.
 // ponytail: hidden directories and node_modules are not descended; add a flag if a repository
 // keeps sources in a dot-directory.
 pub fn detect_language(root: &Path, source_dir: &str) -> Result<Language> {
@@ -195,12 +207,41 @@ pub fn detect_language(root: &Path, source_dir: &str) -> Result<Language> {
             }
         }
     }
-    match (ts, py) {
-        (0, 0) => bail!(
-            "no .ts/.js or .py files under {}; pass --language",
+    let go = if GO_MARKERS.iter().any(|m| root.join(m).is_file()) {
+        count_go(root)?
+    } else {
+        0
+    };
+    match (ts, py, go) {
+        (0, 0, 0) => bail!(
+            "no .ts/.js or .py files under {} (nor .go files beside a go.mod); pass --language",
             root.join(source_dir).display()
         ),
+        _ if go > ts && go > py => Ok(Language::Go),
         _ if py > ts => Ok(Language::Python),
         _ => Ok(Language::Typescript),
     }
+}
+
+/// `.go` files under `root` that are not tests, outside what the go command skips (`vendor`,
+/// `testdata`, names starting with `.` or `_`) and node_modules.
+fn count_go(root: &Path) -> Result<usize> {
+    let mut count = 0;
+    let mut dirs = vec![root.to_path_buf()];
+    while let Some(dir) = dirs.pop() {
+        for entry in fs::read_dir(&dir).with_context(|| format!("reading {}", dir.display()))? {
+            let entry = entry?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if entry.file_type()?.is_dir() {
+                if !name.starts_with(['.', '_'])
+                    && !["vendor", "testdata", "node_modules"].contains(&name.as_str())
+                {
+                    dirs.push(entry.path());
+                }
+            } else if name.ends_with(".go") && !name.ends_with("_test.go") {
+                count += 1;
+            }
+        }
+    }
+    Ok(count)
 }

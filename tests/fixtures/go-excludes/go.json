@@ -1,0 +1,149 @@
+{
+ "bound": [
+  {
+   "from": "app/app.go",
+   "to": "app/wire_gen.go"
+  },
+  {
+   "from": "app/app_test.go",
+   "to": "app/app.go"
+  },
+  {
+   "from": "app/chain/a_linux.go",
+   "to": "app/chain/b_windows.go"
+  },
+  {
+   "from": "app/chain/c_darwin.go",
+   "to": "app/chain/b_windows.go"
+  },
+  {
+   "from": "app/flag.go",
+   "to": "app/probe_other.go"
+  },
+  {
+   "from": "app/flag.go",
+   "to": "app/probe_windows.go"
+  },
+  {
+   "from": "app/probe_other.go",
+   "to": "app/probe_windows.go"
+  }
+ ],
+ "edges": [
+  {
+   "from": "app/app.go",
+   "to": "app/wire_gen.go"
+  },
+  {
+   "from": "app/app.go",
+   "to": "lib/lib.go"
+  },
+  {
+   "from": "app/app_test.go",
+   "to": "app/app.go"
+  },
+  {
+   "from": "app/apptesting/fake.go",
+   "to": "app/app.go"
+  },
+  {
+   "from": "app/cmd/cmd.go",
+   "to": "app/finder.go"
+  },
+  {
+   "from": "app/ext_test.go",
+   "to": "app/app.go"
+  },
+  {
+   "from": "app/flag.go",
+   "to": "app/probe_other.go"
+  },
+  {
+   "from": "app/flag.go",
+   "to": "app/probe_windows.go"
+  },
+  {
+   "from": "app/testhelp.go",
+   "to": "app/app.go"
+  }
+ ],
+ "files": [
+  {
+   "path": "app/app.go",
+   "generated": false
+  },
+  {
+   "path": "app/app.pb.go",
+   "generated": true
+  },
+  {
+   "path": "app/app_test.go",
+   "generated": false
+  },
+  {
+   "path": "app/apptesting/fake.go",
+   "generated": false,
+   "test_support": true
+  },
+  {
+   "path": "app/chain/a_linux.go",
+   "generated": false
+  },
+  {
+   "path": "app/chain/b_windows.go",
+   "generated": false
+  },
+  {
+   "path": "app/chain/c_darwin.go",
+   "generated": false
+  },
+  {
+   "path": "app/check/check.go",
+   "generated": false,
+   "test_support": true
+  },
+  {
+   "path": "app/cmd/cmd.go",
+   "generated": false
+  },
+  {
+   "path": "app/ext_test.go",
+   "generated": false
+  },
+  {
+   "path": "app/finder.go",
+   "generated": false
+  },
+  {
+   "path": "app/flag.go",
+   "generated": false
+  },
+  {
+   "path": "app/probe_other.go",
+   "generated": false
+  },
+  {
+   "path": "app/probe_windows.go",
+   "generated": false
+  },
+  {
+   "path": "app/testhelp.go",
+   "generated": false,
+   "test_support": true
+  },
+  {
+   "path": "app/wire_gen.go",
+   "generated": true
+  },
+  {
+   "path": "lib/lib.go",
+   "generated": false
+  }
+ ],
+ "go_version": "1.27.1",
+ "modules": [
+  ".",
+  "lib"
+ ],
+ "unresolved": 0
+}

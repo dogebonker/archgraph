@@ -6,7 +6,9 @@ use std::process::{Command, ExitCode};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, bail};
-use archgraph::collect::{self, DEFAULT_EXCLUDES, TEST_EXCLUDES, depcruise, grimp};
+use archgraph::collect::{
+    self, DEFAULT_EXCLUDES, GO_EXCLUDES, GO_TEST_EXCLUDES, TEST_EXCLUDES, depcruise, go, grimp,
+};
 use archgraph::model::{
     Config, CycleLevel, Document, Git, Language, SCHEMA, ScanInput, Source, Verdict,
 };
@@ -62,9 +64,10 @@ struct Report {
 /// What `scan` and `report` share.
 #[derive(Args)]
 struct ScanOpts {
-    /// Directory segments below the source root that form a module
-    #[arg(long, default_value_t = 2)]
-    depth: usize,
+    /// Directory segments below the source root that form a module [default: 2; Go: each
+    /// package is a module]
+    #[arg(long)]
+    depth: Option<usize>,
     /// Additional glob to exclude (repeatable)
     #[arg(long)]
     exclude: Vec<String>,
@@ -89,6 +92,9 @@ struct ScanOpts {
     /// Python package to scan (default: the single package under the source root)
     #[arg(long)]
     package: Option<String>,
+    /// Go toolchain (1.21 or later) that runs the Go helper
+    #[arg(long, default_value = "go")]
+    go: String,
     /// layout.yaml with modules, layers, public entries and forbid/allow rules
     #[arg(long)]
     rules: Option<PathBuf>,
@@ -209,9 +215,19 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
     };
     let mut excludes: Vec<String> = Vec::new();
     if !args.no_default_excludes {
-        excludes.extend(DEFAULT_EXCLUDES.iter().map(|g| g.to_string()));
+        let (generated, tests): (&[&str], &[&str]) = if language == Language::Go {
+            (GO_EXCLUDES, GO_TEST_EXCLUDES)
+        } else {
+            (&[], &[])
+        };
+        excludes.extend(
+            DEFAULT_EXCLUDES
+                .iter()
+                .chain(generated)
+                .map(|g| g.to_string()),
+        );
         if !args.include_tests {
-            excludes.extend(TEST_EXCLUDES.iter().map(|g| g.to_string()));
+            excludes.extend(TEST_EXCLUDES.iter().chain(tests).map(|g| g.to_string()));
         }
     }
     excludes.extend(args.exclude.iter().cloned());
@@ -222,6 +238,8 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         .map(|p| fs::read(p).with_context(|| format!("reading {}", p.display())))
         .transpose()?;
     let excludes_set = collect::globset(&excludes)?;
+    // Go: files that cannot be split across packages, in pairs.
+    let mut bound = Vec::new();
     let (raw, source_root) = match language {
         Language::Typescript => {
             let (json, type_marking) = match input {
@@ -243,14 +261,42 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
                 collect::join(source_dir, &package),
             )
         }
+        // Package paths are what the go command reports, from the scan root, `src/` or not.
+        Language::Go => {
+            let json = match input {
+                Some(json) => json,
+                None => {
+                    let (dirs, warnings) = go::module_dirs(root, &excludes_set)?;
+                    for w in warnings {
+                        eprintln!("warning: {w}");
+                    }
+                    if dirs.is_empty() {
+                        bail!("no go.mod with a module line under {}", root.display());
+                    }
+                    go::run(root, &args.go, &dirs)?
+                }
+            };
+            let keep_tests = args.include_tests || args.no_default_excludes;
+            let parsed = go::parse(&json, args.no_default_excludes, keep_tests)?;
+            if !parsed.left_out.is_empty() {
+                eprintln!(
+                    "warning: left out as test support (--include-tests keeps them): {}",
+                    parsed.left_out.join(", ")
+                );
+            }
+            bound = parsed.bound;
+            (parsed.raw, ".".to_owned())
+        }
     };
     let mut raw = raw.exclude(&excludes_set);
     if !args.no_default_excludes {
         raw = raw.exclude_ignored_output(root)?;
     }
+    raw.collector.bound_files = go::bound_files(&bound, &raw.files);
     if let Some(n) = raw.collector.unresolved.filter(|&n| n > 0) {
         eprintln!(
-            "warning: {n} unresolved import(s) reported by dependency-cruiser; their edges are missing"
+            "warning: {n} unresolved import(s) reported by {}; their edges are missing",
+            raw.collector.name
         );
     }
 
@@ -260,8 +306,12 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         git: git(root),
         generated_at: now_utc(),
     };
+    // Go packages are the language's own modules; merging them by folder invents cycles Go
+    // forbids.
+    let package_modules = language == Language::Go && args.depth.is_none();
     let config = Config {
-        depth: args.depth,
+        depth: args.depth.unwrap_or(if package_modules { 0 } else { 2 }),
+        package_modules,
         source_root,
         excludes,
         include_tests: args.include_tests || args.no_default_excludes,
@@ -273,7 +323,7 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         .transpose()?;
     let entries = match language {
         Language::Typescript => depcruise::package_entries(root, &raw.files),
-        Language::Python => Vec::new(),
+        Language::Python | Language::Go => Vec::new(),
     };
     archgraph::analyze(source, config, raw.files, raw.edges, entries, cochange)
 }
@@ -623,9 +673,7 @@ fn consistent(input: &ScanInput) -> Result<()> {
         let module = rules
             .as_ref()
             .and_then(|r| r.module_of(&f.path))
-            .unwrap_or_else(|| {
-                modules::module_of(&f.path, &input.config.source_root, input.config.depth)
-            });
+            .unwrap_or_else(|| modules::module_of(&f.path, &input.config, input.source.language));
         if f.module != module {
             bail!(
                 "{} has module `{}`, its config gives `{module}`",

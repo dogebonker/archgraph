@@ -5,7 +5,7 @@
 #
 #   INPUT_PATH INPUT_RULES INPUT_DEPTH INPUT_LANGUAGE INPUT_PACKAGE INPUT_EXCLUDE INPUT_FAIL_ON
 #   INPUT_FAIL_ON_RULES_CHANGE INPUT_VERSION INPUT_BINARY INPUT_BASE_REF   as in action.yml
-#   ARCHGRAPH_DEPCRUISE, ARCHGRAPH_PYTHON   a collector to use instead of installing one
+#   ARCHGRAPH_DEPCRUISE, ARCHGRAPH_PYTHON, ARCHGRAPH_GO   a collector to use instead of installing one
 #
 # Without a base ref: `report` on INPUT_PATH, its summary in the job summary, exit 1 when any
 # import is forbidden. With one: `report` on HEAD, a scan of the base commit (in a worktree) with
@@ -63,7 +63,11 @@ fi
 "$archgraph" --version
 
 # Options shared by the HEAD report and the base scan.
-opts=(--depth "${INPUT_DEPTH:-2}")
+# Empty when nothing is set: expanded as ${opts[@]+...} for bash 3.2 under set -u.
+opts=()
+if [[ -n ${INPUT_DEPTH:-} ]]; then
+  opts+=(--depth "$INPUT_DEPTH")
+fi
 rules=${INPUT_RULES:-}
 if [[ -z $rules && -f $path/layout.yaml ]]; then
   rules=$path/layout.yaml
@@ -133,9 +137,39 @@ if [[ $lang == python ]] || { [[ -z $lang ]] && has pyproject.toml setup.py setu
   opts+=(--python "$python")
 fi
 
+if [[ $lang == go ]] || { [[ -z $lang ]] && has go.mod go.work; }; then
+  go=${ARCHGRAPH_GO:-}
+  if [[ -z $go ]]; then
+    # Go 1.27.1 from go.dev, checked against these SHA-256 sums. archgraph runs it with
+    # GOTOOLCHAIN=local, GOPROXY=off, GOWORK=off, CGO_ENABLED=0 and GOFLAGS=-mod=readonly.
+    case $(uname -s)-$(uname -m) in
+      Linux-x86_64) platform=linux-amd64 sum=63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445 ;;
+      Linux-aarch64 | Linux-arm64) platform=linux-arm64 sum=3450b45a3f9ee8568792736a5c5e70a1f2e9b36c35a8f74958c03e51d7d92bec ;;
+      Darwin-x86_64) platform=darwin-amd64 sum=8f8f52c6649542cf027bbc9b9c68d1ec042f9f34808a40413f0b8b3f66f3caa4 ;;
+      Darwin-arm64) platform=darwin-arm64 sum=ee215d57e0ec269c60cc9ceca68e6bda321ba9ee5afe24f4b0988703c2d87d12 ;;
+      *) die "no Go 1.27.1 download for $(uname -s) $(uname -m): set ARCHGRAPH_GO" ;;
+    esac
+    goroot=$RUNNER_TEMP/archgraph-go
+    rm -rf "$goroot"
+    mkdir -p "$goroot"
+    curl --proto '=https' --tlsv1.2 -fsSL -o "$goroot/go.tar.gz" "https://go.dev/dl/go1.27.1.$platform.tar.gz" ||
+      die "downloading Go 1.27.1 failed"
+    if command -v sha256sum >/dev/null 2>&1; then
+      got=$(sha256sum "$goroot/go.tar.gz" | cut -d ' ' -f 1)
+    else
+      got=$(shasum -a 256 "$goroot/go.tar.gz" | cut -d ' ' -f 1)
+    fi
+    [[ $got == "$sum" ]] || die "Go 1.27.1 download has SHA-256 $got, expected $sum; not using it"
+    tar -xzf "$goroot/go.tar.gz" -C "$goroot"
+    rm -f "$goroot/go.tar.gz"
+    go=$goroot/go/bin/go
+  fi
+  opts+=(--go "$go")
+fi
+
 head=$work/head
 status=0
-"$archgraph" report "$path" "${opts[@]}" --out-dir "$head" >"$work/report.txt" || status=$?
+"$archgraph" report "$path" ${opts[@]+"${opts[@]}"} --out-dir "$head" >"$work/report.txt" || status=$?
 cat "$work/report.txt"
 ((status <= 1)) || exit "$status"
 {
@@ -172,7 +206,7 @@ worktree=$RUNNER_TEMP/base
 git -C "$repo" worktree remove --force "$worktree" >/dev/null 2>&1 || rm -rf "$worktree"
 git -C "$repo" worktree add --force --detach "$worktree" "$base"
 worktree_added=1
-"$archgraph" scan "$worktree${prefix:+/${prefix%/}}" "${opts[@]}" -o "$work/base.json" ||
+"$archgraph" scan "$worktree${prefix:+/${prefix%/}}" ${opts[@]+"${opts[@]}"} -o "$work/base.json" ||
   die "scanning the base commit $base failed"
 
 "$archgraph" diff "$work/base.json" "$head/archgraph.json" >"$work/diff.json"

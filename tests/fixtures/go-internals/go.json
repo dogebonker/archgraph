@@ -1,0 +1,36 @@
+{
+ "bound": [],
+ "edges": [
+  {
+   "from": "billing/billing.go",
+   "to": "billing/ledger/ledger.go"
+  },
+  {
+   "from": "orders/checkout.go",
+   "to": "billing/billing.go"
+  },
+  {
+   "from": "orders/checkout.go",
+   "to": "billing/ledger/ledger.go"
+  }
+ ],
+ "files": [
+  {
+   "path": "billing/billing.go",
+   "generated": false
+  },
+  {
+   "path": "billing/ledger/ledger.go",
+   "generated": false
+  },
+  {
+   "path": "orders/checkout.go",
+   "generated": false
+  }
+ ],
+ "go_version": "1.27.1",
+ "modules": [
+  "."
+ ],
+ "unresolved": 0
+}

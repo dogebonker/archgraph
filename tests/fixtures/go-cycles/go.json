@@ -1,0 +1,53 @@
+{
+ "bound": [
+  {
+   "from": "api/handler/handler.go",
+   "to": "api/handler/route.go"
+  }
+ ],
+ "edges": [
+  {
+   "from": "api/handler/handler.go",
+   "to": "api/handler/route.go"
+  },
+  {
+   "from": "api/handler/handler.go",
+   "to": "store/store.go"
+  },
+  {
+   "from": "api/handler/route.go",
+   "to": "api/handler/handler.go"
+  },
+  {
+   "from": "store/sql/sql.go",
+   "to": "api/types/types.go"
+  }
+ ],
+ "files": [
+  {
+   "path": "api/handler/handler.go",
+   "generated": false
+  },
+  {
+   "path": "api/handler/route.go",
+   "generated": false
+  },
+  {
+   "path": "api/types/types.go",
+   "generated": false
+  },
+  {
+   "path": "store/sql/sql.go",
+   "generated": false
+  },
+  {
+   "path": "store/store.go",
+   "generated": false
+  }
+ ],
+ "go_version": "1.27.1",
+ "modules": [
+  "."
+ ],
+ "unresolved": 0
+}

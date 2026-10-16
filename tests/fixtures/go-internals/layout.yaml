@@ -1,0 +1,3 @@
+version: 1
+public:
+  - { module: "billing/**", entries: ["billing/*.go"] }

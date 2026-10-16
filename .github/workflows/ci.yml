@@ -33,6 +33,10 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.27.1
+          cache: false
       - name: Install the pinned collectors
         run: |
           npm install --prefix "$RUNNER_TEMP/tools" dependency-cruiser@18.4.0 typescript@6.0.3
@@ -160,3 +164,30 @@ jobs:
         env:
           OUTCOME: ${{ steps.archgraph.outcome }}
           NEW_FORBIDDEN: ${{ steps.archgraph.outputs.new-forbidden }}
+
+  action-go:
+    needs: binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: archgraph-binary
+          path: ${{ runner.temp }}/bin
+      - run: chmod +x "$RUNNER_TEMP/bin/archgraph" && cp -R tests/fixtures/go-layers "$RUNNER_TEMP/layers"
+      # No setup-go: the action installs its pinned Go because the path has a go.mod.
+      - id: archgraph
+        uses: ./
+        continue-on-error: true
+        with:
+          path: ${{ runner.temp }}/layers
+          binary: ${{ runner.temp }}/bin/archgraph
+      - name: The step failed on the fixture's forbidden import
+        run: |
+          echo "outcome=$OUTCOME forbidden=$FORBIDDEN"
+          [ "$OUTCOME" = failure ] && [ "$FORBIDDEN" = 1 ]
+        env:
+          OUTCOME: ${{ steps.archgraph.outcome }}
+          FORBIDDEN: ${{ steps.archgraph.outputs.forbidden }}

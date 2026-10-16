@@ -1,0 +1,222 @@
+{
+ "bound": [
+  {
+   "from": "server/handle.go",
+   "to": "server/server.go"
+  },
+  {
+   "from": "server/server.go",
+   "to": "server/base.go"
+  },
+  {
+   "from": "store/open.go",
+   "to": "store/db.go"
+  },
+  {
+   "from": "store/size.go",
+   "to": "store/native.go"
+  },
+  {
+   "from": "store/size.go",
+   "to": "store/sys_linux.go"
+  },
+  {
+   "from": "store/size.go",
+   "to": "store/sys_windows.go"
+  },
+  {
+   "from": "store/sys_linux.go",
+   "to": "store/sys_windows.go"
+  }
+ ],
+ "edges": [
+  {
+   "from": "cmd/tool/main.go",
+   "to": "server/base.go"
+  },
+  {
+   "from": "cmd/tool/main.go",
+   "to": "server/handle.go"
+  },
+  {
+   "from": "cmd/tool/main.go",
+   "to": "server/server.go"
+  },
+  {
+   "from": "kinds/alias.go",
+   "to": "kinds/impl.go"
+  },
+  {
+   "from": "kinds/emb.go",
+   "to": "kinds/iface.go"
+  },
+  {
+   "from": "lost/lost.go",
+   "to": "wrap/wrap.go"
+  },
+  {
+   "from": "plugin/plugin.go",
+   "to": "blank/beta.go"
+  },
+  {
+   "from": "plugin/plugin.go",
+   "to": "store/doc.go"
+  },
+  {
+   "from": "server/handle.go",
+   "to": "server/server.go"
+  },
+  {
+   "from": "server/handle.go",
+   "to": "store/db.go"
+  },
+  {
+   "from": "server/server.go",
+   "to": "server/base.go"
+  },
+  {
+   "from": "server/server.go",
+   "to": "store/db.go"
+  },
+  {
+   "from": "server/server.go",
+   "to": "store/open.go"
+  },
+  {
+   "from": "store/open.go",
+   "to": "store/db.go"
+  },
+  {
+   "from": "store/size.go",
+   "to": "store/native.go"
+  },
+  {
+   "from": "store/size.go",
+   "to": "store/sys_linux.go"
+  },
+  {
+   "from": "store/size.go",
+   "to": "store/sys_windows.go"
+  },
+  {
+   "from": "use/use.go",
+   "to": "kinds/alias.go"
+  },
+  {
+   "from": "use/use.go",
+   "to": "kinds/emb.go"
+  },
+  {
+   "from": "use/use.go",
+   "to": "kinds/gen.go"
+  },
+  {
+   "from": "use/use.go",
+   "to": "kinds/iface.go"
+  },
+  {
+   "from": "use/use_test.go",
+   "to": "use/use.go"
+  }
+ ],
+ "files": [
+  {
+   "path": "blank/alpha_test.go",
+   "generated": false
+  },
+  {
+   "path": "blank/beta.go",
+   "generated": false
+  },
+  {
+   "path": "cmd/tool/main.go",
+   "generated": false,
+   "main": true
+  },
+  {
+   "path": "kinds/alias.go",
+   "generated": false
+  },
+  {
+   "path": "kinds/emb.go",
+   "generated": false
+  },
+  {
+   "path": "kinds/gen.go",
+   "generated": false
+  },
+  {
+   "path": "kinds/iface.go",
+   "generated": false
+  },
+  {
+   "path": "kinds/impl.go",
+   "generated": false
+  },
+  {
+   "path": "lost/lost.go",
+   "generated": false
+  },
+  {
+   "path": "plugin/plugin.go",
+   "generated": false
+  },
+  {
+   "path": "server/base.go",
+   "generated": false
+  },
+  {
+   "path": "server/handle.go",
+   "generated": false
+  },
+  {
+   "path": "server/server.go",
+   "generated": false
+  },
+  {
+   "path": "store/db.go",
+   "generated": false
+  },
+  {
+   "path": "store/doc.go",
+   "generated": false
+  },
+  {
+   "path": "store/native.go",
+   "generated": false
+  },
+  {
+   "path": "store/open.go",
+   "generated": false
+  },
+  {
+   "path": "store/size.go",
+   "generated": false
+  },
+  {
+   "path": "store/sys_linux.go",
+   "generated": false
+  },
+  {
+   "path": "store/sys_windows.go",
+   "generated": false
+  },
+  {
+   "path": "use/use.go",
+   "generated": false
+  },
+  {
+   "path": "use/use_test.go",
+   "generated": false
+  },
+  {
+   "path": "wrap/wrap.go",
+   "generated": false
+  }
+ ],
+ "go_version": "1.27.1",
+ "modules": [
+  "."
+ ],
+ "unresolved": 2
+}

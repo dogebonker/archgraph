@@ -103,12 +103,15 @@ pub fn module_edges(module_of: &BTreeMap<String, String>, edges: &[Edge]) -> Vec
 /// two-way pairs count only those too. A re-export by one of `entries` (package entries, the
 /// source root's index, a package `__init__.py` importing its own submodules) is public API: no
 /// break removes it unless nothing else breaks the cycle, and a two-way side holding one comes
-/// last. A re-export by another of the `barrels` is internal: the side to cut first.
+/// last. A re-export by another of the `barrels` is internal: the side to cut first. With
+/// `directory_units` (Go, where a directory's files are one package, compiled as a unit) files of
+/// one directory form no file cycle with each other.
 pub fn cycles(
     module_of: &BTreeMap<String, String>,
     edges: &[Edge],
     entries: &BTreeSet<String>,
     barrels: &BTreeSet<String>,
+    directory_units: bool,
 ) -> Vec<Cycle> {
     let wiring = wiring(|p| module_of[p].as_str(), edges);
     // A file nobody imports is an entry point build config names, and an index is its module's
@@ -231,9 +234,13 @@ pub fn cycles(
         });
     }
 
+    fn dir(p: &str) -> &str {
+        p.rsplit_once('/').map_or("", |(d, _)| d)
+    }
     let weighted: Vec<_> = edges
         .iter()
         .filter(|e| e.from != e.to && module_of[&e.from] == module_of[&e.to])
+        .filter(|e| !directory_units || dir(&e.from) != dir(&e.to))
         .map(|e| {
             (
                 e.from.as_str(),

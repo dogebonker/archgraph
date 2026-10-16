@@ -64,6 +64,7 @@ pub struct Source {
 pub enum Language {
     Typescript,
     Python,
+    Go,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,6 +79,20 @@ pub struct Collector {
     /// without `import type`) from value imports: they are `static`. Absent otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub type_marking: Option<String>,
+    /// Go: the directories of `package main` packages (`.` for the root), sorted. Their files
+    /// are commands, never public API. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub main_packages: Vec<String>,
+    /// Go: files that cannot leave their package and still compile, sorted: a file declaring a
+    /// method of a type declared in another file, or using an unexported name another file
+    /// declares, and that other file, when both are scanned. None of them is proposed for a
+    /// move. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bound_files: Vec<String>,
+    /// Go: the directories holding a go.mod (`.` for the root), sorted. No move is proposed
+    /// from one Go module into another. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub go_modules: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,6 +104,10 @@ pub struct Git {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub depth: usize,
+    /// Go without `--depth`: every package (directory) is a module, and `depth` is unused.
+    /// Absent otherwise.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub package_modules: bool,
     pub source_root: String,
     pub excludes: Vec<String>,
     pub include_tests: bool,

@@ -38,16 +38,19 @@
           "type": "object",
           "required": ["language", "collector", "git", "generated_at"],
           "properties": {
-            "language": { "enum": ["typescript", "python"] },
+            "language": { "description": "May grow within archgraph/v1 as languages are added.", "enum": ["typescript", "python", "go"] },
             "collector": {
               "type": "object",
               "required": ["name", "version", "cruised"],
               "properties": {
-                "name": { "enum": ["dependency-cruiser", "grimp"] },
+                "name": { "description": "May grow within archgraph/v1 as collectors are added.", "enum": ["dependency-cruiser", "grimp", "go-types"] },
                 "version": { "type": ["string", "null"] },
                 "cruised": { "$ref": "#/$defs/count" },
                 "type_marking": { "description": "unavailable when dependency-cruiser could not tell imports of types only (written without import type) from value imports; they are then static. Absent otherwise.", "enum": ["unavailable"] },
-                "unresolved": { "$ref": "#/$defs/count" }
+                "unresolved": { "$ref": "#/$defs/count" },
+                "main_packages": { "description": "Go: the directories of package main packages (. for the root), sorted. Their files are commands, never public API. Absent otherwise.", "type": "array", "items": {"$ref": "#/$defs/path"} },
+                "bound_files": { "description": "Go: files that cannot leave their package and still compile, sorted: a file declaring a method of a type declared in another file, or using an unexported name another file declares, and that other file, when both are scanned. None of them is proposed for a move. Absent otherwise.", "type": "array", "items": {"$ref": "#/$defs/path"} },
+                "go_modules": { "description": "Go: the directories holding a go.mod (. for the root), sorted. No move is proposed from one Go module into another. Absent otherwise.", "type": "array", "items": {"$ref": "#/$defs/path"} }
               }
             },
             "git": {
@@ -68,6 +71,7 @@
           "required": ["depth", "source_root", "excludes", "include_tests", "rules"],
           "properties": {
             "depth": { "$ref": "#/$defs/count" },
+            "package_modules": { "description": "Go scanned without --depth: every package (directory) is a module and depth is unused. Absent otherwise.", "type": "boolean" },
             "source_root": { "$ref": "#/$defs/path" },
             "excludes": { "type": "array", "items": {"type": "string"} },
             "include_tests": { "type": "boolean" },
@@ -148,7 +152,7 @@
       "properties": {
         "from": { "$ref": "#/$defs/path" },
         "to": { "$ref": "#/$defs/path" },
-        "kind": { "description": "type is an import the compiler erases: import type, an import of types or interfaces only, or in Python one only under if TYPE_CHECKING. type-reexport is export type ... from: a re-export for barrels, erased at runtime like type. dynamic is import() or, in Python, an import only inside function bodies.", "enum": ["static", "reexport", "dynamic", "type", "type-reexport"] },
+        "kind": { "description": "type is an import the compiler erases: import type, an import of types or interfaces only, or in Python one only under if TYPE_CHECKING. type-reexport is export type ... from: a re-export for barrels, erased at runtime like type. dynamic is import() or, in Python, an import only inside function bodies. Go edges are all static: one per pair of files where the first refers to something the second declares.", "enum": ["static", "reexport", "dynamic", "type", "type-reexport"] },
         "verdict": { "enum": ["allowed", "forbidden", "unplanned", null] },
         "rule": { "type": ["string", "null"] }
       }

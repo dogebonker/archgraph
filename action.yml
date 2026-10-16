@@ -13,10 +13,10 @@ inputs:
     description: layout.yaml with the rules, relative to the workspace (default <path>/layout.yaml when it exists)
     default: ""
   depth:
-    description: Directory segments below the source root that form a module
-    default: "2"
+    description: Directory segments below the source root that form a module (default 2; Go, each package)
+    default: ""
   language:
-    description: typescript or python (default detected)
+    description: typescript, python or go (default detected)
     default: ""
   package:
     description: Python package to scan (default the single package under the source root)

@@ -3,11 +3,16 @@
 # commit, an archgraph scan of its `path`, the rendered report and a stats row in index.json, then
 # index.html from index.template.html.
 #
-#   showcase/build.sh [--only <name>] [--work <dir>] [--out <dir>] [--keep]
+#   showcase/build.sh [--only <name>] [--work <dir>] [--out <dir>] [--keep] [--compare <dir>]
 #
 #   ARCHGRAPH            archgraph binary (default: target/release/archgraph of this repository)
 #   ARCHGRAPH_DEPCRUISE  dependency-cruiser executable for TypeScript entries (required for them)
 #   ARCHGRAPH_PYTHON     Python with grimp 3.17 for Python entries (default: python3)
+#   ARCHGRAPH_GO         Go 1.27.1 for Go entries (default: go)
+#
+# --compare <dir> then compares the config, files, edges, cycles, summary and findings of every
+# scan built with <dir>/<name>.json, an earlier build's output (by another archgraph, say), and
+# exits 1 when any differs or is missing there.
 #
 # Nothing is installed into the targets. Every entry is validated first; a bad one stops the build
 # (exit 2). A failed repository is recorded in index.json and the others still run; the exit status
@@ -21,10 +26,12 @@ template=$here/index.template.html
 archgraph=${ARCHGRAPH:-$here/../target/release/archgraph}
 python=${ARCHGRAPH_PYTHON:-python3}
 depcruise=${ARCHGRAPH_DEPCRUISE:-}
+go=${ARCHGRAPH_GO:-go}
 work=${TMPDIR:-/tmp}/archgraph-showcase
 out=$here/out
 only=
 keep=
+compare=
 
 die() {
   echo "build.sh: $*" >&2
@@ -37,7 +44,8 @@ while (($#)); do
     --work) work=${2:?--work needs a directory}; shift 2 ;;
     --out) out=${2:?--out needs a directory}; shift 2 ;;
     --keep) keep=1; shift ;;
-    -h | --help) sed -n '2,15p' "$0"; exit 0 ;;
+    --compare) compare=${2:?--compare needs a directory}; shift 2 ;;
+    -h | --help) sed -n '2,19p' "$0"; exit 0 ;;
     *) die "unknown option $1" ;;
   esac
 done
@@ -130,6 +138,7 @@ build_one() {
       [[ -n $depcruise ]] || { echo "ARCHGRAPH_DEPCRUISE is not set"; return 1; }
       collector=(--depcruise "$depcruise") ;;
     python) collector=(--python "$python") ;;
+    go) collector=(--go "$go") ;;
     *) echo "unsupported language $language"; return 1 ;;
   esac
 
@@ -228,4 +237,26 @@ jq -rn --rawfile tpl "$template" --slurpfile idx "$out/index.json" \
   >"$out/index.html"
 
 echo "wrote $out/index.html" >&2
+
+# What a change to archgraph may not move: config, files, edges, cycles, summary and findings.
+# Left out: schema, kind, tool, source (collector, git, generated_at), package_entries, modules,
+# module_edges and cochange.
+if [[ -n $compare ]]; then
+  changed=0
+  while IFS= read -r name; do
+    [[ -z $only || $name == "$only" ]] || continue
+    [[ -f $out/$name.json ]] || continue
+    if [[ ! -f $compare/$name.json ]]; then
+      echo "compare: $name is missing from $compare" >&2
+      changed=1
+    elif ! cmp -s <(jq -S '{config, files, edges, cycles, summary, findings}' "$compare/$name.json") \
+      <(jq -S '{config, files, edges, cycles, summary, findings}' "$out/$name.json"); then
+      echo "compare: $name differs from $compare/$name.json" >&2
+      changed=1
+    else
+      echo "compare: $name unchanged" >&2
+    fi
+  done < <(jq -r '.[].name' "$manifest")
+  ((changed == 0)) || failed=1
+fi
 exit "$failed"

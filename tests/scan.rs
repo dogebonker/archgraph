@@ -1001,6 +1001,59 @@ fn build_output_is_excluded_only_at_the_root_or_when_git_ignores_it() {
 }
 
 #[test]
+fn a_registrar_move_that_empties_its_module_reports_the_cycle_it_leaves() {
+    // p/reg/pick.ts, alone in its module, wires five sibling modules that each import it. Moving
+    // it to p/pick/ only renames its module: the 6-module cycle stays, and cycle_after says so.
+    let mut edges = Vec::new();
+    for m in ["a", "b", "c", "d", "e"] {
+        edges.push(("p/reg/pick.ts".to_owned(), format!("p/{m}/x.ts")));
+        edges.push((format!("p/{m}/x.ts"), "p/reg/pick.ts".to_owned()));
+    }
+    let (dir, input) = synthetic("emptying-registrar", edges.len(), &edges);
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let moves = &doc["cycles"][0]["registrar_moves"];
+    assert_eq!(moves[0]["to"], "p/pick/pick.ts", "{:#}", doc["cycles"]);
+    assert_eq!(moves[0]["pairs_removed"], 0);
+    assert_eq!(
+        (&moves[0]["cycle_before"], &moves[0]["cycle_after"]),
+        (&json!(6), &json!(6))
+    );
+}
+
+#[test]
+fn a_registrar_move_out_of_a_cycle_reports_it_gone_for_its_module() {
+    // The fan-out of a_fan_out_registrar_side_is_not_the_cut, plus driver/pg and driver/my
+    // importing each other: after the move driver (which keeps base.ts) is in no cycle, so its
+    // cycle is gone (0), whatever pg and my still do.
+    let mut edges = vec![("app/use.ts".to_owned(), "driver/pick.ts".to_owned())];
+    for m in ["pg", "my", "sq", "ms", "or"] {
+        edges.push(("driver/pick.ts".to_owned(), format!("driver/{m}/a.ts")));
+        for f in ["a", "b", "c"] {
+            edges.push((format!("driver/{m}/{f}.ts"), "driver/base.ts".to_owned()));
+        }
+    }
+    edges.push(("driver/pg/b.ts".to_owned(), "driver/my/b.ts".to_owned()));
+    edges.push(("driver/my/c.ts".to_owned(), "driver/pg/c.ts".to_owned()));
+    let (dir, input) = synthetic("fan-out-leftover", edges.len() + 2, &edges);
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let moves = &doc["cycles"][0]["registrar_moves"];
+    assert_eq!(moves[0]["file"], "driver/pick.ts", "{:#}", doc["cycles"]);
+    assert_eq!(moves[0]["cycle_after"], 0);
+}
+
+#[test]
 fn a_fan_out_registrar_side_is_not_the_cut() {
     // driver/pick.ts makes one import into each of five sibling modules under driver/, each of
     // which imports driver/base.ts three times. The single imports only pick a driver: every

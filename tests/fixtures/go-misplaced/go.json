@@ -1,0 +1,221 @@
+{
+ "bound": [
+  {
+   "from": "internal/report/notify_other.go",
+   "to": "internal/report/notify_linux.go"
+  },
+  {
+   "from": "internal/report/notify_other.go",
+   "to": "internal/report/notify_windows.go"
+  },
+  {
+   "from": "internal/report/percent.go",
+   "to": "internal/report/rate.go"
+  },
+  {
+   "from": "internal/report/tax.go",
+   "to": "internal/report/util.go"
+  }
+ ],
+ "edges": [
+  {
+   "from": "dashboard/view.go",
+   "to": "internal/report/summary.go"
+  },
+  {
+   "from": "dashboard/view.go",
+   "to": "pub/rates.go"
+  },
+  {
+   "from": "internal/report/label.go",
+   "to": "internal/report/summary.go"
+  },
+  {
+   "from": "internal/report/percent.go",
+   "to": "internal/report/rate.go"
+  },
+  {
+   "from": "internal/report/tax.go",
+   "to": "internal/report/util.go"
+  },
+  {
+   "from": "invoice/create.go",
+   "to": "internal/report/format.go"
+  },
+  {
+   "from": "invoice/create.go",
+   "to": "internal/report/label.go"
+  },
+  {
+   "from": "invoice/create.go",
+   "to": "internal/report/notify_linux.go"
+  },
+  {
+   "from": "invoice/create.go",
+   "to": "internal/report/notify_other.go"
+  },
+  {
+   "from": "invoice/create.go",
+   "to": "internal/report/notify_windows.go"
+  },
+  {
+   "from": "invoice/create.go",
+   "to": "internal/report/percent.go"
+  },
+  {
+   "from": "invoice/create.go",
+   "to": "internal/report/rate.go"
+  },
+  {
+   "from": "invoice/create.go",
+   "to": "internal/report/tax.go"
+  },
+  {
+   "from": "invoice/create.go",
+   "to": "pub/money.go"
+  },
+  {
+   "from": "invoice/send.go",
+   "to": "internal/report/format.go"
+  },
+  {
+   "from": "invoice/send.go",
+   "to": "internal/report/label.go"
+  },
+  {
+   "from": "invoice/send.go",
+   "to": "internal/report/notify_linux.go"
+  },
+  {
+   "from": "invoice/send.go",
+   "to": "internal/report/notify_other.go"
+  },
+  {
+   "from": "invoice/send.go",
+   "to": "internal/report/notify_windows.go"
+  },
+  {
+   "from": "invoice/send.go",
+   "to": "internal/report/percent.go"
+  },
+  {
+   "from": "invoice/send.go",
+   "to": "internal/report/rate.go"
+  },
+  {
+   "from": "invoice/send.go",
+   "to": "internal/report/tax.go"
+  },
+  {
+   "from": "invoice/send.go",
+   "to": "pub/money.go"
+  },
+  {
+   "from": "invoice/total.go",
+   "to": "internal/report/format.go"
+  },
+  {
+   "from": "invoice/total.go",
+   "to": "internal/report/label.go"
+  },
+  {
+   "from": "invoice/total.go",
+   "to": "internal/report/notify_linux.go"
+  },
+  {
+   "from": "invoice/total.go",
+   "to": "internal/report/notify_other.go"
+  },
+  {
+   "from": "invoice/total.go",
+   "to": "internal/report/notify_windows.go"
+  },
+  {
+   "from": "invoice/total.go",
+   "to": "internal/report/percent.go"
+  },
+  {
+   "from": "invoice/total.go",
+   "to": "internal/report/rate.go"
+  },
+  {
+   "from": "invoice/total.go",
+   "to": "internal/report/tax.go"
+  },
+  {
+   "from": "invoice/total.go",
+   "to": "pub/money.go"
+  }
+ ],
+ "files": [
+  {
+   "path": "dashboard/view.go",
+   "generated": false
+  },
+  {
+   "path": "internal/report/format.go",
+   "generated": false
+  },
+  {
+   "path": "internal/report/label.go",
+   "generated": false
+  },
+  {
+   "path": "internal/report/notify_linux.go",
+   "generated": false
+  },
+  {
+   "path": "internal/report/notify_other.go",
+   "generated": false
+  },
+  {
+   "path": "internal/report/notify_windows.go",
+   "generated": false
+  },
+  {
+   "path": "internal/report/percent.go",
+   "generated": false
+  },
+  {
+   "path": "internal/report/rate.go",
+   "generated": false
+  },
+  {
+   "path": "internal/report/summary.go",
+   "generated": false
+  },
+  {
+   "path": "internal/report/tax.go",
+   "generated": false
+  },
+  {
+   "path": "internal/report/util.go",
+   "generated": false
+  },
+  {
+   "path": "invoice/create.go",
+   "generated": false
+  },
+  {
+   "path": "invoice/send.go",
+   "generated": false
+  },
+  {
+   "path": "invoice/total.go",
+   "generated": false
+  },
+  {
+   "path": "pub/money.go",
+   "generated": false
+  },
+  {
+   "path": "pub/rates.go",
+   "generated": false
+  }
+ ],
+ "go_version": "1.27.1",
+ "modules": [
+  "."
+ ],
+ "unresolved": 0
+}

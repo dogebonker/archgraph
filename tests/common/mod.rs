@@ -34,7 +34,7 @@ pub fn scan(args: &[&str]) -> (Value, String, String) {
 /// `scan` on a fixture with its recorded collector output.
 pub fn scan_recorded(name: &str, extra: &[&str]) -> (Value, String, String) {
     let dir = fixture(name);
-    let input = ["depcruise.json", "grimp.json"]
+    let input = ["depcruise.json", "grimp.json", "go.json"]
         .iter()
         .map(|f| dir.join(f))
         .find(|p| p.exists())

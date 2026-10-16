@@ -136,6 +136,9 @@ pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
         cruised: files.len(),
         unresolved: None,
         type_marking: None,
+        main_packages: Vec::new(),
+        bound_files: Vec::new(),
+        go_modules: Vec::new(),
     };
     Ok(RawGraph {
         files,

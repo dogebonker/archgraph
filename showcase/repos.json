@@ -296,5 +296,32 @@
       "2"
     ],
     "why": "Core and ORM in one package, with database dialects as plugins."
+  },
+  {
+    "name": "etcd",
+    "repo": "https://github.com/etcd-io/etcd",
+    "commit": "f22475263b89fbc231e1589839427c354bcf237c",
+    "path": ".",
+    "language": "go",
+    "flags": [],
+    "why": "Fourteen Go modules in one repository (server, client, api, etcdctl, tools and more), joined by local replace directives and scanned together."
+  },
+  {
+    "name": "prometheus",
+    "repo": "https://github.com/prometheus/prometheus",
+    "commit": "466be3beb37099c28804608966f894b0dbad9993",
+    "path": ".",
+    "language": "go",
+    "flags": [],
+    "why": "One large Go module: tsdb, promql, scrape, storage and dozens of service-discovery packages, with generated protobuf code and per-platform files."
+  },
+  {
+    "name": "cli",
+    "repo": "https://github.com/cli/cli",
+    "commit": "3d7967df5a94052b0554898ffa02526f0f90b8c9",
+    "path": ".",
+    "language": "go",
+    "flags": [],
+    "why": "GitHub's CLI: one command package per area under pkg/cmd, whose shared helpers other commands reach into."
   }
 ]

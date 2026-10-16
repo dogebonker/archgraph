@@ -195,12 +195,16 @@ mod tests {
                 cruised: 3,
                 unresolved: None,
                 type_marking: None,
+                main_packages: Vec::new(),
+                bound_files: Vec::new(),
+                go_modules: Vec::new(),
             },
             git: None,
             generated_at: String::new(),
         };
         let config = Config {
             depth: 1,
+            package_modules: false,
             source_root: ".".into(),
             excludes: Vec::new(),
             include_tests: false,

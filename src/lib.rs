@@ -60,7 +60,7 @@ pub fn build(
         .map(|f| {
             let module = rules
                 .and_then(|r| r.module_of(&f))
-                .unwrap_or_else(|| modules::module_of(&f, &config.source_root, config.depth));
+                .unwrap_or_else(|| modules::module_of(&f, &config, source.language));
             (f, module)
         })
         .collect();
@@ -98,7 +98,13 @@ pub fn build(
             version: env!("CARGO_PKG_VERSION"),
         },
         modules: graph::modules(&module_of, &pairs),
-        cycles: graph::cycles(&module_of, &edges, &entries, &barrels),
+        cycles: graph::cycles(
+            &module_of,
+            &edges,
+            &entries,
+            &barrels,
+            source.language == model::Language::Go,
+        ),
         files: module_of
             .iter()
             .map(|(path, module)| File {

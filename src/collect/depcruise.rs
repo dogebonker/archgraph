@@ -253,6 +253,9 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
         cruised: out.summary.total_cruised,
         unresolved: Some(unresolved),
         type_marking: None,
+        main_packages: Vec::new(),
+        bound_files: Vec::new(),
+        go_modules: Vec::new(),
     };
     Ok(RawGraph {
         files,

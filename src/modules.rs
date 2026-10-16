@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::model::{Edge, EdgeKind};
+use crate::model::{Config, Edge, EdgeKind, Language};
 
 pub const TS_INDEX: &[&str] = &[
     "index.ts",
@@ -15,10 +15,16 @@ pub const TS_INDEX: &[&str] = &[
 
 /// The file's directory below `source_root`, truncated to `depth` segments. A file directly in
 /// the source root is its own module, named by its file name with extension (`main.ts`), so it
-/// never merges with another root file or with a directory module. Files outside the source root
-/// count from the scan root and are prefixed `../` (`../lib`, `../tool.ts`), so they never merge
-/// with a module inside it.
-pub fn module_of(path: &str, source_root: &str, depth: usize) -> String {
+/// never merges with another root file or with a directory module; in Go the root's files are
+/// one package, module `.`. Files outside the source root count from the scan root and are
+/// prefixed `../` (`../lib`, `../tool.ts`), so they never merge with a module inside it.
+/// With `config.package_modules` the directory is not truncated: each package is a module.
+pub fn module_of(path: &str, config: &Config, language: Language) -> String {
+    let source_root = config.source_root.as_str();
+    let depth = match config.package_modules {
+        true => usize::MAX,
+        false => config.depth,
+    };
     let (rel, outside) = match source_root {
         "." => (path, false),
         root => match path.strip_prefix(root).and_then(|r| r.strip_prefix('/')) {
@@ -28,6 +34,7 @@ pub fn module_of(path: &str, source_root: &str, depth: usize) -> String {
     };
     // `--depth 0` keeps every file below the root's top level in `.` (`..` outside it).
     let id = match rel.rsplit_once('/') {
+        None if language == Language::Go => String::new(),
         None => rel.to_owned(),
         Some(_) if depth == 0 => String::new(),
         Some((dir, _)) => dir.split('/').take(depth).collect::<Vec<_>>().join("/"),
