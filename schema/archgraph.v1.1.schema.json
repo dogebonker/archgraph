@@ -19,7 +19,8 @@
         "bisect",
         "hotspots",
         "impact",
-        "surface"
+        "surface",
+        "package-splits"
       ]
     }
   },
@@ -118,6 +119,18 @@
       },
       "then": {
         "$ref": "#/$defs/surface"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "package-splits"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/package-splits"
       }
     }
   ],
@@ -1344,6 +1357,10 @@
             "generated_at": {
               "type": "string",
               "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+            },
+            "scan_root": {
+              "type": "string",
+              "description": "Optional Git-relative scanned directory; . is the repository root. Used to bind workspace metadata to the scan."
             }
           }
         },
@@ -1801,6 +1818,9 @@
           "items": {
             "$ref": "#/$defs/evidence-grabbag"
           }
+        },
+        "package_splits": {
+          "$ref": "#/$defs/package-splits"
         }
       }
     },
@@ -3231,6 +3251,308 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      }
+    },
+    "package-splits": {
+      "type": "object",
+      "required": [
+        "schema",
+        "kind",
+        "options",
+        "workspace",
+        "candidates",
+        "limitations"
+      ],
+      "properties": {
+        "schema": {
+          "enum": [
+            "archgraph/v1",
+            "archgraph/v1.1"
+          ]
+        },
+        "kind": {
+          "const": "package-splits"
+        },
+        "options": {
+          "type": "object",
+          "required": [
+            "min_cohesion",
+            "max_cuts",
+            "limit"
+          ],
+          "properties": {
+            "min_cohesion": {
+              "$ref": "#/$defs/ratio"
+            },
+            "max_cuts": {
+              "$ref": "#/$defs/count"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "workspace": {
+          "type": "object",
+          "required": [
+            "checked",
+            "packages",
+            "projects",
+            "limitations"
+          ],
+          "properties": {
+            "checked": {
+              "type": "boolean"
+            },
+            "packages": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "root",
+                  "name"
+                ],
+                "properties": {
+                  "root": {
+                    "$ref": "#/$defs/path"
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "projects": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "root",
+                  "name"
+                ],
+                "properties": {
+                  "root": {
+                    "$ref": "#/$defs/path"
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "limitations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "enclosing_package": {
+              "type": "string"
+            }
+          }
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "modules",
+              "files",
+              "classification",
+              "readiness",
+              "fan_in",
+              "size",
+              "score",
+              "cohesion",
+              "internal_edges",
+              "cut_list",
+              "package_dependencies",
+              "external_packages",
+              "uncertainties",
+              "simulation"
+            ],
+            "properties": {
+              "path": {
+                "$ref": "#/$defs/path"
+              },
+              "modules": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/path"
+                }
+              },
+              "classification": {
+                "enum": [
+                  "free",
+                  "cheap"
+                ]
+              },
+              "readiness": {
+                "enum": [
+                  "import-level-ready",
+                  "cuts-required",
+                  "needs-verification"
+                ]
+              },
+              "fan_in": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 2
+              },
+              "score": {
+                "type": "integer",
+                "minimum": 2
+              },
+              "cohesion": {
+                "$ref": "#/$defs/ratio"
+              },
+              "internal_edges": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "cut_list": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "to",
+                    "kind",
+                    "line",
+                    "reason"
+                  ],
+                  "properties": {
+                    "from": {
+                      "$ref": "#/$defs/path"
+                    },
+                    "to": {
+                      "$ref": "#/$defs/path"
+                    },
+                    "kind": {
+                      "enum": [
+                        "runtime",
+                        "lazy",
+                        "type",
+                        "reexport"
+                      ]
+                    },
+                    "line": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 1
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "package_dependencies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "to",
+                    "package",
+                    "root"
+                  ],
+                  "properties": {
+                    "from": {
+                      "$ref": "#/$defs/path"
+                    },
+                    "to": {
+                      "$ref": "#/$defs/path"
+                    },
+                    "package": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "root": {
+                      "$ref": "#/$defs/path"
+                    }
+                  }
+                }
+              },
+              "external_packages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "uncertainties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "simulation": {
+                "type": "object",
+                "required": [
+                  "verified",
+                  "no_new_cycles",
+                  "cycles_before",
+                  "cycles_after",
+                  "boundary_cycle",
+                  "scope"
+                ],
+                "properties": {
+                  "verified": {
+                    "type": "boolean"
+                  },
+                  "no_new_cycles": {
+                    "type": "boolean"
+                  },
+                  "cycles_before": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "cycles_after": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "boundary_cycle": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "scope": {
+                    "enum": [
+                      "runtime",
+                      "all-kinds"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       }

@@ -133,7 +133,7 @@ fn ts_basic_output_is_byte_stable_and_location_free() {
     let (_, second, _) = scan_recorded("ts-basic", &[]);
     assert_eq!(stable(&first), stable(&second));
 
-    // The same tree somewhere else gives the same bytes: no absolute paths are recorded.
+    // Relocation preserves graph data; the Git-relative workspace anchor changes by design.
     let copy = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("ts-basic-copy");
     let _ = fs::remove_dir_all(&copy);
     copy_dir(&fixture("ts-basic"), &copy);
@@ -143,7 +143,16 @@ fn ts_basic_output_is_byte_stable_and_location_free() {
         "--collector-input",
         input.to_str().unwrap(),
     ]);
-    assert_eq!(stable(&first), stable(&moved));
+    let graph_data = |text: &str| {
+        let mut doc: Value = serde_json::from_str(text).unwrap();
+        let source = doc["source"].as_object_mut().unwrap();
+        source.remove("generated_at");
+        if let Some(anchor) = source.remove("scan_root") {
+            assert!(std::path::Path::new(anchor.as_str().unwrap()).is_relative());
+        }
+        doc
+    };
+    assert_eq!(graph_data(&first), graph_data(&moved));
 }
 
 fn copy_dir(from: &std::path::Path, to: &std::path::Path) {

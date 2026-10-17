@@ -36,6 +36,8 @@
 
 ### Added
 
+- `package-splits` ranks cohesive, externally used folder subtrees by importing modules × production files, with free/cheap classifications, full cut lists, workspace checks, uncertainty guards and cycle simulations. Optional graph attachments survive replay and power map island highlights; build and packaging compatibility remain unverified.
+- New scans record an optional Git-relative `source.scan_root` to bind workspace metadata to the correct scanned directory. Older scans remain readable and receive conservative workspace-readiness labels.
 - `infer-layout` drafts annotated layout rules from saved graphs: SCC condensation, longest-path layers, unresolved cycle groups, and sparse-boundary proposals with file-pair evidence and existing violations. It prints by default; `--apply` creates a new draft without overwriting existing files.
 - Public surface reports for TypeScript/JavaScript, Python and Go: symbol exports and external usage, deep imports, advisory unused exports and oversized surfaces. Optional symbol evidence keeps the `archgraph/v1` document format compatible with earlier scans.
 - Strict `entrypoints` rules for module boundaries, integrated with `check`, plus surface metrics and ring thickness in the architecture map. Incomplete symbol coverage withholds unused-export suggestions.

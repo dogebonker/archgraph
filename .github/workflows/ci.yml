@@ -91,7 +91,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 18
-      - run: node --test ../tests/history-ui.test.cjs ../tests/context-ui.test.cjs ../tests/surface-ui.test.cjs
+      - run: node --test ../tests/history-ui.test.cjs ../tests/context-ui.test.cjs ../tests/surface-ui.test.cjs ../tests/package-splits-ui.test.cjs
         working-directory: npm
       - run: node --test
         working-directory: npm

@@ -1,18 +1,16 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use serde_json::{Value, json};
 
 struct Scratch(PathBuf);
+static NEXT: AtomicUsize = AtomicUsize::new(0);
 
 impl Scratch {
     fn new() -> Self {
-        let stamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
+        let stamp = NEXT.fetch_add(1, Ordering::Relaxed);
         let path = Path::new(env!("CARGO_TARGET_TMPDIR"))
             .join(format!("infer-layout-{}-{stamp}", std::process::id()));
         fs::create_dir_all(&path).unwrap();

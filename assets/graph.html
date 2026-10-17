@@ -561,6 +561,7 @@ p { margin: 6px 0; }
             <p>Ring colours are a reading aid, not a score. Drag a module or a file to move it; with a module focused, Shift and an arrow key moves it.</p>
             <p id="churn-legend" hidden>Churn view: larger, warmer file discs changed more often. Module fill size and color show the highest file churn in that module. Outer rings still show architecture checks. Churn is normalized within the scanned files and selected history window.</p>
             <p id="surface-legend" hidden></p>
+            <p id="package-split-legend" hidden></p>
           </div>
         </div>
       </div>
@@ -661,6 +662,27 @@ function surfaceRingWidth(symbols, active = false) {
   const n = Number.isFinite(symbols) ? Math.max(0, symbols) : 0;
   return Math.max(active ? 2 : 1.25, Math.min(6, 1.25 + Math.log2(1 + n) * 0.65));
 }
+/* ---------- package split helpers ---------- */
+function packageSplitState(candidate) {
+  if (candidate.readiness === "needs-verification" || !candidate.simulation?.verified || !candidate.simulation?.no_new_cycles || candidate.simulation?.boundary_cycle?.length) return "uncertain";
+  return candidate.classification === "free" && candidate.readiness === "import-level-ready" ? "ready" : "cheap";
+}
+function packageSplitMarker(rows) {
+  if (!rows.length) return null;
+  const states = rows.map(packageSplitState);
+  const state = states.includes("ready") ? "ready" : states.includes("cheap") ? "cheap" : "uncertain";
+  return { state, color: { ready: "#45c6b0", cheap: "#e5ad48", uncertain: "#a1a1aa" }[state] };
+}
+function drawPackageSplitHalo(ctx, marker, x, y, r, px) {
+  if (!marker) return;
+  ctx.save();
+  ctx.strokeStyle = marker.color;
+  ctx.lineWidth = 1.5 * px;
+  ctx.setLineDash([5 * px, 4 * px]);
+  ctx.beginPath(); ctx.arc(x, y, r + 8 * px, 0, TAU); ctx.stroke();
+  ctx.restore();
+}
+/* ---------- end package split helpers ---------- */
 /* ---------- end history context helpers ---------- */
 
 /* ---------- header ---------- */
@@ -710,6 +732,19 @@ const F = files.length;
 const fileIndex = new Map(files.map(f => [f.path, f.i]));
 const hotspotFiles = doc.hotspots ? doc.hotspots.files : [];
 const hotspotByPath = new Map(hotspotFiles.map(h => [h.path, h]));
+/* ---------- package split model ---------- */
+const packageSplitCandidates = doc.package_splits?.candidates || [];
+const packageSplitsByModule = new Map();
+for (const candidate of packageSplitCandidates) for (const id of candidate.modules) {
+  if (!packageSplitsByModule.has(id)) packageSplitsByModule.set(id, []);
+  packageSplitsByModule.get(id).push(candidate);
+}
+const packageSplitMarkers = mods.map(m => packageSplitMarker(packageSplitsByModule.get(m.id) || []));
+if (doc.package_splits) {
+  $("package-split-legend").hidden = false;
+  $("package-split-legend").textContent = "Dashed outer islands: teal = import-level ready, amber = cuts required, grey = needs verification. A halo may cover only part of a module; inspect its candidate files. Import-level ready does not mean extraction done; build, test and environment assumptions still need review. Health colours and public-surface rings are unchanged.";
+}
+/* ---------- end package split model ---------- */
 const surfaceByModule = new Map((doc.surface?.modules || []).map(m => [m.module, m]));
 /* ---------- public surface legend ---------- */
 if (doc.surface) {
@@ -2036,6 +2071,7 @@ function draw() {
     ctx.lineWidth = surfaceRingWidth(surface?.exported.length || 0, chosen || s >= S_IN) * px;
     if (hiddenMods[i]) ctx.setLineDash([4 * px, 4 * px]);
     ctx.stroke();
+    drawPackageSplitHalo(ctx, packageSplitMarkers[i], x, y, r, px);
     if (fileT > 0 && groups[i].length) {
       ctx.globalAlpha = 0.5 * fileT * (dim ? 0.4 : 1);
       ctx.strokeStyle = "rgba(235, 235, 245, .3)";
@@ -3718,6 +3754,7 @@ function overview() {
   panel.append(el("h2", {}, "Assessment"));
   panel.append(el("p", { class: "sub" }, `${nf(F)} ${F === 1 ? "file" : "files"} in ${nf(N)} ${N === 1 ? "module" : "modules"}`));
   panel.append(el("p", { class: "intro" }, "Read from imports" + (doc.config.codeowners ? " and declared ownership" : "") + "; every line names its evidence. Select a name to see it on the map."));
+  packageSplitContext();
   if (doc.config.codeowners) {
     const counts = new Map();
     let owned = 0;
@@ -3792,6 +3829,82 @@ function overview() {
     for (const limit of doc.hotspots.limitations || []) panel.append(el("p", { class: "note" }, limit));
   }
 }
+/* ---------- package split panel ---------- */
+function packageSplitContext(moduleId) {
+  const report = doc.package_splits;
+  if (!report) return;
+  const candidates = moduleId === undefined ? packageSplitCandidates : packageSplitsByModule.get(moduleId) || [];
+  if (moduleId !== undefined && !candidates.length) return;
+  panel.append(el("h3", {}, "Package split candidates"));
+  panel.append(el("p", { class: "note" }, "Draft import-level evidence: build configuration, shared test utilities and environment assumptions are not verified. Import-level ready does not mean extraction done."));
+  if (moduleId === undefined) {
+    const workspace = report.workspace;
+    panel.append(el("p", { class: "muted" }, workspace?.checked
+      ? "Existing workspace packages were checked and excluded from suggestions."
+      : "Existing workspace packages were not fully checked; verify package boundaries before extracting."));
+    for (const limit of workspace?.limitations || []) panel.append(el("p", { class: "note" }, limit));
+    for (const limit of report.limitations || []) panel.append(el("p", { class: "muted" }, limit));
+    if (!candidates.length) panel.append(el("p", { class: "muted" }, "No package split candidates meet the selected thresholds."));
+  }
+  const fileLink = path => {
+    const i = fileIndex.get(path);
+    return i === undefined ? el("span", { class: "path" }, path) : btn(short(path), "path", () => go({ type: "file", i }), path);
+  };
+  const list = el("div", { class: "kinds" });
+  for (const candidate of candidates) {
+    const state = packageSplitState(candidate), detail = el("details", { class: "kind" });
+    detail.append(el("summary", {}, `${candidate.path} · ${state === "ready" ? "import-level ready" : state === "cheap" ? "cuts required" : "needs verification"} · score ${fmt(candidate.score)}`));
+    detail.addEventListener("toggle", () => {
+      if (!detail.open || detail.childNodes.length > 1) return;
+      const inner = el("div", { class: "inner" });
+      inner.append(el("p", {}, `Score = ${candidate.fan_in} inbound modules × ${candidate.size} files = ${fmt(candidate.score)}; cohesion ${fmt(candidate.cohesion)}; ${candidate.internal_edges} internal imports.`));
+      if (moduleId !== undefined) {
+        const total = doc.files.filter(f => f.module === moduleId).length;
+        const selected = new Set(candidate.files);
+        const covered = doc.files.filter(f => f.module === moduleId && selected.has(f.path)).length;
+        inner.append(el("p", { class: covered < total ? "note" : "muted" }, `${covered < total ? "Partial module coverage: " : "Module coverage: "}${covered} of ${total} files in ${moduleId}; candidate folder ${candidate.path}.`));
+      }
+      const sim = candidate.simulation;
+      inner.append(el("p", { class: sim?.verified && sim.no_new_cycles ? "muted" : "note" }, sim
+        ? `Simulation ${sim.verified ? "verified" : "unverified"}; ${sim.no_new_cycles ? "no new cycles" : "cycle safety unconfirmed"}; cycles ${sim.cycles_before} → ${sim.cycles_after}. Scope: ${sim.scope}.`
+        : "Simulation unavailable; cycle safety is unverified."));
+      if (sim?.boundary_cycle?.length) inner.append(el("p", { class: "note" }, `Boundary cycle: ${sim.boundary_cycle.join(" → ")}.`));
+      for (const uncertainty of candidate.uncertainties || []) inner.append(el("p", { class: "note" }, uncertainty));
+      if (candidate.external_packages?.length) inner.append(el("p", {}, `External packages: ${candidate.external_packages.join(", ")}.`));
+      for (const dependency of candidate.package_dependencies || []) {
+        const row = el("p", {}, `Existing package ${dependency.package || dependency.root}: `);
+        row.append(fileLink(dependency.from), document.createTextNode(" → "), fileLink(dependency.to));
+        inner.append(row);
+      }
+      const cuts = el("details");
+      cuts.append(el("summary", {}, `${count(candidate.cut_list.length, "import to cut", "imports to cut")}`));
+      cuts.addEventListener("toggle", () => {
+        if (!cuts.open || cuts.childNodes.length > 1) return;
+        const rows = el("ul");
+        for (const cut of candidate.cut_list) {
+          const row = el("li");
+          row.append(fileLink(cut.from), document.createTextNode(`${cut.line ? `:${cut.line}` : ""} → `), fileLink(cut.to), document.createTextNode(` (${cut.kind})${cut.reason ? "; " + cut.reason : ""}`));
+          rows.append(row);
+        }
+        cuts.append(rows);
+      });
+      inner.append(cuts);
+      const members = el("details");
+      members.append(el("summary", {}, count(candidate.files.length, "candidate file", "candidate files")));
+      members.addEventListener("toggle", () => {
+        if (!members.open || members.childNodes.length > 1) return;
+        const rows = el("ul");
+        for (const path of candidate.files) { const row = el("li"); row.append(fileLink(path)); rows.append(row); }
+        members.append(rows);
+      });
+      inner.append(members);
+      detail.append(inner);
+    });
+    list.append(detail);
+  }
+  panel.append(list);
+}
+/* ---------- end package split panel ---------- */
 /* ---------- public surface panel ---------- */
 function surfaceContext(row) {
   if (!row || !doc.surface) return;
@@ -3845,6 +3958,7 @@ function modulePanel(i) {
   }
   if (doc.hotspots) hotspotContext(hotspotFiles.filter(h => h.module === m.id));
   surfaceContext(surfaceByModule.get(m.id));
+  packageSplitContext(m.id);
   panel.append(sentence(diagnosis(i), "p"));
   panel.lastChild.className = "diag";
   panel.append(metrics([

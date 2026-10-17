@@ -29,6 +29,8 @@ mod impact_context;
 mod impact_typescript;
 #[path = "cli/infer_layout.rs"]
 mod infer_layout_cli;
+#[path = "cli/package_splits.rs"]
+mod package_splits_cli;
 #[path = "cli/provenance.rs"]
 mod provenance_cli;
 #[path = "cli/surface.rs"]
@@ -76,6 +78,8 @@ enum Cmd {
     Surface(surface_cli::SurfaceArgs),
     /// Draft layout rules from observed module dependencies, for review
     InferLayout(infer_layout_cli::InferLayoutArgs),
+    /// Rank folders that could become packages, with cuts and cycle evidence
+    PackageSplits(package_splits_cli::PackageSplitsArgs),
     /// List default file exclusions and their categories
     ShowExcludes,
     /// List imports whose file or external package could not be resolved
@@ -324,6 +328,7 @@ fn main() -> ExitCode {
         Cmd::Impact(args) => impact_cli::run(args),
         Cmd::Surface(args) => surface_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::InferLayout(args) => infer_layout_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::PackageSplits(args) => package_splits_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::ShowExcludes => show_excludes().map(|()| ExitCode::SUCCESS),
         Cmd::Unresolved(args) => unresolved(args).map(|()| ExitCode::SUCCESS),
     };
@@ -860,6 +865,7 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         collector: raw.collector,
         git: git(root),
         generated_at: now_utc(),
+        scan_root: git_scan_root(root),
     };
     // Keep package directories intact unless a depth is explicitly requested.
     let package_modules = matches!(language, Language::Go | Language::Java) && args.depth.is_none();
@@ -1432,6 +1438,21 @@ fn write(output: Option<&Path>, value: &impl serde::Serialize) -> Result<()> {
             Ok(())
         }
     }
+}
+
+fn git_scan_root(root: &Path) -> Option<String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["-c", "core.fsmonitor=false", "rev-parse", "--show-prefix"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let prefix = String::from_utf8(output.stdout).ok()?;
+    let prefix = prefix.trim_end_matches('\n').trim_end_matches('/');
+    Some(if prefix.is_empty() { "." } else { prefix }.to_owned())
 }
 
 fn git(root: &Path) -> Option<Git> {

@@ -119,6 +119,13 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         owners.as_ref(),
     );
     crate::resolution::attach(&mut moved);
+    if let Some(saved) = &doc.package_splits {
+        moved.package_splits = Some(crate::package_splits::analyze(
+            &moved,
+            saved.options,
+            saved.workspace.clone(),
+        )?);
+    }
     Ok(moved)
 }
 
@@ -240,6 +247,7 @@ mod tests {
             },
             git: None,
             generated_at: String::new(),
+            scan_root: None,
         };
         let config = Config {
             depth: 1,

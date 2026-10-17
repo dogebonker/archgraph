@@ -52,6 +52,8 @@ pub struct Document {
     pub symbols: Option<crate::surface::Symbols>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub surface: Option<crate::surface::SurfaceReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub package_splits: Option<crate::package_splits::Report>,
 }
 
 /// The parts of a scan document that every other subcommand recomputes the rest from.
@@ -77,6 +79,8 @@ pub struct ScanInput {
     pub symbols: Option<crate::surface::Symbols>,
     #[serde(default)]
     pub surface: Option<crate::surface::SurfaceReport>,
+    #[serde(default)]
+    pub package_splits: Option<crate::package_splits::Report>,
 }
 
 #[derive(Debug, Serialize)]
@@ -91,6 +95,9 @@ pub struct Source {
     pub collector: Collector,
     pub git: Option<Git>,
     pub generated_at: String,
+    /// Git-relative directory that was scanned; `.` is the repository root.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scan_root: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum)]

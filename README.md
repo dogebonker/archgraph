@@ -102,6 +102,8 @@ The map is one HTML file with no network requests. Zoom until files appear, drag
 
 ## Does this code belong here?
 
+Find folders that could become packages with `archgraph package-splits graph.json --root .`. Suggestions distinguish free boundaries from cheap cuts, rank importing modules × file count, check existing workspaces, and simulate the remaining cycles. Save an enriched graph with `--output packages.json`, then `archgraph render packages.json -o packages.html` to highlight candidate islands. These are **import-level** suggestions; package exports, builds, tests, and environment assumptions still need review. See [package splits](docs/guide.md#package-splits).
+
 Add a `CODEOWNERS` file and the report shows declared responsibility by file and module. Ownership qualifies misplaced-file findings: conflicting team boundaries keep the dependency evidence and require review before a move. Shared ownership and incomplete coverage stay visible.
 
 ```sh

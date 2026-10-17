@@ -160,6 +160,38 @@ archgraph infer-layout graph.json --max-rules 0           # layers only
 
 These thresholds limit over-fitting; zero observed imports still do not establish an intended boundary. Review the draft before making it a CI policy. No scan-schema or rules-format migration is required.
 
+## Package splits
+
+`package-splits` ranks physical folder subtrees that could become packages, including folders spanning several graph modules. **Import-level ready** describes the observed dependency boundary; it does not mean extraction, compilation, packaging, or deployment has been verified.
+
+```sh
+archgraph package-splits graph.json --root .
+archgraph package-splits graph.json --root . --format json
+archgraph package-splits graph.json --root . --output packages.json
+archgraph render packages.json -o packages.html
+```
+
+Each candidate needs at least two production files, a non-barrel implementation, an internal dependency, and at least one importing production module outside the folder. The score is **distinct importing modules × production files**. Weighted cohesion must be at least **0.8** by default: canonical internal dependencies divided by internal plus unextracted outgoing dependencies. Known dependencies on separate existing packages are externalized for this factor. Written barrel paths and import-ledger destinations still constrain the physical boundary; resolving a symbol into the folder cannot hide a dependency on an outside facade.
+
+- **Free:** no recorded dependency to cut; outgoing dependencies may target proven separate packages. A subfolder's dependency on its own enclosing package is not a free external escape.
+- **Cheap:** at most **3** distinct source/target file dependencies to cut by default. Every cut includes its kind and source line when available. These are dependency counts, not a prediction of how many edits are needed.
+- **Needs verification:** missing import ledgers, unresolved/namespace imports, low-confidence edges, unscanned local bodies, ambiguous external aliases, unverified workspace metadata, or a package-boundary cycle prevent a readiness claim. A candidate can have a free observed boundary and still need verification.
+
+All import kinds constrain the boundary, including lazy/type imports. Included tests inside the folder contribute boundary dependencies, while production files determine size, cohesion and fan-in. The cycle simulation removes the candidate from the remainder, compares SCC membership with the original graph, and also checks the collapsed package boundary after the listed cuts. Counts can increase when one SCC splits; that alone is not a new cycle. Simulation uses runtime imports by default, or all kinds with `--all-kinds`, and excludes test endpoints. Its SCC counts are for the physical dependency graph, before grab-bag reclassification.
+
+```sh
+archgraph package-splits graph.json --root . --max-cuts 0  # free boundaries only
+archgraph package-splits graph.json --root . --min-cohesion 0.9 --limit 10
+```
+
+`--root` is the **directory originally scanned**, which may be a subfolder of the Git repository. Static inspection supports npm/Yarn workspace declarations, pnpm patterns and exclusions, and explicit Nx project metadata. A [configured Nx project](https://nx.dev/docs/reference/project-configuration) is tracked separately from a manifest-backed package; workspace layout conventions alone are not a package inventory. Existing package/project roots are not suggested again, and ancestors spanning those roots are skipped. A smaller folder inside an existing package can still be a candidate. Nx plugins and package-manager commands are never executed. Unsupported, skipped or incomplete metadata is reported.
+
+New scans record `source.scan_root`, a Git-relative directory, to distinguish sibling roots at the same commit. A mismatched root/revision is rejected. Older graphs, non-Git scans, dirty checkouts, or omitted `--root` without saved metadata cannot establish verified workspace boundaries; results remain available with conservative labels. Keep generated graphs in an ignored output directory when using a clean checkout. Saved workspace evidence is reused when replaying an enriched graph, and candidate scores/cuts are recomputed from its current files and edges.
+
+The map adds dashed island halos without replacing architecture health rings. Panels show free/cheap/unverified status, score factors, all cuts, simulation results and partial-module coverage. Nested suggestions can overlap; review them as alternatives rather than simultaneous extractions. Build configuration, package exports, consumer paths, excluded/shared test utilities, generated code, and environment assumptions remain outside this proof.
+
+No scan-version migration is required: `package_splits` and `source.scan_root` are optional additions to v1.1. Standalone report JSON uses the new `package-splits` kind and cannot be exported with `--legacy-v1`; legacy scan input remains supported.
+
 ## Exclusions and included tests
 
 ```sh

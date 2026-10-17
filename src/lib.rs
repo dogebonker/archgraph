@@ -15,6 +15,7 @@ pub mod impact;
 pub mod infer_layout;
 pub mod model;
 pub mod modules;
+pub mod package_splits;
 pub mod quality;
 pub mod render;
 pub mod resolution;
@@ -86,6 +87,16 @@ pub fn restore_scan(mut input: model::ScanInput) -> Result<Document> {
             bail!("hotspot report names a file outside the scan");
         }
         apply_hotspots(&mut doc, report);
+    }
+    if let Some(saved) = input.package_splits {
+        if !model::supported_schema(&saved.schema) || saved.kind != "package-splits" {
+            bail!("expected a package-splits report in the scan attachment");
+        }
+        doc.package_splits = Some(package_splits::analyze(
+            &doc,
+            saved.options,
+            saved.workspace,
+        )?);
     }
     Ok(doc)
 }
@@ -401,6 +412,7 @@ pub fn build(
         hotspots: None,
         symbols: None,
         surface: None,
+        package_splits: None,
     };
     if owners.is_some() {
         for module in &mut doc.modules {
