@@ -54,7 +54,7 @@ jobs:
         env:
           ARCHGRAPH_DEPCRUISE: ${{ runner.temp }}/tools/node_modules/.bin/depcruise
           ARCHGRAPH_PYTHON: ${{ runner.temp }}/venv/bin/python
-      - run: cargo test --locked --test symbols --test surface_go -- --include-ignored
+      - run: cargo test --locked --test symbols --test surface_go --test go_resolution -- --include-ignored
 
   binary:
     runs-on: ubuntu-latest
