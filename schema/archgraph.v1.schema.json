@@ -3,7 +3,7 @@
   "title": "archgraph v1 document",
   "type": "object",
   "required": ["schema", "kind"],
-  "properties": { "schema": {"const": "archgraph/v1"}, "kind": {"enum": ["scan", "simulation", "diff", "history", "bisect", "hotspots", "impact"]} },
+  "properties": { "schema": {"const": "archgraph/v1"}, "kind": {"enum": ["scan", "simulation", "diff", "history", "bisect", "hotspots", "impact", "surface"]} },
   "allOf": [
     { "if": {"properties": {"kind": {"const": "scan"}}}, "then": {"$ref": "#/$defs/scan"} },
     { "if": {"properties": {"kind": {"const": "simulation"}}}, "then": {"$ref": "#/$defs/simulation"} },
@@ -11,9 +11,18 @@
     { "if": {"properties": {"kind": {"const": "history"}}}, "then": {"$ref": "#/$defs/history"} },
     { "if": {"properties": {"kind": {"const": "bisect"}}}, "then": {"$ref": "#/$defs/bisect"} },
     { "if": {"properties": {"kind": {"const": "hotspots"}}}, "then": {"$ref": "#/$defs/hotspots"} },
-    { "if": {"properties": {"kind": {"const": "impact"}}}, "then": {"$ref": "#/$defs/impact"} }
+    { "if": {"properties": {"kind": {"const": "impact"}}}, "then": {"$ref": "#/$defs/impact"} },
+    { "if": {"properties": {"kind": {"const": "surface"}}}, "then": {"$ref": "#/$defs/surface"} }
   ],
   "$defs": {
+    "symbol-target": {"type": "object","required": ["file","name"],"properties": {"file": {"$ref": "#/$defs/path"},"name": {"type": "string","minLength": 1}}},
+    "symbol-export": {"type": "object","required": ["file","name","target"],"properties": {"file": {"$ref": "#/$defs/path"},"name": {"type": "string","minLength": 1},"target": {"$ref": "#/$defs/symbol-target"}}},
+    "symbol-import": {"type": "object","required": ["from","to","name","target","wildcard"],"properties": {"from": {"$ref": "#/$defs/path"},"to": {"$ref": "#/$defs/path"},"name": {"type": "string"},"target": {"oneOf": [{"type": "null"},{"$ref": "#/$defs/symbol-target"}]},"wildcard": {"type": "boolean"}}},
+    "symbols": {"type": "object","required": ["complete","exports","imports","limitations"],"properties": {"complete": {"type": "boolean"},"exports": {"type": "array","items": {"$ref": "#/$defs/symbol-export"}},"imports": {"type": "array","items": {"$ref": "#/$defs/symbol-import"}},"limitations": {"type": "array","items": {"type": "string"}}}},
+    "symbol-use": {"type": "object","required": ["target","importers"],"properties": {"target": {"$ref": "#/$defs/symbol-target"},"importers": {"type": "array","items": {"$ref": "#/$defs/path"}}}},
+    "deep-import": {"type": "object","required": ["from","to","symbols","suggestion"],"properties": {"from": {"$ref": "#/$defs/path"},"to": {"$ref": "#/$defs/path"},"symbols": {"type": "array","items": {"type": "string"}},"suggestion": {"type": "string"}}},
+    "module-surface": {"type": "object","required": ["module","entrypoints","exported","used_externally","could_be_internal","deep_imports","oversized"],"properties": {"module": {"type": "string"},"entrypoints": {"type": "array","items": {"$ref": "#/$defs/path"}},"exported": {"type": "array","items": {"$ref": "#/$defs/symbol-export"}},"used_externally": {"type": "array","items": {"$ref": "#/$defs/symbol-use"}},"could_be_internal": {"type": "array","items": {"$ref": "#/$defs/symbol-export"}},"deep_imports": {"type": "array","items": {"$ref": "#/$defs/deep-import"}},"oversized": {"type": "boolean"}}},
+    "surface": {"type": "object","required": ["max_symbols","complete","modules","limitations"],"properties": {"max_symbols": {"type": "integer","minimum": 1},"complete": {"type": "boolean"},"modules": {"type": "array","items": {"$ref": "#/$defs/module-surface"}},"limitations": {"type": "array","items": {"type": "string"}}}},
     "impact": {
       "type": "object",
       "required": ["changed_files", "unscanned_files", "affected_files", "affected_modules", "selected_tests", "go_test_packages", "reviewers", "risk", "limitations"],
@@ -201,6 +210,8 @@
         "summary": { "$ref": "#/$defs/summary" },
         "findings": { "type": "array", "items": {"$ref": "#/$defs/finding"} },
         "hotspots": {"$ref": "#/$defs/hotspots"},
+        "symbols": {"$ref": "#/$defs/symbols"},
+        "surface": {"$ref": "#/$defs/surface"},
         "cochange": { "oneOf": [ { "type": "null" }, { "$ref": "#/$defs/cochange" } ] }
       }
     },
@@ -282,6 +293,7 @@
             "properties": { "id": {"type": "string", "minLength": 1}, "path": {"type": "string", "minLength": 1} }
           }
         },
+        "entrypoints": {"type": "object", "additionalProperties": {"$ref": "#/$defs/path"}},
         "layers": { "type": "array", "items": {"type": "string", "minLength": 1} },
         "public": {
           "type": "array",

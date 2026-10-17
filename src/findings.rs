@@ -829,7 +829,8 @@ fn internals_reach(g: &Graph, out: &mut Vec<Finding>) {
         let module = g.module_of[e.to.as_str()];
         let (subject, entries, share) = match g.rules {
             Some(rules)
-                if e.verdict == Some(Verdict::Forbidden) && e.rule.as_deref() == Some("public") =>
+                if e.verdict == Some(Verdict::Forbidden)
+                    && matches!(e.rule.as_deref(), Some("public" | "entrypoints")) =>
             {
                 let (public, entries) = rules.public_for(&e.to).unwrap_or_default();
                 (public, entries, None)

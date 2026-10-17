@@ -118,6 +118,15 @@ archgraph impact origin/main..HEAD --format json --tests-output tests.txt
 
 Impact follows reverse imports up to three steps, marks cycle and hotspot risk, and suggests CODEOWNERS or recent contributors. It scans committed code with tests included. Results mean **at least these**; dynamic wiring and symbol ambiguity through barrels limit coverage. See [impact options and CI comments](docs/guide.md#impact).
 
+## What each module exposes
+
+```sh
+archgraph scan . --symbols -o graph.json
+archgraph surface graph.json
+```
+
+Compare exports with the symbols other modules actually import. The report lists deep imports, exports with no external consumer in the scan, and surfaces that may need a facade. Declare `entrypoints` in `layout.yaml` to make bypasses fail `check`. Maps show surface size as ring thickness. Symbol collection supports TypeScript/JavaScript, Python and Go; incomplete coverage withholds unused-export suggestions. See [public surface checks](docs/guide.md#public-surface).
+
 ## How the architecture changed
 
 ```sh
@@ -127,7 +136,7 @@ archgraph history path/to/repo --sample tags --limit 20
 
 Open `.archgraph/history.html` to step through commits, inspect each architecture map, and see changes in cycles, forbidden imports and module metrics. `history.json` contains the complete snapshots and adjacent diffs. History uses a temporary local clone and leaves your checkout untouched. See the [history options and collector requirements](docs/guide.md#history).
 
-The [benchmark suite](benchmarks/) checks pinned Java/Rust repositories and real historical changes, with repeatable timings and source-reference assertions.
+The [benchmark suite](benchmarks/) checks pinned Java/Rust repositories and real historical changes, with repeatable timings and source-reference assertions. See the [changelog](CHANGELOG.md) for added features.
 
 ## Results on 20 well-known repositories
 

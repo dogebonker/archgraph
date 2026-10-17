@@ -21,6 +21,8 @@ pub struct Rules {
     pub layers: Vec<String>,
     #[serde(default)]
     pub public: Vec<PublicRule>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub entrypoints: BTreeMap<String, String>,
     #[serde(default)]
     pub forbid: Vec<Forbid>,
     #[serde(default)]
@@ -110,6 +112,7 @@ fn known_keys() -> serde_json::Value {
     serde_json::to_value(Rules {
         modules: vec![ModuleRule::default()],
         public: vec![PublicRule::default()],
+        entrypoints: BTreeMap::from([("module".into(), "entry".into())]),
         forbid: vec![Forbid::default()],
         allow: vec![Allow::default()],
         default: Some(Fallback::Forbidden),
@@ -126,6 +129,9 @@ fn unknown_key(
     at: &str,
 ) -> Option<(String, String)> {
     use serde_json::Value::{Array, Object};
+    if at == "entrypoints" {
+        return None;
+    }
     match (given, known) {
         (Object(given), Object(known)) => {
             given.iter().find_map(|(key, value)| match known.get(key) {
@@ -236,6 +242,7 @@ pub struct Compiled {
     modules: Vec<(Pattern, String)>,
     layers: Vec<GlobMatcher>,
     public: Vec<(Pattern, Vec<String>)>,
+    entrypoints: Vec<(Pattern, String)>,
     /// (name, from, to, reachable); `to` may use only `from`'s capture, bound to the importer.
     forbid: Vec<(String, Pattern, String, bool)>,
     allow: Vec<(String, Pattern, String)>,
@@ -257,6 +264,12 @@ impl Compiled {
             .iter()
             .flat_map(|m| [&m.id, &m.path])
             .chain(&rules.layers)
+            .chain(
+                rules
+                    .entrypoints
+                    .iter()
+                    .flat_map(|(module, entry)| [module, entry]),
+            )
             .chain(
                 rules
                     .public
@@ -295,6 +308,19 @@ impl Compiled {
             }
             public.push((module, p.entries.clone()));
         }
+        let mut entrypoints = Vec::new();
+        for (raw, entry) in &rules.entrypoints {
+            let module = Pattern::new(raw)?;
+            module.check_template(entry)?;
+            let path = module.instance(entry, Some("x"));
+            if path.is_empty()
+                || path.contains(['\\', ':', '*', '?', '[', ']', '{', '}'])
+                || path.split('/').any(|part| matches!(part, "" | "." | ".."))
+            {
+                bail!("entrypoint `{entry}` must be an exact relative file path");
+            }
+            entrypoints.push((module, entry.clone()));
+        }
         let name = |id: &Option<String>, kind: &str, i: usize| {
             id.clone().unwrap_or_else(|| format!("{kind}[{i}]"))
         };
@@ -315,6 +341,7 @@ impl Compiled {
             modules,
             layers,
             public,
+            entrypoints,
             forbid: rules
                 .forbid
                 .iter()
@@ -387,7 +414,7 @@ impl Compiled {
         }
     }
 
-    /// The first matching step of the seven in docs/guide.md ("Rules file" section).
+    /// The first matching rule; strict entrypoint boundaries precede permissive allows.
     fn verdict<'a>(
         &self,
         e: &'a Edge,
@@ -410,6 +437,15 @@ impl Compiled {
                 });
                 if let Some(path) = path {
                     return (Forbidden, name.clone(), Some(path.clone()));
+                }
+            }
+        }
+        for (module, entry) in &self.entrypoints {
+            if let Some(value) = self.bind(module, &e.to) {
+                let value = value.as_deref();
+                let inside = self.bound_match(&module.bound_glob(&module.raw, value), &e.from);
+                if !inside && e.to != module.instance(entry, value) {
+                    return (Forbidden, "entrypoints".into(), None);
                 }
             }
         }
@@ -446,6 +482,13 @@ impl Compiled {
         if module_of[&e.from] == module_of[&e.to] {
             return (Allowed, "same-module".into(), None);
         }
+        for (module, entry) in &self.entrypoints {
+            if let Some(value) = self.bind(module, &e.to)
+                && e.to == module.instance(entry, value.as_deref())
+            {
+                return (Allowed, "entrypoints".into(), None);
+            }
+        }
         for (module, entries) in &self.public {
             if let Some(value) = self.bind(module, &e.to)
                 && entry_of(module, entries, value.as_deref())
@@ -460,17 +503,30 @@ impl Compiled {
         }
     }
 
-    /// The `public` module covering `to`, with its capture bound (`src/domains/cart/**`), and the
-    /// entries an import into `to` should use instead.
+    /// The entrypoint or `public` module covering `to`, with captures bound, and the entries an
+    /// import into `to` should use instead. Explicit entrypoints take precedence.
     pub fn public_for(&self, to: &str) -> Option<(String, Vec<String>)> {
-        self.public.iter().find_map(|(module, entries)| {
+        self.entrypoints_for(to).or_else(|| {
+            self.public.iter().find_map(|(module, entries)| {
+                let value = self.bind(module, to)?;
+                Some((
+                    module.instance(&module.raw, value.as_deref()),
+                    entries
+                        .iter()
+                        .map(|entry| module.instance(entry, value.as_deref()))
+                        .collect(),
+                ))
+            })
+        })
+    }
+
+    /// The explicit entrypoint for `to`, with module captures bound to its path.
+    pub fn entrypoints_for(&self, to: &str) -> Option<(String, Vec<String>)> {
+        self.entrypoints.iter().find_map(|(module, entry)| {
             let value = self.bind(module, to)?;
             Some((
                 module.instance(&module.raw, value.as_deref()),
-                entries
-                    .iter()
-                    .map(|entry| module.instance(entry, value.as_deref()))
-                    .collect(),
+                vec![module.instance(entry, value.as_deref())],
             ))
         })
     }

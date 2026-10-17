@@ -560,6 +560,7 @@ p { margin: 6px 0; }
             <span><i class="sw ln co"></i>changed together</span>
             <p>Ring colours are a reading aid, not a score. Drag a module or a file to move it; with a module focused, Shift and an arrow key moves it.</p>
             <p id="churn-legend" hidden>Churn view: larger, warmer file discs changed more often. Module fill size and color show the highest file churn in that module. Outer rings still show architecture checks. Churn is normalized within the scanned files and selected history window.</p>
+            <p id="surface-legend" hidden></p>
           </div>
         </div>
       </div>
@@ -656,6 +657,10 @@ function findingAge(f) {
   const age = f.age_days ?? f.introduced_by?.age_days;
   return age == null ? "" : (age <= 7 ? "new · " : "") + count(age, "day", "days");
 }
+function surfaceRingWidth(symbols, active = false) {
+  const n = Number.isFinite(symbols) ? Math.max(0, symbols) : 0;
+  return Math.max(active ? 2 : 1.25, Math.min(6, 1.25 + Math.log2(1 + n) * 0.65));
+}
 /* ---------- end history context helpers ---------- */
 
 /* ---------- header ---------- */
@@ -705,6 +710,14 @@ const F = files.length;
 const fileIndex = new Map(files.map(f => [f.path, f.i]));
 const hotspotFiles = doc.hotspots ? doc.hotspots.files : [];
 const hotspotByPath = new Map(hotspotFiles.map(h => [h.path, h]));
+const surfaceByModule = new Map((doc.surface?.modules || []).map(m => [m.module, m]));
+/* ---------- public surface legend ---------- */
+if (doc.surface) {
+  $("surface-legend").hidden = false;
+  $("surface-legend").textContent = "Thicker module rings expose more symbols (log scale, capped at 6 pixels); colours still show architecture checks." +
+    (doc.surface.complete ? "" : " Symbol collection is incomplete: surface counts are partial or conservative estimates.");
+}
+/* ---------- end public surface legend ---------- */
 const moduleChurn = mods.map(() => 0);
 for (const h of hotspotFiles) if (modIndex.has(h.module)) {
   const i = modIndex.get(h.module);
@@ -2003,7 +2016,8 @@ function draw() {
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU);
     ctx.globalAlpha = (dim ? 0.35 : s >= S_IN || chosen ? 1 : 0.8) * hid;
     ctx.strokeStyle = chosen ? C.focus : s === S_IN ? C.in : s === S_OUT ? C.out : s === S_SELF || s === S_INV ? C.fg : col;
-    ctx.lineWidth = (chosen || s >= S_IN ? 2 : 1.25) * px;
+    const surface = surfaceByModule.get(mods[i].id);
+    ctx.lineWidth = surfaceRingWidth(surface?.exported.length || 0, chosen || s >= S_IN) * px;
     if (hiddenMods[i]) ctx.setLineDash([4 * px, 4 * px]);
     ctx.stroke();
     if (fileT > 0 && groups[i].length) {
@@ -3762,6 +3776,45 @@ function overview() {
     for (const limit of doc.hotspots.limitations || []) panel.append(el("p", { class: "note" }, limit));
   }
 }
+/* ---------- public surface panel ---------- */
+function surfaceContext(row) {
+  if (!row || !doc.surface) return;
+  panel.append(el("h3", {}, "Public surface"));
+  panel.append(el("p", {}, `${count(row.exported.length, "exported symbol", "exported symbols")}; ${count(row.used_externally.length, "symbol used externally", "symbols used externally")}; ${count(row.deep_imports.length, "deep import", "deep imports")}.`));
+  if (!doc.surface.complete) panel.append(el("p", { class: "note" }, "Symbol collection is incomplete: counts are partial or conservative estimates; absence of external use is not proof that a symbol can become internal."));
+  const fileLink = path => {
+    const i = fileIndex.get(path);
+    return i === undefined ? el("span", { class: "path" }, path) : btn(short(path), "path", () => go({ type: "file", i }), path);
+  };
+  if (row.entrypoints.length) {
+    const p = el("p", {}, "Entrypoints: ");
+    row.entrypoints.forEach((path, i) => { if (i) p.append(document.createTextNode(", ")); p.append(fileLink(path)); });
+    panel.append(p);
+  }
+  if (row.could_be_internal.length) {
+    panel.append(el("h4", {}, "Could be internal"));
+    const list = el("ul");
+    for (const symbol of row.could_be_internal) {
+      const li = el("li", {}, `${symbol.name} — `);
+      li.append(fileLink(symbol.file)); list.append(li);
+    }
+    panel.append(list);
+  }
+  if (row.deep_imports.length) {
+    panel.append(el("h4", {}, "Deep imports"));
+    const list = el("ul");
+    for (const edge of row.deep_imports) {
+      const li = el("li");
+      li.append(fileLink(edge.from), document.createTextNode(" → "), fileLink(edge.to));
+      if (edge.symbols.length) li.append(document.createTextNode(` (${edge.symbols.join(", ")})`));
+      li.append(el("p", { class: "muted" }, edge.suggestion)); list.append(li);
+    }
+    panel.append(list);
+  }
+  if (row.oversized) panel.append(el("p", { class: "note" }, `External users touch more than ${doc.surface.max_symbols} symbols. Consider a facade for the operations those callers need.`));
+  for (const limit of doc.surface.limitations || []) panel.append(el("p", { class: "muted" }, limit));
+}
+/* ---------- end public surface panel ---------- */
 function modulePanel(i) {
   const m = mods[i];
   const chip = el("span", { class: "pill" });
@@ -3775,6 +3828,7 @@ function modulePanel(i) {
     panel.append(owners);
   }
   if (doc.hotspots) hotspotContext(hotspotFiles.filter(h => h.module === m.id));
+  surfaceContext(surfaceByModule.get(m.id));
   panel.append(sentence(diagnosis(i), "p"));
   panel.lastChild.className = "diag";
   panel.append(metrics([

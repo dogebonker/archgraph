@@ -15,6 +15,8 @@ pub mod modules;
 pub mod render;
 pub mod rules;
 pub mod simulate;
+pub mod surface;
+pub mod symbols;
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -33,6 +35,15 @@ pub fn restore_scan(input: model::ScanInput) -> Result<Document> {
         input.package_entries,
         input.cochange,
     )?;
+    let threshold = input
+        .surface
+        .as_ref()
+        .map_or(surface::DEFAULT_MAX_SYMBOLS, |s| s.max_symbols);
+    if let Some(symbols) = input.symbols {
+        surface::attach(&mut doc, symbols, threshold)?;
+    } else if input.surface.is_some() {
+        doc.surface = Some(surface::analyze(&doc, threshold)?);
+    }
     for saved in input.findings {
         if let Some(finding) = doc.findings.iter_mut().find(|f| {
             f.subject == saved.subject
@@ -237,6 +248,8 @@ pub fn build(
         findings: Vec::new(),
         cochange: None,
         hotspots: None,
+        symbols: None,
+        surface: None,
     };
     if owners.is_some() {
         for module in &mut doc.modules {

@@ -45,14 +45,15 @@ jobs:
           python -m venv "$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/pip" install grimp==3.17
           echo "$RUNNER_TEMP/tools/node_modules/.bin" >> "$GITHUB_PATH"
-      - name: Verify TypeScript impact symbol resolution
-        run: node --test tests/impact-typescript.test.cjs
+      - name: Verify symbol collectors
+        run: node --test tests/impact-typescript.test.cjs tests/surface-symbols.test.cjs
         env:
           ARCHGRAPH_TYPESCRIPT: ${{ runner.temp }}/tools/node_modules/typescript/package.json
       - run: cargo test --locked --test live -- --ignored
         env:
           ARCHGRAPH_DEPCRUISE: ${{ runner.temp }}/tools/node_modules/.bin/depcruise
           ARCHGRAPH_PYTHON: ${{ runner.temp }}/venv/bin/python
+      - run: cargo test --locked --test symbols --test surface_go -- --include-ignored
 
   binary:
     runs-on: ubuntu-latest
@@ -89,7 +90,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 18
-      - run: node --test ../tests/history-ui.test.cjs ../tests/context-ui.test.cjs
+      - run: node --test ../tests/history-ui.test.cjs ../tests/context-ui.test.cjs ../tests/surface-ui.test.cjs
         working-directory: npm
       - run: node --test
         working-directory: npm

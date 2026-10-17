@@ -30,6 +30,10 @@ pub struct Document {
     pub cochange: Option<Cochange>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hotspots: Option<crate::hotspots::Hotspots>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub symbols: Option<crate::surface::Symbols>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub surface: Option<crate::surface::SurfaceReport>,
 }
 
 /// The parts of a scan document that every other subcommand recomputes the rest from.
@@ -49,6 +53,10 @@ pub struct ScanInput {
     pub hotspots: Option<crate::hotspots::Hotspots>,
     #[serde(default)]
     pub findings: Vec<FindingContext>,
+    #[serde(default)]
+    pub symbols: Option<crate::surface::Symbols>,
+    #[serde(default)]
+    pub surface: Option<crate::surface::SurfaceReport>,
 }
 
 #[derive(Debug, Serialize)]

@@ -27,6 +27,8 @@ mod impact_context;
 mod impact_typescript;
 #[path = "cli/provenance.rs"]
 mod provenance_cli;
+#[path = "cli/surface.rs"]
+mod surface_cli;
 
 #[derive(Parser)]
 #[command(version, about = "Import-graph evidence for architecture decisions")]
@@ -57,6 +59,8 @@ enum Cmd {
     Hotspots(hotspots_cli::HotspotsArgs),
     /// Show affected modules, tests and reviewers for a Git diff
     Impact(impact_cli::ImpactArgs),
+    /// Compare exposed symbols with external usage and intended entrypoints
+    Surface(surface_cli::SurfaceArgs),
 }
 
 #[derive(Args)]
@@ -183,6 +187,9 @@ struct ScanOpts {
     /// Ignore commits touching more than this many repository files
     #[arg(long, default_value_t = 30, value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..))]
     hotspot_max_files: usize,
+    /// Collect symbol-level public API evidence (TypeScript, Python and Go)
+    #[arg(long)]
+    symbols: bool,
 }
 
 #[derive(Args)]
@@ -269,6 +276,7 @@ fn main() -> ExitCode {
         Cmd::Bisect(args) => provenance_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Hotspots(args) => hotspots_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Impact(args) => impact_cli::run(args),
+        Cmd::Surface(args) => surface_cli::run(args).map(|()| ExitCode::SUCCESS),
     };
     result.unwrap_or_else(|e| {
         eprintln!("error: {e:#}");
@@ -735,6 +743,18 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         Language::Python | Language::Go | Language::Rust | Language::Java => Vec::new(),
     };
     let mut doc = archgraph::analyze(source, config, raw.files, raw.edges, entries, cochange)?;
+    if args.symbols {
+        let symbols = archgraph::symbols::collect(
+            root,
+            &doc,
+            archgraph::symbols::Options {
+                depcruise: depcruise.as_deref(),
+                python: &args.python,
+                go: &args.go,
+            },
+        )?;
+        archgraph::surface::attach(&mut doc, symbols, archgraph::surface::DEFAULT_MAX_SYMBOLS)?;
+    }
     if let Some(since) = &args.hotspots {
         let report = archgraph::hotspots::collect(
             root,
@@ -981,7 +1001,7 @@ fn count(n: usize, noun: &str) -> String {
 
 fn check(args: Check) -> Result<ExitCode> {
     let doc = recompute(&args.graph, args.rules.as_deref())?;
-    if doc.config.rules.is_none() {
+    if doc.config.rules.is_none() && doc.surface.is_none() {
         bail!("no rules: pass --rules, or scan with --rules");
     }
     let (mut forbidden, mut unplanned) = (0, 0);
@@ -1005,6 +1025,9 @@ fn check(args: Check) -> Result<ExitCode> {
         println!("{label} {} -> {} ({rule}){via}", e.from, e.to);
     }
     println!("{forbidden} forbidden, {unplanned} unplanned");
+    if let Some(surface) = &doc.surface {
+        surface_cli::print_findings(surface);
+    }
     if let Some(path) = &args.output {
         write(Some(path), &doc)?;
     }
