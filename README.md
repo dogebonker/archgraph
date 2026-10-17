@@ -19,9 +19,9 @@
 </p>
 
 <a href="https://dogebonker.github.io/archgraph/next.js.html">
-  <img alt="The archgraph map of Next.js: 85 modules as dark discs with rings that mark cycles and findings, the server module selected with its 48 importers in blue and 39 imports in purple, and the assessment panel beside the map" src="docs/assets/hero.png" width="100%">
+  <img alt="The archgraph map of Next.js: modules as discs with cycle and finding rings; the selected module highlights its importers and imports" src="docs/assets/hero.png" width="100%">
 </a>
-<p align="center"><sub>Next.js (<code>packages/next</code> at <code>00c4ba8</code>): 1,542 files, 85 modules, 6,058 imports. Click it for the live map. Made with <code>archgraph report</code> (<a href="showcase/">how</a>).</sub></p>
+<p align="center"><sub>Next.js (<code>packages/next</code> at <code>00c4ba8</code>): 1,252 files, 65 modules, 4,627 internal file dependencies. The static illustration shows an earlier scan; click it for the current map. Made with <code>archgraph report</code> (<a href="showcase/">how</a>).</sub></p>
 
 archgraph reads every file import in a repository, groups files into modules by folder, and finds the modules that depend on each other in both directions. Folders tied together like that can't be changed, tested or split off alone. archgraph shows where it happened and which few imports to remove first, with the counts behind each suggestion.
 
@@ -142,30 +142,30 @@ The [benchmark suite](benchmarks/) checks pinned Java/Rust repositories and real
 
 archgraph on 20 open-source projects at pinned commits. Each name opens its live map; the path under a name is the folder that was scanned.
 
-| Project | Files | Largest cycle | First suggested step |
+| Project | Files | Largest cycle | Suggested cut |
 |---|--:|--:|---|
-| [vercel/next.js](https://dogebonker.github.io/archgraph/next.js.html)<br><sub><code>packages/next</code></sub> | 1,542 | 62 modules | cut <code>shared/lib → server/app-render</code><br><sub>in <code>preload-chunks.tsx</code></sub> |
-| [nestjs/nest](https://dogebonker.github.io/archgraph/nest.html) | 666 | 16 modules | cut <code>packages/core/inspector → packages/core</code><br><sub>in <code>serialized-graph.ts</code></sub> |
-| [django/django](https://dogebonker.github.io/archgraph/django.html) | 713 | 31 modules | cut <code>utils → forms</code><br><sub>in <code>feedgenerator.py</code></sub> |
-| [typeorm/typeorm](https://dogebonker.github.io/archgraph/typeorm.html)<br><sub><code>packages/typeorm/src</code></sub> | 496 | 27 modules | move <code>DriverFactory.ts</code> into its own folder<br><sub>cycle drops from 27 to 5 modules</sub> |
-| [outline/outline](https://dogebonker.github.io/archgraph/outline.html) | 2,243 | 40 modules | cut <code>app/components → app/editor</code><br><sub>in <code>Lightbox.tsx</code></sub> |
-| [payloadcms/payload](https://dogebonker.github.io/archgraph/payload.html)<br><sub><code>packages/payload</code></sub> | 819 | 21 modules | cut <code>utilities → collections</code><br><sub>in <code>createPayloadRequest.ts</code></sub> |
-| [activepieces/activepieces](https://dogebonker.github.io/archgraph/activepieces.html)<br><sub><code>packages/server/api</code></sub> | 757 | 32 modules | cut <code>app/helper → app/ee</code><br><sub>in <code>embed-security.ts</code></sub> |
-| [immich-app/immich](https://dogebonker.github.io/archgraph/immich.html)<br><sub><code>server</code></sub> | 458 | 9 modules | cut <code>decorators.ts → schema</code><br><sub>in <code>decorators.ts</code></sub> |
-| [excalidraw/excalidraw](https://dogebonker.github.io/archgraph/excalidraw.html)<br><sub><code>packages/excalidraw</code></sub> | 364 | 29 modules | cut <code>actions → components/CommandPalette</code><br><sub>in <code>actionLinearEditor.tsx</code></sub> |
-| [strapi/strapi](https://dogebonker.github.io/archgraph/strapi.html)<br><sub><code>packages/core/core/src</code></sub> | 236 | 5 modules | drop one re-export<br><sub><code>getDirs</code> from <code>utils/index.ts</code></sub> |
-| [trpc/trpc](https://dogebonker.github.io/archgraph/trpc.html)<br><sub><code>packages/server</code></sub> | 83 | 5 modules | cut <code>unstable-core-do-not-import/error → unstable-core-do-not-import</code><br><sub>in <code>TRPCError.ts</code></sub> |
-| [vitejs/vite](https://dogebonker.github.io/archgraph/vite.html)<br><sub><code>packages/vite</code></sub> | 135 | 5 modules | cut <code>node/ssr → node/server</code><br><sub>in <code>fetchModule.ts</code></sub> |
-| [zulip/zulip](https://dogebonker.github.io/archgraph/zulip.html) | 733 | 14 modules | cut <code>lib → webhooks</code><br><sub>in <code>integrations.py</code></sub> |
-| [sqlalchemy/sqlalchemy](https://dogebonker.github.io/archgraph/sqlalchemy.html)<br><sub><code>lib</code></sub> | 245 | 3 modules | cut <code>sql → engine</code><br><sub>in <code>sqltypes.py</code></sub> |
-| [celery/celery](https://dogebonker.github.io/archgraph/celery.html) | 161 | 5 modules | cut <code>app → worker</code><br><sub>in <code>trace.py</code></sub> |
-| [scrapy/scrapy](https://dogebonker.github.io/archgraph/scrapy.html) | 194 | 18 modules | cut <code>utils → spiders</code><br><sub>in <code>spider.py</code></sub> |
-| [pydantic/pydantic](https://dogebonker.github.io/archgraph/pydantic.html) | 79 | 8 modules | cut <code>errors.py → _internal</code><br><sub>in <code>errors.py</code></sub> |
-| [fastapi/fastapi](https://dogebonker.github.io/archgraph/fastapi.html) | 52 | 14 modules | cut <code>telemetry → __init__.py</code><br><sub>in <code>_asgi.py</code></sub> |
-| [pallets/flask](https://dogebonker.github.io/archgraph/flask.html) | 21 | none | no module cycles<br><sub>a flat package</sub> |
-| [encode/httpx](https://dogebonker.github.io/archgraph/httpx.html) | 23 | none | no module cycles<br><sub>a flat package</sub> |
+| [vercel/next.js](https://dogebonker.github.io/archgraph/next.js.html)<br><sub><code>packages/next</code></sub> | 1,252 | 43 modules | review <code>src/cli/next-info.ts → src/server/config.ts</code> |
+| [nestjs/nest](https://dogebonker.github.io/archgraph/nest.html) | 666 | 15 modules | review <code>packages/core/adapters/http-adapter.ts → packages/core/helpers/cookies/serialize-cookie.ts</code> |
+| [django/django](https://dogebonker.github.io/archgraph/django.html) | 716 | 30 modules | review <code>django/apps/config.py → django/core/exceptions.py</code> |
+| [typeorm/typeorm](https://dogebonker.github.io/archgraph/typeorm.html)<br><sub><code>packages/typeorm/src</code></sub> | 496 | 27 modules | review <code>driver/DriverFactory.ts → driver/aurora-mysql/AuroraMysqlDriver.ts</code> |
+| [outline/outline](https://dogebonker.github.io/archgraph/outline.html) | 2,231 | 22 modules | review <code>plugins/azure/server/auth/azure.ts → server/commands/accountProvisioner.ts</code> |
+| [payloadcms/payload](https://dogebonker.github.io/archgraph/payload.html)<br><sub><code>packages/payload</code></sub> | 817 | 21 modules | review <code>src/admin/initAdminContext.ts → src/index.ts</code> |
+| [activepieces/activepieces](https://dogebonker.github.io/archgraph/activepieces.html)<br><sub><code>packages/server/api</code></sub> | 757 | 32 modules | review <code>src/app/agents/agents-module.ts → src/app/ee/agent/agent-run-controller.ts</code> |
+| [immich-app/immich](https://dogebonker.github.io/archgraph/immich.html)<br><sub><code>server</code></sub> | 458 | 9 modules | review <code>src/cores/storage.core.ts → src/utils/asset.util.ts</code> |
+| [excalidraw/excalidraw](https://dogebonker.github.io/archgraph/excalidraw.html)<br><sub><code>packages/excalidraw</code></sub> | 364 | 29 modules | review <code>clipboard.ts → data/blob.ts</code> |
+| [strapi/strapi](https://dogebonker.github.io/archgraph/strapi.html)<br><sub><code>packages/core/core/src</code></sub> | 236 | 3 modules | review <code>core-api/routes/validation/utils.ts → utils/zod.ts</code> |
+| [trpc/trpc](https://dogebonker.github.io/archgraph/trpc.html)<br><sub><code>packages/server</code></sub> | 76 | 5 modules | review <code>src/unstable-core-do-not-import/error/TRPCError.ts → src/unstable-core-do-not-import/utils.ts</code> |
+| [vitejs/vite](https://dogebonker.github.io/archgraph/vite.html)<br><sub><code>packages/vite</code></sub> | 135 | 5 modules | review <code>src/node/optimizer/index.ts → src/node/constants.ts</code> |
+| [zulip/zulip](https://dogebonker.github.io/archgraph/zulip.html) | 775 | 19 modules | review <code>analytics/lib/counts.py → zerver/lib/timestamp.py</code> |
+| [sqlalchemy/sqlalchemy](https://dogebonker.github.io/archgraph/sqlalchemy.html)<br><sub><code>lib</code></sub> | 245 | 3 modules | review <code>sqlalchemy/sql/sqltypes.py → sqlalchemy/engine/processors.py</code> |
+| [celery/celery](https://dogebonker.github.io/archgraph/celery.html) | 164 | 5 modules | review <code>celery/app/trace.py → celery/worker/state.py</code> |
+| [scrapy/scrapy](https://dogebonker.github.io/archgraph/scrapy.html) | 198 | 18 modules | review <code>scrapy/core/downloader/__init__.py → scrapy/__init__.py</code> |
+| [pydantic/pydantic](https://dogebonker.github.io/archgraph/pydantic.html) | 79 | 8 modules | review <code>pydantic/_internal/_dataclasses.py → pydantic/fields.py</code> |
+| [fastapi/fastapi](https://dogebonker.github.io/archgraph/fastapi.html) | 52 | 9 modules | review <code>fastapi/telemetry/_asgi.py → fastapi/__init__.py</code> |
+| [pallets/flask](https://dogebonker.github.io/archgraph/flask.html) | 24 | none | no module cycles |
+| [encode/httpx](https://dogebonker.github.io/archgraph/httpx.html) | 23 | none | no module cycles |
 
-<sub>Scanned by us at the commits listed in [showcase/repos.json](showcase/repos.json), from shallow clones (so no co-change analysis). These are reading aids for maintainers, not endorsements or ratings. Rebuild them with [`showcase/build.sh`](showcase/).</sub>
+<sub>Generated from the final pinned scans in [showcase/repos.json](showcase/repos.json). Runtime cycles now exclude lazy, type-only and structural re-export edges; named imports resolve through barrels. Default test/generated/vendor/example exclusions change scan scope and can exclude real source in folders such as Next.js `src/build` or Django `test`. Include overrides restore file coverage; test-classified files still stay outside runtime cycles. [The measured comparison and caveats](showcase/edge-quality-report.md) document the methodology change. Suggested cuts are existing break-set edges from the largest remaining module SCC, to review rather than apply automatically. Rebuild with [`showcase/build.sh`](showcase/).</sub>
 
 ## Gate pull requests
 

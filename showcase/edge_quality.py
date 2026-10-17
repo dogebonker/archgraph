@@ -7,6 +7,7 @@ engine hashes and timing are retained outside the repository (default /tmp).
 import argparse
 import concurrent.futures
 import hashlib
+import html
 import json
 import os
 from pathlib import Path
@@ -76,7 +77,17 @@ def stats(doc):
     for edge in doc['edges']:
         kind = edge.get('kind', 'runtime')
         kinds[kind] = kinds.get(kind, 0) + 1
+    statement_kinds = {}
+    for occurrence in doc.get('imports') or []:
+        kind = {'static': 'runtime', 'dynamic': 'lazy', 'type-reexport': 'type'}.get(occurrence['kind'], occurrence['kind'])
+        statement_kinds[kind] = statement_kinds.get(kind, 0) + 1
     return {
+        'import_resolution': doc.get('import_resolution'),
+        'import_statement_kinds': statement_kinds if doc.get('imports') is not None else None,
+        'external_packages': len(doc.get('external_nodes', [])),
+        'external_edges': len(doc.get('external_edges', [])),
+        'grabbag_reclassifications': len(doc.get('grabbags', [])),
+        'grabbag_complete': sum(not evidence.get('remaining_cycles') for evidence in doc.get('grabbags', [])),
         'files': len(doc['files']), 'modules': len(doc['modules']),
         'edges': len(doc['edges']), 'edge_kinds': kinds,
         'collector': doc['source']['collector'],
@@ -84,6 +95,8 @@ def stats(doc):
         'largest_module_cycle': max((len(c['members']) for c in cycles), default=0),
         'cycle_members': [c['members'] for c in cycles],
         'deferred_module_cycles': sum(c.get('level') == 'module' for c in doc.get('type_only_cycles', [])),
+        'nonruntime_module_cycles': sum(c.get('level') == 'module' and not c.get('contains_runtime_cycle', False) for c in doc.get('type_only_cycles', [])),
+        'excluded_files': len(doc.get('config', {}).get('excluded_files', [])),
         'barrels': sum(bool(f.get('barrel')) for f in doc['files']),
         'summary': doc['summary'],
     }
@@ -165,7 +178,7 @@ HAND_CHECKS = [
 ]
 
 
-def report(work, entries, output):
+def archived_stages(work, entries):
     stages = ['baseline', 'fix1', 'fix2', 'fix3', 'fix4', 'fix5']
     complete = [stage for stage in stages if (work / stage / 'index.json').is_file()]
     if not complete or complete[0] != 'baseline':
@@ -184,7 +197,18 @@ def report(work, entries, output):
             path = work / stage / entry['name'] / 'graph.json'
             if digest(path) != by_name[entry['name']]['graph_sha256']:
                 raise RuntimeError(f'{path}: archived graph hash changed')
-            documents[stage][entry['name']] = json.loads(path.read_text())
+            document = json.loads(path.read_text())
+            if by_name[entry['name']]['fingerprint']['entry'] != entry:
+                raise RuntimeError(f'{stage}/{entry["name"]}: manifest provenance changed')
+            if document.get('source', {}).get('git', {}).get('commit') != entry.get('commit'):
+                raise RuntimeError(f'{stage}/{entry["name"]}: pinned source commit differs')
+            documents[stage][entry['name']] = document
+    return complete, documents, metadata
+
+
+def report(work, entries, output):
+    stages = ['baseline', 'fix1', 'fix2', 'fix3', 'fix4', 'fix5']
+    complete, documents, metadata = archived_stages(work, entries)
     if 'fix2' not in complete:
         raise RuntimeError('report requires complete baseline, fix1 and fix2 snapshots')
     latest = complete[-1]
@@ -195,7 +219,7 @@ def report(work, entries, output):
              '## Methodology', '',
              'The first 20 entries in `showcase/repos.json` are the published README cohort (11 TypeScript/JavaScript and nine Python repositories). Three supplemental Go repositories are reported separately. Every stage scans the exact manifest commit and the same scanned root and explicit flags; defaults change only with the corresponding fix.', '',
              'The baseline is the frozen pre-change source at `6627a5e22013044516a599e86bede437ba76ad10`. Targets are separate clean checkouts. No target installation, target build scripts, or annotation processors run. The runner captures commands, engine/source hashes, graph hashes, logs, and raw collector stdout/stderr under `<work>/<stage>/<repo>/`; cached source repositories are never checked out or reset.', '',
-             '**Counting units:** edges are canonical file-dependency records, not source import statements. One named import can resolve to several defining files and increase the edge count. Runtime/lazy/type/re-export columns below count edges, and legacy static/dynamic names are mapped to runtime/lazy for comparison. Import-statement totals and resolution percentages remain pending until the resolution ledger exists; neither is inferred from graph edges or the old unresolved counter.', '',
+             '**Counting units:** edges are canonical file-dependency records, not source import statements. One named import can resolve to several defining files and increase the edge count. Runtime/lazy/type/re-export columns in the architecture tables count edges, and legacy static/dynamic names are mapped to runtime/lazy for comparison. The separate resolution table counts source specifier occurrences only when a ledger exists; missing coverage is never inferred from graph edges or the old unresolved counter. External nodes and edges stay outside internal module metrics.', '',
              'The baseline already excluded type-only and dynamic edges from runtime cycles. Fix 1 additionally excludes structural re-exports, so an observed decrease is not automatically a newly detected type-only cycle. Deferred SCCs containing an existing runtime SCC are reported separately from wholly non-runtime SCCs. JavaScript re-exports can still cause module evaluation: these results describe the requested graph policy, not proof that all runtime execution is acyclic.', '',
              '## Engine provenance', '', '| Stage | Source commit | Binary SHA-256 |', '| --- | --- | --- |']
     for stage in complete:
@@ -205,27 +229,84 @@ def report(work, entries, output):
         commit, binary_hash = fingerprints.pop()
         lines.append(f'| {stage} | `{commit}` | `{binary_hash}` |')
     lines += ['', 'Collector versions are recorded per scan in `metadata.json`. Reproduce a stage with:', '', '```sh', 'python3 -B showcase/edge_quality.py --engine /absolute/frozen-archgraph \\', '  --engine-commit FULL_SOURCE_COMMIT --stage fixN', 'python3 -B showcase/edge_quality.py --report-output showcase/edge-quality-report.md', '```', '', '## Published 20 repositories', '',
-              'Within each arrow cell the stages are ' + ' → '.join(complete) + '. SCC means a strongly connected component with a cycle; largest is its module count.', '',
-              '| Repository | Files | File edges | Module SCCs | Largest SCC | Runtime / lazy / type / re-export edges (' + latest + ') | Barrels (' + latest + ') |',
-              '| --- | ---: | ---: | ---: | ---: | ---: | ---: |']
+              'Arrow cells compare baseline → ' + latest + '. SCC means a strongly connected component with a cycle; largest is its module count. All intermediate stages remain in the cohort totals, provenance and full SCC inventory.', '',
+              '| Repository | Files | File edges | Module SCCs | Largest SCC | Runtime / lazy / type / re-export edges (' + latest + ') | Barrels (' + latest + ') | Excluded candidate files | Non-runtime / extended-runtime SCCs | Via grab-bag: complete / partial |',
+              '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
     def table_rows(cohort):
         for entry in cohort:
             name = entry['name']
-            snapshots = [stats(documents[stage][name]) for stage in complete]
+            snapshots = [stats(documents[stage][name]) for stage in ['baseline', latest]]
             arrow = lambda key: ' → '.join(str(snapshot[key]) for snapshot in snapshots)
             kinds = {}
             for edge in documents[latest][name]['edges']:
                 kind = {'static': 'runtime', 'dynamic': 'lazy', 'type-reexport': 'type'}.get(edge['kind'], edge['kind'])
                 kinds[kind] = kinds.get(kind, 0) + 1
             counts = ' / '.join(str(kinds.get(kind, 0)) for kind in ['runtime', 'lazy', 'type', 'reexport'])
-            lines.append(f"| {name} | {arrow('files')} | {arrow('edges')} | {arrow('module_cycles')} | {arrow('largest_module_cycle')} | {counts} | {snapshots[-1]['barrels']} |")
+            excluded = snapshots[-1]['excluded_files'] if 'fix3' in complete else 'pending'
+            nonruntime = snapshots[-1]['nonruntime_module_cycles']
+            extended = snapshots[-1]['deferred_module_cycles'] - nonruntime
+            complete_grabbags = snapshots[-1]['grabbag_complete']
+            partial_grabbags = snapshots[-1]['grabbag_reclassifications'] - complete_grabbags
+            grabbag_counts = f'{complete_grabbags} / {partial_grabbags}' if 'fix5' in complete else 'pending'
+            lines.append(f"| {name} | {arrow('files')} | {arrow('edges')} | {arrow('module_cycles')} | {arrow('largest_module_cycle')} | {counts} | {snapshots[-1]['barrels']} | {excluded} | {nonruntime} / {extended} | {grabbag_counts} |")
     table_rows(entries[:20])
-    lines += ['', '## Supplemental Go repositories', '', '| Repository | Files | File edges | Module SCCs | Largest SCC | Runtime / lazy / type / re-export edges (' + latest + ') | Barrels (' + latest + ') |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: |']
+    lines += ['', '### Published cohort totals by measured stage', '',
+              '| Stage | Files | Canonical file edges | Module SCCs | Largest module SCC |',
+              '| --- | ---: | ---: | ---: | ---: |']
+    for stage in complete:
+        snapshots = [stats(documents[stage][entry['name']]) for entry in entries[:20]]
+        lines.append(f"| {stage} | {sum(snapshot['files'] for snapshot in snapshots)} | {sum(snapshot['edges'] for snapshot in snapshots)} | {sum(snapshot['module_cycles'] for snapshot in snapshots)} | {max(snapshot['largest_module_cycle'] for snapshot in snapshots)} |")
+    lines += ['', '## Supplemental Go repositories', '', '| Repository | Files | File edges | Module SCCs | Largest SCC | Runtime / lazy / type / re-export edges (' + latest + ') | Barrels (' + latest + ') | Excluded candidate files | Non-runtime / extended-runtime SCCs | Via grab-bag: complete / partial |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
     table_rows(entries[20:])
+    lines += ['', 'The fix3 directory rules exclude real source as well as generated/test artifacts: Next.js `packages/next/src/build/index.ts:1115` declares its framework build function; Django `django/test/testcases.py:1378` declares its public TestCase API; Payload `src/cli/commands/build/` contains CLI implementation. The measured reduction must be described as changed scan scope. Layout include overrides can restore Next.js build files and their cycle participation. Including Django/test restores files but they retain the test class and remain excluded from cycles; production-cycle analysis of test-named APIs requires a future classification override.', '']
+    lines += ['', '## Confidence limits on runtime projection', '',
+              'Low-confidence zero-weight re-export fallbacks are retained in JSON but excluded from the default runtime projection. They include un-narrowed namespace/star imports, ambiguous exports, and named exports whose metadata is unproven. These are uncertainty categories, **not proven type-only imports**. Resolved-file coverage and absence of a reported cycle do not prove complete runtime coverage; dynamic wiring and these fallbacks can hide dependencies.', '',
+              '| Repository | Zero-weight low-confidence re-export edges | Namespace/star | Ambiguous | Unproven named metadata | Other |',
+              '| --- | ---: | ---: | ---: | ---: | ---: |']
+    fallback_totals = [0, 0, 0, 0]
+    for entry in entries:
+        counts = [0, 0, 0, 0]
+        for edge in documents[latest][entry['name']]['edges']:
+            if edge.get('confidence') != 'low' or edge['kind'] != 'reexport' or edge.get('weight') != 0:
+                continue
+            reason = edge.get('resolution_reason', '')
+            category = 2 if 'unproven' in reason and 'metadata' in reason else 1 if 'ambiguous' in reason else 0 if 'namespace' in reason or 'star import' in reason else 3
+            counts[category] += 1
+        fallback_totals = [left + right for left, right in zip(fallback_totals, counts)]
+        lines.append(f"| {entry['name']} | {sum(counts)} | " + ' | '.join(map(str, counts)) + ' |')
+    lines.append('| All 23 | ' + str(sum(fallback_totals)) + ' | ' + ' | '.join(map(str, fallback_totals)) + ' |')
+    lines += ['', '## Import resolution: source specifier occurrences', '',
+              'These counts come only from `import_resolution` and the source-occurrence ledger. They include known external packages and do not use the file-edge denominator. An unavailable ledger stays unavailable; a zero-import ledger has no percentage. Percentages are rounded to one decimal, so 100.0% with a nonzero unresolved count is rounding, not complete coverage. Runtime/lazy/type/re-export columns in this table count source occurrences, unlike the architecture table above.', '',
+              '| Repository | Imports | Resolved | Resolved % | Unresolved | Runtime / lazy / type / re-export occurrences | Known external packages |',
+              '| --- | ---: | ---: | ---: | ---: | ---: | ---: |']
+    for entry in entries:
+        document = documents[latest][entry['name']]
+        measured = stats(document)
+        resolution = measured['import_resolution']
+        if resolution is None:
+            cells = 'unavailable | unavailable | unavailable | unavailable | unavailable | unavailable'
+        else:
+            if resolution['imports'] != resolution['resolved'] + resolution['unresolved']:
+                raise RuntimeError(f"{entry['name']}: resolution accounting does not add up")
+            if document.get('imports') is None or len(document['imports']) != resolution['imports']:
+                raise RuntimeError(f"{entry['name']}: occurrence ledger and resolution total disagree")
+            percent = resolution.get('resolved_percent')
+            percent = 'n/a' if percent is None else f'{percent:.1f}%'
+            kinds = measured['import_statement_kinds']
+            counts = ' / '.join(str(kinds.get(kind, 0)) for kind in ['runtime', 'lazy', 'type', 'reexport'])
+            cells = f"{resolution['imports']} | {resolution['resolved']} | {percent} | {resolution['unresolved']} | {counts} | {measured['external_packages']}"
+        lines.append(f"| {entry['name']} | {cells} |")
+    dispositions = [cycle_disposition(members, documents[latest][entry['name']])
+                    for entry in entries for members in module_cycles(documents['baseline'][entry['name']])]
+    unchanged = sum(d == 'unchanged' for d in dispositions)
+    shrunk = sum(d.startswith('shrunk or split') for d in dispositions)
+    eliminated = sum(d == 'eliminated' for d in dispositions)
+    expanded = sum(d == 'persists in a larger cycle' for d in dispositions)
+    inventory_text = f'Through {latest}, {unchanged} original SCCs remain exactly unchanged, {shrunk} have shrunk or split, {eliminated} are eliminated, and {expanded} persist in larger SCCs. '
     lines += ['', '## Resolution and exclusions', '',
-              'Source import-statement totals, resolved percentages, default-excluded file counts, and grab-bag reclassification counts: **pending fixes 3–5**. Old collector dependency counts have a different denominator and are not presented as import-statement coverage.', '',
+              ('Grab-bag reclassifications are measured from `grabbags`: complete means no residual module SCC, while partial retains verified residual runtime SCCs. ' if 'fix5' in documents else 'Grab-bag reclassification remains pending fix5. ') + 'Import-statement totals and resolved percentages are shown only for snapshots with the fix4 ledger; older snapshots remain unavailable. Excluded candidate files are the actual length of `config.excluded_files` in the latest snapshot: they include pre-existing defaults and explicit manifest exclusions, not just files newly removed in fix3. Non-runtime SCCs have no runtime cycle; extended-runtime SCCs include a runtime SCC and must not be counted as removed cycles.', '',
               '## Every baseline module SCC', '',
-              'This inventory includes all original SCCs, including shrinkage. An old SCC absorbed into a larger SCC still persists; it is not counted as removed. Fixes 1–2 have one fully eliminated original SCC, six shrunken original SCCs, and 26 unchanged original SCCs. Fix 2 also expands the surviving Nest common SCC from five to six modules.', '',
+              'This inventory includes all original SCCs, including shrinkage. An old SCC absorbed into a larger SCC still persists; it is not counted as removed. ' + inventory_text + 'Fix 2 expands the surviving Nest common SCC from five to six modules.', '',
               '| Repository / baseline SCC | Original modules | ' + ' | '.join(complete[1:]) + ' | Explanation of changed membership |',
               '| --- | ---: | ' + ' | '.join('---' for _ in complete[1:]) + ' | --- |']
     for entry in entries:
@@ -233,12 +314,107 @@ def report(work, entries, output):
         for number, members in enumerate(module_cycles(documents['baseline'][name]), 1):
             dispositions = [cycle_disposition(members, documents[stage][name]) for stage in complete[1:]]
             explanation = 'Unchanged through measured stages.'
-            if any(disposition != 'unchanged' for disposition in dispositions):
+            if cycle_disposition(members, documents['fix1'][name]) != 'unchanged':
                 explanation = 'Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering.'
             if name == 'nest' and 'packages/common/file-stream' in members:
                 explanation += ' Named barrel resolution at fix2 restores common itself to the surviving SCC (5 → 6); this is expansion, not another disappearance.'
+            if 'fix3' in documents and cycle_disposition(members, documents['fix3'][name]) != cycle_disposition(members, documents['fix2'][name]):
+                if explanation == 'Unchanged through measured stages.':
+                    explanation = ''
+                after_paths = {f['path'] for f in documents['fix3'][name]['files']}
+                removed = [f['path'] for f in documents['fix2'][name]['files'] if f['module'] in members and f['path'] not in after_paths]
+                examples = ', '.join('`' + path + '`' for path in sorted(removed)[:3])
+                explanation += f' Fix3 directory exclusions remove {len(removed)} files in this original SCC; examples: {examples}. Next.js build code and Django testing APIs are real source excluded by directory convention; this is a scope change, not proof that those dependencies were erroneous.'
+            if 'fix4' in documents and cycle_disposition(members, documents['fix4'][name]) != cycle_disposition(members, documents['fix3'][name]):
+                if explanation == 'Unchanged through measured stages.':
+                    explanation = ''
+                explanation += ' Fix4 changes type-only or resolved runtime links; exact counts and pinned source witnesses are listed in the transition table below.'
+            if 'fix5' in documents:
+                classifications = [evidence for evidence in documents['fix5'][name].get('grabbags', []) if set(evidence['members']) == members or set(evidence['members']) <= members]
+                if classifications:
+                    if explanation == 'Unchanged through measured stages.':
+                        explanation = ''
+                    explanation += ' Fix5 verifies a cycle via grab-bag; residual real cycles are retained. See the complete/partial evidence table below.'
             label = ', '.join(sorted(members)[:3]) + (', …' if len(members) > 3 else '')
             lines.append(f"| {name} #{number}: `{label}` | {len(members)} | " + ' | '.join(dispositions) + f' | {explanation} |')
+    if 'fix4' in documents:
+        verify_type_controls(documents['fix4']['nest'])
+        lines += ['', '## Fix 4 runtime-link changes behind SCC membership changes', '',
+                  'For every original SCC whose disposition changes between fixes 3 and 4, this table groups its old runtime edges by their actual new kind or changed target, plus new runtime links touching its modules. These are edge-level explanations, not reasons guessed from a lower cycle count. Added links can expand SCCs; they are not counted as removed edges. The complete inventory is reproducible with `transition_kinds()` and the archived JSON.', '',
+                  '| Original SCC | Fix3 → fix4 disposition | Changed runtime links | Source witnesses |',
+                  '| --- | --- | --- | --- |']
+        for entry in entries:
+            name = entry['name']
+            for number, members in enumerate(module_cycles(documents['baseline'][name]), 1):
+                before, after = documents['fix3'][name], documents['fix4'][name]
+                prior, current = cycle_disposition(members, before), cycle_disposition(members, after)
+                if prior == current:
+                    continue
+                groups = transition_kinds(members, before, after)
+                if not groups:
+                    raise RuntimeError(f'{name} SCC {number}: changed membership lacks a runtime-edge explanation')
+                counts = '; '.join(f'{reason}: {len(edges)}' for reason, edges in sorted(groups.items()))
+                witnesses = []
+                for reason, edges in sorted(groups.items()):
+                    selected = edges[:2]
+                    if reason == 'new or redirected runtime link':
+                        modules = {file['path']: file['module'] for file in after['files']}
+                        inbound = next((edge for edge in edges if modules.get(edge['from']) in members and modules.get(edge['to']) not in members), None)
+                        outbound = next((edge for edge in edges if modules.get(edge['from']) not in members and modules.get(edge['to']) in members), None)
+                        if inbound is not None and outbound is not None:
+                            selected = [inbound, outbound]
+                    for edge in selected:
+                        line = edge.get('line')
+                        location = str(Path(entry['path']) / edge['from'])
+                        label = location + (f':{line}' if line is not None else ' (line unavailable)')
+                        url = entry['repo'] + '/blob/' + entry['commit'] + '/' + location + (f'#L{line}' if line is not None else '')
+                        witnesses.append(f'[{label}]({url}) ({reason}; target `{edge["to"]}`)')
+                lines.append(f'| {name} #{number} | {prior} → {current} | {counts} | ' + '<br>'.join(witnesses) + ' |')
+    if 'fix4' in documents:
+        all_modules = [(name, module) for name, document in documents['fix4'].items() for module in document['modules']]
+        def candidates(cohesion=.2, fanin=5, density=.5, minimum_files=2):
+            return [(name, module) for name, module in all_modules if module['files'] >= minimum_files
+                    and module['cohesion'] is not None and module['cohesion'] < cohesion
+                    and module['weighted_ca'] >= fanin
+                    and module['internal_edges'] / module['files'] < density]
+        proposed = candidates()
+        cyclic = {name: set().union(*module_cycles(document)) if module_cycles(document) else set()
+                  for name, document in documents['fix4'].items()}
+        in_cycles = sum(module['id'] in cyclic[name] for name, module in proposed)
+        lines += ['', '## Grab-bag candidate calibration (post-fix4)', '',
+                  f'The chosen defaults (cohesion <0.2, weighted fan-in ≥5, raw internal edges/file <0.5, at least two files) select {len(proposed)} candidates across all 23 repositories; {in_cycles} are currently cyclic. This is candidate calibration, not a claim that all are grab-bags. Benign contexts, enums and two-file barrel modules can satisfy the metrics. Reclassification still requires the fix5 split-graph proof.', '',
+                  '| One threshold changed | Candidates across 23 repositories |', '| --- | ---: |',
+                  f'| Chosen defaults | {len(proposed)} |',
+                  f'| Cohesion <0.1 | {len(candidates(cohesion=.1))} |',
+                  f'| Weighted fan-in ≥8 | {len(candidates(fanin=8))} |',
+                  f'| Weighted fan-in ≥10 | {len(candidates(fanin=10))} |',
+                  f'| Raw internal edges/file <0.25 | {len(candidates(density=.25))} |',
+                  f'| At least three files | {len(candidates(minimum_files=3))} |']
+    if 'fix5' in documents:
+        lines += ['', '## Verified grab-bag reclassifications', '',
+                  'A candidate metric is not a finding. Each record below is actual split-graph evidence. Complete reclassification leaves no residual module SCC; partial reclassification retains and reports real residual SCCs and their cut witnesses. These categories are not added to the number of removed SCCs.', '',
+                  '| Repository | Original modules | Candidate modules | Result | Residual SCC sizes | File witnesses |',
+                  '| --- | ---: | --- | --- | --- | --- |']
+        for entry in entries:
+            document = documents['fix5'][entry['name']]
+            for evidence in document.get('grabbags', []):
+                result = 'partial; real residual cycles retained' if evidence['remaining_cycles'] else 'complete; no residual module SCC'
+                residual = ', '.join(str(len(members)) for members in evidence['remaining_cycles']) or 'none'
+                candidates = '<br>'.join('`' + candidate['module'] + f"` (cohesion {candidate['cohesion']}, weighted fan-in {candidate['fan_in']}, internal/file {candidate['internal_edges_per_file']:.4f})" for candidate in evidence['candidates'])
+                by_pair = {(edge['from'], edge['to']): edge for edge in document['edges']}
+                witnesses = []
+                candidate_files = {file for candidate in evidence['candidates'] for file in candidate['files']}
+                links = [link for link in evidence['edges'] if link['from'] in candidate_files or link['to'] in candidate_files]
+                if not links:
+                    raise RuntimeError(f"{entry['name']}: grab-bag finding has no candidate-file witness")
+                for link in links[:3]:
+                    edge = by_pair[(link['from'], link['to'])]
+                    location = str(Path(entry['path']) / edge['from'])
+                    line = edge.get('line')
+                    label = location + (f':{line}' if line is not None else ' (line unavailable)')
+                    url = entry['repo'] + '/blob/' + entry['commit'] + '/' + location + (f'#L{line}' if line is not None else '')
+                    witnesses.append(f'[{label}]({url}) → `{edge["to"]}`')
+                lines.append(f"| {entry['name']} | {len(evidence['members'])} | {candidates} | {result} | {residual} | " + '<br>'.join(witnesses) + ' |')
     lines += ['', '## Hand spot-checks', '',
               'Eleven source reads at the exact pins below check one complete SCC disappearance and individual membership removals in shrunken SCCs. They are **not eleven removed SCCs**. For each witness, the baseline edge is a re-export that participated in the old module projection; fix1/fix2 retain the edge as structural and omit it from the runtime projection. No corresponding import was silently erased.', '',
               '| Repository | Source evidence at pinned commit | Checked consequence | Classification |', '| --- | --- | --- | --- |']
@@ -271,16 +447,124 @@ def report(work, entries, output):
         defining_path = str(Path(entry['path']) / defining_path)
         base = entry['repo'] + '/blob/' + entry['commit'] + '/'
         lines.append(f"| {name} | [`{source_path}:{matching_lines[0]}`]({base}{source_path}#L{matching_lines[0]}) | [`{defining_path}:{definition_line}`]({base}{defining_path}#L{definition_line}) | {edges[0]['kind']} / {edges[0]['weight']} |")
-    lines += ['', 'Fastify return-path check: `packages/platform-fastify/adapters/fastify-adapter.ts:73` and `packages/platform-fastify/decorators/route-config.decorator.ts:2` import parent-folder `constants.js`; the parent `index.ts:8,10` exports children. These are different files grouped into one parent module, explaining the projected loop.', '',
-              'No wholly removed SCC attributable to type-only imports, test exclusions, resolution fixes, or grab-bag splitting has yet been measured. Those categories remain pending rather than being inferred from a net count.', '',
-              '## Remaining validation', '',
-              '- Measure fixes 3–5 and update the full SCC inventory with stage-specific edge/file evidence.',
-              '- Fix the implicit TypeScript type-use gap found in Nest: `packages/common/decorators/core/use-guards.decorator.ts:2,29` imports `CanActivate` only as a type; its interface declaration is `packages/common/interfaces/features/can-activate.interface.ts:14`, but the fix2 snapshot still marks the edge runtime. Mixed type/value imports must retain their runtime bindings. This gap is pending bounded refinement, not counted as solved.',
-              '- Fill the import-statement ledger, resolution coverage, exclusion counts, and grab-bag classifications from actual engine fields.',
-              '- Rebuild generated showcase outputs and README numbers only after all stages pass.',
-              '- Fix any source witness or resolution failure that contradicts the intended dependency graph before publishing final claims.', '']
+    lines += ['', 'Fastify return-path check: `packages/platform-fastify/adapters/fastify-adapter.ts:73` and `packages/platform-fastify/decorators/route-config.decorator.ts:2` import parent-folder `constants.js`; the parent `index.ts:8,10` exports children. These are different files grouped into one parent module, explaining the projected loop.', '']
+    if 'fix5' in documents:
+        for entry in entries:
+            for field in ['files', 'edges', 'imports', 'import_resolution', 'unresolved', 'external_nodes', 'external_edges']:
+                if documents['fix5'][entry['name']].get(field) != documents['fix4'][entry['name']].get(field):
+                    raise RuntimeError(f"{entry['name']}: fix5 unexpectedly changes {field} inputs")
+        final = [documents['fix5'][entry['name']] for entry in entries[:20]]
+        complete_reclassifications = sum(stats(document)['grabbag_complete'] for document in final)
+        partial_reclassifications = sum(stats(document)['grabbag_reclassifications'] for document in final) - complete_reclassifications
+        lines += ['## Final interpretation', '',
+                  f'The published cohort has {complete_reclassifications} complete and {partial_reclassifications} partial grab-bag reclassifications. Real residual runtime SCCs remain reported. SCC count can rise when one component splits: Outline changes from one 40-module SCC to components of 11, 22 and five modules. The aggregate component count is not a monotonic quality score.', '',
+                  'Through fix4, no additional baseline runtime SCC was fully removed solely by type-only refinement, test exclusions or resolver changes. The complete baseline Fastify SCC disappearance is the structural re-export policy change; shrinkage and the Zulip expansion are listed individually above. Low-confidence exclusions limit runtime-coverage claims.', '',
+                  'All 23 final graphs preserve exactly the fix4 files, file edges, import ledgers, unresolved records and external arrays: fix5 changes cycle interpretation, not those inputs.', '',
+                  '## Verification and reproduction', '',
+                  'All 23 pinned repositories completed baseline and fixes 1–5. Report generation checks full-cohort coverage, manifest commits, clean scan provenance and archived graph hashes. README generation requires the complete verified fix5 cohort and checks that each suggested cut is an existing runtime edge.', '',
+                  '```sh', 'python3 -B -m unittest discover -s showcase/tests',
+                  'python3 -B showcase/edge_quality.py --report-output showcase/edge-quality-report.md',
+                  'python3 -B showcase/edge_quality.py --readme-output README.md', '```', '',
+                  '## Open questions and next steps', '',
+                  '- Broad directory defaults intentionally change scope. Layout include overrides restore Next.js build implementation and its cycles. Including Django/test restores its public testing API files, but they remain test-classified and outside cycles. An explicit classification override for production APIs in test-named folders is future work, not an implemented option. Payload CLI build code is also excluded by convention.',
+                  '- Unresolved imports and low-confidence re-export metadata are a visible backlog. Improve the most common missing/alias cases with fixtures; dynamic imports and dependency injection still limit coverage.',
+                  '- The checked Nest interface-only import is now type, while mixed imports retain runtime bindings. This verifies the concrete counterexamples; a lightweight tokenizer is not a complete TypeScript type checker.',
+                  '- Candidate thresholds alone do not prove a grab-bag. Keep split-graph verification and real residual-cycle witnesses when extending calibration to other repositories.', '']
+    else:
+        lines += ['## Remaining validation', '',
+                  '- Complete the remaining measured stages and regenerate the final report and README.',
+                  '- Keep unresolved coverage and uncertain type/barrel metadata explicit; never infer a resolution denominator from graph edges.', '']
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text('\n'.join(lines))
+
+
+
+
+def transition_kinds(members, before, after):
+    """Explain actual runtime-link changes without inferring reasons from net SCC counts."""
+    removed = cycle_edge_changes(members, before, after)['runtime_edges_removed']
+    by_pair = {}
+    for edge in after['edges']:
+        by_pair.setdefault((edge['from'], edge['to']), set()).add(edge['kind'])
+    groups = {}
+    for edge in removed:
+        kinds = by_pair.get((edge['from'], edge['to']), set())
+        reason = 'type-only' if kinds and kinds <= {'type', 'type-reexport'} else (
+            'lazy' if kinds == {'lazy'} else 'structural re-export' if kinds == {'reexport'} else 'resolution target change')
+        groups.setdefault(reason, []).append(edge)
+    prior_runtime = {(edge['from'], edge['to']) for edge in before['edges'] if edge['kind'] in {'runtime', 'static'}}
+    modules = {file['path']: file['module'] for file in after['files']}
+    for edge in after['edges']:
+        if edge['kind'] in {'runtime', 'static'} and (edge['from'], edge['to']) not in prior_runtime:
+            if modules.get(edge['from']) in members or modules.get(edge['to']) in members:
+                groups.setdefault('new or redirected runtime link', []).append(edge)
+    return groups
+
+
+def verify_type_controls(document):
+    implicit = [edge for edge in document['edges']
+                if edge['from'] == 'packages/common/decorators/core/use-guards.decorator.ts'
+                and edge['to'] == 'packages/common/interfaces/features/can-activate.interface.ts']
+    mixed_runtime = [edge for edge in document['edges']
+                     if edge['from'] == 'packages/core/router/router-response-controller.ts'
+                     and edge['kind'] == 'runtime']
+    if len(implicit) != 1 or implicit[0]['kind'] != 'type' or not mixed_runtime:
+        raise RuntimeError('Nest implicit-type or mixed-runtime positive control failed')
+
+
+def readme_text(source, entries, documents):
+    """Publish measured counts and an existing break-set edge, without ranking new suggestions."""
+    heading = '## Results on 20 well-known repositories'
+    start = source.index(heading)
+    end = source.index('\n## ', start + len(heading))
+    original = source[start:end]
+    order = re.findall(r'https://dogebonker\.github\.io/archgraph/([a-z0-9._-]+)\.html', original)
+    by_name = {entry['name']: entry for entry in entries}
+    if len(order) != len(entries) or set(order) != set(by_name):
+        raise RuntimeError('README showcase rows do not match the published manifest cohort')
+    escape = lambda value: html.escape(str(value), quote=True).replace('|', '&#124;').replace('\n', ' ')
+    lines = [heading, '',
+             'archgraph on 20 open-source projects at pinned commits. Each name opens its live map; the path under a name is the folder that was scanned.', '',
+             '| Project | Files | Largest cycle | Suggested cut |', '|---|--:|--:|---|']
+    for name in order:
+        entry, document = by_name[name], documents[name]
+        project = escape(entry['repo'].removeprefix('https://github.com/'))
+        label = f'[{project}](https://dogebonker.github.io/archgraph/{name}.html)'
+        if entry['path'] != '.':
+            label += '<br><sub><code>' + escape(entry['path']) + '</code></sub>'
+        cycles = [cycle for cycle in document['cycles'] if cycle['level'] == 'module']
+        largest = max(cycles, key=lambda cycle: len(cycle['members']), default=None)
+        if largest is None:
+            size, step = 'none', 'no module cycles'
+        else:
+            size = f"{len(largest['members'])} modules"
+            if largest.get('break'):
+                edge = largest['break'][0]
+                if not any(candidate.get('from') == edge['from'] and candidate.get('to') == edge['to']
+                           and candidate.get('kind') in {'runtime', 'static'} for candidate in document['edges']):
+                    raise RuntimeError(f'{name}: suggested cut is not an existing runtime edge')
+                step = 'review <code>' + escape(edge['from']) + ' → ' + escape(edge['to']) + '</code>'
+            else:
+                step = 'review the cycle report'
+        lines.append(f"| {label} | {len(document['files']):,} | {size} | {step} |")
+    lines += ['', '<sub>Generated from the final pinned scans in [showcase/repos.json](showcase/repos.json). Runtime cycles now exclude lazy, type-only and structural re-export edges; named imports resolve through barrels. Default test/generated/vendor/example exclusions change scan scope and can exclude real source in folders such as Next.js `src/build` or Django `test`. Include overrides restore file coverage; test-classified files still stay outside runtime cycles. [The measured comparison and caveats](showcase/edge-quality-report.md) document the methodology change. Suggested cuts are existing break-set edges from the largest remaining module SCC, to review rather than apply automatically. Rebuild with [`showcase/build.sh`](showcase/).</sub>', '']
+    updated = source[:start] + '\n'.join(lines) + source[end:]
+    if 'next.js' in by_name:
+        entry, document = by_name['next.js'], documents['next.js']
+        caption = '<p align="center"><sub>Next.js (<code>' + escape(entry['path']) + '</code> at <code>' + entry['commit'][:7] + '</code>): ' + f"{len(document['files']):,} files, {len(document['modules']):,} modules, {len(document['edges']):,} internal file dependencies." + ' The static illustration shows an earlier scan; click it for the current map. Made with <code>archgraph report</code> (<a href="showcase/">how</a>).</sub></p>'
+        updated, replaced = re.subn(r'<p align="center"><sub>Next\.js .*?</sub></p>', lambda _: caption, updated, count=1)
+        if replaced != 1:
+            raise RuntimeError('README Next.js caption was not found')
+        updated = re.sub(r'alt="The archgraph map of Next\.js:[^"]*"',
+                         'alt="The archgraph map of Next.js: modules as discs with cycle and finding rings; the selected module highlights its importers and imports"', updated, count=1)
+    return updated
+
+
+def publish_readme(work, entries, output):
+    complete, documents, _ = archived_stages(work, entries)
+    if 'fix5' not in complete:
+        raise RuntimeError('README generation requires the complete verified fix5 cohort')
+    output.write_text(readme_text((HERE.parent / 'README.md').read_text(), entries[:20], documents['fix5']))
 
 
 def scan(entry, args, binary_hash):
@@ -337,7 +621,9 @@ def main():
     parser.add_argument('--engine', type=Path)
     parser.add_argument('--engine-commit', help='Exact source commit, or a recorded staged-source identifier')
     parser.add_argument('--stage')
-    parser.add_argument('--report-output', type=Path, help='Generate a report from complete archived stages; no scanning')
+    outputs = parser.add_mutually_exclusive_group()
+    outputs.add_argument('--report-output', type=Path, help='Generate a report from complete archived stages; no scanning')
+    outputs.add_argument('--readme-output', type=Path, help='Generate README numeric rows from the complete verified fix5 cohort')
     parser.add_argument('--work', type=Path, default=Path('/private/tmp/archgraph-edge-quality'))
     parser.add_argument('--cache', type=Path, default=Path('/private/tmp/archgraph-hotspot-validation'))
     parser.add_argument('--manifest', type=Path, default=HERE / 'repos.json')
@@ -350,6 +636,9 @@ def main():
     parser.add_argument('--extra-flag', action='append', default=[])
     parser.add_argument('--force', action='store_true')
     args = parser.parse_args()
+    if args.readme_output:
+        publish_readme(args.work.resolve(), json.loads(args.manifest.read_text()), args.readme_output)
+        return 0
     if args.report_output:
         report(args.work.resolve(), json.loads(args.manifest.read_text()), args.report_output)
         return 0
