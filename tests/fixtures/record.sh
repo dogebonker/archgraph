@@ -36,7 +36,7 @@ for args in "py-cycles . mypkg" "py-clean src app" "py-deferred . deferred"; do
   set -- $args
   (
     cd "$here/$1"
-    "$python" -I -B -c "$(cat "$here/../../src/collect/grimp_dump.py")" "$2" "$3" > grimp.json
+    "$python" -I -B -c "$(cat "$here/../../src/collect/grimp_dump.py")" "$2" "$3" . > grimp.json
   )
 done
 

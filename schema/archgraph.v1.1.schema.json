@@ -1709,6 +1709,31 @@
         },
         "is_reexport": {
           "type": "boolean"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "low"
+          ]
+        },
+        "original_to": {
+          "$ref": "#/$defs/path"
+        },
+        "specifier": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resolution_reason": {
+          "type": "string"
         }
       }
     },
@@ -2359,6 +2384,22 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "reexport-cycle"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "$ref": "#/$defs/evidence-reexport-cycle"
+              }
+            }
+          }
         }
       ]
     },
@@ -2853,6 +2894,28 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/edge"
+          }
+        }
+      }
+    },
+    "evidence-reexport-cycle": {
+      "type": "object",
+      "required": [
+        "members",
+        "edges"
+      ],
+      "properties": {
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
           }
         }
       }

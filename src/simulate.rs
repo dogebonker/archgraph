@@ -66,6 +66,17 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         .map(|m| (m.file.as_str(), m.to.as_str()))
         .collect();
     let rename = |path: &str| renamed.get(path).copied().unwrap_or(path).to_owned();
+    let mut config = doc.config.clone();
+    config.file_metadata = doc
+        .files
+        .iter()
+        .map(|f| {
+            (
+                rename(&f.path),
+                crate::model::NodeMetadata { barrel: f.barrel },
+            )
+        })
+        .collect();
     let files = doc.files.iter().map(|f| rename(&f.path)).collect();
     let edges = doc
         .edges
@@ -73,6 +84,7 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         .map(|e| Edge {
             from: rename(&e.from),
             to: rename(&e.to),
+            original_to: e.original_to.as_deref().map(rename),
             ..e.clone()
         })
         .collect();
@@ -85,7 +97,7 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         .transpose()?;
     Ok(crate::build(
         doc.source.clone(),
-        doc.config.clone(),
+        config,
         files,
         edges,
         entries,
@@ -224,6 +236,7 @@ mod tests {
             rules: None,
             codeowners: None,
             collection: None,
+            file_metadata: Default::default(),
         };
         let files = ["a/x.ts", "a/y.ts", "b/z.ts"].map(String::from).to_vec();
         crate::build(source, config, files, Vec::new(), Vec::new(), None, None)

@@ -369,6 +369,14 @@ archgraph --all-kinds scan . -o graph-all-kinds.json
 
 `--legacy-v1` exports the compatibility shape, including old edge-kind names; it does not restore the old analysis or its unweighted metric ratios. Rescan both sides with the same options before comparing architecture changes across engines. A mixed old/new comparison can reflect methodology changes rather than repository changes. Frozen readers may ignore newer policy fields such as rule `kinds`; use an upgraded, pinned CLI when enforcing those policies in CI.
 
+### Resolving barrels
+
+For TypeScript/JavaScript, the collector tokenizes import and export specifiers and follows named/default re-export routes to their defining files. Python uses its existing standard-library AST pass, including relative imports, aliases, static `__all__`, and statically visible star exports. No scanned Python code is imported or executed by this pass. Go packages need no barrel resolution. Legacy collector recordings without source-route metadata retain their existing edges.
+
+A file containing only re-exports is marked `barrel: true`; Python package initializers qualify only when they contain imports, static `__all__` and optional docstrings. Initializers with executable statements keep their load dependencies, so a real initialization cycle remains visible. Pure structural forwarding edges stay out of default runtime cycle membership. Resolved consumer edges carry `confidence: high` and point at the defining file. Their `original_to` retains the written import destination: `public`, `entrypoints`, direct forbid/allow matching and reachability boundaries check that written path, so resolving a facade import does not turn it into a forbidden deep import. Conversely, resolving a written bypass does not make the bypass permitted.
+
+Re-export traversal is capped at ten hops. Ambiguous namespace/star imports, missing export evidence and exhausted chains retain the written barrel target as `kind: reexport`, `confidence: low`, with `resolution_reason` and a warning rather than inventing a definition. Cycles in forwarding routes produce a `reexport-cycle` finding with file-level edges. These diagnostics are separate from runtime cycles. The cap, low-confidence evidence and dynamic Python namespace changes remain limits of static resolution.
+
 ## Rules file
 
 ```yaml
@@ -437,4 +445,4 @@ Verdict per import, first match wins:
 - Small repositories have little signal; the `small-repo` finding says so.
 - Findings are moves with evidence. There is no single score to optimize; module colors in `render` are a reading aid.
 - Module boundaries come from folders (`--depth`) or rules `modules:`; wrong boundaries give wrong metrics.
-- Barrel attribution over-approximates: a consumer of an index is counted against every re-exported file.
+- Named imports through proven barrels resolve to their defining files. Legacy recordings and imports lacking usable export evidence can retain conservative barrel attribution; inspect low-confidence edges before treating them as runtime dependency evidence.

@@ -71,7 +71,8 @@ fn depcruise_live_matches_recorded() {
         assert_eq!(stable(&live_out), stable(&recorded_out), "{name}");
 
         if name == "ts-basic" {
-            let edges = live["edges"].as_array().unwrap();
+            let projected = common::without_import_metadata(&live["edges"]);
+            let edges = projected.as_array().unwrap();
             let alias = json!({ "from": "src/main.ts", "to": "src/app/shell/run.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null });
             let type_only = json!({ "from": "src/app/shell/run.ts", "to": "src/core/model/types.ts",
                                     "kind": "type", "weight": 0.1, "verdict": null, "rule": null });
@@ -153,7 +154,7 @@ fn grimp_never_runs_code_from_the_scanned_repository() {
     let (doc, _, _) = scan(&[root.to_str().unwrap(), "--python", python.to_str().unwrap()]);
     assert!(!marker.exists(), "the planted json.py ran");
     assert_eq!(
-        doc["edges"],
+        common::without_import_metadata(&doc["edges"]),
         json!([{ "from": "src/pkg/a.py", "to": "src/pkg/b.py", "kind": "runtime", "weight": 1.0, "verdict": null,
                  "rule": null }])
     );
@@ -267,7 +268,7 @@ fn go_scan_runs_no_repository_code() {
     ]);
     // The blank import's edge, to package a's anchor file.
     assert_eq!(
-        doc["edges"],
+        common::without_import_metadata(&doc["edges"]),
         json!([
             { "from": "main.go", "to": "a/a.go", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null }
         ])
@@ -382,7 +383,7 @@ fn go_scan_reads_a_module_go_list_rejects_with_go_build() {
         .collect();
     assert_eq!(paths, ["a/a.go", "legacy/l.go", "legacy/sub/s.go"]);
     assert_eq!(
-        doc["edges"],
+        common::without_import_metadata(&doc["edges"]),
         json!([{ "from": "legacy/l.go", "to": "legacy/sub/s.go", "kind": "runtime", "weight": 1.0, "verdict": null,
                  "rule": null }])
     );
@@ -563,7 +564,7 @@ fn rust_scan_resolves_cross_file_calls_without_changing_the_repository() {
     let before = tree(&root);
     let (doc, _, _) = scan(&[root.to_str().unwrap(), "--language", "rust"]);
     assert_eq!(
-        doc["edges"],
+        common::without_import_metadata(&doc["edges"]),
         json!([
             { "from": "src/a.rs", "to": "src/b.rs", "kind": "runtime", "weight": 1.0, "verdict": null,
               "rule": null },
@@ -1100,7 +1101,7 @@ fn impact_collects_external_tests_and_resolves_barrels() {
             .any(|line| line
                 .as_str()
                 .unwrap()
-                .contains("barrel import edges to their source declarations"))
+                .contains("Pure re-export barrels consume no depth step"))
     );
     assert_eq!(git(&["status", "--porcelain"]), "");
     assert_eq!(git(&["rev-parse", "HEAD"]), head);

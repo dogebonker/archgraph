@@ -18,6 +18,8 @@ struct Dump {
     grimp_version: String,
     modules: Vec<String>,
     imports: Vec<Import>,
+    #[serde(default)]
+    barrel_modules: Vec<super::barrels::BarrelModule>,
 }
 
 #[derive(Deserialize)]
@@ -87,6 +89,7 @@ pub fn run(root: &Path, source_dir: &str, package: &str, python: &str) -> Result
         .args(["-I", "-B", "-c", DUMP])
         .arg(src)
         .arg(package)
+        .arg(fs::canonicalize(root)?)
         .output()
         .with_context(|| format!("running {python}"))?;
     if !out.status.success() {
@@ -115,7 +118,7 @@ pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
             Some(file)
         }
     };
-    let edges = dump
+    let mut edges: Vec<Edge> = dump
         .imports
         .iter()
         .filter_map(|i| {
@@ -130,6 +133,24 @@ pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
             })
         })
         .collect();
+    if !dump.barrel_modules.is_empty() {
+        let analyzed: std::collections::BTreeSet<_> = dump
+            .barrel_modules
+            .iter()
+            .map(|module| module.file.as_str())
+            .collect();
+        edges.retain(|edge| !analyzed.contains(edge.from.as_str()));
+        for module in &dump.barrel_modules {
+            for route in &module.imports {
+                edges.push(Edge {
+                    from: module.file.clone(),
+                    to: route.to.clone(),
+                    kind: route.kind,
+                    ..Edge::default()
+                });
+            }
+        }
+    }
     let files: Vec<String> = dump.modules.iter().filter_map(|m| path(m)).collect();
     let collector = Collector {
         name: "grimp".to_owned(),
@@ -141,9 +162,14 @@ pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
         bound_files: Vec::new(),
         go_modules: Vec::new(),
     };
-    Ok(RawGraph {
+    let mut graph = RawGraph {
         files,
         edges,
         collector,
-    })
+        metadata: Default::default(),
+    };
+    for warning in super::barrels::resolve(&mut graph, &dump.barrel_modules) {
+        eprintln!("warning: {warning}");
+    }
+    Ok(graph)
 }

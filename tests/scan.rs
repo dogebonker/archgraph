@@ -42,7 +42,7 @@ fn ts_basic_metrics_by_hand() {
     // main.ts reaches run.ts through the `@/` tsconfig alias; run.ts -> types.ts is `import type`;
     // store.ts imports types.ts both as a type and as a value, so the pair is static.
     assert_eq!(
-        doc["edges"],
+        common::without_import_metadata(&doc["edges"]),
         json!([
             { "from": "src/app/shell/run.ts", "to": "src/core/model/store.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
             { "from": "src/app/shell/run.ts", "to": "src/core/model/types.ts", "kind": "type", "weight": 0.1, "verdict": null, "rule": null },
@@ -275,24 +275,26 @@ fn ts_excludes_and_barrel_attribution() {
     // `export type { Kind } from "./kinds"` is a type-only re-export: a re-export, so index.ts
     // stays a barrel, but not a runtime import.
     assert_eq!(
-        doc["edges"],
+        common::without_import_metadata(&doc["edges"]),
         json!([
-            { "from": "src/app/main.ts", "to": "src/feature/index.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "src/app/main.ts", "to": "src/feature/a.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "src/app/main.ts", "to": "src/feature/b.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
             { "from": "src/app/main.ts", "to": "src/shared/util.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
             { "from": "src/feature/b.ts", "to": "src/shared/util.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
-            { "from": "src/feature/index.ts", "to": "src/feature/a.ts", "kind": "reexport", "weight": 0.0, "verdict": null, "rule": null },
-            { "from": "src/feature/index.ts", "to": "src/feature/b.ts", "kind": "reexport", "weight": 0.0, "verdict": null, "rule": null },
+            { "from": "src/feature/index.ts", "to": "src/feature/a.ts", "kind": "reexport", "weight": 0.0, "is_reexport": true, "verdict": null, "rule": null },
+            { "from": "src/feature/index.ts", "to": "src/feature/b.ts", "kind": "reexport", "weight": 0.0, "is_reexport": true, "verdict": null, "rule": null },
             { "from": "src/feature/index.ts", "to": "src/feature/kinds.ts", "kind": "type", "weight": 0.1, "is_reexport": true, "verdict": null, "rule": null }
         ])
     );
-    // main -> index counts as main -> a, b and kinds; the barrel's own re-exports are dropped,
+    // Named imports a and b resolve to their definitions; the unused Kind export adds no edge.
+    // The barrel's own re-exports are dropped,
     // so feature has no internal edges (cohesion 0.0, not 3/4).
     assert_eq!(
         doc["modules"],
         json!([
             { "id": "app", "files": 1, "ca": 0, "ce": 2, "instability": 1.0,
-              "internal_edges": 0, "outgoing_edges": 4, "cohesion": 0.0,
-              "outgoing_to": { "feature": 3, "shared": 1 }, "weighted_ca": 0.0, "weighted_ce": 2.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 4.0, "weighted_outgoing_to": { "feature": 3.0, "shared": 1.0 } },
+              "internal_edges": 0, "outgoing_edges": 3, "cohesion": 0.0,
+              "outgoing_to": { "feature": 2, "shared": 1 }, "weighted_ca": 0.0, "weighted_ce": 2.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 3.0, "weighted_outgoing_to": { "feature": 2.0, "shared": 1.0 } },
             { "id": "feature", "files": 4, "ca": 1, "ce": 1, "instability": 0.5,
               "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0,
               "outgoing_to": { "shared": 1 }, "weighted_ca": 1.0, "weighted_ce": 1.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 1.0, "weighted_outgoing_to": { "shared": 1.0 } },
@@ -300,16 +302,16 @@ fn ts_excludes_and_barrel_attribution() {
               "internal_edges": 0, "outgoing_edges": 0, "cohesion": null, "outgoing_to": {}, "weighted_ca": 2.0, "weighted_ce": 0.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 0.0, "weighted_outgoing_to": {} }
         ])
     );
-    // Module edges are raw imports, as cycles and their break sets need.
+    // Module edges count canonical file dependencies after resolving named barrel imports.
     assert_eq!(
         doc["module_edges"],
         json!([
-            { "from": "app", "to": "feature", "imports": 1, "forbidden": 0 },
+            { "from": "app", "to": "feature", "imports": 2, "forbidden": 0 },
             { "from": "app", "to": "shared", "imports": 1, "forbidden": 0 },
             { "from": "feature", "to": "shared", "imports": 1, "forbidden": 0 }
         ])
     );
-    // main.ts -> index.ts counts as 3 edges into feature (via the barrel), but main.ts is the
+    // main.ts imports exactly a.ts and b.ts through index.ts, but main.ts is the
     // only file of app, so it is not misplaced.
     assert_eq!(
         doc["findings"],
@@ -1348,7 +1350,7 @@ fn only_source_files_become_files() {
     ]);
     assert_eq!(files(&doc), ["src/a/x.ts", "src/b/y.tsx"]);
     assert_eq!(
-        doc["edges"],
+        common::without_import_metadata(&doc["edges"]),
         json!([{ "from": "src/a/x.ts", "to": "src/b/y.tsx", "kind": "runtime", "weight": 1.0, "verdict": null,
                  "rule": null }])
     );

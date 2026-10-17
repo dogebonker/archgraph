@@ -151,7 +151,7 @@ fn simulate_cli_destination_decides_layer() {
     // queue.ts -> cli.ts becomes internal to adapters/in: forbid[1] no longer matches, the
     // in <-> out module cycle (and with it the only SCC) goes, adapters/in gains cohesion.
     assert_eq!(
-        sim,
+        common::without_import_metadata(&sim),
         json!({
             "schema": "archgraph/v1.1",
             "kind": "simulation",
@@ -191,7 +191,7 @@ fn simulate_cli_destination_decides_layer() {
     assert_eq!(sim["before"]["forbidden"], 3);
     assert_eq!(sim["after"]["forbidden"], 4);
     assert_eq!(
-        sim["new_forbidden"],
+        common::without_import_metadata(&sim["new_forbidden"]),
         json!([{ "from": "src/domain/user.ts", "to": "src/adapters/in/rules.ts", "kind": "runtime", "weight": 1.0, "verdict": "forbidden", "rule": "layers" }])
     );
     assert_eq!(sim["removed_forbidden"], json!([]));

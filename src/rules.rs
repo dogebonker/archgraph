@@ -511,6 +511,7 @@ impl Compiled {
         reached: &mut Reached<'a>,
     ) -> (Verdict, String, Option<Vec<String>>) {
         use Verdict::*;
+        let written = e.original_to.as_deref().unwrap_or(&e.to);
         for (i, (name, from, to, reachable, kinds)) in self.forbid.iter().enumerate() {
             if !includes_kind(kinds, e.kind) {
                 continue;
@@ -519,7 +520,7 @@ impl Compiled {
                 continue;
             };
             let to = from.bound_glob(to, value.as_deref());
-            if self.bound_match(&to, &e.to) {
+            if self.bound_match(&to, written) {
                 return (Forbidden, name.clone(), None);
             }
             if *reachable {
@@ -532,10 +533,10 @@ impl Compiled {
             }
         }
         for (module, entry) in &self.entrypoints {
-            if let Some(value) = self.bind(module, &e.to) {
+            if let Some(value) = self.bind(module, written) {
                 let value = value.as_deref();
                 let inside = self.bound_match(&module.bound_glob(&module.raw, value), &e.from);
-                if !inside && e.to != module.instance(entry, value) {
+                if !inside && written != module.instance(entry, value) {
                     return (Forbidden, "entrypoints".into(), None);
                 }
             }
@@ -545,7 +546,7 @@ impl Compiled {
                 continue;
             }
             if let Some(value) = self.bind(from, &e.from)
-                && self.bound_match(&from.bound_glob(to, value.as_deref()), &e.to)
+                && self.bound_match(&from.bound_glob(to, value.as_deref()), written)
             {
                 return (Allowed, name.clone(), None);
             }
@@ -553,13 +554,13 @@ impl Compiled {
         let entry_of = |module: &Pattern, entries: &[String], value: Option<&str>| {
             entries
                 .iter()
-                .any(|entry| self.bound_match(&module.bound_glob(entry, value), &e.to))
+                .any(|entry| self.bound_match(&module.bound_glob(entry, value), written))
         };
         for (module, entries, kinds) in &self.public {
             if !includes_kind(kinds, e.kind) {
                 continue;
             }
-            if let Some(value) = self.bind(module, &e.to) {
+            if let Some(value) = self.bind(module, written) {
                 let value = value.as_deref();
                 let inside = self.bound_match(&module.bound_glob(&module.raw, value), &e.from);
                 if !inside && !entry_of(module, entries, value) {
@@ -568,7 +569,7 @@ impl Compiled {
             }
         }
         let layer = |path: &str| self.layers.iter().position(|l| l.is_match(path));
-        if let (Some(importer), Some(target)) = (layer(&e.from), layer(&e.to)) {
+        if let (Some(importer), Some(target)) = (layer(&e.from), layer(written)) {
             let verdict = if target <= importer {
                 Allowed
             } else {
@@ -576,12 +577,12 @@ impl Compiled {
             };
             return (verdict, "layers".into(), None);
         }
-        if module_of[&e.from] == module_of[&e.to] {
+        if module_of[&e.from] == module_of[written] {
             return (Allowed, "same-module".into(), None);
         }
         for (module, entry) in &self.entrypoints {
-            if let Some(value) = self.bind(module, &e.to)
-                && e.to == module.instance(entry, value.as_deref())
+            if let Some(value) = self.bind(module, written)
+                && written == module.instance(entry, value.as_deref())
             {
                 return (Allowed, "entrypoints".into(), None);
             }
@@ -590,7 +591,7 @@ impl Compiled {
             if !includes_kind(kinds, e.kind) {
                 continue;
             }
-            if let Some(value) = self.bind(module, &e.to)
+            if let Some(value) = self.bind(module, written)
                 && entry_of(module, entries, value.as_deref())
             {
                 return (Allowed, "public".into(), None);

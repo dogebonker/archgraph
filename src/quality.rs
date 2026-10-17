@@ -192,7 +192,7 @@ fn directory(file: &str) -> &str {
     file.rsplit_once('/').map_or("", |(directory, _)| directory)
 }
 
-fn components<'a>(pairs: &[(&'a str, &'a str, &Edge)]) -> Vec<BTreeSet<&'a str>> {
+pub(crate) fn components<'a>(pairs: &[(&'a str, &'a str, &Edge)]) -> Vec<BTreeSet<&'a str>> {
     let files: BTreeSet<_> = pairs
         .iter()
         .flat_map(|(from, to, _)| [*from, *to])
@@ -209,7 +209,12 @@ fn components<'a>(pairs: &[(&'a str, &'a str, &Edge)]) -> Vec<BTreeSet<&'a str>>
     }
     graph::sccs(&adjacency)
         .into_iter()
-        .filter(|component| component.len() > 1)
+        .filter(|component| {
+            component.len() > 1
+                || component
+                    .first()
+                    .is_some_and(|&i| pairs.iter().any(|(a, b, _)| a == b && *a == files[i]))
+        })
         .map(|component| component.into_iter().map(|i| files[i]).collect())
         .collect()
 }

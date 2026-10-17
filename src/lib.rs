@@ -27,8 +27,13 @@ use model::{Cochange, Config, Document, Edge, File, SCHEMA, Source, Summary, Too
 use rules::Compiled;
 
 /// Rebuild a persisted scan, retaining its optional historical context.
-pub fn restore_scan(input: model::ScanInput) -> Result<Document> {
+pub fn restore_scan(mut input: model::ScanInput) -> Result<Document> {
     validate_scan(&input)?;
+    input.config.file_metadata = input
+        .files
+        .iter()
+        .map(|f| (f.path.clone(), model::NodeMetadata { barrel: f.barrel }))
+        .collect();
     let mut doc = analyze(
         input.source,
         input.config,
@@ -117,6 +122,14 @@ pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
                     edge.to
                 );
             }
+        }
+        if let Some(path) = &edge.original_to
+            && (path.starts_with('/')
+                || path
+                    .split('/')
+                    .any(|p| p.is_empty() || p == "." || p == ".."))
+        {
+            bail!("written import destination must be a relative path inside the scan root");
         }
     }
     Ok(())
@@ -207,7 +220,9 @@ pub fn build(
     }
     package_entries.sort();
     package_entries.dedup();
-    edges.sort_by(|a, b| (&a.from, &a.to).cmp(&(&b.from, &b.to)));
+    edges.sort_by(|a, b| {
+        (&a.from, &a.to, &a.original_to, a.kind).cmp(&(&b.from, &b.to, &b.original_to, b.kind))
+    });
     let module_of: BTreeMap<String, String> = files
         .into_iter()
         .map(|f| {
@@ -218,14 +233,34 @@ pub fn build(
         })
         .collect();
     match rules {
-        Some(rules) => rules.decide(&mut edges, &module_of),
+        Some(rules) => {
+            let mut policy_modules = module_of.clone();
+            for path in edges.iter().filter_map(|e| e.original_to.as_ref()) {
+                policy_modules.entry(path.clone()).or_insert_with(|| {
+                    rules
+                        .module_of(path)
+                        .unwrap_or_else(|| modules::module_of(path, &config, source.language))
+                });
+            }
+            rules.decide(&mut edges, &policy_modules);
+        }
         None => {
             for e in &mut edges {
                 (e.verdict, e.rule, e.reach) = (None, None, None);
             }
         }
     }
-    let barrels = modules::barrels(&edges);
+    let inferred = modules::barrels(&edges);
+    let barrels = module_of
+        .keys()
+        .filter(|path| {
+            config
+                .file_metadata
+                .get(*path)
+                .map_or_else(|| inferred.contains(*path), |m| m.barrel)
+        })
+        .cloned()
+        .collect();
     let pairs = modules::attribute(&edges, &barrels);
     // Public entries for cycle cuts: what a package.json publishes and the source root's index
     // (`index.ts`, a Python package's `__init__.py`). Other barrels are internal.

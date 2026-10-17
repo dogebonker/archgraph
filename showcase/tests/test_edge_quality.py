@@ -32,6 +32,20 @@ class EdgeQualityTests(unittest.TestCase):
         document = {'cycles': [{'level': 'module', 'members': ['a', 'b']}]}
         self.assertIn('2 original modules remain cyclic', MODULE.cycle_disposition({'a', 'b', 'c'}, document))
 
+    def test_runtime_edge_inventory_ignores_kind_renames(self):
+        before = {
+            'schema': 'archgraph/v1',
+            'files': [{'path': 'a.ts', 'module': 'a'}, {'path': 'b.ts', 'module': 'b'}],
+            'edges': [{'from': 'a.ts', 'to': 'b.ts', 'kind': 'static'},
+                      {'from': 'b.ts', 'to': 'a.ts', 'kind': 'reexport'}],
+        }
+        after = dict(before, schema='archgraph/v1.1', edges=[
+            {'from': 'a.ts', 'to': 'b.ts', 'kind': 'runtime'},
+            {'from': 'b.ts', 'to': 'a.ts', 'kind': 'reexport'}])
+        changes = MODULE.cycle_edge_changes({'a', 'b'}, before, after)
+        self.assertEqual(changes['changed_kinds'], [])
+        self.assertEqual(changes['runtime_edges_removed'], [before['edges'][1]])
+
     def test_atomic_json_and_hash(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'stage' / 'metadata.json'

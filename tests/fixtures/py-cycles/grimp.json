@@ -60,5 +60,265 @@
    "imported": "mypkg.core.service",
    "kind": "static"
   }
+ ],
+ "barrel_modules": [
+  {
+   "file": "mypkg/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "mypkg/api/__init__.py",
+   "pure": true,
+   "declared": [
+    "handlers",
+    "schemas"
+   ],
+   "exports": [
+    {
+     "exported": "handlers",
+     "imported": "*",
+     "to": "mypkg/api/handlers.py"
+    },
+    {
+     "exported": "schemas",
+     "imported": "*",
+     "to": "mypkg/api/schemas.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "mypkg/api/handlers.py",
+     "names": [],
+     "wildcard": true,
+     "kind": "runtime",
+     "specifier": ".",
+     "line": 1,
+     "side_effect": false
+    },
+    {
+     "to": "mypkg/api/schemas.py",
+     "names": [],
+     "wildcard": true,
+     "kind": "runtime",
+     "specifier": ".",
+     "line": 1,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "mypkg/api/handlers.py",
+   "pure": false,
+   "declared": [
+    "handle",
+    "serve"
+   ],
+   "exports": [
+    {
+     "exported": "serve",
+     "imported": "serve",
+     "to": "mypkg/core/service.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "mypkg/core/service.py",
+     "names": [
+      "serve"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "mypkg.core.service",
+     "line": 1,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "mypkg/api/schemas.py",
+   "pure": false,
+   "declared": [
+    "SCHEMA"
+   ],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "mypkg/cli.py",
+   "pure": false,
+   "declared": [
+    "main",
+    "mypkg"
+   ],
+   "exports": [
+    {
+     "exported": "mypkg",
+     "imported": "*",
+     "to": "mypkg/api/__init__.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "mypkg/api/__init__.py",
+     "names": [],
+     "wildcard": true,
+     "kind": "runtime",
+     "specifier": "mypkg.api",
+     "line": 1,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "mypkg/core/__init__.py",
+   "pure": false,
+   "declared": [
+    "boot",
+    "connect"
+   ],
+   "exports": [
+    {
+     "exported": "connect",
+     "imported": "connect",
+     "to": "mypkg/db/session.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "mypkg/db/session.py",
+     "names": [
+      "connect"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "mypkg.db.session",
+     "line": 1,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "mypkg/core/service.py",
+   "pure": false,
+   "declared": [
+    "repo",
+    "serve"
+   ],
+   "exports": [
+    {
+     "exported": "repo",
+     "imported": "*",
+     "to": "mypkg/db/repo.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "mypkg/db/repo.py",
+     "names": [],
+     "wildcard": true,
+     "kind": "runtime",
+     "specifier": "mypkg.db",
+     "line": 1,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "mypkg/db/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "mypkg/db/repo.py",
+   "pure": false,
+   "declared": [
+    "connect",
+    "find",
+    "mypkg"
+   ],
+   "exports": [
+    {
+     "exported": "mypkg",
+     "imported": "*",
+     "to": "mypkg/core/__init__.py"
+    },
+    {
+     "exported": "connect",
+     "imported": "connect",
+     "to": "mypkg/db/session.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "mypkg/core/__init__.py",
+     "names": [],
+     "wildcard": true,
+     "kind": "runtime",
+     "specifier": "mypkg.core",
+     "line": 1,
+     "side_effect": false
+    },
+    {
+     "to": "mypkg/db/session.py",
+     "names": [
+      "connect"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "mypkg.db.session",
+     "line": 2,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "mypkg/db/session.py",
+   "pure": false,
+   "declared": [
+    "connect"
+   ],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "mypkg/tests/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "mypkg/tests/test_service.py",
+   "pure": false,
+   "declared": [
+    "serve",
+    "test_serve"
+   ],
+   "exports": [
+    {
+     "exported": "serve",
+     "imported": "serve",
+     "to": "mypkg/core/service.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "mypkg/core/service.py",
+     "names": [
+      "serve"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "mypkg.core.service",
+     "line": 1,
+     "side_effect": false
+    }
+   ]
+  }
  ]
 }

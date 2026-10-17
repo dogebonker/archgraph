@@ -1,5 +1,6 @@
 //! Collectors turn a tool's output into files and file edges inside the scanned root.
 
+pub mod barrels;
 pub mod depcruise;
 pub mod go;
 pub mod grimp;
@@ -14,12 +15,13 @@ use std::path::Path;
 use anyhow::{Context, Result, bail};
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 
-use crate::model::{Collector, Edge, Language};
+use crate::model::{Collector, Edge, Language, NodeMetadata};
 
 pub struct RawGraph {
     pub files: Vec<String>,
     pub edges: Vec<Edge>,
     pub collector: Collector,
+    pub metadata: std::collections::BTreeMap<String, NodeMetadata>,
 }
 
 /// Extensions dependency-cruiser files must have to count as source; imports of anything else

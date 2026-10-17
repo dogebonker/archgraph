@@ -87,9 +87,11 @@ pub(super) fn probe(root: &Path, original: &Document, opts: &ScanOpts) -> Result
     opts.cochange = original.cochange.as_ref().map(|cochange| cochange.limit);
     opts.hotspots = None;
     let collected = super::scan_doc(root, &opts, None)?;
+    let mut config = original.config.clone();
+    config.file_metadata = collected.config.file_metadata;
     archgraph::analyze(
         collected.source,
-        original.config.clone(),
+        config,
         collected.files.into_iter().map(|file| file.path).collect(),
         collected.edges,
         collected.package_entries,

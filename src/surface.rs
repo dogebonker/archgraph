@@ -274,15 +274,16 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
             if files.get(edge.to.as_str()) != Some(&module.id.as_str()) {
                 continue;
             }
-            let boundary = rules.as_ref().and_then(|r| r.public_for(&edge.to));
+            let written = edge.original_to.as_deref().unwrap_or(&edge.to);
+            let boundary = rules.as_ref().and_then(|r| r.public_for(written));
             let (outside, bypass, expected) = if let Some((pattern, entries)) = boundary {
                 let inside = crate::collect::globset(&[pattern])?.is_match(&edge.from);
-                let entry_match = crate::collect::globset(&entries)?.is_match(&edge.to);
+                let entry_match = crate::collect::globset(&entries)?.is_match(written);
                 (!inside, !entry_match, entries)
             } else {
                 (
                     files.get(edge.from.as_str()) != Some(&module.id.as_str()),
-                    !entries.is_empty() && !entries.contains(&edge.to),
+                    !entries.is_empty() && !entries.contains(written),
                     entries.iter().cloned().collect(),
                 )
             };
@@ -290,7 +291,7 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
                 let names = symbols
                     .into_iter()
                     .flat_map(|s| &s.imports)
-                    .filter(|i| i.from == edge.from && i.to == edge.to)
+                    .filter(|i| i.from == edge.from && (i.to == edge.to || i.to == written))
                     .map(|i| i.name.clone())
                     .collect::<BTreeSet<_>>()
                     .into_iter()

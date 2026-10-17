@@ -56,5 +56,262 @@
    "imported": "app.domain.model",
    "kind": "static"
   }
+ ],
+ "barrel_modules": [
+  {
+   "file": "src/app/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "src/app/adapters/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "src/app/adapters/notify.py",
+   "pure": false,
+   "declared": [
+    "notify",
+    "prompt"
+   ],
+   "exports": [
+    {
+     "exported": "prompt",
+     "imported": "prompt",
+     "to": "src/app/entrypoints/cli.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "src/app/entrypoints/cli.py",
+     "names": [
+      "prompt"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "app.entrypoints.cli",
+     "line": 1,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "src/app/adapters/repository.py",
+   "pure": false,
+   "declared": [
+    "User",
+    "save"
+   ],
+   "exports": [
+    {
+     "exported": "User",
+     "imported": "User",
+     "to": "src/app/domain/model.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "src/app/domain/model.py",
+     "names": [
+      "User"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "app.domain.model",
+     "line": 1,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "src/app/bootstrap.py",
+   "pure": false,
+   "declared": [
+    "boot",
+    "handle",
+    "save"
+   ],
+   "exports": [
+    {
+     "exported": "save",
+     "imported": "save",
+     "to": "src/app/adapters/repository.py"
+    },
+    {
+     "exported": "handle",
+     "imported": "handle",
+     "to": "src/app/entrypoints/api.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "src/app/adapters/repository.py",
+     "names": [
+      "save"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "app.adapters.repository",
+     "line": 1,
+     "side_effect": false
+    },
+    {
+     "to": "src/app/entrypoints/api.py",
+     "names": [
+      "handle"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "app.entrypoints.api",
+     "line": 2,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "src/app/domain/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "src/app/domain/events.py",
+   "pure": false,
+   "declared": [
+    "created",
+    "save"
+   ],
+   "exports": [
+    {
+     "exported": "save",
+     "imported": "save",
+     "to": "src/app/adapters/repository.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "src/app/adapters/repository.py",
+     "names": [
+      "save"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "app.adapters.repository",
+     "line": 1,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "src/app/domain/model.py",
+   "pure": false,
+   "declared": [
+    "User"
+   ],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "src/app/entrypoints/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "src/app/entrypoints/api.py",
+   "pure": false,
+   "declared": [
+    "create",
+    "handle",
+    "save"
+   ],
+   "exports": [
+    {
+     "exported": "save",
+     "imported": "save",
+     "to": "src/app/adapters/repository.py"
+    },
+    {
+     "exported": "create",
+     "imported": "create",
+     "to": "src/app/service_layer/services.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "src/app/adapters/repository.py",
+     "names": [
+      "save"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "app.adapters.repository",
+     "line": 1,
+     "side_effect": false
+    },
+    {
+     "to": "src/app/service_layer/services.py",
+     "names": [
+      "create"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "app.service_layer.services",
+     "line": 2,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "src/app/entrypoints/cli.py",
+   "pure": false,
+   "declared": [
+    "prompt"
+   ],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "src/app/service_layer/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "src/app/service_layer/services.py",
+   "pure": false,
+   "declared": [
+    "User",
+    "create"
+   ],
+   "exports": [
+    {
+     "exported": "User",
+     "imported": "User",
+     "to": "src/app/domain/model.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "src/app/domain/model.py",
+     "names": [
+      "User"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "app.domain.model",
+     "line": 1,
+     "side_effect": false
+    }
+   ]
+  }
  ]
 }

@@ -406,7 +406,17 @@ fn lex_tokens(
                 if c == '`' && ch == '$' && chars.get(i + 1) == Some(&'{') {
                     computed = true;
                     let (nested, consumed, end_line) = lex_tokens(&chars[i + 2..], line, true);
+                    expressions.push(Token {
+                        text: "(".into(),
+                        literal: None,
+                        line,
+                    });
                     expressions.extend(nested);
+                    expressions.push(Token {
+                        text: ")".into(),
+                        literal: None,
+                        line: end_line,
+                    });
                     i += 2 + consumed;
                     line = end_line;
                     continue;
@@ -537,4 +547,308 @@ fn lex_tokens(
         });
     }
     (tokens, i, line)
+}
+
+#[derive(Debug, Default)]
+pub struct ModuleExports {
+    pub pure: bool,
+    pub declared: Vec<String>,
+    pub local: Vec<ImportedName>,
+}
+
+/// Recognizes forwarding-only modules; any executable declaration keeps load-time edges intact.
+pub fn module_exports(source: &str) -> ModuleExports {
+    let tokens = lex(source);
+    let statements = typescript(source);
+    let mut result = ModuleExports {
+        pure: true,
+        ..ModuleExports::default()
+    };
+    let mut forwarding = false;
+    let mut i = 0;
+    while i < tokens.len() {
+        if tokens[i].text == ";" {
+            i += 1;
+            continue;
+        }
+        if tokens[i].text == "import" && tokens.get(i + 1).is_some_and(|t| t.text != "(") {
+            if tokens.get(i + 1).is_some_and(|t| t.literal.is_some()) {
+                result.pure = false;
+            }
+            let mut end = i + 1;
+            while end < tokens.len()
+                && tokens[end].literal.is_none()
+                && !matches!(tokens[end].text.as_str(), ";" | "import" | "export")
+            {
+                end += 1;
+            }
+            if end < tokens.len() && tokens[end].literal.is_some() {
+                i = end + 1;
+                continue;
+            }
+        }
+        if tokens[i].text == "export" {
+            let start = i
+                + 1
+                + usize::from(
+                    tokens.get(i + 1).is_some_and(|t| t.text == "type")
+                        && tokens
+                            .get(i + 2)
+                            .is_some_and(|t| matches!(t.text.as_str(), "{" | "*")),
+                );
+            if tokens
+                .get(start)
+                .is_some_and(|t| matches!(t.text.as_str(), "{" | "*"))
+            {
+                let mut end = start;
+                while end < tokens.len()
+                    && !matches!(tokens[end].text.as_str(), ";" | "import" | "export")
+                {
+                    if tokens[end].text == "from"
+                        && tokens.get(end + 1).is_some_and(|t| t.literal.is_some())
+                    {
+                        forwarding = true;
+                        i = end + 2;
+                        break;
+                    }
+                    if tokens[end].text == "}" {
+                        if tokens.get(end + 1).is_some_and(|t| t.text == "from") {
+                            end += 1;
+                            continue;
+                        }
+                        let mut j = start + 1;
+                        while j < end {
+                            if tokens[j].text == "," {
+                                j += 1;
+                                continue;
+                            }
+                            if tokens[j].text == "type"
+                                && tokens
+                                    .get(j + 1)
+                                    .is_some_and(|t| !matches!(t.text.as_str(), "as" | "," | "}"))
+                            {
+                                j += 1;
+                            }
+                            let imported = tokens[j].text.clone();
+                            let mut local = imported.clone();
+                            j += 1;
+                            if tokens.get(j).is_some_and(|t| t.text == "as") && j + 1 < end {
+                                local = tokens[j + 1].text.clone();
+                                j += 2;
+                            }
+                            result.local.push(ImportedName { imported, local });
+                        }
+                        forwarding = true;
+                        i = end + 1;
+                        break;
+                    }
+                    end += 1;
+                }
+                if i > start {
+                    continue;
+                }
+            } else {
+                let mut declaration_index = start;
+                while tokens
+                    .get(declaration_index)
+                    .is_some_and(|t| matches!(t.text.as_str(), "async" | "abstract" | "declare"))
+                {
+                    declaration_index += 1;
+                }
+                let declaration = tokens.get(declaration_index).map(|t| t.text.as_str());
+                if declaration == Some("default") {
+                    result.declared.push("default".into());
+                } else if matches!(declaration, Some("const" | "let" | "var")) {
+                    result
+                        .declared
+                        .extend(variable_bindings(&tokens, declaration_index + 1));
+                } else if matches!(
+                    declaration,
+                    Some("function" | "class" | "interface" | "type" | "enum")
+                ) && let Some(name) = tokens.get(declaration_index + 1)
+                {
+                    result.declared.push(name.text.clone());
+                }
+            }
+        }
+        result.pure = false;
+        i += 1;
+    }
+    result.pure &= forwarding
+        && statements.iter().filter(|s| !s.reexport).all(|statement| {
+            !statement.side_effect
+                && !statement.names.is_empty()
+                && statement.names.iter().all(|name| {
+                    result
+                        .local
+                        .iter()
+                        .any(|export| export.imported == name.local)
+                })
+        });
+    result.declared.sort();
+    result.declared.dedup();
+    result
+}
+
+fn identifier(token: &Token) -> bool {
+    token.literal.is_none()
+        && token
+            .text
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_alphabetic() || matches!(c, '_' | '$'))
+}
+
+fn variable_bindings(tokens: &[Token], mut i: usize) -> Vec<String> {
+    let mut names = Vec::new();
+    while i < tokens.len() {
+        let mut declarator = Vec::new();
+        if !binding_pattern(tokens, &mut i, &mut declarator, 0) {
+            break;
+        }
+        if tokens.get(i).is_some_and(|t| t.text == ":") {
+            i += 1;
+            skip_initializer(tokens, &mut i, &["=", ",", ";"], true);
+        }
+        if tokens.get(i).is_some_and(|t| t.text == "=") {
+            i += 1;
+            skip_initializer(tokens, &mut i, &[",", ";"], false);
+        } else if tokens.get(i).is_some_and(|t| {
+            !matches!(t.text.as_str(), "," | ";") && !matches!(t.text.as_str(), "export" | "import")
+        }) {
+            break;
+        }
+        names.extend(declarator);
+        if tokens.get(i).is_none_or(|t| t.text != ",") {
+            break;
+        }
+        i += 1;
+    }
+    names
+}
+
+fn binding_pattern(tokens: &[Token], i: &mut usize, names: &mut Vec<String>, depth: usize) -> bool {
+    if depth > 32 {
+        return false;
+    }
+    let Some(token) = tokens.get(*i) else {
+        return false;
+    };
+    if identifier(token) {
+        names.push(token.text.clone());
+        *i += 1;
+        return true;
+    }
+    let object = token.text == "{";
+    if !object && token.text != "[" {
+        return false;
+    }
+    let close = if object { "}" } else { "]" };
+    *i += 1;
+    while let Some(token) = tokens.get(*i) {
+        if token.text == close {
+            *i += 1;
+            return true;
+        }
+        if token.text == "," {
+            *i += 1;
+            continue;
+        }
+        if token.text == "." {
+            while tokens.get(*i).is_some_and(|t| t.text == ".") {
+                *i += 1;
+            }
+        }
+        if object && tokens.get(*i).is_some_and(|t| t.text == "[") {
+            *i += 1;
+            skip_initializer(tokens, i, &["]"], false);
+            if tokens.get(*i).is_none_or(|t| t.text != "]") {
+                return false;
+            }
+            *i += 1;
+            if tokens.get(*i).is_none_or(|t| t.text != ":") {
+                return false;
+            }
+            *i += 1;
+            if !binding_pattern(tokens, i, names, depth + 1) {
+                return false;
+            }
+        } else if object {
+            let Some(key) = tokens.get(*i) else {
+                return false;
+            };
+            let shorthand = identifier(key).then(|| key.text.clone());
+            *i += 1;
+            if tokens.get(*i).is_some_and(|t| t.text == ":") {
+                *i += 1;
+                if !binding_pattern(tokens, i, names, depth + 1) {
+                    return false;
+                }
+            } else if let Some(name) = shorthand {
+                names.push(name);
+            } else {
+                return false;
+            }
+        } else if !binding_pattern(tokens, i, names, depth + 1) {
+            return false;
+        }
+        if tokens.get(*i).is_some_and(|t| t.text == "=") {
+            *i += 1;
+            skip_initializer(tokens, i, &[",", close], false);
+        }
+        if tokens
+            .get(*i)
+            .is_none_or(|t| t.text != "," && t.text != close)
+        {
+            return false;
+        }
+    }
+    false
+}
+
+fn skip_initializer(tokens: &[Token], i: &mut usize, stops: &[&str], type_annotation: bool) {
+    let mut stack = Vec::new();
+    while let Some(token) = tokens.get(*i) {
+        let text = token.text.as_str();
+        if stack.is_empty()
+            && (stops.contains(&text)
+                || text == "export"
+                || text == "import"
+                    && tokens
+                        .get(*i + 1)
+                        .is_none_or(|t| !matches!(t.text.as_str(), "(" | ".")))
+        {
+            return;
+        }
+        match text {
+            "(" => stack.push(")"),
+            "[" => stack.push("]"),
+            "{" => stack.push("}"),
+            "<" if type_annotation || generic_arguments(tokens, *i) => stack.push(">"),
+            ")" | "]" | "}" | ">" if stack.last() == Some(&text) => {
+                stack.pop();
+            }
+            ")" | "]" | "}" if stack.is_empty() => return,
+            _ => {}
+        }
+        *i += 1;
+    }
+}
+
+fn generic_arguments(tokens: &[Token], start: usize) -> bool {
+    let mut depth = 1;
+    for i in start + 1..tokens.len() {
+        match tokens[i].text.as_str() {
+            "<" => depth += 1,
+            ">" => {
+                depth -= 1;
+                if depth == 0 {
+                    return tokens.get(i + 1).is_some_and(|t| t.text == "(");
+                }
+            }
+            ";" | "=" => return false,
+            _ => {}
+        }
+    }
+    false
 }

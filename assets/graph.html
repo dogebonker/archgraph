@@ -754,6 +754,7 @@ const edges = doc.edges.map((e, i) => {
   const a = fileIndex.get(e.from), b = fileIndex.get(e.to);
   const ma = files[a].mod, mb = files[b].mod;
   const r = { i, a, b, kind: e.kind, verdict: e.verdict, rule: e.rule,
+    confidence: e.confidence, original_to: e.original_to, specifier: e.specifier, line: e.line, resolution_reason: e.resolution_reason,
     tone: e.verdict === "forbidden" || e.verdict === "unplanned" ? e.verdict : "neutral",
     me: ma === mb ? null : meOf.get(ma * N + mb) || null };
   files[a].outs.push(i);
@@ -1015,6 +1016,7 @@ relayoutAll();
 
 /* ---------- findings ---------- */
 const KIND_TEXT = {
+  "reexport-cycle": "A re-export chain loops back to a facade before reaching a definition.",
   "cycle": "Runtime import cycles (type-only and dynamic imports left out), with the fewest imports to remove.",
   "hidden-coupling": "Files in different modules changed together without importing each other.",
   "internals-reach": "Modules whose public entry other modules import past.",
@@ -1026,6 +1028,7 @@ const KIND_TEXT = {
 };
 /* Why each kind matters and what to do about it, in the README's and the skill's words. */
 const KIND_ADVICE = {
+  "reexport-cycle": ["A forwarding loop prevents reliable named-import resolution.", "Point the facade at the defining file and re-scan."],
   "cycle": ["Modules in a cycle cannot be changed, tested or split off alone: a change can come back around.",
     "Remove or invert the lighter side of a two-way pair (or an import of the break), re-scan, repeat while the cycle remains."],
   "hidden-coupling": ["Something the imports do not show links these files, so changing one quietly needs the other.",
@@ -1105,6 +1108,10 @@ const findings = doc.findings.map((f, i) => {
         if (a !== undefined && b !== undefined) { fs.add(a); fs.add(b); }
         addE(a, b, true);
       }
+      break;
+    case "reexport-cycle":
+      (ev.members || []).forEach(addF);
+      for (const l of ev.edges || []) addE(addF(l.from), addF(l.to), true);
       break;
     case "hidden-coupling": {
       const a = addF(ev.files[0]), b = addF(ev.files[1]);
@@ -3891,6 +3898,9 @@ function fedgePanel(j) {
   const e = edges[j];
   head(`${e.kind.charAt(0).toUpperCase() + e.kind.slice(1)} import`, `${files[e.a].name} → ${files[e.b].name}`, null, true);
   panel.append(fileTree({ mode: "flat", rows: [{ fi: e.a, lead: "from" }, { fi: e.b, lead: "to", edge: e }], label: "Import" }));
+  if (e.original_to) panel.append(el("p", { class: "muted" }, `Written target: ${e.original_to}. Resolved to ${files[e.b].path}.`));
+  if (e.specifier) panel.append(el("p", { class: "muted" }, `Specifier: ${e.specifier}${e.line ? `, line ${e.line}` : ""}.`));
+  if (e.confidence === "low") panel.append(el("p", { class: "muted" }, `Low confidence: ${e.resolution_reason || "the import could not be narrowed to a definition"}.`));
   if (e.verdict) {
     const p = el("p");
     p.append(el("span", { class: "v " + e.verdict }, e.verdict), document.createTextNode(e.rule ? ` by rule ${e.rule}` : ""));
@@ -3993,6 +4003,8 @@ function findingPanel(j) {
     // A heuristic break set can run to hundreds of imports; the two-way pairs are where to start.
     if (ev.exact) panel.append(breakHead, ul, ...twoWay);
     else panel.append(...twoWay, breakHead, ul);
+  } else if (f.kind === "reexport-cycle") {
+    line(`Forwarding loop: ${(ev.members || []).join(" → ")}. Resolve the chain before treating its imports as runtime dependencies.`);
   } else if (f.kind === "misplaced-file") {
     line(`Imported by ${count(ev.imports_from_target, "file", "files")} of ${ev.target_module}, ` +
       `${count(ev.own_module_edges, "edge", "edges")} within its own module` + (ev.via_barrel ? ", through a barrel." : "."));

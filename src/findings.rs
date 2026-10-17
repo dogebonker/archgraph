@@ -350,6 +350,38 @@ pub fn find(
         ));
     }
     internals_reach(&g, &mut findings);
+    let reexports: Vec<_> = doc
+        .edges
+        .iter()
+        .filter(|e| {
+            e.is_reexport
+                || matches!(e.kind, EdgeKind::Reexport | EdgeKind::TypeReexport)
+                    && e.confidence != Some(crate::model::Confidence::Low)
+        })
+        .map(|e| {
+            (
+                e.from.as_str(),
+                e.original_to.as_deref().unwrap_or(&e.to),
+                e,
+            )
+        })
+        .collect();
+    for members in crate::quality::components(&reexports) {
+        let edges = reexports
+            .iter()
+            .filter(|(a, b, _)| members.contains(a) && members.contains(b))
+            .map(|(from, to, _)| crate::model::Link {
+                from: (*from).into(),
+                to: (*to).into(),
+            })
+            .collect();
+        let members: Vec<String> = members.into_iter().map(str::to_owned).collect();
+        findings.push(finding(
+            FindingKind::ReexportCycle,
+            members.join(" -> "),
+            Evidence::ReexportCycle { members, edges },
+        ));
+    }
     hidden_coupling(&g, &mut findings);
     unstable_dependency(&g, &mut findings);
     // Go: clusters of files split packages, which Go cannot do, and clusters of packages are
@@ -815,29 +847,42 @@ fn internals_reach(g: &Graph, out: &mut Vec<Finding>) {
     // Per module: (cross-module imports into it, of which into one of its entries).
     let mut into: BTreeMap<&str, (usize, usize)> = BTreeMap::new();
     for e in &g.doc.edges {
-        let module = g.module_of[e.to.as_str()];
+        let written = e.original_to.as_deref().unwrap_or(&e.to);
+        let module = g
+            .module_of
+            .get(written)
+            .copied()
+            .unwrap_or(g.module_of[e.to.as_str()]);
         if g.module_of[e.from.as_str()] != module {
             let count = into.entry(module).or_default();
             count.0 += 1;
-            count.1 += usize::from(is_entry.contains(e.to.as_str()));
+            count.1 += usize::from(is_entry.contains(written));
         }
     }
     // Per subject: the module, its entries, its barrel share, the imports that bypass them.
     type Reach<'e> = (&'e str, BTreeSet<String>, Option<f64>, Vec<&'e Edge>);
     let mut by_subject: BTreeMap<String, Reach> = BTreeMap::new();
     for e in &g.doc.edges {
-        let module = g.module_of[e.to.as_str()];
+        let written = e.original_to.as_deref().unwrap_or(&e.to);
+        let module = g
+            .module_of
+            .get(written)
+            .copied()
+            .unwrap_or(g.module_of[e.to.as_str()]);
         let (subject, entries, share) = match g.rules {
             Some(rules)
                 if e.verdict == Some(Verdict::Forbidden)
                     && matches!(e.rule.as_deref(), Some("public" | "entrypoints")) =>
             {
-                let (public, entries) = rules.public_for(&e.to).unwrap_or_default();
+                let (public, entries) = match rules.public_for(written) {
+                    Some(boundary) => boundary,
+                    None => continue,
+                };
                 (public, entries, None)
             }
             None if g.doc.source.language == Language::Typescript
                 && g.module_of[e.from.as_str()] != module
-                && !is_entry.contains(e.to.as_str())
+                && !is_entry.contains(written)
                 && g.offered
                     .get(module)
                     .is_some_and(|o| o.contains(e.to.as_str()))

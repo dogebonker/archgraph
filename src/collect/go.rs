@@ -214,6 +214,7 @@ pub fn parse(json: &[u8], keep_generated: bool, keep_tests: bool) -> Result<Pars
         })
         .collect();
     let raw = RawGraph {
+        metadata: Default::default(),
         files: dump
             .files
             .into_iter()

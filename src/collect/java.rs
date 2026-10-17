@@ -121,6 +121,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
         );
     }
     Ok(RawGraph {
+        metadata: Default::default(),
         collector: Collector {
             name: "java-javac".to_owned(),
             version: Some(dump.java_version),

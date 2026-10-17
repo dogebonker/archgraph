@@ -153,3 +153,13 @@ test('assessment and module next steps ask for ownership review when a move conf
   vm.runInContext(fragment('  if (mv) say(', '  return out;'), ctx);
   assert.match(spoken[2].label, /review ownership.*before proposing a move/);
 });
+
+test('resolved import panel preserves written path and explains low confidence as text', () => {
+  const panel = node();
+  const ctx = context({ panel, edges: [{ a:0, b:1, kind:'reexport', original_to:'api/<index>.ts', specifier:'<unsafe>', line:3, confidence:'low', resolution_reason:'ambiguous <export>' }], files:[{name:'caller',path:'caller.ts'},{name:'impl',path:'impl.ts'}], head(){}, fileTree(){return node();} });
+  vm.runInContext(fragment('function fedgePanel(', 'function simTable('), ctx);
+  vm.runInContext('fedgePanel(0)', ctx);
+  assert.match(panel.textContent, /Written target: api\/<index>\.ts/);
+  assert.match(panel.textContent, /Specifier: <unsafe>, line 3/);
+  assert.match(panel.textContent, /Low confidence: ambiguous <export>/);
+});

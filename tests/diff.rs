@@ -71,7 +71,7 @@ fn diff_shows_a_resolved_forbidden_edge_and_a_removed_module() {
     );
     let (diff, _) = run_json(&["diff", &old, &new]);
     assert_eq!(
-        diff["resolved_forbidden"],
+        common::without_import_metadata(&diff["resolved_forbidden"]),
         json!([{ "from": "src/domain/user.ts", "to": "src/adapters/out/pg.ts", "kind": "runtime", "weight": 1.0, "verdict": "forbidden", "rule": "layers" }])
     );
     assert_eq!(diff["new_forbidden"], json!([]));
@@ -195,7 +195,7 @@ fn fail_on_new_unplanned_reads_new_unplanned() {
     let (doc, code) = run_json(&["diff", &new, &old, "--fail-on", "new-unplanned"]);
     assert_eq!(code, Some(1));
     assert_eq!(
-        doc["new_unplanned"],
+        common::without_import_metadata(&doc["new_unplanned"]),
         json!([{ "from": "src/domains/cart/controller.ts", "to": "src/lib/clock.ts",
                  "kind": "runtime", "weight": 1.0, "verdict": "unplanned", "rule": "none" }])
     );

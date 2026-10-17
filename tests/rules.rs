@@ -77,7 +77,7 @@ fn ts_fda_verdicts_follow_the_seven_steps() {
             // module, 6 allows the public entry.
             (
                 "src/domains/cart/ui/Cart.tsx",
-                "src/domains/checkout/index.ts",
+                "src/domains/checkout/types.ts",
                 "allowed",
                 "public"
             ),
@@ -240,7 +240,12 @@ fn ts_modmono_index_only_even_without_an_index() {
     assert_eq!(
         verdicts(&doc),
         v(&[
-            ("src/main.ts", "src/modules/c/index.ts", "allowed", "public"),
+            (
+                "src/main.ts",
+                "src/modules/c/domain/item.ts",
+                "allowed",
+                "public"
+            ),
             (
                 "src/modules/a/application/x.ts",
                 "src/modules/a/domain/order.ts",
@@ -256,7 +261,7 @@ fn ts_modmono_index_only_even_without_an_index() {
             ),
             (
                 "src/modules/a/application/z.ts",
-                "src/modules/c/index.ts",
+                "src/modules/c/domain/item.ts",
                 "allowed",
                 "public"
             ),

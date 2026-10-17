@@ -94,6 +94,9 @@ impl Target {
                         Evidence::HiddenCoupling { files, .. } => {
                             paths.extend(files.iter().cloned())
                         }
+                        Evidence::ReexportCycle { members, .. } => {
+                            paths.extend(members.iter().cloned())
+                        }
                         Evidence::InternalsReach { edges, entries, .. } => {
                             paths.extend(entries.iter().cloned());
                             paths.extend(

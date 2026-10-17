@@ -76,6 +76,35 @@ pub fn stable(stdout: &str) -> String {
         .join("\n")
 }
 
+/// Existing graph assertions retain targets, kinds, weights and verdicts while source-evidence
+/// tests separately check the optional import metadata.
+pub fn without_import_metadata(value: &Value) -> Value {
+    let mut projected = value.clone();
+    fn visit(value: &mut Value) {
+        match value {
+            Value::Array(values) => values.iter_mut().for_each(visit),
+            Value::Object(fields) => {
+                if fields.contains_key("from") && fields.contains_key("to") {
+                    for key in [
+                        "names",
+                        "line",
+                        "specifier",
+                        "confidence",
+                        "original_to",
+                        "resolution_reason",
+                    ] {
+                        fields.remove(key);
+                    }
+                }
+                fields.values_mut().for_each(visit);
+            }
+            _ => {}
+        }
+    }
+    visit(&mut projected);
+    projected
+}
+
 pub fn layout(name: &str) -> String {
     fixture(name)
         .join("layout.yaml")

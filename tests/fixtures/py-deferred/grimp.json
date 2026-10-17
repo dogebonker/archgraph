@@ -42,5 +42,175 @@
    "imported": "deferred.c.z",
    "kind": "static"
   }
+ ],
+ "barrel_modules": [
+  {
+   "file": "deferred/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "deferred/a/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "deferred/a/x.py",
+   "pure": false,
+   "declared": [
+    "X",
+    "Y"
+   ],
+   "exports": [
+    {
+     "exported": "Y",
+     "imported": "Y",
+     "to": "deferred/b/y.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "deferred/b/y.py",
+     "names": [
+      "Y"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "deferred.b.y",
+     "line": 1,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "deferred/b/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "deferred/b/y.py",
+   "pure": false,
+   "declared": [
+    "TYPE_CHECKING",
+    "Y"
+   ],
+   "exports": [],
+   "imports": [
+    {
+     "to": "deferred/a/x.py",
+     "names": [
+      "X"
+     ],
+     "wildcard": false,
+     "kind": "type",
+     "specifier": "deferred.a.x",
+     "line": 4,
+     "side_effect": false
+    },
+    {
+     "to": "deferred/c/z.py",
+     "names": [
+      "Z"
+     ],
+     "wildcard": false,
+     "kind": "lazy",
+     "specifier": "deferred.c.z",
+     "line": 12,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "deferred/c/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "deferred/c/z.py",
+   "pure": false,
+   "declared": [
+    "Y",
+    "Z"
+   ],
+   "exports": [
+    {
+     "exported": "Y",
+     "imported": "Y",
+     "to": "deferred/b/y.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "deferred/b/y.py",
+     "names": [
+      "Y"
+     ],
+     "wildcard": false,
+     "kind": "runtime",
+     "specifier": "deferred.b.y",
+     "line": 1,
+     "side_effect": false
+    },
+    {
+     "to": "deferred/d/w.py",
+     "names": [],
+     "wildcard": true,
+     "kind": "lazy",
+     "specifier": "deferred.d.w",
+     "line": 6,
+     "side_effect": false
+    }
+   ]
+  },
+  {
+   "file": "deferred/d/__init__.py",
+   "pure": false,
+   "declared": [],
+   "exports": [],
+   "imports": []
+  },
+  {
+   "file": "deferred/d/w.py",
+   "pure": false,
+   "declared": [
+    "W",
+    "deferred"
+   ],
+   "exports": [
+    {
+     "exported": "deferred",
+     "imported": "*",
+     "to": "deferred/c/z.py"
+    }
+   ],
+   "imports": [
+    {
+     "to": "deferred/c/z.py",
+     "names": [],
+     "wildcard": true,
+     "kind": "runtime",
+     "specifier": "deferred.c.z",
+     "line": 1,
+     "side_effect": false
+    },
+    {
+     "to": "deferred/c/z.py",
+     "names": [],
+     "wildcard": true,
+     "kind": "lazy",
+     "specifier": "deferred.c.z",
+     "line": 6,
+     "side_effect": false
+    }
+   ]
+  }
  ]
 }

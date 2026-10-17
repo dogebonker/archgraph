@@ -506,6 +506,7 @@ pub fn attach_findings(report: &mut Hotspots, graph: &Document) {
                             }
                         }
                         Evidence::HiddenCoupling { files, .. } => files.contains(&file.path),
+                        Evidence::ReexportCycle { members, .. } => members.contains(&file.path),
                         Evidence::InternalsReach { edges, .. } => edges
                             .iter()
                             .any(|e| e.from == file.path || e.to == file.path),

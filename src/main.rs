@@ -640,6 +640,9 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
                 )?,
             };
             let mut raw = depcruise::parse_at(&json, root)?;
+            for warning in collect::barrels::typescript(root, &json, &mut raw)? {
+                eprintln!("warning: {warning}");
+            }
             raw.collector.type_marking = type_marking.map(str::to_owned);
             (raw, source_dir.to_owned())
         }
@@ -740,6 +743,7 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
                 rust_build_scripts: language == Language::Rust && args.rust_build_scripts,
             },
         ),
+        file_metadata: raw.metadata,
     };
     if let Some(owners) = &config.codeowners {
         for warning in &owners.warnings {
@@ -1043,7 +1047,13 @@ fn check(args: Check) -> Result<ExitCode> {
             None => String::new(),
         };
         let rule = e.rule.as_deref().unwrap_or_default();
-        println!("{label} {} -> {} ({rule}){via}", e.from, e.to);
+        let written = e.original_to.as_deref().unwrap_or(&e.to);
+        let resolved = if written != e.to {
+            format!(" [resolves to {}]", e.to)
+        } else {
+            String::new()
+        };
+        println!("{label} {} -> {} ({rule}){via}{resolved}", e.from, written);
     }
     println!("{forbidden} forbidden, {unplanned} unplanned");
     if let Some(surface) = &doc.surface {
@@ -1156,6 +1166,16 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
         );
     }
     input.config.all_kinds |= ALL_KINDS.load(Ordering::Relaxed);
+    input.config.file_metadata = input
+        .files
+        .iter()
+        .map(|f| {
+            (
+                f.path.clone(),
+                archgraph::model::NodeMetadata { barrel: f.barrel },
+            )
+        })
+        .collect();
     archgraph::validate_scan(&input)
         .with_context(|| format!("inconsistent scan document {}", path.display()))?;
     Ok(input)

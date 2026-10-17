@@ -32,30 +32,42 @@ fn py_cycles_mapping_barrels_and_cycle() {
         ])
     );
     assert_eq!(
-        doc["edges"],
+        common::without_import_metadata(&doc["edges"]),
         json!([
-            { "from": "mypkg/api/__init__.py", "to": "mypkg/api/handlers.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
-            { "from": "mypkg/api/__init__.py", "to": "mypkg/api/schemas.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "mypkg/api/__init__.py", "to": "mypkg/api/handlers.py", "kind": "reexport", "weight": 0.0, "is_reexport": true, "verdict": null, "rule": null },
+            { "from": "mypkg/api/__init__.py", "to": "mypkg/api/schemas.py", "kind": "reexport", "weight": 0.0, "is_reexport": true, "verdict": null, "rule": null },
             { "from": "mypkg/api/handlers.py", "to": "mypkg/core/service.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
-            { "from": "mypkg/cli.py", "to": "mypkg/api/__init__.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "mypkg/cli.py", "to": "mypkg/api/__init__.py", "kind": "reexport", "weight": 0.0, "verdict": null, "rule": null },
             { "from": "mypkg/core/__init__.py", "to": "mypkg/db/session.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
             { "from": "mypkg/core/service.py", "to": "mypkg/db/repo.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
             { "from": "mypkg/db/repo.py", "to": "mypkg/core/__init__.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
             { "from": "mypkg/db/repo.py", "to": "mypkg/db/session.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null }
         ])
     );
-    // cli -> api/__init__ counts as cli -> handlers and cli -> schemas.
+    let namespace = doc["edges"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|edge| edge["from"] == "mypkg/cli.py")
+        .unwrap();
+    assert_eq!(namespace["confidence"], "low");
+    assert_eq!(
+        namespace["resolution_reason"],
+        "namespace or star import cannot be narrowed"
+    );
+    // cli imports an un-narrowed package namespace: it remains a low-confidence structural
+    // edge with zero runtime weight. Integer raw counts retain legacy barrel expansion.
     assert_eq!(
         doc["modules"],
         json!([
             { "id": "__init__.py", "files": 1, "ca": 0, "ce": 0, "instability": null,
               "internal_edges": 0, "outgoing_edges": 0, "cohesion": null, "outgoing_to": {}, "weighted_ca": 0.0, "weighted_ce": 0.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 0.0, "weighted_outgoing_to": {} },
-            { "id": "api", "files": 3, "ca": 1, "ce": 1, "instability": 0.5,
+            { "id": "api", "files": 3, "ca": 1, "ce": 1, "instability": 1.0,
               "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0,
-              "outgoing_to": { "core": 1 }, "weighted_ca": 1.0, "weighted_ce": 1.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 1.0, "weighted_outgoing_to": { "core": 1.0 } },
-            { "id": "cli.py", "files": 1, "ca": 0, "ce": 1, "instability": 1.0,
-              "internal_edges": 0, "outgoing_edges": 2, "cohesion": 0.0,
-              "outgoing_to": { "api": 2 }, "weighted_ca": 0.0, "weighted_ce": 1.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 2.0, "weighted_outgoing_to": { "api": 2.0 } },
+              "outgoing_to": { "core": 1 }, "weighted_ca": 0.0, "weighted_ce": 1.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 1.0, "weighted_outgoing_to": { "core": 1.0 } },
+            { "id": "cli.py", "files": 1, "ca": 0, "ce": 1, "instability": null,
+              "internal_edges": 0, "outgoing_edges": 2, "cohesion": null,
+              "outgoing_to": { "api": 2 }, "weighted_ca": 0.0, "weighted_ce": 0.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 0.0, "weighted_outgoing_to": { "api": 0.0 } },
             { "id": "core", "files": 2, "ca": 2, "ce": 1, "instability": 0.3333,
               "internal_edges": 0, "outgoing_edges": 2, "cohesion": 0.0,
               "outgoing_to": { "db": 2 }, "weighted_ca": 2.0, "weighted_ce": 1.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 2.0, "weighted_outgoing_to": { "db": 2.0 } },

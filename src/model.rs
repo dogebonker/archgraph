@@ -140,6 +140,14 @@ pub struct Config {
     pub codeowners: Option<crate::codeowners::Codeowners>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub collection: Option<CollectionOptions>,
+    /// Runtime carrier for source node attributes; persisted on `files`, not as configuration.
+    #[serde(skip)]
+    pub file_metadata: BTreeMap<String, NodeMetadata>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct NodeMetadata {
+    pub barrel: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -157,7 +165,7 @@ pub struct RulesRef {
     pub doc: Rules,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct File {
     pub path: String,
     pub module: String,
@@ -175,12 +183,32 @@ pub struct Edge {
     pub weight: Option<f64>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub is_reexport: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confidence: Option<Confidence>,
+    /// Written import destination, retained when the dependency resolves through a facade.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub original_to: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub specifier: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line: Option<usize>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub names: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolution_reason: Option<String>,
     pub verdict: Option<Verdict>,
     pub rule: Option<String>,
     /// For a `reachable` forbid: the import path from `to` to the matching file. Printed by
     /// `check`, not part of the document.
     #[serde(skip)]
     pub reach: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Confidence {
+    High,
+    Low,
 }
 
 /// Declared in ascending precedence: when a pair is reported more than once the greatest wins,
@@ -382,6 +410,7 @@ pub enum FindingKind {
     HiddenCoupling,
     InternalsReach,
     MisplacedFile,
+    ReexportCycle,
     Seam,
     SinkSplit,
     SmallRepo,
@@ -435,6 +464,10 @@ pub struct FindingContext {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum Evidence {
+    ReexportCycle {
+        members: Vec<String>,
+        edges: Vec<Link>,
+    },
     SinkSplit {
         ca: usize,
         components: Vec<Component>,

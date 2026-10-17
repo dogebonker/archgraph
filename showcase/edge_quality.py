@@ -83,6 +83,7 @@ def stats(doc):
         'module_cycles': len(cycles),
         'largest_module_cycle': max((len(c['members']) for c in cycles), default=0),
         'cycle_members': [c['members'] for c in cycles],
+        'deferred_module_cycles': sum(c.get('level') == 'module' for c in doc.get('type_only_cycles', [])),
         'barrels': sum(bool(f.get('barrel')) for f in doc['files']),
         'summary': doc['summary'],
     }
@@ -112,17 +113,39 @@ def cycle_edge_changes(members, before, after):
     kept = {f['path'] for f in after['files']}
     old = [e for e in before['edges']
            if modules.get(e['from']) in members and modules.get(e['to']) in members]
-    new = {(e['from'], e['to'], e.get('kind')) for e in after['edges']}
+    canonical_kind = lambda kind: {'static': 'runtime', 'dynamic': 'lazy'}.get(kind, kind)
+    new = {(e['from'], e['to'], canonical_kind(e.get('kind'))) for e in after['edges']}
+    runtime_after = {(e['from'], e['to']) for e in after['edges']
+                     if canonical_kind(e.get('kind')) == 'runtime'}
     endpoints = {(e['from'], e['to']) for e in after['edges']}
     result = {'excluded_files': sorted({p for e in old for p in (e['from'], e['to']) if p not in kept}),
-              'removed_or_redirected': [], 'changed_kinds': []}
+              'removed_or_redirected': [], 'changed_kinds': [], 'runtime_edges_removed': []}
     for edge in old:
         pair = (edge['from'], edge['to'])
+        was_runtime = edge.get('kind') in ('static', 'runtime') or (
+            before['schema'] == 'archgraph/v1' and edge.get('kind') == 'reexport')
+        if was_runtime and pair not in runtime_after:
+            result['runtime_edges_removed'].append(edge)
         if pair not in endpoints and all(p in kept for p in pair):
             result['removed_or_redirected'].append(edge)
-        elif pair in endpoints and (*pair, edge.get('kind')) not in new:
+        elif pair in endpoints and (*pair, canonical_kind(edge.get('kind'))) not in new:
             result['changed_kinds'].append(edge)
     return result
+
+
+
+def comparison(work, stage, entries):
+    rows = []
+    for entry in entries:
+        name = entry['name']
+        before = json.loads((work / 'baseline' / name / 'graph.json').read_text())
+        after = json.loads((work / stage / name / 'graph.json').read_text())
+        cycles = []
+        for members in module_cycles(before):
+            cycles.append({'members': sorted(members), 'disposition': cycle_disposition(members, after),
+                           'edge_changes': cycle_edge_changes(members, before, after)})
+        rows.append({'name': name, 'before': stats(before), 'after': stats(after), 'cycles': cycles})
+    return rows
 
 
 def scan(entry, args, binary_hash):
