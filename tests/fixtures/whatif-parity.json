@@ -1,0 +1,6396 @@
+[
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "b": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "b/three.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [
+        {
+          "level": "module",
+          "members": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "forbidden": 0,
+      "largest_cycle": 2,
+      "modules": {
+        "a": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "b": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [
+        [
+          "a",
+          "b"
+        ]
+      ],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "a/three.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": null,
+        "source_root": "."
+      },
+      "cycles": [
+        {
+          "break": [
+            {
+              "from": "a/one.ts",
+              "to": "b/two.ts"
+            }
+          ],
+          "exact": true,
+          "level": "module",
+          "members": [
+            "a",
+            "b"
+          ],
+          "two_way": [
+            {
+              "edges": [
+                {
+                  "from": "a/one.ts",
+                  "to": "b/two.ts"
+                }
+              ],
+              "even": true,
+              "from": "a",
+              "imports": 1,
+              "reverse_imports": 1,
+              "to": "b"
+            }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "from": "a/one.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "b/two.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "a/three.ts",
+          "verdict": null,
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/one.ts"
+        },
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/three.ts"
+        },
+        {
+          "barrel": false,
+          "module": "b",
+          "path": "b/two.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "break": [
+              {
+                "from": "a/one.ts",
+                "to": "b/two.ts"
+              }
+            ],
+            "exact": true,
+            "level": "module",
+            "members": [
+              "a",
+              "b"
+            ],
+            "two_way": [
+              {
+                "edges": [
+                  {
+                    "from": "a/one.ts",
+                    "to": "b/two.ts"
+                  }
+                ],
+                "even": true,
+                "from": "a",
+                "imports": 1,
+                "reverse_imports": 1,
+                "to": "b"
+              }
+            ]
+          },
+          "kind": "cycle",
+          "subject": "a, b"
+        },
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "a",
+          "imports": 1,
+          "to": "b"
+        },
+        {
+          "forbidden": 0,
+          "from": "b",
+          "imports": 1,
+          "to": "a"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 2,
+          "id": "a",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "b": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "b": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "b",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "a": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "a": 1.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 1,
+        "forbidden": 0,
+        "modules": {
+          "a": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          },
+          "b": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "a/three.ts",
+      "to": "b/three.ts"
+    },
+    "name": "cut-module-cycle"
+  },
+  {
+    "after": {
+      "cycles": [
+        {
+          "level": "file",
+          "members": [
+            "b/one.ts",
+            "b/two.ts"
+          ]
+        }
+      ],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "b": {
+          "ca": 0,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": null,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "b/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "b/one.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [
+        {
+          "level": "module",
+          "members": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "forbidden": 0,
+      "largest_cycle": 2,
+      "modules": {
+        "a": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "b": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [
+        [
+          "a",
+          "b"
+        ]
+      ],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "a/one.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": null,
+        "source_root": "."
+      },
+      "cycles": [
+        {
+          "break": [
+            {
+              "from": "a/one.ts",
+              "to": "b/two.ts"
+            }
+          ],
+          "exact": true,
+          "level": "module",
+          "members": [
+            "a",
+            "b"
+          ],
+          "two_way": [
+            {
+              "edges": [
+                {
+                  "from": "a/one.ts",
+                  "to": "b/two.ts"
+                }
+              ],
+              "even": true,
+              "from": "a",
+              "imports": 1,
+              "reverse_imports": 1,
+              "to": "b"
+            }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "from": "a/one.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "b/two.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "a/one.ts",
+          "verdict": null,
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/one.ts"
+        },
+        {
+          "barrel": false,
+          "module": "b",
+          "path": "b/two.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "break": [
+              {
+                "from": "a/one.ts",
+                "to": "b/two.ts"
+              }
+            ],
+            "exact": true,
+            "level": "module",
+            "members": [
+              "a",
+              "b"
+            ],
+            "two_way": [
+              {
+                "edges": [
+                  {
+                    "from": "a/one.ts",
+                    "to": "b/two.ts"
+                  }
+                ],
+                "even": true,
+                "from": "a",
+                "imports": 1,
+                "reverse_imports": 1,
+                "to": "b"
+              }
+            ]
+          },
+          "kind": "cycle",
+          "subject": "a, b"
+        },
+        {
+          "evidence": {
+            "files": 2,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "a",
+          "imports": 1,
+          "to": "b"
+        },
+        {
+          "forbidden": 0,
+          "from": "b",
+          "imports": 1,
+          "to": "a"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "a",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "b": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "b": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "b",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "a": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "a": 1.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 1,
+        "forbidden": 0,
+        "modules": {
+          "a": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          },
+          "b": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "a/one.ts",
+      "to": "b/one.ts"
+    },
+    "name": "merge-modules-retains-file-cycle"
+  },
+  {
+    "after": {
+      "cycles": [
+        {
+          "level": "module",
+          "members": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "forbidden": 0,
+      "largest_cycle": 2,
+      "modules": {
+        "a": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "b": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [
+        [
+          "a",
+          "b"
+        ]
+      ],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "a/three.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "b": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "c": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "c/three.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": null,
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "a/one.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "b/two.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "c/three.ts",
+          "verdict": null,
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/one.ts"
+        },
+        {
+          "barrel": false,
+          "module": "b",
+          "path": "b/two.ts"
+        },
+        {
+          "barrel": false,
+          "module": "c",
+          "path": "c/three.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 3
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "a",
+          "imports": 1,
+          "to": "b"
+        },
+        {
+          "forbidden": 0,
+          "from": "b",
+          "imports": 1,
+          "to": "c"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "a",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "b": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "b": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "b",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "c": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "c": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "c",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 0,
+        "modules": {
+          "a": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "b": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          },
+          "c": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "c/three.ts",
+      "to": "a/three.ts"
+    },
+    "name": "relocate-creates-cycle"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 0,
+          "ce": 2,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.1
+        },
+        "b": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.75,
+          "weighted_ca": 0.1,
+          "weighted_ce": 0.3
+        },
+        "c": {
+          "ca": 2,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.3,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "c/three.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "c/three.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.9091,
+          "instability": 0.25,
+          "weighted_ca": 0.3,
+          "weighted_ce": 0.1
+        },
+        "b": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.75,
+          "weighted_ca": 0.1,
+          "weighted_ce": 0.3
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "a/three.ts",
+          "verdict": null
+        },
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "a/three.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": null,
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "a/one.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "a/three.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "a/one.ts",
+          "kind": "type",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null,
+          "weight": 0.1
+        },
+        {
+          "from": "b/two.ts",
+          "kind": "lazy",
+          "rule": null,
+          "to": "a/three.ts",
+          "verdict": null,
+          "weight": 0.3
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/one.ts"
+        },
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/three.ts"
+        },
+        {
+          "barrel": false,
+          "module": "b",
+          "path": "b/two.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "a",
+          "imports": 1,
+          "to": "b"
+        },
+        {
+          "forbidden": 0,
+          "from": "b",
+          "imports": 1,
+          "to": "a"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.9091,
+          "files": 2,
+          "id": "a",
+          "instability": 0.25,
+          "internal_edges": 1,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "b": 1
+          },
+          "weighted_ca": 0.3,
+          "weighted_ce": 0.1,
+          "weighted_internal_edges": 1.0,
+          "weighted_outgoing_edges": 0.1,
+          "weighted_outgoing_to": {
+            "b": 0.1
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "b",
+          "instability": 0.75,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "a": 1
+          },
+          "weighted_ca": 0.1,
+          "weighted_ce": 0.3,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.3,
+          "weighted_outgoing_to": {
+            "a": 0.3
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 0,
+        "modules": {
+          "a": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.9091,
+            "instability": 0.25,
+            "weighted_ca": 0.3,
+            "weighted_ce": 0.1
+          },
+          "b": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.75,
+            "weighted_ca": 0.1,
+            "weighted_ce": 0.3
+          }
+        },
+        "type_only_cycles": 1,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": [
+        {
+          "contains_runtime_cycle": false,
+          "kinds": [
+            "lazy",
+            "type"
+          ],
+          "level": "module",
+          "members": [
+            "a",
+            "b"
+          ]
+        }
+      ]
+    },
+    "move": {
+      "file": "a/three.ts",
+      "to": "c/three.ts"
+    },
+    "name": "weighted-type-and-lazy"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.1
+        },
+        "b": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": 0.0,
+          "weighted_ca": 0.1,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "b/three.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [
+        {
+          "level": "module",
+          "members": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "forbidden": 0,
+      "largest_cycle": 2,
+      "modules": {
+        "a": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.25,
+          "weighted_ca": 0.3,
+          "weighted_ce": 0.1
+        },
+        "b": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.75,
+          "weighted_ca": 0.1,
+          "weighted_ce": 0.3
+        }
+      },
+      "two_way_pairs": [
+        [
+          "a",
+          "b"
+        ]
+      ],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "a/three.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "all_kinds": true,
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": null,
+        "source_root": "."
+      },
+      "cycles": [
+        {
+          "break": [
+            {
+              "from": "a/one.ts",
+              "to": "b/two.ts"
+            }
+          ],
+          "exact": true,
+          "level": "module",
+          "members": [
+            "a",
+            "b"
+          ],
+          "two_way": [
+            {
+              "edges": [
+                {
+                  "from": "a/one.ts",
+                  "to": "b/two.ts"
+                }
+              ],
+              "even": true,
+              "from": "a",
+              "imports": 1,
+              "reverse_imports": 1,
+              "to": "b"
+            }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "from": "a/one.ts",
+          "kind": "type",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null,
+          "weight": 0.1
+        },
+        {
+          "from": "b/two.ts",
+          "kind": "lazy",
+          "rule": null,
+          "to": "a/three.ts",
+          "verdict": null,
+          "weight": 0.3
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/one.ts"
+        },
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/three.ts"
+        },
+        {
+          "barrel": false,
+          "module": "b",
+          "path": "b/two.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "break": [
+              {
+                "from": "a/one.ts",
+                "to": "b/two.ts"
+              }
+            ],
+            "exact": true,
+            "level": "module",
+            "members": [
+              "a",
+              "b"
+            ],
+            "two_way": [
+              {
+                "edges": [
+                  {
+                    "from": "a/one.ts",
+                    "to": "b/two.ts"
+                  }
+                ],
+                "even": true,
+                "from": "a",
+                "imports": 1,
+                "reverse_imports": 1,
+                "to": "b"
+              }
+            ]
+          },
+          "kind": "cycle",
+          "subject": "a, b"
+        },
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "a",
+          "imports": 1,
+          "to": "b"
+        },
+        {
+          "forbidden": 0,
+          "from": "b",
+          "imports": 1,
+          "to": "a"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 2,
+          "id": "a",
+          "instability": 0.25,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "b": 1
+          },
+          "weighted_ca": 0.3,
+          "weighted_ce": 0.1,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.1,
+          "weighted_outgoing_to": {
+            "b": 0.1
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "b",
+          "instability": 0.75,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "a": 1
+          },
+          "weighted_ca": 0.1,
+          "weighted_ce": 0.3,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.3,
+          "weighted_outgoing_to": {
+            "a": 0.3
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 1,
+        "forbidden": 0,
+        "modules": {
+          "a": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.25,
+            "weighted_ca": 0.3,
+            "weighted_ce": 0.1
+          },
+          "b": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.75,
+            "weighted_ca": 0.1,
+            "weighted_ce": 0.3
+          }
+        },
+        "type_only_cycles": 1,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": [
+        {
+          "contains_runtime_cycle": false,
+          "kinds": [
+            "lazy",
+            "type"
+          ],
+          "level": "module",
+          "members": [
+            "a",
+            "b"
+          ]
+        }
+      ]
+    },
+    "move": {
+      "file": "a/three.ts",
+      "to": "b/three.ts"
+    },
+    "name": "all-kinds-cycle"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 0,
+          "ce": 2,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 2.2
+        },
+        "b": {
+          "ca": 2,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 0.9,
+          "weighted_ce": 0.0
+        },
+        "c": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.2593,
+          "weighted_ca": 2.0,
+          "weighted_ce": 0.7
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 3,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": "none",
+          "to": "b/two.ts",
+          "verdict": "unplanned"
+        },
+        {
+          "from": "a/one.ts",
+          "rule": "none",
+          "to": "c/three.ts",
+          "verdict": "unplanned"
+        },
+        {
+          "from": "c/three.ts",
+          "rule": "none",
+          "to": "b/two.ts",
+          "verdict": "unplanned"
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.6897,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.7
+        },
+        "b": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 0.7,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 2,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": "same-module",
+          "to": "a/three.ts",
+          "verdict": "allowed"
+        },
+        {
+          "from": "a/one.ts",
+          "rule": "none",
+          "to": "b/two.ts",
+          "verdict": "unplanned"
+        },
+        {
+          "from": "a/three.ts",
+          "rule": "none",
+          "to": "b/two.ts",
+          "verdict": "unplanned"
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "doc": {
+            "allow": [],
+            "edge_weights": {
+              "lazy": 0.7,
+              "reexport": 0.05,
+              "runtime": 2.0,
+              "type": 0.2
+            },
+            "forbid": [],
+            "layers": [],
+            "modules": [],
+            "public": [],
+            "version": 1
+          },
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "a/one.ts",
+          "kind": "runtime",
+          "rule": "same-module",
+          "to": "a/three.ts",
+          "verdict": "allowed",
+          "weight": 2.0
+        },
+        {
+          "from": "a/one.ts",
+          "kind": "type",
+          "rule": "none",
+          "to": "b/two.ts",
+          "verdict": "unplanned",
+          "weight": 0.2
+        },
+        {
+          "from": "a/three.ts",
+          "kind": "lazy",
+          "rule": "none",
+          "to": "b/two.ts",
+          "verdict": "unplanned",
+          "weight": 0.7
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/one.ts"
+        },
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/three.ts"
+        },
+        {
+          "barrel": false,
+          "module": "b",
+          "path": "b/two.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "a",
+          "imports": 2,
+          "to": "b"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.6897,
+          "files": 2,
+          "id": "a",
+          "instability": 1.0,
+          "internal_edges": 1,
+          "outgoing_edges": 2,
+          "outgoing_to": {
+            "b": 2
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.7,
+          "weighted_internal_edges": 2.0,
+          "weighted_outgoing_edges": 0.9,
+          "weighted_outgoing_to": {
+            "b": 0.9
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "b",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 0.7,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 0,
+        "modules": {
+          "a": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.6897,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 0.7
+          },
+          "b": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 0.7,
+            "weighted_ce": 0.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 2
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "a/three.ts",
+      "to": "c/three.ts"
+    },
+    "name": "custom-weights"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "domain/cart": {
+          "ca": 0,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": null,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "src/domains/cart/a.ts",
+          "rule": "same-module",
+          "to": "src/domains/cart/b.ts",
+          "verdict": "allowed"
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "domain/cart": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "domain/pay": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 1,
+      "verdicts": [
+        {
+          "from": "src/domains/cart/a.ts",
+          "rule": "none",
+          "to": "src/domains/pay/b.ts",
+          "verdict": "unplanned"
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "doc": {
+            "allow": [],
+            "forbid": [],
+            "layers": [],
+            "modules": [
+              {
+                "id": "domain/<name>",
+                "path": "src/domains/<name>/**"
+              }
+            ],
+            "public": [],
+            "version": 1
+          },
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "src/domains/cart/a.ts",
+          "kind": "runtime",
+          "rule": "none",
+          "to": "src/domains/pay/b.ts",
+          "verdict": "unplanned",
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "domain/cart",
+          "path": "src/domains/cart/a.ts"
+        },
+        {
+          "barrel": false,
+          "module": "domain/pay",
+          "path": "src/domains/pay/b.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 2,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "domain/cart",
+          "imports": 1,
+          "to": "domain/pay"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "domain/cart",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "domain/pay": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "domain/pay": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "domain/pay",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 0,
+        "modules": {
+          "domain/cart": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "domain/pay": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 1
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "src/domains/pay/b.ts",
+      "to": "src/domains/cart/b.ts"
+    },
+    "name": "capture-modules"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 0,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": null,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "src/a/one.ts",
+          "rule": null,
+          "to": "src/a/two.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "../lib": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "a": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "src/a/one.ts",
+          "rule": null,
+          "to": "lib/two.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": null,
+        "source_root": "src"
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "src/a/one.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "lib/two.ts",
+          "verdict": null,
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "../lib",
+          "path": "lib/two.ts"
+        },
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "src/a/one.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 2,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "a",
+          "imports": 1,
+          "to": "../lib"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "../lib",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "a",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "../lib": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "../lib": 1.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 0,
+        "modules": {
+          "../lib": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          },
+          "a": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "lib/two.ts",
+      "to": "src/a/two.ts"
+    },
+    "name": "source-root-outside"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "cmd/tool": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "internal/deep": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "cmd/tool/main.go",
+          "rule": null,
+          "to": "internal/deep/a.go",
+          "verdict": null
+        },
+        {
+          "from": "internal/deep/a.go",
+          "rule": null,
+          "to": "internal/deep/b.go",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "cmd/tool": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "internal/deep": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "internal/other": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "cmd/tool/main.go",
+          "rule": null,
+          "to": "internal/deep/a.go",
+          "verdict": null
+        },
+        {
+          "from": "internal/deep/a.go",
+          "rule": null,
+          "to": "internal/other/b.go",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "package_modules": true,
+        "rules": null,
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "cmd/tool/main.go",
+          "kind": "runtime",
+          "rule": null,
+          "to": "internal/deep/a.go",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "internal/deep/a.go",
+          "kind": "runtime",
+          "rule": null,
+          "to": "internal/other/b.go",
+          "verdict": null,
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "cmd/tool",
+          "path": "cmd/tool/main.go"
+        },
+        {
+          "barrel": false,
+          "module": "internal/deep",
+          "path": "internal/deep/a.go"
+        },
+        {
+          "barrel": false,
+          "module": "internal/other",
+          "path": "internal/other/b.go"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 3
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "cmd/tool",
+          "imports": 1,
+          "to": "internal/deep"
+        },
+        {
+          "forbidden": 0,
+          "from": "internal/deep",
+          "imports": 1,
+          "to": "internal/other"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "cmd/tool",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "internal/deep": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "internal/deep": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "internal/deep",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "internal/other": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "internal/other": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "internal/other",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "go"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 0,
+        "modules": {
+          "cmd/tool": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "internal/deep": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          },
+          "internal/other": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "internal/other/b.go",
+      "to": "internal/deep/b.go"
+    },
+    "name": "go-package-directories"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "tests::b": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "a/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.test.ts",
+          "rule": null,
+          "to": "a/one.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "b": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "tests::b": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.test.ts",
+          "rule": null,
+          "to": "a/one.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": true,
+        "rules": null,
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "a/one.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "b/two.test.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "a/one.ts",
+          "verdict": null,
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/one.ts"
+        },
+        {
+          "barrel": false,
+          "class": "tests",
+          "module": "tests::b",
+          "path": "b/two.test.ts"
+        },
+        {
+          "barrel": false,
+          "module": "b",
+          "path": "b/two.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 3
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "a",
+          "imports": 1,
+          "to": "b"
+        },
+        {
+          "forbidden": 0,
+          "from": "tests::b",
+          "imports": 1,
+          "to": "a"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "a",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "b": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "b": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "b",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "class": "tests",
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "tests::b",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "a": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "a": 1.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 0,
+        "modules": {
+          "a": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          },
+          "b": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          },
+          "tests::b": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "test_coverage": {
+        "covered": 1,
+        "modules": 2,
+        "without_importing_tests": [
+          "b"
+        ]
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "b/two.ts",
+      "to": "a/two.ts"
+    },
+    "name": "test-back-edge-is-not-cycle"
+  },
+  {
+    "after": {
+      "cycles": [
+        {
+          "level": "module",
+          "members": [
+            "b/two.ts",
+            "c/one.ts"
+          ]
+        }
+      ],
+      "forbidden": 0,
+      "largest_cycle": 2,
+      "modules": {
+        "b/two.ts": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "c/one.ts": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [
+        [
+          "b/two.ts",
+          "c/one.ts"
+        ]
+      ],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "c/one.ts",
+          "verdict": null
+        },
+        {
+          "from": "c/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [
+        {
+          "level": "module",
+          "members": [
+            "a/one.ts",
+            "b/two.ts"
+          ]
+        }
+      ],
+      "forbidden": 0,
+      "largest_cycle": 2,
+      "modules": {
+        "a/one.ts": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "b/two.ts": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [
+        [
+          "a/one.ts",
+          "b/two.ts"
+        ]
+      ],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.ts",
+          "rule": null,
+          "to": "a/one.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "granularity": "file",
+        "include_tests": false,
+        "rules": null,
+        "source_root": "."
+      },
+      "cycles": [
+        {
+          "break": [
+            {
+              "from": "a/one.ts",
+              "to": "b/two.ts"
+            }
+          ],
+          "exact": true,
+          "level": "module",
+          "members": [
+            "a/one.ts",
+            "b/two.ts"
+          ],
+          "two_way": [
+            {
+              "edges": [
+                {
+                  "from": "a/one.ts",
+                  "to": "b/two.ts"
+                }
+              ],
+              "even": true,
+              "from": "a/one.ts",
+              "imports": 1,
+              "reverse_imports": 1,
+              "to": "b/two.ts"
+            }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "from": "a/one.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "b/two.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "a/one.ts",
+          "verdict": null,
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "a/one.ts",
+          "path": "a/one.ts"
+        },
+        {
+          "barrel": false,
+          "module": "b/two.ts",
+          "path": "b/two.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "break": [
+              {
+                "from": "a/one.ts",
+                "to": "b/two.ts"
+              }
+            ],
+            "exact": true,
+            "level": "module",
+            "members": [
+              "a/one.ts",
+              "b/two.ts"
+            ],
+            "two_way": [
+              {
+                "edges": [
+                  {
+                    "from": "a/one.ts",
+                    "to": "b/two.ts"
+                  }
+                ],
+                "even": true,
+                "from": "a/one.ts",
+                "imports": 1,
+                "reverse_imports": 1,
+                "to": "b/two.ts"
+              }
+            ]
+          },
+          "kind": "cycle",
+          "subject": "a/one.ts, b/two.ts"
+        },
+        {
+          "evidence": {
+            "files": 2,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "a/one.ts",
+          "imports": 1,
+          "to": "b/two.ts"
+        },
+        {
+          "forbidden": 0,
+          "from": "b/two.ts",
+          "imports": 1,
+          "to": "a/one.ts"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "a/one.ts",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "b/two.ts": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "b/two.ts": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "b/two.ts",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "a/one.ts": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "a/one.ts": 1.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 1,
+        "forbidden": 0,
+        "modules": {
+          "a/one.ts": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          },
+          "b/two.ts": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "a/one.ts",
+      "to": "c/one.ts"
+    },
+    "name": "file-granularity"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 2,
+      "largest_cycle": 0,
+      "modules": {
+        "domain": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "misc": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "ui": {
+          "ca": 0,
+          "ce": 2,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 2.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "domain/model.ts",
+          "rule": "layers",
+          "to": "domain/helper.ts",
+          "verdict": "allowed"
+        },
+        {
+          "from": "ui/view.ts",
+          "rule": "layers",
+          "to": "domain/model.ts",
+          "verdict": "forbidden"
+        },
+        {
+          "from": "ui/view.ts",
+          "rule": "default",
+          "to": "misc/other.ts",
+          "verdict": "forbidden"
+        }
+      ]
+    },
+    "before": {
+      "cycles": [
+        {
+          "level": "module",
+          "members": [
+            "domain",
+            "ui"
+          ]
+        }
+      ],
+      "forbidden": 2,
+      "largest_cycle": 2,
+      "modules": {
+        "domain": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "misc": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "ui": {
+          "ca": 1,
+          "ce": 2,
+          "cohesion": 0.0,
+          "instability": 0.6667,
+          "weighted_ca": 1.0,
+          "weighted_ce": 2.0
+        }
+      },
+      "two_way_pairs": [
+        [
+          "domain",
+          "ui"
+        ]
+      ],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "domain/model.ts",
+          "rule": "layers",
+          "to": "ui/helper.ts",
+          "verdict": "allowed"
+        },
+        {
+          "from": "ui/view.ts",
+          "rule": "layers",
+          "to": "domain/model.ts",
+          "verdict": "forbidden"
+        },
+        {
+          "from": "ui/view.ts",
+          "rule": "default",
+          "to": "misc/other.ts",
+          "verdict": "forbidden"
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "doc": {
+            "allow": [],
+            "default": "forbidden",
+            "forbid": [],
+            "layers": [
+              "ui/**",
+              "domain/**"
+            ],
+            "modules": [],
+            "public": [],
+            "version": 1
+          },
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "source_root": "."
+      },
+      "cycles": [
+        {
+          "break": [
+            {
+              "from": "domain/model.ts",
+              "to": "ui/helper.ts"
+            }
+          ],
+          "exact": true,
+          "level": "module",
+          "members": [
+            "domain",
+            "ui"
+          ],
+          "two_way": [
+            {
+              "edges": [
+                {
+                  "from": "domain/model.ts",
+                  "to": "ui/helper.ts"
+                }
+              ],
+              "even": true,
+              "from": "domain",
+              "imports": 1,
+              "reverse_imports": 1,
+              "to": "ui"
+            }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "from": "domain/model.ts",
+          "kind": "runtime",
+          "rule": "layers",
+          "to": "ui/helper.ts",
+          "verdict": "allowed",
+          "weight": 1.0
+        },
+        {
+          "from": "ui/view.ts",
+          "kind": "runtime",
+          "rule": "layers",
+          "to": "domain/model.ts",
+          "verdict": "forbidden",
+          "weight": 1.0
+        },
+        {
+          "from": "ui/view.ts",
+          "kind": "runtime",
+          "rule": "default",
+          "to": "misc/other.ts",
+          "verdict": "forbidden",
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "domain",
+          "path": "domain/model.ts"
+        },
+        {
+          "barrel": false,
+          "module": "misc",
+          "path": "misc/other.ts"
+        },
+        {
+          "barrel": false,
+          "module": "ui",
+          "path": "ui/helper.ts"
+        },
+        {
+          "barrel": false,
+          "module": "ui",
+          "path": "ui/view.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "break": [
+              {
+                "from": "domain/model.ts",
+                "to": "ui/helper.ts"
+              }
+            ],
+            "exact": true,
+            "level": "module",
+            "members": [
+              "domain",
+              "ui"
+            ],
+            "two_way": [
+              {
+                "edges": [
+                  {
+                    "from": "domain/model.ts",
+                    "to": "ui/helper.ts"
+                  }
+                ],
+                "even": true,
+                "from": "domain",
+                "imports": 1,
+                "reverse_imports": 1,
+                "to": "ui"
+              }
+            ]
+          },
+          "kind": "cycle",
+          "subject": "domain, ui"
+        },
+        {
+          "evidence": {
+            "clusters": [
+              {
+                "files": [
+                  "domain/model.ts",
+                  "ui/helper.ts"
+                ],
+                "modules": [
+                  "domain",
+                  "ui"
+                ]
+              },
+              {
+                "files": [
+                  "misc/other.ts",
+                  "ui/view.ts"
+                ],
+                "modules": [
+                  "misc",
+                  "ui"
+                ]
+              }
+            ],
+            "folder_modularity": -0.3889,
+            "hubs": [],
+            "modularity": 0.1667,
+            "via_barrel": false
+          },
+          "kind": "seam",
+          "subject": "."
+        },
+        {
+          "evidence": {
+            "files": 4,
+            "modules": 3
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "domain",
+          "imports": 1,
+          "to": "ui"
+        },
+        {
+          "forbidden": 1,
+          "from": "ui",
+          "imports": 1,
+          "to": "domain"
+        },
+        {
+          "forbidden": 1,
+          "from": "ui",
+          "imports": 1,
+          "to": "misc"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "domain",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "ui": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "ui": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "misc",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        },
+        {
+          "ca": 1,
+          "ce": 2,
+          "cohesion": 0.0,
+          "files": 2,
+          "id": "ui",
+          "instability": 0.6667,
+          "internal_edges": 0,
+          "outgoing_edges": 2,
+          "outgoing_to": {
+            "domain": 1,
+            "misc": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 2.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 2.0,
+          "weighted_outgoing_to": {
+            "domain": 1.0,
+            "misc": 1.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 1,
+        "forbidden": 2,
+        "modules": {
+          "domain": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          },
+          "misc": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          },
+          "ui": {
+            "ca": 1,
+            "ce": 2,
+            "cohesion": 0.0,
+            "instability": 0.6667,
+            "weighted_ca": 1.0,
+            "weighted_ce": 2.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "ui/helper.ts",
+      "to": "domain/helper.ts"
+    },
+    "name": "layers-and-default"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "ca": 0,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": null,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "app/a.ts",
+          "rule": "app-imports",
+          "to": "app/b.ts",
+          "verdict": "allowed"
+        },
+        {
+          "from": "app/c.ts",
+          "rule": "app-imports",
+          "to": "app/b.ts",
+          "verdict": "allowed"
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 1,
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "store": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "app/a.ts",
+          "rule": "runtime-store",
+          "to": "store/b.ts",
+          "verdict": "forbidden"
+        },
+        {
+          "from": "app/c.ts",
+          "rule": "app-imports",
+          "to": "store/b.ts",
+          "verdict": "allowed"
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "doc": {
+            "allow": [
+              {
+                "from": "app/**",
+                "id": "app-imports",
+                "reason": null,
+                "to": "**"
+              }
+            ],
+            "forbid": [
+              {
+                "from": "app/**",
+                "id": "runtime-store",
+                "kinds": [
+                  "runtime"
+                ],
+                "reachable": false,
+                "reason": null,
+                "to": "store/**"
+              }
+            ],
+            "layers": [],
+            "modules": [],
+            "public": [],
+            "version": 1
+          },
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "app/a.ts",
+          "kind": "runtime",
+          "rule": "runtime-store",
+          "to": "store/b.ts",
+          "verdict": "forbidden",
+          "weight": 1.0
+        },
+        {
+          "from": "app/c.ts",
+          "kind": "type",
+          "rule": "app-imports",
+          "to": "store/b.ts",
+          "verdict": "allowed",
+          "weight": 0.1
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "app",
+          "path": "app/a.ts"
+        },
+        {
+          "barrel": false,
+          "module": "app",
+          "path": "app/c.ts"
+        },
+        {
+          "barrel": false,
+          "module": "store",
+          "path": "store/b.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 1,
+          "from": "app",
+          "imports": 2,
+          "to": "store"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 2,
+          "id": "app",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 2,
+          "outgoing_to": {
+            "store": 2
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.1,
+          "weighted_outgoing_to": {
+            "store": 1.1
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "store",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 1,
+        "modules": {
+          "app": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "store": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "store/b.ts",
+      "to": "app/b.ts"
+    },
+    "name": "forbid-before-allow-kind-filter"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.5,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "billing": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "app/a.ts",
+          "rule": "same-module",
+          "to": "app/internal.ts",
+          "verdict": "allowed"
+        },
+        {
+          "from": "app/a.ts",
+          "rule": "entrypoints",
+          "to": "billing/index.ts",
+          "verdict": "allowed"
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 1,
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "billing": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "app/a.ts",
+          "rule": "entrypoints",
+          "to": "billing/index.ts",
+          "verdict": "allowed"
+        },
+        {
+          "from": "app/a.ts",
+          "rule": "entrypoints",
+          "to": "billing/internal.ts",
+          "verdict": "forbidden"
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "doc": {
+            "allow": [],
+            "entrypoints": {
+              "billing/**": "billing/index.ts"
+            },
+            "forbid": [],
+            "layers": [],
+            "modules": [],
+            "public": [],
+            "version": 1
+          },
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "app/a.ts",
+          "kind": "runtime",
+          "rule": "entrypoints",
+          "to": "billing/index.ts",
+          "verdict": "allowed",
+          "weight": 1.0
+        },
+        {
+          "from": "app/a.ts",
+          "kind": "runtime",
+          "rule": "entrypoints",
+          "to": "billing/internal.ts",
+          "verdict": "forbidden",
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "app",
+          "path": "app/a.ts"
+        },
+        {
+          "barrel": false,
+          "module": "billing",
+          "path": "billing/index.ts"
+        },
+        {
+          "barrel": false,
+          "module": "billing",
+          "path": "billing/internal.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "edges": [
+              {
+                "from": "app/a.ts",
+                "to": "billing/internal.ts"
+              }
+            ],
+            "entries": [
+              "billing/index.ts"
+            ],
+            "importers": 1,
+            "importing_files": 1,
+            "imports": 1,
+            "module": "billing"
+          },
+          "kind": "internals-reach",
+          "subject": "billing/**"
+        },
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 1,
+          "from": "app",
+          "imports": 2,
+          "to": "billing"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "app",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 2,
+          "outgoing_to": {
+            "billing": 2
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 2.0,
+          "weighted_outgoing_to": {
+            "billing": 2.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 2,
+          "id": "billing",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 1,
+        "modules": {
+          "app": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "billing": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "billing/internal.ts",
+      "to": "app/internal.ts"
+    },
+    "name": "entrypoint-bypass"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "domains": {
+          "ca": 0,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": null,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "domains/a/a.ts",
+          "rule": "same-module",
+          "to": "domains/a/internal.ts",
+          "verdict": "allowed"
+        },
+        {
+          "from": "domains/a/a.ts",
+          "rule": "same-module",
+          "to": "domains/b/index.ts",
+          "verdict": "allowed"
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 1,
+      "largest_cycle": 0,
+      "modules": {
+        "domains": {
+          "ca": 0,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": null,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "domains/a/a.ts",
+          "rule": "same-module",
+          "to": "domains/b/index.ts",
+          "verdict": "allowed"
+        },
+        {
+          "from": "domains/a/a.ts",
+          "rule": "public",
+          "to": "domains/b/internal.ts",
+          "verdict": "forbidden"
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "doc": {
+            "allow": [],
+            "forbid": [],
+            "layers": [],
+            "modules": [],
+            "public": [
+              {
+                "entries": [
+                  "domains/<name>/index.ts"
+                ],
+                "module": "domains/<name>/**"
+              }
+            ],
+            "version": 1
+          },
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "domains/a/a.ts",
+          "kind": "runtime",
+          "rule": "same-module",
+          "to": "domains/b/index.ts",
+          "verdict": "allowed",
+          "weight": 1.0
+        },
+        {
+          "from": "domains/a/a.ts",
+          "kind": "runtime",
+          "rule": "public",
+          "to": "domains/b/internal.ts",
+          "verdict": "forbidden",
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "domains",
+          "path": "domains/a/a.ts"
+        },
+        {
+          "barrel": false,
+          "module": "domains",
+          "path": "domains/b/index.ts"
+        },
+        {
+          "barrel": false,
+          "module": "domains",
+          "path": "domains/b/internal.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "edges": [
+              {
+                "from": "domains/a/a.ts",
+                "to": "domains/b/internal.ts"
+              }
+            ],
+            "entries": [
+              "domains/b/index.ts"
+            ],
+            "importers": 1,
+            "importing_files": 1,
+            "imports": 1,
+            "module": "domains"
+          },
+          "kind": "internals-reach",
+          "subject": "domains/b/**"
+        },
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 1
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [],
+      "modules": [
+        {
+          "ca": 0,
+          "ce": 0,
+          "cohesion": 1.0,
+          "files": 3,
+          "id": "domains",
+          "instability": null,
+          "internal_edges": 2,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 2.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 1,
+        "modules": {
+          "domains": {
+            "ca": 0,
+            "ce": 0,
+            "cohesion": 1.0,
+            "instability": null,
+            "weighted_ca": 0.0,
+            "weighted_ce": 0.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "domains/b/internal.ts",
+      "to": "domains/a/internal.ts"
+    },
+    "name": "public-capture-boundary"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "shared": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 1,
+      "verdicts": [
+        {
+          "from": "app/client.ts",
+          "rule": "none",
+          "to": "shared/bridge.ts",
+          "verdict": "unplanned"
+        },
+        {
+          "from": "shared/bridge.ts",
+          "rule": "same-module",
+          "to": "shared/private.ts",
+          "verdict": "allowed"
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 1,
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "server": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "shared": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 1,
+      "verdicts": [
+        {
+          "from": "app/client.ts",
+          "rule": "no-server",
+          "to": "shared/bridge.ts",
+          "verdict": "forbidden"
+        },
+        {
+          "from": "shared/bridge.ts",
+          "rule": "none",
+          "to": "server/private.ts",
+          "verdict": "unplanned"
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "doc": {
+            "allow": [],
+            "forbid": [
+              {
+                "from": "app/**",
+                "id": "no-server",
+                "reachable": true,
+                "reason": null,
+                "to": "server/**"
+              }
+            ],
+            "layers": [],
+            "modules": [],
+            "public": [],
+            "version": 1
+          },
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "app/client.ts",
+          "kind": "runtime",
+          "rule": "no-server",
+          "to": "shared/bridge.ts",
+          "verdict": "forbidden",
+          "weight": 1.0
+        },
+        {
+          "from": "shared/bridge.ts",
+          "kind": "runtime",
+          "rule": "none",
+          "to": "server/private.ts",
+          "verdict": "unplanned",
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "app",
+          "path": "app/client.ts"
+        },
+        {
+          "barrel": false,
+          "module": "server",
+          "path": "server/private.ts"
+        },
+        {
+          "barrel": false,
+          "module": "shared",
+          "path": "shared/bridge.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 3
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 1,
+          "from": "app",
+          "imports": 1,
+          "to": "shared"
+        },
+        {
+          "forbidden": 0,
+          "from": "shared",
+          "imports": 1,
+          "to": "server"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "app",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "shared": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "shared": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "server",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        },
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "shared",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "server": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "server": 1.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 1,
+        "modules": {
+          "app": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "server": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          },
+          "shared": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 1
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "server/private.ts",
+      "to": "shared/private.ts"
+    },
+    "name": "reachable-forbid"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 1,
+      "largest_cycle": 0,
+      "modules": {
+        "lib": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "src": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 2,
+      "verdicts": [
+        {
+          "from": "src/app/a.ts",
+          "rule": "none",
+          "to": "lib/other.ts",
+          "verdict": "unplanned"
+        },
+        {
+          "from": "src/app/long.ts",
+          "rule": "none",
+          "to": "lib/other.ts",
+          "verdict": "unplanned"
+        },
+        {
+          "from": "src/ui/b.ts",
+          "rule": "brace-question",
+          "to": "lib/safe.ts",
+          "verdict": "forbidden"
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 2,
+      "largest_cycle": 0,
+      "modules": {
+        "lib": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "src": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 1,
+      "verdicts": [
+        {
+          "from": "src/app/a.ts",
+          "rule": "brace-question",
+          "to": "lib/core.ts",
+          "verdict": "forbidden"
+        },
+        {
+          "from": "src/app/long.ts",
+          "rule": "none",
+          "to": "lib/core.ts",
+          "verdict": "unplanned"
+        },
+        {
+          "from": "src/ui/b.ts",
+          "rule": "brace-question",
+          "to": "lib/safe.ts",
+          "verdict": "forbidden"
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "doc": {
+            "allow": [],
+            "forbid": [
+              {
+                "from": "src/{app,ui}/?.ts",
+                "id": "brace-question",
+                "reachable": false,
+                "reason": null,
+                "to": "lib/{core,safe}.ts"
+              }
+            ],
+            "layers": [],
+            "modules": [],
+            "public": [],
+            "version": 1
+          },
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "src/app/a.ts",
+          "kind": "runtime",
+          "rule": "brace-question",
+          "to": "lib/core.ts",
+          "verdict": "forbidden",
+          "weight": 1.0
+        },
+        {
+          "from": "src/app/long.ts",
+          "kind": "runtime",
+          "rule": "none",
+          "to": "lib/core.ts",
+          "verdict": "unplanned",
+          "weight": 1.0
+        },
+        {
+          "from": "src/ui/b.ts",
+          "kind": "runtime",
+          "rule": "brace-question",
+          "to": "lib/safe.ts",
+          "verdict": "forbidden",
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "lib",
+          "path": "lib/core.ts"
+        },
+        {
+          "barrel": false,
+          "module": "lib",
+          "path": "lib/safe.ts"
+        },
+        {
+          "barrel": false,
+          "module": "src",
+          "path": "src/app/a.ts"
+        },
+        {
+          "barrel": false,
+          "module": "src",
+          "path": "src/app/long.ts"
+        },
+        {
+          "barrel": false,
+          "module": "src",
+          "path": "src/ui/b.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "clusters": [
+              {
+                "files": [
+                  "lib/core.ts",
+                  "src/app/a.ts",
+                  "src/app/long.ts"
+                ],
+                "modules": [
+                  "lib",
+                  "src"
+                ]
+              },
+              {
+                "files": [
+                  "lib/safe.ts",
+                  "src/ui/b.ts"
+                ],
+                "modules": [
+                  "lib",
+                  "src"
+                ]
+              }
+            ],
+            "folder_modularity": -0.5,
+            "hubs": [],
+            "modularity": 0.4444,
+            "via_barrel": false
+          },
+          "kind": "seam",
+          "subject": "."
+        },
+        {
+          "evidence": {
+            "files": 5,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 2,
+          "from": "src",
+          "imports": 3,
+          "to": "lib"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 2,
+          "id": "lib",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 3,
+          "id": "src",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 3,
+          "outgoing_to": {
+            "lib": 3
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 3.0,
+          "weighted_outgoing_to": {
+            "lib": 3.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 2,
+        "modules": {
+          "lib": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          },
+          "src": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 1
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "lib/core.ts",
+      "to": "lib/other.ts"
+    },
+    "name": "glob-braces-and-question-mark"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "data": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "src": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 3,
+      "verdicts": [
+        {
+          "from": "src/alpha.ts",
+          "rule": "none",
+          "to": "data/xvalue.ts",
+          "verdict": "unplanned"
+        },
+        {
+          "from": "src/beta.ts",
+          "rule": "none",
+          "to": "data/xray.ts",
+          "verdict": "unplanned"
+        },
+        {
+          "from": "src/beta.ts",
+          "rule": "none",
+          "to": "data/xvalue.ts",
+          "verdict": "unplanned"
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 1,
+      "largest_cycle": 0,
+      "modules": {
+        "data": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "src": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 2,
+      "verdicts": [
+        {
+          "from": "src/alpha.ts",
+          "rule": "none",
+          "to": "data/value.ts",
+          "verdict": "unplanned"
+        },
+        {
+          "from": "src/beta.ts",
+          "rule": "negated-classes",
+          "to": "data/value.ts",
+          "verdict": "forbidden"
+        },
+        {
+          "from": "src/beta.ts",
+          "rule": "none",
+          "to": "data/xray.ts",
+          "verdict": "unplanned"
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "doc": {
+            "allow": [],
+            "forbid": [
+              {
+                "from": "src/[!a]*.ts",
+                "id": "negated-classes",
+                "reachable": false,
+                "reason": null,
+                "to": "data/[^x]*.ts"
+              }
+            ],
+            "layers": [],
+            "modules": [],
+            "public": [],
+            "version": 1
+          },
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "src/alpha.ts",
+          "kind": "runtime",
+          "rule": "none",
+          "to": "data/value.ts",
+          "verdict": "unplanned",
+          "weight": 1.0
+        },
+        {
+          "from": "src/beta.ts",
+          "kind": "runtime",
+          "rule": "negated-classes",
+          "to": "data/value.ts",
+          "verdict": "forbidden",
+          "weight": 1.0
+        },
+        {
+          "from": "src/beta.ts",
+          "kind": "runtime",
+          "rule": "none",
+          "to": "data/xray.ts",
+          "verdict": "unplanned",
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "data",
+          "path": "data/value.ts"
+        },
+        {
+          "barrel": false,
+          "module": "data",
+          "path": "data/xray.ts"
+        },
+        {
+          "barrel": false,
+          "module": "src",
+          "path": "src/alpha.ts"
+        },
+        {
+          "barrel": false,
+          "module": "src",
+          "path": "src/beta.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "imports_from_target": 2,
+            "own_module_edges": 0,
+            "target_module": "src",
+            "via_barrel": false
+          },
+          "kind": "misplaced-file",
+          "simulation": {
+            "after": {
+              "cycles": 0,
+              "forbidden": 0,
+              "modules": {
+                "src": {
+                  "ca": 0,
+                  "ce": 1,
+                  "cohesion": 0.6667,
+                  "instability": 1.0,
+                  "weighted_ca": 0.0,
+                  "weighted_ce": 1.0
+                }
+              },
+              "type_only_cycles": 0,
+              "unplanned": 1
+            }
+          },
+          "subject": "data/value.ts",
+          "suggestion": {
+            "move": {
+              "file": "data/value.ts",
+              "to": "src/value.ts"
+            }
+          }
+        },
+        {
+          "evidence": {
+            "clusters": [
+              {
+                "files": [
+                  "data/value.ts",
+                  "src/alpha.ts"
+                ],
+                "modules": [
+                  "data",
+                  "src"
+                ]
+              },
+              {
+                "files": [
+                  "data/xray.ts",
+                  "src/beta.ts"
+                ],
+                "modules": [
+                  "data",
+                  "src"
+                ]
+              }
+            ],
+            "folder_modularity": -0.5,
+            "hubs": [],
+            "modularity": 0.1667,
+            "via_barrel": false
+          },
+          "kind": "seam",
+          "subject": "."
+        },
+        {
+          "evidence": {
+            "files": 4,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 1,
+          "from": "src",
+          "imports": 3,
+          "to": "data"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 2,
+          "id": "data",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 2,
+          "id": "src",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 3,
+          "outgoing_to": {
+            "data": 3
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 3.0,
+          "weighted_outgoing_to": {
+            "data": 3.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 1,
+        "modules": {
+          "data": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          },
+          "src": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 2
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "data/value.ts",
+      "to": "data/xvalue.ts"
+    },
+    "name": "glob-negated-character-classes"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "b": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "tests::a": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/helper.ts",
+          "rule": null,
+          "to": "a/one.ts",
+          "verdict": null
+        },
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "a": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "b": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "tests::b": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "a/one.ts",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null
+        },
+        {
+          "from": "b/two.test.ts",
+          "rule": null,
+          "to": "a/one.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": true,
+        "rules": null,
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "a/one.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "b/two.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "b/two.test.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "a/one.ts",
+          "verdict": null,
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "a",
+          "path": "a/one.ts"
+        },
+        {
+          "barrel": false,
+          "class": "tests",
+          "module": "tests::b",
+          "path": "b/two.test.ts"
+        },
+        {
+          "barrel": false,
+          "module": "b",
+          "path": "b/two.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 3
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "a",
+          "imports": 1,
+          "to": "b"
+        },
+        {
+          "forbidden": 0,
+          "from": "tests::b",
+          "imports": 1,
+          "to": "a"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "a",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "b": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "b": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "b",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "class": "tests",
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "tests::b",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "a": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "a": 1.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 0,
+        "modules": {
+          "a": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          },
+          "b": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          },
+          "tests::b": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "test_coverage": {
+        "covered": 1,
+        "modules": 2,
+        "without_importing_tests": [
+          "b"
+        ]
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "b/two.test.ts",
+      "to": "a/helper.ts"
+    },
+    "name": "test-class-survives-rename"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 1,
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "billing": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "app/a.ts",
+          "rule": "entrypoints",
+          "to": "billing/internal.ts",
+          "verdict": "forbidden"
+        },
+        {
+          "from": "billing/public.ts",
+          "rule": "same-module",
+          "to": "billing/internal.ts",
+          "verdict": "allowed"
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "billing": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "app/a.ts",
+          "rule": "entrypoints",
+          "to": "billing/internal.ts",
+          "verdict": "allowed"
+        },
+        {
+          "from": "billing/index.ts",
+          "rule": "same-module",
+          "to": "billing/internal.ts",
+          "verdict": "allowed"
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "doc": {
+            "allow": [],
+            "entrypoints": {
+              "billing/**": "billing/index.ts"
+            },
+            "forbid": [],
+            "layers": [],
+            "modules": [],
+            "public": [],
+            "version": 1
+          },
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "app/a.ts",
+          "kind": "runtime",
+          "original_to": "billing/index.ts",
+          "rule": "entrypoints",
+          "to": "billing/internal.ts",
+          "verdict": "allowed",
+          "weight": 1.0
+        },
+        {
+          "from": "billing/index.ts",
+          "kind": "reexport",
+          "rule": "same-module",
+          "to": "billing/internal.ts",
+          "verdict": "allowed",
+          "weight": 0.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "app",
+          "path": "app/a.ts"
+        },
+        {
+          "barrel": true,
+          "module": "billing",
+          "path": "billing/index.ts"
+        },
+        {
+          "barrel": false,
+          "module": "billing",
+          "path": "billing/internal.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "app",
+          "imports": 1,
+          "to": "billing"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "app",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "billing": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "billing": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 2,
+          "id": "billing",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 0,
+        "modules": {
+          "app": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "billing": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "billing/index.ts",
+      "to": "billing/public.ts"
+    },
+    "name": "written-barrel-rule-target"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.5,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "c1": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "c2": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "c3": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "c4": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "c5": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "utils": {
+          "ca": 6,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 6.0,
+          "weighted_ce": 0.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "app/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        },
+        {
+          "from": "app/work.ts",
+          "rule": null,
+          "to": "app/a.ts",
+          "verdict": null
+        },
+        {
+          "from": "c1/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        },
+        {
+          "from": "c2/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        },
+        {
+          "from": "c3/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        },
+        {
+          "from": "c4/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        },
+        {
+          "from": "c5/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "c1": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "c2": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "c3": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "c4": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "c5": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        },
+        "utils": {
+          "ca": 6,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.1429,
+          "weighted_ca": 6.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [
+        [
+          "app",
+          "utils"
+        ]
+      ],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "app/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        },
+        {
+          "from": "c1/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        },
+        {
+          "from": "c2/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        },
+        {
+          "from": "c3/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        },
+        {
+          "from": "c4/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        },
+        {
+          "from": "c5/a.ts",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null
+        },
+        {
+          "from": "utils/work.ts",
+          "rule": null,
+          "to": "app/a.ts",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": null,
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "app/a.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "c1/a.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "c2/a.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "c3/a.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "c4/a.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "c5/a.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "utils/date.ts",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "utils/work.ts",
+          "kind": "runtime",
+          "rule": null,
+          "to": "app/a.ts",
+          "verdict": null,
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "app",
+          "path": "app/a.ts"
+        },
+        {
+          "barrel": false,
+          "module": "c1",
+          "path": "c1/a.ts"
+        },
+        {
+          "barrel": false,
+          "module": "c2",
+          "path": "c2/a.ts"
+        },
+        {
+          "barrel": false,
+          "module": "c3",
+          "path": "c3/a.ts"
+        },
+        {
+          "barrel": false,
+          "module": "c4",
+          "path": "c4/a.ts"
+        },
+        {
+          "barrel": false,
+          "module": "c5",
+          "path": "c5/a.ts"
+        },
+        {
+          "barrel": false,
+          "module": "utils",
+          "path": "utils/date.ts"
+        },
+        {
+          "barrel": false,
+          "module": "utils",
+          "path": "utils/work.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "candidates": [
+              {
+                "cohesion": 0.0,
+                "fan_in": 6.0,
+                "files": [
+                  "utils/date.ts",
+                  "utils/work.ts"
+                ],
+                "internal_edges_per_file": 0.0,
+                "module": "utils"
+              }
+            ],
+            "edges": [
+              {
+                "from": "app/a.ts",
+                "to": "utils/date.ts"
+              },
+              {
+                "from": "utils/work.ts",
+                "to": "app/a.ts"
+              }
+            ],
+            "members": [
+              "app",
+              "utils"
+            ],
+            "remaining_cycles": []
+          },
+          "kind": "cycle-via-grabbag",
+          "subject": "app, utils"
+        },
+        {
+          "evidence": {
+            "files": 8,
+            "modules": 7
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "grabbags": [
+        {
+          "candidates": [
+            {
+              "cohesion": 0.0,
+              "fan_in": 6.0,
+              "files": [
+                "utils/date.ts",
+                "utils/work.ts"
+              ],
+              "internal_edges_per_file": 0.0,
+              "module": "utils"
+            }
+          ],
+          "edges": [
+            {
+              "from": "app/a.ts",
+              "to": "utils/date.ts"
+            },
+            {
+              "from": "utils/work.ts",
+              "to": "app/a.ts"
+            }
+          ],
+          "members": [
+            "app",
+            "utils"
+          ],
+          "remaining_cycles": []
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "app",
+          "imports": 1,
+          "to": "utils"
+        },
+        {
+          "forbidden": 0,
+          "from": "c1",
+          "imports": 1,
+          "to": "utils"
+        },
+        {
+          "forbidden": 0,
+          "from": "c2",
+          "imports": 1,
+          "to": "utils"
+        },
+        {
+          "forbidden": 0,
+          "from": "c3",
+          "imports": 1,
+          "to": "utils"
+        },
+        {
+          "forbidden": 0,
+          "from": "c4",
+          "imports": 1,
+          "to": "utils"
+        },
+        {
+          "forbidden": 0,
+          "from": "c5",
+          "imports": 1,
+          "to": "utils"
+        },
+        {
+          "forbidden": 0,
+          "from": "utils",
+          "imports": 1,
+          "to": "app"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "app",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "utils": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "utils": 1.0
+          }
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "c1",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "utils": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "utils": 1.0
+          }
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "c2",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "utils": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "utils": 1.0
+          }
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "c3",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "utils": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "utils": 1.0
+          }
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "c4",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "utils": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "utils": 1.0
+          }
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "c5",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "utils": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "utils": 1.0
+          }
+        },
+        {
+          "ca": 6,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 2,
+          "id": "utils",
+          "instability": 0.1429,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "app": 1
+          },
+          "weighted_ca": 6.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "app": 1.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 0,
+        "modules": {
+          "app": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          },
+          "c1": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "c2": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "c3": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "c4": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "c5": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          },
+          "utils": {
+            "ca": 6,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.1429,
+            "weighted_ca": 6.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "utils/work.ts",
+      "to": "app/work.ts"
+    },
+    "name": "grabbag-refinement-needs-cli",
+    "unsupported": true
+  }
+]

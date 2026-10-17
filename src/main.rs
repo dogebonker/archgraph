@@ -304,7 +304,7 @@ struct Simulate {
     /// Scan document
     graph: PathBuf,
     /// The file to move and its destination path; the destination decides module and layer
-    #[arg(long = "move", num_args = 2, value_names = ["FILE", "DEST"], required = true)]
+    #[arg(long = "move", num_args = 2, value_names = ["FILE", "DEST"], required = true, allow_hyphen_values = true)]
     moves: Vec<String>,
     /// Rules replacing the ones embedded in the document
     #[arg(long)]

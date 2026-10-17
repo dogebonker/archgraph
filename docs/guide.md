@@ -160,6 +160,38 @@ archgraph infer-layout graph.json --max-rules 0           # layers only
 
 These thresholds limit over-fitting; zero observed imports still do not establish an intended boundary. Review the draft before making it a CI policy. No scan-schema or rules-format migration is required.
 
+## Live what-if in the map
+
+```sh
+archgraph render graph.json -o graph.html
+```
+
+Open the HTML, enable **What-if**, zoom until files appear, and drag a file into a different module disc. The target module's common physical directory becomes the proposed destination folder; confirm it in the panel, especially for custom modules spanning several folders. The source basename is retained. A labeled file/folder form provides the same preview with keyboard or touch; it also accepts new folders. Every proposal starts from the original graph, rather than chaining moves.
+
+The panel compares total cycles (module and within-module file SCCs), largest module cycle, distinct two-way module pairs, forbidden/unplanned imports, and changed module instability. Map links and health rings show preview cycle/rule evidence. Original findings are hidden until preview mode closes: heuristics such as seams, placement, ownership, cut sets, public surfaces and package readiness are **not** recomputed in JS. A new module appears in results; module disc positions stay fixed. Clear restores original paths, positions, counts and health. Preview moves are not persisted to browser layout storage and never edit the repository. Ordinary dragging outside What-if still arranges the map.
+
+A preview rewrites the path and import endpoints, including written barrel destinations. Module assignment, runtime/all-kind SCCs, test exclusions, weighted barrel-aware metrics, and supported glob/capture rules follow the Rust pipeline. Rules use their normal precedence, including kind filters, reachable forbids, public entries, strict entrypoints and layers. A residual SCC contained in a previous SCC is not called new cycle membership; a new or expanded component is flagged. This membership comparison is a preview explanation, not a CI verdict.
+
+**Rust remains authoritative.** Grab-bag refinement, legacy boundary assumptions, unknown schema/rule fields and unsupported glob syntax visibly mark a limited/raw preview and withhold the no-new-cycle assurance. Dynamic/unresolved imports remain invisible. The preview does not rewrite import strings, check build compatibility, recompute symbol surfaces or execute code. Verify the displayed, shell-quoted `archgraph simulate` command before using the Git snippet; set its graph JSON path and run from the scanned root. Moving files can still require import and build-configuration edits. Clipboard-denied and local-file environments fall back to selecting the command for manual copying.
+
+The HTML remains self-contained and offline, including maps embedded in history timelines. No runtime package or schema migration is required. A fixture test rebuilds canonical Rust results and compares them with [the committed parity cases](../tests/fixtures/whatif-parity.json); Node tests run those cases against the exact JS embedded in reports. Regenerate intentionally with `UPDATE_WHATIF_FIXTURES=1 cargo test --test whatif`, then run `node --test tests/whatif-parity.test.cjs tests/whatif-ui.test.cjs`. Grab-bag fixtures verify the limitation warning rather than claim raw SCC parity with refined Rust cycles.
+
+### Record the demo
+
+The [capture script](../scripts/record-whatif-demo.cjs) uses a development-only Playwright/Chromium installation and `img2webp` (WebP tools); these are not archgraph dependencies. It drives a real browser mouse drag, clicks Copy, clears the preview, and asserts the browser has no errors and original state returns. It does not paint or fabricate the result.
+
+```sh
+python3 - <<'PY' > /tmp/whatif-demo.json
+import json
+cases = json.load(open('tests/fixtures/whatif-parity.json'))
+print(json.dumps(next(c['document'] for c in cases if c['name'] == 'cut-module-cycle')))
+PY
+archgraph render /tmp/whatif-demo.json -o /tmp/whatif-demo.html
+node scripts/record-whatif-demo.cjs /tmp/whatif-demo.html demo.webp a/three.ts b
+```
+
+Set `PLAYWRIGHT_MODULE`, `CHROMIUM_EXECUTABLE` or `IMG2WEBP` to existing tool paths when needed. The checked-in [animation](assets/whatif-demo.webp) records the `cut-module-cycle` Rust fixture: moving `a/three.ts` into `b` removes its two-module cycle. The script also writes a PNG poster. The asset demonstrates interaction, not a measured result on an OSS repository.
+
 ## Reading order
 
 ```sh

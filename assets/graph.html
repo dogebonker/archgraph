@@ -366,6 +366,14 @@ table.sim tr.mod td { font-weight: 600; padding-top: 12px; color: var(--label); 
 .better { color: var(--green-s); font-weight: 600; } .worse { color: var(--red-s); font-weight: 600; }
 .note { margin: 8px 0; padding: 9px 12px; border-radius: var(--r); background: rgba(118, 118, 128, .14); overflow-wrap: anywhere; }
 p { margin: 6px 0; }
+.whatif-panel { padding: 18px 20px 32px; overflow: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }
+.whatif-panel h2 { font-size: 20px; margin: 0 0 10px; }
+.whatif-panel label { display: block; margin: 12px 0; font-size: 12px; color: var(--label2); }
+.whatif-panel input, .whatif-panel textarea { display: block; width: 100%; margin-top: 5px; padding: 8px; border: 1px solid var(--sep); border-radius: 8px; background: var(--surface); color: var(--label); font: inherit; }
+.whatif-panel textarea { font-family: monospace; resize: vertical; }
+.whatif-actions { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+.whatif-actions button { padding: 8px 12px; background: var(--surface); border: 1px solid var(--sep); border-radius: 8px; color: var(--label); min-height: 36px; }
+.whatif-panel ul { padding-left: 18px; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
@@ -530,6 +538,7 @@ p { margin: 6px 0; }
         <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3M10.5 12h3M17 12h3"/></svg><span class="lbl">Type-only</span></button>
       <button type="button" class="tbtn" id="t-churn" hidden aria-pressed="false" aria-label="Churn view" title="Size and color files by commit frequency; module fills show their most changed file">
         <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16M7 15l4-5 4 2 5-7"/></svg><span class="lbl">Churn</span></button>
+      <button type="button" class="tbtn" id="whatif-toggle" aria-pressed="false" aria-controls="whatif-panel" title="Preview a file move without changing the repository"><span>What-if</span></button>
       <div class="menu" id="hide">
         <button type="button" class="tbtn" id="hide-btn" aria-expanded="false" aria-controls="hide-list" aria-haspopup="true" aria-label="Hide modules" title="Hide modules">
           <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12s3-6 8.5-6c1.6 0 3 .5 4.2 1.2M20.5 12s-3 6-8.5 6c-1.6 0-3-.5-4.2-1.2"/><path d="M4.5 19.5l15-15"/></svg><span class="lbl">Hide modules</span><span class="badge" id="hide-sum" hidden></span></button>
@@ -558,7 +567,7 @@ p { margin: 6px 0; }
             <span><i class="sw ln out"></i>imports of the selection</span>
             <span><i class="sw ln move"></i>suggested move</span>
             <span><i class="sw ln co"></i>changed together</span>
-            <p>Ring colours are a reading aid, not a score. Drag a module or a file to move it; with a module focused, Shift and an arrow key moves it.</p>
+            <p>Ring colours are a reading aid, not a score. Drag nodes to arrange the map. Enable What-if to drag a file into another module and preview a code move; its form also works without dragging. With a module focused, Shift and an arrow key moves it.</p>
             <p id="churn-legend" hidden>Churn view: larger, warmer file discs changed more often. Module fill size and color show the highest file churn in that module. Outer rings still show architecture checks. Churn is normalized within the scanned files and selected history window.</p>
             <p id="surface-legend" hidden></p>
             <p id="package-split-legend" hidden></p>
@@ -589,6 +598,28 @@ p { margin: 6px 0; }
     <button type="button" class="side-x" id="side-x" aria-label="Hide details" title="Hide details">
       <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg></button>
   </div>
+  <section id="whatif-panel" class="whatif-panel" aria-label="File move preview" hidden>
+    <h2>What-if move</h2>
+    <p>Drag a file into another module, or choose its destination folder below. One move at a time, always from the original graph.</p>
+    <p class="note">Preview only. Rust <code>archgraph simulate</code> is authoritative. Only cycle and rule findings update here; builds and import rewriting are unverified. View filters are disabled; the preview shows all imports.</p>
+    <form id="whatif-form">
+      <label>File to move<input id="whatif-file" list="whatif-files" required autocomplete="off" spellcheck="false"></label>
+      <datalist id="whatif-files"></datalist>
+      <label>Destination folder<input id="whatif-folder" list="whatif-folders" required autocomplete="off" spellcheck="false" placeholder="src/domain"></label>
+      <datalist id="whatif-folders"></datalist>
+      <div class="whatif-actions"><button type="submit" id="whatif-run">Preview move</button><button type="button" id="whatif-clear">Clear preview</button><button type="button" id="whatif-close">Done</button></div>
+    </form>
+    <p id="whatif-status" role="status" aria-live="polite"></p>
+    <div id="whatif-result"></div>
+    <div id="whatif-commands" hidden>
+      <label>Graph JSON path for CLI<input id="whatif-graph" value="graph.json" autocomplete="off" spellcheck="false"></label>
+      <p>Run from the scanned root. Review the result before moving files.</p>
+      <label>Authoritative simulation<textarea id="whatif-cli" readonly rows="3"></textarea></label>
+      <div class="whatif-actions"><button type="button" id="whatif-copy-cli">Copy simulate command</button></div>
+      <label>Git move snippet<textarea id="whatif-git" readonly rows="3"></textarea></label>
+      <div class="whatif-actions"><button type="button" id="whatif-copy-git">Copy git mv snippet</button></div>
+    </div>
+  </section>
   <div id="panel"></div>
 </aside>
 <button type="button" class="glass capsule ctl" id="side-open" hidden aria-label="Show details">
@@ -603,6 +634,8 @@ p { margin: 6px 0; }
 <script type="application/json" id="graph">{{GRAPH}}</script>
 <script>
 "use strict";
+/*__ARCHGRAPH_PREVIEW__*/
+let whatifMode = false, whatifResult = null;
 const doc = JSON.parse(document.getElementById("graph").textContent);
 const $ = id => document.getElementById(id);
 
@@ -984,7 +1017,7 @@ function placeFile(fi, x, y, band) {
   const m = files[fi].mod;
   let dx = x - mx[m], dy = y - my[m];
   const r = Math.hypot(dx, dy), max = fileRoom(m);
-  if (r > max && r > 0) {
+  if (r > max && r > 0 && !whatifMode) {
     const to = band ? max + rubber(r - max, modR[m] * 0.4) : max;
     dx *= to / r; dy *= to / r;
   }
@@ -1015,6 +1048,7 @@ const homeBox = (() => {
   return [cx - span, cy - span, cx + span, cy + span];
 })();
 function saveLayout() {
+  if (whatifMode) return;
   try {
     if (!pinnedM.size && !pinnedF.size) localStorage.removeItem(LAYOUT_KEY);
     else {
@@ -1638,6 +1672,7 @@ const raise = (arr, j, s) => { if (arr[j] < s) arr[j] = s; };
 function applyFocus() {
   const t = hover || kb || sel;
   overlay = { moves: [], links: [] };
+  if (whatifMode) { focused = false; return; }
   focused = !!t;
   if (!t) return;
   modS.fill(S_DIM); fileS.fill(S_DIM); meS.fill(S_DIM); feS.fill(S_DIM);
@@ -2067,11 +2102,11 @@ function draw() {
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU);
     ctx.globalAlpha = (dim ? 0.35 : s >= S_IN || chosen ? 1 : 0.8) * hid;
     ctx.strokeStyle = chosen ? C.focus : s === S_IN ? C.in : s === S_OUT ? C.out : s === S_SELF || s === S_INV ? C.fg : col;
-    const surface = surfaceByModule.get(mods[i].id);
+    const surface = whatifResult ? null : surfaceByModule.get(mods[i].id);
     ctx.lineWidth = surfaceRingWidth(surface?.exported.length || 0, chosen || s >= S_IN) * px;
     if (hiddenMods[i]) ctx.setLineDash([4 * px, 4 * px]);
     ctx.stroke();
-    drawPackageSplitHalo(ctx, packageSplitMarkers[i], x, y, r, px);
+    if (!whatifResult) drawPackageSplitHalo(ctx, packageSplitMarkers[i], x, y, r, px);
     if (fileT > 0 && groups[i].length) {
       ctx.globalAlpha = 0.5 * fileT * (dim ? 0.4 : 1);
       ctx.strokeStyle = "rgba(235, 235, 245, .3)";
@@ -2099,7 +2134,7 @@ function draw() {
     if (!b) buckets.set(key, b = { G, layer, color, alpha, width, dash, arrowL, list: [] });
     b.list.push(j);
   };
-  if (fileT < 1) {
+  if (fileT < 1 && !whatifResult) {
     const fade = 1 - fileT;
     for (const me of medges) {
       if (!showME(me) || !seen(MB, me.i * 4, 0)) continue;
@@ -2120,7 +2155,7 @@ function draw() {
       if (me.cycle && (s >= S_IN || filt.cycles)) marks.push([ME, me.i, color, alpha * fade]);
     }
   }
-  if (fileT > 0) {
+  if (fileT > 0 && !whatifResult) {
     const arrows = k >= 2.4;
     for (const e of edges) {
       if (!seen(FB, e.i * 4, 2) || !showFE(e)) continue;
@@ -2138,6 +2173,7 @@ function draw() {
       if (e.fileCycle && s !== S_DIM && k >= K_FILE1) marks.push([FE, e.i, color, alpha * fileT]);
     }
   }
+  if (whatifResult) putWhatifLinks(put, marks, fileT, seen);
   const order = [...buckets.values()].sort((p, q) => (p.G === FE) - (q.G === FE) || p.layer - q.layer);
   let clustersDone = false;
   for (const b of order) {
@@ -2325,7 +2361,8 @@ function draw() {
     const sx = mx[i] * k + tx, sy = my[i] * k + ty, r = modR[i] * k;
     if (pass === 0 && r < 24) continue;
     const s = focused ? modS[i] : S_NORM;
-    const id = mods[i].id.slice(MOD_PREFIX.length), num = mods[i].files > 1 ? " " + mods[i].files : "";
+    const fileCount = whatifDrawing ? whatifDrawing.counts.get(mods[i].id) || 0 : mods[i].files;
+    const id = mods[i].id.slice(MOD_PREFIX.length), num = fileCount !== 1 ? " " + fileCount : "";
     const full = textW(MOD, id) + (num ? textW(NUM, num) : 0);
     /* Inside, centred at module zoom and along the top edge once files show, only when the whole
        name fits; a name is never cut. */
@@ -2469,6 +2506,10 @@ function verdictLine(v) {
   return parts.join(", ");
 }
 function tipLines(h) {
+  if (whatifResult) {
+    const lines = whatifTip(h);
+    if (lines) return lines;
+  }
   if (h.type === "module") {
     const m = mods[h.i];
     return [m.id, `${count(m.files, "file", "files")}, ${HEALTH_TEXT[modSignal[h.i]]}`,
@@ -2556,7 +2597,8 @@ canvas.addEventListener("pointerdown", ev => {
   stopCam();
   closePops();
   if (pointers.size === 1) {
-    const node = nodeAt(hit(x, y));
+    let node = nodeAt(hit(x, y));
+    if (whatifMode && node?.type === "module") node = null;
     const [cx, cy] = centerWorld();
     const hist = [[ev.timeStamp, x, y]];
     if (node) {
@@ -2668,6 +2710,11 @@ function settleModule(i, start) {
 }
 function finishNodeDrag() {
   const node = drag.node;
+  if (whatifMode && node.type === "file") {
+    whatifDrop(node.i, files[node.i].x, files[node.i].y, drag.startLocal);
+    settleLift();
+    return;
+  }
   if (node.type === "module") { pinnedM.add(node.i); settleModule(node.i, drag.start); }
   else {
     pinnedF.add(node.i);
@@ -2793,9 +2840,9 @@ $("z-out").addEventListener("click", () => zoomBy(1 / 1.6));
 $("z-fit").addEventListener("click", () => fit(true));
 document.addEventListener("keydown", ev => {
   const t = ev.target;
-  const typing = t instanceof HTMLInputElement && t.type !== "checkbox";
+  const typing = t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || t instanceof HTMLInputElement && t.type !== "checkbox";
   /* With a module focused, Shift and an arrow moves it 8px, with Option too 32px. */
-  if (kb && kb.type === "module" && ev.shiftKey && ev.key.startsWith("Arrow") && !ev.metaKey && !ev.ctrlKey) {
+  if (!whatifMode && kb && kb.type === "module" && ev.shiftKey && ev.key.startsWith("Arrow") && !ev.metaKey && !ev.ctrlKey) {
     const i = kb.i, d = (ev.altKey ? 32 : 8) / view.k, key = ev.key;
     cancelSettle("m" + i);
     if (!kbMove || kbMove.i !== i) kbMove = { i, start: [mx[i], my[i]] };
@@ -3015,6 +3062,7 @@ function updateReset() {
   if (resetBtn.hidden === any) { resetBtn.hidden = !any; measureChrome(); }
 }
 resetBtn.addEventListener("click", () => {
+  if (whatifMode) return;
   cancelAllSettles();
   kbMove = null;
   mx.set(mx0); my.set(my0); lx.set(lx0); ly.set(ly0);
@@ -3152,7 +3200,11 @@ function setSheetY(y) {
 }
 /* The sheet keeps its full height and slides down: pad the content by the part below the screen so
    its last rows can be scrolled into view at every detent. */
-function padSheet() { panel.style.paddingBottom = sheetMode ? (40 + detentY(sheetDetent)) + "px" : ""; }
+function padSheet() {
+  const padding = sheetMode ? (40 + detentY(sheetDetent)) + "px" : "";
+  panel.style.paddingBottom = padding;
+  $("whatif-panel").style.paddingBottom = padding;
+}
 function stopSheet() { if (sheetAnim) { anims.delete(sheetAnim); sheetAnim = null; } }
 function snapSheet(d, vel) {
   sheetDetent = d;
@@ -4193,6 +4245,7 @@ function findingPanel(j) {
   }
 }
 function showPanel() {
+  if (whatifMode) return;
   /* When the panel had focus, it keeps it: on the first tree row, else the heading. */
   const hadFocus = panel.contains(document.activeElement);
   panel.replaceChildren();
@@ -4213,6 +4266,8 @@ function showPanel() {
     else if (h2) { h2.tabIndex = -1; h2.focus({ preventScroll: true }); }
   }
 }
+
+/*__ARCHGRAPH_PREVIEW_UI__*/
 
 /* ---------- start ---------- */
 readTheme();

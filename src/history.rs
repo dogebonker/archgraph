@@ -575,6 +575,6 @@ pub fn collect_with_options(
 
 /// A standalone timeline which reuses the ordinary graph renderer for every snapshot.
 pub fn render(history: &History) -> Result<String> {
-    let data = serde_json::to_string(&(history, render::TEMPLATE))?.replace('<', "\\u003c");
+    let data = serde_json::to_string(&(history, render::template()))?.replace('<', "\\u003c");
     Ok(include_str!("history.html").replace("__HISTORY_DATA__", &data))
 }

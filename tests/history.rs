@@ -137,6 +137,18 @@ fn history_cli_orders_snapshots_diffs_and_preserves_dirty_subdirectory_checkout(
         .unwrap()
         .replace('<', "\\u003c")
         .len()
+        + [
+            include_str!("../assets/whatif.js"),
+            include_str!("../assets/whatif-ui.js"),
+        ]
+        .iter()
+        .map(|asset| {
+            serde_json::to_string(asset)
+                .unwrap()
+                .replace('<', "\\u003c")
+                .len()
+        })
+        .sum::<usize>()
         + serde_json::to_string(&doc)
             .unwrap()
             .replace('<', "\\u003c")
@@ -149,6 +161,9 @@ fn history_cli_orders_snapshots_diffs_and_preserves_dirty_subdirectory_checkout(
         page.len()
     );
     assert!(page.contains("Architecture history"));
+    assert!(!page.contains("/*__ARCHGRAPH_PREVIEW__*/"));
+    assert!(!page.contains("/*__ARCHGRAPH_PREVIEW_UI__*/"));
+    assert_eq!(page.matches("root.ArchgraphPreview = api").count(), 1);
     assert!(page.contains("sandbox=\"allow-scripts\""));
     assert!(!page.contains("cycle </script>"));
     assert!(page.contains("\\u003c/script>"));

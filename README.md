@@ -100,6 +100,15 @@ Start with an evidence-backed draft of the current architecture using `archgraph
 
 The map is one HTML file with no network requests. Zoom until files appear, drag modules to make sense of a cluster (your layout is remembered), click anything for who imports it and what to do about it.
 
+Enable **What-if**, then drag a file into another module to preview a code move. Cycle counts, two-way pairs, instability and cycle/rule findings update locally; a form provides the same workflow without dragging. Copy the authoritative `archgraph simulate` command or a quoted `git mv` snippet. Previewing changes neither files nor the saved layout; Rust remains the source of truth. [Details and limitations](docs/guide.md#live-what-if-in-the-map).
+
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/whatif-demo.png">
+  <img src="docs/assets/whatif-demo.webp" alt="Recorded map interaction: dragging a file into module b removes one two-way pair and changes the largest module cycle from two modules to zero; Copy and Clear follow." width="100%">
+</picture>
+
+The recording uses the small Rust parity fixture, not an OSS benchmark. [Reproduce the capture](docs/guide.md#record-the-demo).
+
 ## Does this code belong here?
 
 Find folders that could become packages with `archgraph package-splits graph.json --root .`. Suggestions distinguish free boundaries from cheap cuts, rank importing modules × file count, check existing workspaces, and simulate the remaining cycles. Save an enriched graph with `--output packages.json`, then `archgraph render packages.json -o packages.html` to highlight candidate islands. These are **import-level** suggestions; package exports, builds, tests, and environment assumptions still need review. See [package splits](docs/guide.md#package-splits).

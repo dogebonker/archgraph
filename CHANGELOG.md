@@ -36,6 +36,8 @@
 
 ### Added
 
+- Live What-if map previews: drag or enter a file move, compare cycles, two-way pairs, weighted instability and cycle/rule findings, clear transient state, and copy quoted Rust simulation and Git move commands. Rust-generated parity fixtures validate the dependency-free JS preview; unsupported refinements are labeled. Includes a recorded WebP demo.
+
 - `tour` generates a Markdown reading order from saved graphs: dependency layers, fan-in priorities, grouped cycles with a suggested starting module, reversed layers, and optional saved export summaries for agents.
 
 - Budgeted `context` reading plans from saved graphs, with required layout constraints, import/importer tiers, barrel deduplication, export summaries and omission reasons; project skill and opt-in Claude Code/Cursor adapters. Includes a frozen 30-PR retrieval benchmark against grep + folder, reporting discovery and full-body recall separately.

@@ -5,10 +5,18 @@ use anyhow::Result;
 use crate::model::Document;
 
 pub(crate) const TEMPLATE: &str = include_str!("../assets/graph.html");
+const PREVIEW: &str = include_str!("../assets/whatif.js");
+const PREVIEW_UI: &str = include_str!("../assets/whatif-ui.js");
+
+pub(crate) fn template() -> String {
+    TEMPLATE
+        .replacen("/*__ARCHGRAPH_PREVIEW__*/", PREVIEW, 1)
+        .replacen("/*__ARCHGRAPH_PREVIEW_UI__*/", PREVIEW_UI, 1)
+}
 
 /// The page with `doc` embedded as JSON. Every `<` is escaped, so no path can close the script
 /// element it sits in.
 pub fn render(doc: &Document) -> Result<String> {
     let json = serde_json::to_string(doc)?.replace('<', "\\u003c");
-    Ok(TEMPLATE.replace("{{GRAPH}}", &json))
+    Ok(template().replacen("{{GRAPH}}", &json, 1))
 }

@@ -38,7 +38,12 @@ fn render_is_self_contained_and_embeds_the_document() {
     ));
     // Same document, same picture; document text never reaches the page as markup or code.
     // Checked on the template: the embedded document may hold any of these in a path.
-    let template = include_str!("../assets/graph.html");
+    let template = [
+        include_str!("../assets/graph.html"),
+        include_str!("../assets/whatif.js"),
+        include_str!("../assets/whatif-ui.js"),
+    ]
+    .join("\n");
     for banned in [
         "Math.random",
         "Date.now",
@@ -87,12 +92,47 @@ fn script_end_tag_in_a_path_stays_escaped() {
 }
 
 #[test]
+fn asset_placeholders_in_repository_paths_remain_literal_data() {
+    let paths = [
+        "src/x/*__ARCHGRAPH_PREVIEW__*/{{GRAPH}}.ts".to_owned(),
+        "src/y/*__ARCHGRAPH_PREVIEW_UI__*/dep.ts".to_owned(),
+    ];
+    let (dir, input) = synthetic("render-markers", 2, &[(paths[0].clone(), paths[1].clone())]);
+    let (_, stdout, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let graph = write_tmp("render-markers/graph.json", &stdout);
+    let html = render(&[&graph], "render-markers/graph.html");
+    let doc: Value = serde_json::from_str(embedded(&html)).unwrap();
+    for path in paths {
+        assert!(
+            doc["files"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|file| file["path"] == path)
+        );
+    }
+    assert_eq!(html.matches("root.ArchgraphPreview = api").count(), 1);
+}
+
+#[test]
 fn counts_agree_in_number_with_their_nouns() {
     // The page builds its header in the browser; the template must pick "1 cycle" over
     // "1 cycles" for every count it prints.
     let graph = scan_file("ts-fda", &["--rules", &layout("ts-fda")]);
     let html = render(&[&graph], "ts-fda-plural.html");
-    assert!(!html.contains("(s)"), "a count written as noun(s)");
+    // The pure engine can contain calls such as test(s); only UI assets contain count prose.
+    for ui in [
+        include_str!("../assets/graph.html"),
+        include_str!("../assets/whatif-ui.js"),
+    ] {
+        assert!(!ui.contains("(s)"), "a count written as noun(s)");
+    }
     for noun in [
         "file",
         "module",
@@ -106,4 +146,31 @@ fn counts_agree_in_number_with_their_nouns() {
             "{noun} is not pluralized by count"
         );
     }
+}
+
+#[test]
+fn simulation_accepts_dash_leading_move_paths_used_by_copied_commands() {
+    let edges = [("-old.ts".to_owned(), "lib/dep.ts".to_owned())];
+    let (dir, input) = synthetic("whatif-dash-path", 1, &edges);
+    let (_, stdout, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let graph = write_tmp("whatif-dash-path/-graph.json", &stdout);
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        .current_dir(std::path::Path::new(&graph).parent().unwrap())
+        .args(["simulate", "./-graph.json", "--move", "-old.ts", "-new.ts"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let result: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(result["move"]["file"], "-old.ts");
+    assert_eq!(result["move"]["to"], "-new.ts");
 }
