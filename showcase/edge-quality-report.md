@@ -1,6 +1,6 @@
 # Edge-quality validation
 
-Measured stages: baseline, fix1, fix2, fix3, fix4, fix5. Pending: none.
+Measured stages: baseline, fix1, fix2, fix3, fix4, fix5, corrected. Pending: none.
 
 All five fixes have measured snapshots.
 
@@ -14,6 +14,19 @@ The baseline is the frozen pre-change source at `6627a5e22013044516a599e86bede43
 
 The baseline already excluded type-only and dynamic edges from runtime cycles. Fix 1 additionally excludes structural re-exports, so an observed decrease is not automatically a newly detected type-only cycle. Deferred SCCs containing an existing runtime SCC are reported separately from wholly non-runtime SCCs. JavaScript re-exports can still cause module evaluation: these results describe the requested graph policy, not proof that all runtime execution is acyclic.
 
+## Python exact-case correction
+
+The original baseline/fix1–fix5 measurements were collected on macOS. A case-insensitive filesystem lookup in the Python resolver treated differently cased names as existing module files and introduced synthetic capitalized paths. The corrected stage requires exact path-component spelling and rescans all 23 pins. Its counts are authoritative for the final report and README. Earlier archives remain unchanged as historical engine measurements; synthetic-path removal must not be credited as architectural improvement.
+
+| Repository | Files: fix5 → corrected | Edges: fix5 → corrected | Removed synthetic paths (examples) |
+| --- | ---: | ---: | --- |
+| django | 716 → 706 | 3175 → 3119 | `django/contrib/gis/gdal/DataSource.py`, `django/contrib/gis/geos/LineString.py`, `django/contrib/gis/geos/Point.py` |
+| scrapy | 198 → 194 | 1004 → 988 | `scrapy/Selector/__init__.py`, `scrapy/http/Headers.py`, `scrapy/http/Request/__init__.py` |
+| celery | 164 → 161 | 640 → 617 | `celery/utils/dispatch/Signal.py`, `celery/worker/consumer/Consumer.py`, `celery/worker/consumer/Tasks.py` |
+| sqlalchemy | 245 → 240 | 2500 → 2392 | `sqlalchemy/engine/Result.py`, `sqlalchemy/engine/Row.py`, `sqlalchemy/engine/URL.py` |
+
+Cross-platform check against the **prior Linux deployment**, source `22ee0fb9c7f52d00606e3886be8c0815d9ccc65d`: all 23 corrected repository counts, module/file-cycle counts, findings, import-resolution ledgers and external-package counts exactly match that deployment's cached index (`published-index.json`, SHA-256 `0be0887b0cc078c0d5f75483f70e03a36ef5a33b782a7ba8a08627a32a8790d3`). Full semantic JSON also matches the cached published graphs for django, scrapy, celery, sqlalchemy. This validates platform consistency after the correction, not the status of a new deployment or an architectural improvement claim.
+
 ## Engine provenance
 
 | Stage | Source commit | Binary SHA-256 |
@@ -24,6 +37,7 @@ The baseline already excluded type-only and dynamic edges from runtime cycles. F
 | fix3 | `18532c9d54ab403ef09b6a4f1d2261aa65b07392` | `3bc780de20a87347a98194dde4be176d0c95a20c46790cd5c8ea5c7fc593fdf5` |
 | fix4 | `b7f82fc644797b031a099b09d90188f6b9183c67` | `ad570486800f416a1081c918d6da8dcd8d69d07a43c626a66ac17d7e2293b7cb` |
 | fix5 | `07985946a40b8917b6d1e8f0d456dec4c3858da0` | `7334d5ea0d483c7037bd7a05e3d0a4f1f7e62a6cfbeffdd823ab1aad379f9d7e` |
+| corrected | `0a7d4a928dac9b1677e8ed92e9c707c4f2a5fb8a` | `ed11fe1e29caafbf00bd9459f229e70b9a03ff988d6920d8031e230b060a4ebb` |
 
 Collector versions are recorded per scan in `metadata.json`. Reproduce a stage with:
 
@@ -35,9 +49,9 @@ python3 -B showcase/edge_quality.py --report-output showcase/edge-quality-report
 
 ## Published 20 repositories
 
-Arrow cells compare baseline → fix5. SCC means a strongly connected component with a cycle; largest is its module count. All intermediate stages remain in the cohort totals, provenance and full SCC inventory.
+Arrow cells compare baseline → corrected. SCC means a strongly connected component with a cycle; largest is its module count. All intermediate stages remain in the cohort totals, provenance and full SCC inventory.
 
-| Repository | Files | File edges | Module SCCs | Largest SCC | Runtime / lazy / type / re-export edges (fix5) | Barrels (fix5) | Excluded candidate files | Non-runtime / extended-runtime SCCs | Via grab-bag: complete / partial |
+| Repository | Files | File edges | Module SCCs | Largest SCC | Runtime / lazy / type / re-export edges (corrected) | Barrels (corrected) | Excluded candidate files | Non-runtime / extended-runtime SCCs | Via grab-bag: complete / partial |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | nest | 666 → 666 | 2206 → 2546 | 6 → 5 | 16 → 15 | 1534 / 6 / 545 / 461 | 95 | 1377 | 1 / 2 | 0 / 1 |
 | next.js | 1542 → 1252 | 6058 → 4627 | 2 → 2 | 62 → 43 | 3358 / 150 / 1019 / 100 | 43 | 1232 | 0 / 1 | 0 / 1 |
@@ -50,15 +64,15 @@ Arrow cells compare baseline → fix5. SCC means a strongly connected component 
 | outline | 2243 → 2231 | 10778 → 11469 | 1 → 3 | 40 → 22 | 9983 / 94 / 1259 / 133 | 42 | 385 | 0 / 1 | 0 / 1 |
 | strapi | 236 → 236 | 361 → 365 | 2 → 2 | 5 → 3 | 280 / 0 / 43 / 42 | 8 | 116 | 0 / 1 | 0 / 0 |
 | trpc | 83 → 76 | 270 → 298 | 1 → 1 | 5 → 5 | 120 / 0 / 117 / 61 | 13 | 32 | 0 / 1 | 0 / 0 |
-| django | 713 → 716 | 3170 → 3175 | 2 → 2 | 31 → 30 | 2836 / 160 / 0 / 179 | 24 | 201 | 0 / 1 | 0 / 0 |
+| django | 713 → 706 | 3170 → 3119 | 2 → 2 | 31 → 30 | 2788 / 156 / 0 / 175 | 24 | 201 | 0 / 1 | 0 / 0 |
 | fastapi | 52 → 52 | 123 → 128 | 1 → 1 | 14 → 9 | 117 / 3 / 1 / 7 | 4 | 0 | 0 / 1 | 0 / 1 |
 | flask | 21 → 24 | 69 → 95 | 0 → 0 | 0 → 0 | 55 / 5 / 24 / 11 | 1 | 0 | 1 / 0 | 0 / 0 |
 | pydantic | 79 → 79 | 362 → 362 | 1 → 1 | 8 → 8 | 269 / 36 / 57 / 0 | 1 | 26 | 0 / 1 | 0 / 0 |
 | httpx | 23 → 23 | 87 → 87 | 0 → 0 | 0 → 0 | 74 / 1 / 6 / 6 | 1 | 0 | 2 / 0 | 0 / 0 |
-| scrapy | 194 → 198 | 942 → 1004 | 2 → 2 | 18 → 18 | 726 / 16 / 250 / 12 | 4 | 0 | 0 / 1 | 0 / 0 |
-| celery | 161 → 164 | 614 → 640 | 2 → 2 | 5 → 5 | 567 / 46 / 11 / 16 | 6 | 0 | 0 / 1 | 0 / 0 |
+| scrapy | 194 → 194 | 942 → 988 | 2 → 2 | 18 → 18 | 714 / 15 / 248 / 11 | 3 | 0 | 0 / 1 | 0 / 0 |
+| celery | 161 → 161 | 614 → 617 | 2 → 2 | 5 → 5 | 545 / 45 / 11 / 16 | 6 | 0 | 0 / 1 | 0 / 0 |
 | zulip | 733 → 775 | 3172 → 4073 | 1 → 1 | 14 → 19 | 3930 / 108 / 5 / 30 | 2 | 946 | 0 / 0 | 0 / 0 |
-| sqlalchemy | 245 → 245 | 2342 → 2500 | 2 → 2 | 3 → 3 | 1629 / 58 / 606 / 207 | 6 | 18 | 0 / 1 | 0 / 0 |
+| sqlalchemy | 245 → 240 | 2342 → 2392 | 2 → 2 | 3 → 3 | 1554 / 58 / 579 / 201 | 6 | 18 | 0 / 1 | 0 / 0 |
 
 ### Published cohort totals by measured stage
 
@@ -70,10 +84,11 @@ Arrow cells compare baseline → fix5. SCC means a strongly connected component 
 | fix3 | 9697 | 44514 | 32 | 44 |
 | fix4 | 9764 | 45221 | 32 | 44 |
 | fix5 | 9764 | 45221 | 34 | 43 |
+| corrected | 9742 | 45018 | 34 | 43 |
 
 ## Supplemental Go repositories
 
-| Repository | Files | File edges | Module SCCs | Largest SCC | Runtime / lazy / type / re-export edges (fix5) | Barrels (fix5) | Excluded candidate files | Non-runtime / extended-runtime SCCs | Via grab-bag: complete / partial |
+| Repository | Files | File edges | Module SCCs | Largest SCC | Runtime / lazy / type / re-export edges (corrected) | Barrels (corrected) | Excluded candidate files | Non-runtime / extended-runtime SCCs | Via grab-bag: complete / partial |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | etcd | 571 → 571 | 1982 → 1982 | 0 → 0 | 0 → 0 | 1982 / 0 / 0 / 0 | 0 | 528 | 0 / 0 | 0 / 0 |
 | prometheus | 429 → 420 | 2183 → 2159 | 0 → 0 | 0 → 0 | 2159 / 0 / 0 / 0 | 0 | 322 | 0 / 0 | 0 / 0 |
@@ -99,7 +114,7 @@ Low-confidence zero-weight re-export fallbacks are retained in JSON but excluded
 | outline | 2 | 1 | 0 | 1 | 0 |
 | strapi | 4 | 4 | 0 | 0 | 0 |
 | trpc | 5 | 3 | 2 | 0 | 0 |
-| django | 79 | 76 | 3 | 0 | 0 |
+| django | 75 | 72 | 3 | 0 | 0 |
 | fastapi | 0 | 0 | 0 | 0 | 0 |
 | flask | 1 | 1 | 0 | 0 | 0 |
 | pydantic | 0 | 0 | 0 | 0 | 0 |
@@ -107,11 +122,11 @@ Low-confidence zero-weight re-export fallbacks are retained in JSON but excluded
 | scrapy | 0 | 0 | 0 | 0 | 0 |
 | celery | 2 | 2 | 0 | 0 | 0 |
 | zulip | 0 | 0 | 0 | 0 | 0 |
-| sqlalchemy | 178 | 177 | 0 | 1 | 0 |
+| sqlalchemy | 172 | 171 | 0 | 1 | 0 |
 | etcd | 0 | 0 | 0 | 0 | 0 |
 | prometheus | 0 | 0 | 0 | 0 | 0 |
 | cli | 0 | 0 | 0 | 0 | 0 |
-| All 23 | 403 | 352 | 6 | 45 | 0 |
+| All 23 | 393 | 342 | 6 | 45 | 0 |
 
 ## Import resolution: source specifier occurrences
 
@@ -130,15 +145,15 @@ These counts come only from `import_resolution` and the source-occurrence ledger
 | outline | 15874 | 15812 | 99.6% | 62 | 13436 / 183 / 2120 / 135 | 236 |
 | strapi | 853 | 847 | 99.3% | 6 | 549 / 22 / 240 / 42 | 59 |
 | trpc | 326 | 324 | 99.4% | 2 | 123 / 0 / 141 / 62 | 8 |
-| django | 4417 | 4285 | 97.0% | 132 | 4136 / 281 / 0 / 0 | 98 |
+| django | 4336 | 4206 | 97.0% | 130 | 4061 / 275 / 0 / 0 | 98 |
 | fastapi | 492 | 304 | 61.8% | 188 | 471 / 20 / 1 / 0 | 33 |
 | flask | 390 | 301 | 77.2% | 89 | 317 / 24 / 49 / 0 | 35 |
 | pydantic | 908 | 766 | 84.4% | 142 | 737 / 74 / 97 / 0 | 42 |
 | httpx | 223 | 194 | 87.0% | 29 | 185 / 21 / 17 / 0 | 31 |
-| scrapy | 2327 | 2009 | 86.3% | 318 | 1793 / 89 / 445 / 0 | 81 |
-| celery | 1613 | 1189 | 73.7% | 424 | 1446 / 143 / 24 / 0 | 72 |
+| scrapy | 2289 | 1975 | 86.3% | 314 | 1765 / 88 / 436 / 0 | 81 |
+| celery | 1567 | 1154 | 73.6% | 413 | 1402 / 141 / 24 / 0 | 72 |
 | zulip | 7450 | 5347 | 71.8% | 2103 | 7238 / 190 / 22 / 0 | 85 |
-| sqlalchemy | 8952 | 8846 | 98.8% | 106 | 7107 / 184 / 1661 / 0 | 57 |
+| sqlalchemy | 8630 | 8524 | 98.8% | 106 | 6858 / 184 / 1588 / 0 | 57 |
 | etcd | 3009 | 3009 | 100.0% | 0 | 3009 / 0 / 0 / 0 | 152 |
 | prometheus | 3377 | 3377 | 100.0% | 0 | 3377 / 0 / 0 / 0 | 260 |
 | cli | 4767 | 4767 | 100.0% | 0 | 4767 / 0 / 0 / 0 | 152 |
@@ -149,43 +164,43 @@ Grab-bag reclassifications are measured from `grabbags`: complete means no resid
 
 ## Every baseline module SCC
 
-This inventory includes all original SCCs, including shrinkage. An old SCC absorbed into a larger SCC still persists; it is not counted as removed. Through fix5, 22 original SCCs remain exactly unchanged, 9 have shrunk or split, 1 are eliminated, and 1 persist in larger SCCs. Fix 2 expands the surviving Nest common SCC from five to six modules.
+This inventory includes all original SCCs, including shrinkage. An old SCC absorbed into a larger SCC still persists; it is not counted as removed. Through corrected, 22 original SCCs remain exactly unchanged, 9 have shrunk or split, 1 are eliminated, and 1 persist in larger SCCs. Fix 2 expands the surviving Nest common SCC from five to six modules.
 
-| Repository / baseline SCC | Original modules | fix1 | fix2 | fix3 | fix4 | fix5 | Explanation of changed membership |
-| --- | ---: | --- | --- | --- | --- | --- | --- |
-| nest #1: `packages/common, packages/common/decorators, packages/common/exceptions, …` | 10 | shrunk or split (5 original modules remain cyclic) | shrunk or split (6 original modules remain cyclic) | shrunk or split (6 original modules remain cyclic) | shrunk or split (6 original modules remain cyclic) | shrunk or split (5 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. Named barrel resolution at fix2 restores common itself to the surviving SCC (5 → 6); this is expansion, not another disappearance. Fix5 verifies a cycle via grab-bag; residual real cycles are retained. See the complete/partial evidence table below. |
-| nest #2: `packages/core, packages/core/adapters, packages/core/discovery, …` | 16 | shrunk or split (15 original modules remain cyclic) | shrunk or split (15 original modules remain cyclic) | shrunk or split (15 original modules remain cyclic) | shrunk or split (15 original modules remain cyclic) | shrunk or split (15 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. |
-| nest #3: `packages/microservices, packages/microservices/client, packages/microservices/context, …` | 12 | shrunk or split (11 original modules remain cyclic) | shrunk or split (11 original modules remain cyclic) | shrunk or split (11 original modules remain cyclic) | shrunk or split (11 original modules remain cyclic) | shrunk or split (11 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. |
-| nest #4: `packages/platform-fastify, packages/platform-fastify/adapters, packages/platform-fastify/decorators` | 3 | eliminated | eliminated | eliminated | eliminated | eliminated | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. |
-| nest #5: `packages/testing, packages/testing/interfaces` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| nest #6: `packages/websockets, packages/websockets/adapters, packages/websockets/context, …` | 5 | shrunk or split (4 original modules remain cyclic) | shrunk or split (4 original modules remain cyclic) | shrunk or split (4 original modules remain cyclic) | shrunk or split (4 original modules remain cyclic) | shrunk or split (4 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. |
-| next.js #1: `build, build/adapter, build/analysis, …` | 62 | shrunk or split (61 original modules remain cyclic) | shrunk or split (61 original modules remain cyclic) | shrunk or split (44 original modules remain cyclic) | shrunk or split (44 original modules remain cyclic) | shrunk or split (43 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. Fix3 directory exclusions remove 220 files in this original SCC; examples: `src/build/adapter/build-complete.ts`, `src/build/adapter/fallback-shell-runs.ts`, `src/build/adapter/setup-node-env.external.ts`. Next.js build code and Django testing APIs are real source excluded by directory convention; this is a scope change, not proof that those dependencies were erroneous. Fix5 verifies a cycle via grab-bag; residual real cycles are retained. See the complete/partial evidence table below. |
-| next.js #2: `next-devtools, next-devtools/dev-overlay` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| excalidraw #1: `actions, animatedTrail.ts, clients.ts, …` | 29 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| immich #1: `constants.ts, cores, decorators.ts, …` | 9 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| immich #2: `maintenance, middleware, services` | 3 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| activepieces #1: `app, app/action-run, app/agents, …` | 32 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| payload #1: `admin, auth, checkPayloadDependencies.ts, …` | 21 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| typeorm #1: `driver, driver/aurora-mysql, driver/aurora-postgres, …` | 27 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| typeorm #2: `persistence, persistence/subject-builder` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| typeorm #3: `query-builder, query-builder/relation-id` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| vite #1: `module-runner, module-runner/sourcemap` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| vite #2: `node, node/optimizer, node/plugins, …` | 5 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| outline #1: `app, app/actions, app/components, …` | 40 | unchanged | unchanged | unchanged | unchanged | shrunk or split (11, 22, 5 original modules remain cyclic) |  Fix5 verifies a cycle via grab-bag; residual real cycles are retained. See the complete/partial evidence table below. |
-| strapi #1: `configuration, core-api/routes, ee, …` | 5 | shrunk or split (3 original modules remain cyclic) | shrunk or split (3 original modules remain cyclic) | shrunk or split (3 original modules remain cyclic) | shrunk or split (3 original modules remain cyclic) | shrunk or split (3 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. |
-| strapi #2: `domain/module, registries` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| trpc #1: `unstable-core-do-not-import, unstable-core-do-not-import/error, unstable-core-do-not-import/http, …` | 5 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| django #1: `__init__.py, apps, conf, …` | 31 | unchanged | unchanged | shrunk or split (30 original modules remain cyclic) | shrunk or split (30 original modules remain cyclic) | shrunk or split (30 original modules remain cyclic) |  Fix3 directory exclusions remove 7 files in this original SCC; examples: `django/test/__init__.py`, `django/test/client.py`, `django/test/html.py`. Next.js build code and Django testing APIs are real source excluded by directory convention; this is a scope change, not proof that those dependencies were erroneous. |
-| django #2: `contrib/admin, contrib/auth, contrib/contenttypes, …` | 4 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| fastapi #1: `__init__.py, _compat, applications.py, …` | 14 | unchanged | unchanged | unchanged | unchanged | shrunk or split (9 original modules remain cyclic) |  Fix5 verifies a cycle via grab-bag; residual real cycles are retained. See the complete/partial evidence table below. |
-| pydantic #1: `_internal, config.py, errors.py, …` | 8 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| scrapy #1: `__init__.py, addons.py, core, …` | 18 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| scrapy #2: `cmdline.py, commands` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| celery #1: `app, canvas.py, concurrency, …` | 5 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| celery #2: `exceptions.py, platforms.py, utils` | 3 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| zulip #1: `actions, context_processors.py, data_import, …` | 14 | unchanged | unchanged | unchanged | persists in a larger cycle | persists in a larger cycle |  Fix4 changes type-only or resolved runtime links; exact counts and pinned source witnesses are listed in the transition table below. |
-| sqlalchemy #1: `dialects, engine, sql` | 3 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
-| sqlalchemy #2: `exc.py, util` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| Repository / baseline SCC | Original modules | fix1 | fix2 | fix3 | fix4 | fix5 | corrected | Explanation of changed membership |
+| --- | ---: | --- | --- | --- | --- | --- | --- | --- |
+| nest #1: `packages/common, packages/common/decorators, packages/common/exceptions, …` | 10 | shrunk or split (5 original modules remain cyclic) | shrunk or split (6 original modules remain cyclic) | shrunk or split (6 original modules remain cyclic) | shrunk or split (6 original modules remain cyclic) | shrunk or split (5 original modules remain cyclic) | shrunk or split (5 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. Named barrel resolution at fix2 restores common itself to the surviving SCC (5 → 6); this is expansion, not another disappearance. Fix5 verifies a cycle via grab-bag; residual real cycles are retained. See the complete/partial evidence table below. |
+| nest #2: `packages/core, packages/core/adapters, packages/core/discovery, …` | 16 | shrunk or split (15 original modules remain cyclic) | shrunk or split (15 original modules remain cyclic) | shrunk or split (15 original modules remain cyclic) | shrunk or split (15 original modules remain cyclic) | shrunk or split (15 original modules remain cyclic) | shrunk or split (15 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. |
+| nest #3: `packages/microservices, packages/microservices/client, packages/microservices/context, …` | 12 | shrunk or split (11 original modules remain cyclic) | shrunk or split (11 original modules remain cyclic) | shrunk or split (11 original modules remain cyclic) | shrunk or split (11 original modules remain cyclic) | shrunk or split (11 original modules remain cyclic) | shrunk or split (11 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. |
+| nest #4: `packages/platform-fastify, packages/platform-fastify/adapters, packages/platform-fastify/decorators` | 3 | eliminated | eliminated | eliminated | eliminated | eliminated | eliminated | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. |
+| nest #5: `packages/testing, packages/testing/interfaces` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| nest #6: `packages/websockets, packages/websockets/adapters, packages/websockets/context, …` | 5 | shrunk or split (4 original modules remain cyclic) | shrunk or split (4 original modules remain cyclic) | shrunk or split (4 original modules remain cyclic) | shrunk or split (4 original modules remain cyclic) | shrunk or split (4 original modules remain cyclic) | shrunk or split (4 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. |
+| next.js #1: `build, build/adapter, build/analysis, …` | 62 | shrunk or split (61 original modules remain cyclic) | shrunk or split (61 original modules remain cyclic) | shrunk or split (44 original modules remain cyclic) | shrunk or split (44 original modules remain cyclic) | shrunk or split (43 original modules remain cyclic) | shrunk or split (43 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. Fix3 directory exclusions remove 220 files in this original SCC; examples: `src/build/adapter/build-complete.ts`, `src/build/adapter/fallback-shell-runs.ts`, `src/build/adapter/setup-node-env.external.ts`. Next.js build code and Django testing APIs are real source excluded by directory convention; this is a scope change, not proof that those dependencies were erroneous. Fix5 verifies a cycle via grab-bag; residual real cycles are retained. See the complete/partial evidence table below. |
+| next.js #2: `next-devtools, next-devtools/dev-overlay` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| excalidraw #1: `actions, animatedTrail.ts, clients.ts, …` | 29 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| immich #1: `constants.ts, cores, decorators.ts, …` | 9 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| immich #2: `maintenance, middleware, services` | 3 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| activepieces #1: `app, app/action-run, app/agents, …` | 32 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| payload #1: `admin, auth, checkPayloadDependencies.ts, …` | 21 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| typeorm #1: `driver, driver/aurora-mysql, driver/aurora-postgres, …` | 27 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| typeorm #2: `persistence, persistence/subject-builder` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| typeorm #3: `query-builder, query-builder/relation-id` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| vite #1: `module-runner, module-runner/sourcemap` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| vite #2: `node, node/optimizer, node/plugins, …` | 5 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| outline #1: `app, app/actions, app/components, …` | 40 | unchanged | unchanged | unchanged | unchanged | shrunk or split (11, 22, 5 original modules remain cyclic) | shrunk or split (11, 22, 5 original modules remain cyclic) |  Fix5 verifies a cycle via grab-bag; residual real cycles are retained. See the complete/partial evidence table below. |
+| strapi #1: `configuration, core-api/routes, ee, …` | 5 | shrunk or split (3 original modules remain cyclic) | shrunk or split (3 original modules remain cyclic) | shrunk or split (3 original modules remain cyclic) | shrunk or split (3 original modules remain cyclic) | shrunk or split (3 original modules remain cyclic) | shrunk or split (3 original modules remain cyclic) | Structural re-export/barrel policy at fix1; see source witnesses below. No baseline runtime SCC disappeared solely because of type/lazy filtering. |
+| strapi #2: `domain/module, registries` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| trpc #1: `unstable-core-do-not-import, unstable-core-do-not-import/error, unstable-core-do-not-import/http, …` | 5 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| django #1: `__init__.py, apps, conf, …` | 31 | unchanged | unchanged | shrunk or split (30 original modules remain cyclic) | shrunk or split (30 original modules remain cyclic) | shrunk or split (30 original modules remain cyclic) | shrunk or split (30 original modules remain cyclic) |  Fix3 directory exclusions remove 7 files in this original SCC; examples: `django/test/__init__.py`, `django/test/client.py`, `django/test/html.py`. Next.js build code and Django testing APIs are real source excluded by directory convention; this is a scope change, not proof that those dependencies were erroneous. |
+| django #2: `contrib/admin, contrib/auth, contrib/contenttypes, …` | 4 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| fastapi #1: `__init__.py, _compat, applications.py, …` | 14 | unchanged | unchanged | unchanged | unchanged | shrunk or split (9 original modules remain cyclic) | shrunk or split (9 original modules remain cyclic) |  Fix5 verifies a cycle via grab-bag; residual real cycles are retained. See the complete/partial evidence table below. |
+| pydantic #1: `_internal, config.py, errors.py, …` | 8 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| scrapy #1: `__init__.py, addons.py, core, …` | 18 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| scrapy #2: `cmdline.py, commands` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| celery #1: `app, canvas.py, concurrency, …` | 5 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| celery #2: `exceptions.py, platforms.py, utils` | 3 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| zulip #1: `actions, context_processors.py, data_import, …` | 14 | unchanged | unchanged | unchanged | persists in a larger cycle | persists in a larger cycle | persists in a larger cycle |  Fix4 changes type-only or resolved runtime links; exact counts and pinned source witnesses are listed in the transition table below. |
+| sqlalchemy #1: `dialects, engine, sql` | 3 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
+| sqlalchemy #2: `exc.py, util` | 2 | unchanged | unchanged | unchanged | unchanged | unchanged | unchanged | Unchanged through measured stages. |
 
 ## Fix 4 runtime-link changes behind SCC membership changes
 
@@ -195,7 +210,7 @@ For every original SCC whose disposition changes between fixes 3 and 4, this tab
 | --- | --- | --- | --- |
 | zulip #1 | unchanged → persists in a larger cycle | new or redirected runtime link: 330 | [zerver/actions/create_realm.py:11](https://github.com/zulip/zulip/blob/fb4f7abc378de7308a572d9af375101707e0c1ee/zerver/actions/create_realm.py#L11) (new or redirected runtime link; target `confirmation/settings.py`)<br>[analytics/lib/counts.py:23](https://github.com/zulip/zulip/blob/fb4f7abc378de7308a572d9af375101707e0c1ee/analytics/lib/counts.py#L23) (new or redirected runtime link; target `zerver/lib/timestamp.py`) |
 
-## Grab-bag candidate calibration (post-fix4)
+## Grab-bag candidate calibration (corrected)
 
 The chosen defaults (cohesion <0.2, weighted fan-in ≥5, raw internal edges/file <0.5, at least two files) select 26 candidates across all 23 repositories; 18 are currently cyclic. This is candidate calibration, not a claim that all are grab-bags. Benign contexts, enums and two-file barrel modules can satisfy the metrics. Reclassification still requires the fix5 split-graph proof.
 
@@ -254,11 +269,11 @@ The published cohort has 0 complete and 4 partial grab-bag reclassifications. Re
 
 Through fix4, no additional baseline runtime SCC was fully removed solely by type-only refinement, test exclusions or resolver changes. The complete baseline Fastify SCC disappearance is the structural re-export policy change; shrinkage and the Zulip expansion are listed individually above. Low-confidence exclusions limit runtime-coverage claims.
 
-All 23 final graphs preserve exactly the fix4 files, file edges, import ledgers, unresolved records and external arrays: fix5 changes cycle interpretation, not those inputs.
+The archived fix5 graphs preserve exactly the fix4 input arrays. The corrected final stage changes Python resolution inputs as documented above; removing synthetic paths is a collector correctness fix, not an architectural improvement.
 
 ## Verification and reproduction
 
-All 23 pinned repositories completed baseline and fixes 1–5. Report generation checks full-cohort coverage, manifest commits, clean scan provenance and archived graph hashes. README generation requires the complete verified fix5 cohort and checks that each suggested cut is an existing runtime edge.
+All 23 pinned repositories completed baseline and fixes 1–5, plus any separately listed correction stage. Report generation checks full-cohort coverage, manifest commits, clean scan provenance and archived graph hashes. README generation uses the latest complete verified final cohort, including the corrected stage when present, and checks that each suggested cut is an existing runtime edge.
 
 ```sh
 python3 -B -m unittest discover -s showcase/tests

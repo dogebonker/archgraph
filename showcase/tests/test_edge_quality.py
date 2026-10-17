@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SPEC = importlib.util.spec_from_file_location('edge_quality', Path(__file__).parents[1] / 'edge_quality.py')
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -132,6 +133,52 @@ class EdgeQualityTests(unittest.TestCase):
         result = MODULE.stats(document)
         self.assertEqual(result['grabbag_reclassifications'], 2)
         self.assertEqual(result['grabbag_complete'], 1)
+
+    def test_correction_stage_is_final_without_rewriting_fix_archives(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            entries = [{'name': 'one', 'commit': 'a' * 40}]
+            for stage in MODULE.ARCHIVE_STAGES:
+                graph = root / stage / 'one' / 'graph.json'
+                MODULE.write_json(graph, {'source': {'git': {'commit': 'a' * 40}},
+                                          'files': [{'path': stage + '.py'}]})
+                MODULE.write_json(root / stage / 'index.json', [{
+                    'status': 'ok', 'fingerprint': {'entry': entries[0]},
+                    'graph_sha256': MODULE.digest(graph)}])
+            original = (root / 'fix5' / 'one' / 'graph.json').read_bytes()
+            complete, documents, _ = MODULE.archived_stages(root, entries)
+            self.assertEqual(complete[-1], 'corrected')
+            self.assertEqual(documents['fix5']['one']['files'], [{'path': 'fix5.py'}])
+            self.assertEqual(documents['corrected']['one']['files'], [{'path': 'corrected.py'}])
+            self.assertEqual((root / 'fix5' / 'one' / 'graph.json').read_bytes(), original)
+            (root / 'README.md').write_text('existing readme')
+            with patch.object(MODULE, 'HERE', root / 'showcase'), patch.object(
+                    MODULE, 'readme_text', return_value='Generated from the final pinned scans in manifest') as render:
+                MODULE.publish_readme(root, entries, root / 'generated.md')
+            self.assertEqual(render.call_args.args[2], documents['corrected'])
+            self.assertIn('including the exact-case Python resolver correction',
+                          (root / 'generated.md').read_text())
+            self.assertEqual((root / 'README.md').read_text(), 'existing readme')
+
+    def test_deployed_comparison_rejects_divergent_final_metrics(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            entry = {'name': 'one', 'commit': 'a' * 40}
+            document = {'files': [], 'modules': [], 'edges': [], 'cycles': [],
+                        'source': {'collector': {}}, 'summary': {'forbidden': 0}, 'findings': []}
+            index = {'repos': [{'name': 'one', 'commit': entry['commit'], 'status': 'ok',
+                               'stats': {'files': 0, 'modules': 0, 'imports': 0,
+                                         'module_cycles': 0, 'largest_module_cycle': 0,
+                                         'file_cycles': 0, 'forbidden': 0, 'import_resolution': None,
+                                         'external_packages': 0, 'findings': {}}}]}
+            MODULE.write_json(root / 'published-index.json', index)
+            result = MODULE.compare_published(root, [entry], {'one': document})
+            self.assertEqual(result['repositories'], 1)
+            self.assertEqual(len(result['sha256']), 64)
+            index['repos'][0]['stats']['files'] = 1
+            MODULE.write_json(root / 'published-index.json', index)
+            with self.assertRaisesRegex(RuntimeError, 'deployed files differs'):
+                MODULE.compare_published(root, [entry], {'one': document})
 
     def test_atomic_json_and_hash(self):
         with tempfile.TemporaryDirectory() as directory:

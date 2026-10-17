@@ -18,6 +18,8 @@ import sys
 import time
 
 HERE = Path(__file__).resolve().parent
+FIX_STAGES = ['baseline', 'fix1', 'fix2', 'fix3', 'fix4', 'fix5']
+ARCHIVE_STAGES = [*FIX_STAGES, 'corrected']
 
 
 def digest(path):
@@ -179,7 +181,7 @@ HAND_CHECKS = [
 
 
 def archived_stages(work, entries):
-    stages = ['baseline', 'fix1', 'fix2', 'fix3', 'fix4', 'fix5']
+    stages = ARCHIVE_STAGES
     complete = [stage for stage in stages if (work / stage / 'index.json').is_file()]
     if not complete or complete[0] != 'baseline':
         raise RuntimeError('a complete baseline is required')
@@ -206,8 +208,45 @@ def archived_stages(work, entries):
     return complete, documents, metadata
 
 
+
+def compare_published(work, entries, documents):
+    """Validate the optional cached deployed index against this final measured cohort."""
+    path = work / 'published-index.json'
+    if not path.is_file():
+        return None
+    published = {row['name']: row for row in json.loads(path.read_text())['repos']}
+    semantic_fields = ['config', 'files', 'edges', 'package_entries', 'modules', 'module_edges',
+                       'cycles', 'type_only_cycles', 'test_coverage', 'imports', 'import_resolution',
+                       'unresolved', 'external_nodes', 'external_edges', 'summary', 'findings',
+                       'cochange', 'hotspots', 'symbols', 'surface', 'grabbags']
+    full_matches = []
+    for entry in entries:
+        name, document = entry['name'], documents[entry['name']]
+        row, measured = published[name], stats(document)
+        if row['commit'] != entry['commit'] or row['status'] != 'ok':
+            raise RuntimeError(f'{name}: deployed snapshot has different source provenance')
+        actual = {'files': measured['files'], 'modules': measured['modules'], 'imports': measured['edges'],
+                  'module_cycles': measured['module_cycles'], 'largest_module_cycle': measured['largest_module_cycle'],
+                  'file_cycles': sum(cycle['level'] == 'file' for cycle in document['cycles']),
+                  'forbidden': document['summary']['forbidden'], 'import_resolution': measured['import_resolution'],
+                  'external_packages': measured['external_packages'],
+                  'findings': {kind: sum(finding['kind'] == kind for finding in document['findings'])
+                               for kind in {finding['kind'] for finding in document['findings']}}}
+        for key, value in actual.items():
+            if value != row['stats'].get(key):
+                raise RuntimeError(f'{name}: deployed {key} differs from corrected measurement')
+        full = work / f'published-{name}.json'
+        if full.is_file():
+            saved = json.loads(full.read_text())
+            if any(saved.get(key) != document.get(key) for key in semantic_fields):
+                raise RuntimeError(f'{name}: deployed semantic graph differs from corrected measurement')
+            full_matches.append(name)
+    return {'sha256': digest(path), 'repositories': len(entries), 'full_semantic_matches': full_matches,
+            'engine_commit': json.loads(path.read_text()).get('archgraph', {}).get('commit', 'unavailable')}
+
+
 def report(work, entries, output):
-    stages = ['baseline', 'fix1', 'fix2', 'fix3', 'fix4', 'fix5']
+    stages = FIX_STAGES
     complete, documents, metadata = archived_stages(work, entries)
     if 'fix2' not in complete:
         raise RuntimeError('report requires complete baseline, fix1 and fix2 snapshots')
@@ -222,6 +261,25 @@ def report(work, entries, output):
              '**Counting units:** edges are canonical file-dependency records, not source import statements. One named import can resolve to several defining files and increase the edge count. Runtime/lazy/type/re-export columns in the architecture tables count edges, and legacy static/dynamic names are mapped to runtime/lazy for comparison. The separate resolution table counts source specifier occurrences only when a ledger exists; missing coverage is never inferred from graph edges or the old unresolved counter. External nodes and edges stay outside internal module metrics.', '',
              'The baseline already excluded type-only and dynamic edges from runtime cycles. Fix 1 additionally excludes structural re-exports, so an observed decrease is not automatically a newly detected type-only cycle. Deferred SCCs containing an existing runtime SCC are reported separately from wholly non-runtime SCCs. JavaScript re-exports can still cause module evaluation: these results describe the requested graph policy, not proof that all runtime execution is acyclic.', '',
              '## Engine provenance', '', '| Stage | Source commit | Binary SHA-256 |', '| --- | --- | --- |']
+    if latest == 'corrected':
+        correction = ['## Python exact-case correction', '',
+                      'The original baseline/fix1–fix5 measurements were collected on macOS. A case-insensitive filesystem lookup in the Python resolver treated differently cased names as existing module files and introduced synthetic capitalized paths. The corrected stage requires exact path-component spelling and rescans all 23 pins. Its counts are authoritative for the final report and README. Earlier archives remain unchanged as historical engine measurements; synthetic-path removal must not be credited as architectural improvement.', '',
+                      '| Repository | Files: fix5 → corrected | Edges: fix5 → corrected | Removed synthetic paths (examples) |',
+                      '| --- | ---: | ---: | --- |']
+        for entry in entries:
+            before, after = documents['fix5'][entry['name']], documents['corrected'][entry['name']]
+            if before['files'] == after['files'] and before['edges'] == after['edges']:
+                continue
+            kept = {file['path'] for file in after['files']}
+            removed = [file['path'] for file in before['files'] if file['path'] not in kept]
+            examples = ', '.join('`' + path + '`' for path in removed[:3]) or 'edge-resolution changes only'
+            correction.append(f"| {entry['name']} | {len(before['files'])} → {len(after['files'])} | {len(before['edges'])} → {len(after['edges'])} | {examples} |")
+        deployed = compare_published(work, entries, documents['corrected'])
+        if deployed is not None:
+            correction += ['', f"Cross-platform check against the **prior Linux deployment**, source `{deployed['engine_commit']}`: all {deployed['repositories']} corrected repository counts, module/file-cycle counts, findings, import-resolution ledgers and external-package counts exactly match that deployment's cached index (`published-index.json`, SHA-256 `{deployed['sha256']}`). Full semantic JSON also matches the cached published graphs for {', '.join(deployed['full_semantic_matches']) or 'no separately cached repositories'}. This validates platform consistency after the correction, not the status of a new deployment or an architectural improvement claim."]
+        # Insert before the engine-provenance heading and keep its table contiguous.
+        position = lines.index('## Engine provenance')
+        lines[position:position] = correction + ['']
     for stage in complete:
         fingerprints = {(row['fingerprint']['engine_commit'], row['fingerprint']['engine_sha256']) for row in metadata[stage].values()}
         if len(fingerprints) != 1:
@@ -330,11 +388,15 @@ def report(work, entries, output):
                     explanation = ''
                 explanation += ' Fix4 changes type-only or resolved runtime links; exact counts and pinned source witnesses are listed in the transition table below.'
             if 'fix5' in documents:
-                classifications = [evidence for evidence in documents['fix5'][name].get('grabbags', []) if set(evidence['members']) == members or set(evidence['members']) <= members]
+                classifications = [evidence for evidence in documents[latest][name].get('grabbags', []) if set(evidence['members']) == members or set(evidence['members']) <= members]
                 if classifications:
                     if explanation == 'Unchanged through measured stages.':
                         explanation = ''
                     explanation += ' Fix5 verifies a cycle via grab-bag; residual real cycles are retained. See the complete/partial evidence table below.'
+            if latest == 'corrected' and cycle_disposition(members, documents['corrected'][name]) != cycle_disposition(members, documents['fix5'][name]):
+                if explanation == 'Unchanged through measured stages.':
+                    explanation = ''
+                explanation += ' Exact-case Python resolution correction changes this disposition; this is collector correctness, not an architectural change.'
             label = ', '.join(sorted(members)[:3]) + (', …' if len(members) > 3 else '')
             lines.append(f"| {name} #{number}: `{label}` | {len(members)} | " + ' | '.join(dispositions) + f' | {explanation} |')
     if 'fix4' in documents:
@@ -371,17 +433,18 @@ def report(work, entries, output):
                         witnesses.append(f'[{label}]({url}) ({reason}; target `{edge["to"]}`)')
                 lines.append(f'| {name} #{number} | {prior} → {current} | {counts} | ' + '<br>'.join(witnesses) + ' |')
     if 'fix4' in documents:
-        all_modules = [(name, module) for name, document in documents['fix4'].items() for module in document['modules']]
+        calibration_stage = 'corrected' if 'corrected' in documents else 'fix4'
+        all_modules = [(name, module) for name, document in documents[calibration_stage].items() for module in document['modules']]
         def candidates(cohesion=.2, fanin=5, density=.5, minimum_files=2):
             return [(name, module) for name, module in all_modules if module['files'] >= minimum_files
                     and module['cohesion'] is not None and module['cohesion'] < cohesion
                     and module['weighted_ca'] >= fanin
                     and module['internal_edges'] / module['files'] < density]
         proposed = candidates()
-        cyclic = {name: set().union(*module_cycles(document)) if module_cycles(document) else set()
-                  for name, document in documents['fix4'].items()}
+        cyclic = {name: set().union(*module_cycles(document), *(set(evidence['members']) for evidence in document.get('grabbags', [])))
+                  for name, document in documents[calibration_stage].items()}
         in_cycles = sum(module['id'] in cyclic[name] for name, module in proposed)
-        lines += ['', '## Grab-bag candidate calibration (post-fix4)', '',
+        lines += ['', f'## Grab-bag candidate calibration ({calibration_stage})', '',
                   f'The chosen defaults (cohesion <0.2, weighted fan-in ≥5, raw internal edges/file <0.5, at least two files) select {len(proposed)} candidates across all 23 repositories; {in_cycles} are currently cyclic. This is candidate calibration, not a claim that all are grab-bags. Benign contexts, enums and two-file barrel modules can satisfy the metrics. Reclassification still requires the fix5 split-graph proof.', '',
                   '| One threshold changed | Candidates across 23 repositories |', '| --- | ---: |',
                   f'| Chosen defaults | {len(proposed)} |',
@@ -396,7 +459,7 @@ def report(work, entries, output):
                   '| Repository | Original modules | Candidate modules | Result | Residual SCC sizes | File witnesses |',
                   '| --- | ---: | --- | --- | --- | --- |']
         for entry in entries:
-            document = documents['fix5'][entry['name']]
+            document = documents[latest][entry['name']]
             for evidence in document.get('grabbags', []):
                 result = 'partial; real residual cycles retained' if evidence['remaining_cycles'] else 'complete; no residual module SCC'
                 residual = ', '.join(str(len(members)) for members in evidence['remaining_cycles']) or 'none'
@@ -453,15 +516,15 @@ def report(work, entries, output):
             for field in ['files', 'edges', 'imports', 'import_resolution', 'unresolved', 'external_nodes', 'external_edges']:
                 if documents['fix5'][entry['name']].get(field) != documents['fix4'][entry['name']].get(field):
                     raise RuntimeError(f"{entry['name']}: fix5 unexpectedly changes {field} inputs")
-        final = [documents['fix5'][entry['name']] for entry in entries[:20]]
+        final = [documents[latest][entry['name']] for entry in entries[:20]]
         complete_reclassifications = sum(stats(document)['grabbag_complete'] for document in final)
         partial_reclassifications = sum(stats(document)['grabbag_reclassifications'] for document in final) - complete_reclassifications
         lines += ['## Final interpretation', '',
                   f'The published cohort has {complete_reclassifications} complete and {partial_reclassifications} partial grab-bag reclassifications. Real residual runtime SCCs remain reported. SCC count can rise when one component splits: Outline changes from one 40-module SCC to components of 11, 22 and five modules. The aggregate component count is not a monotonic quality score.', '',
                   'Through fix4, no additional baseline runtime SCC was fully removed solely by type-only refinement, test exclusions or resolver changes. The complete baseline Fastify SCC disappearance is the structural re-export policy change; shrinkage and the Zulip expansion are listed individually above. Low-confidence exclusions limit runtime-coverage claims.', '',
-                  'All 23 final graphs preserve exactly the fix4 files, file edges, import ledgers, unresolved records and external arrays: fix5 changes cycle interpretation, not those inputs.', '',
+                  ('The archived fix5 graphs preserve exactly the fix4 input arrays. The corrected final stage changes Python resolution inputs as documented above; removing synthetic paths is a collector correctness fix, not an architectural improvement.' if latest == 'corrected' else 'All 23 final graphs preserve exactly the fix4 files, file edges, import ledgers, unresolved records and external arrays: fix5 changes cycle interpretation, not those inputs.'), '',
                   '## Verification and reproduction', '',
-                  'All 23 pinned repositories completed baseline and fixes 1–5. Report generation checks full-cohort coverage, manifest commits, clean scan provenance and archived graph hashes. README generation requires the complete verified fix5 cohort and checks that each suggested cut is an existing runtime edge.', '',
+                  'All 23 pinned repositories completed baseline and fixes 1–5, plus any separately listed correction stage. Report generation checks full-cohort coverage, manifest commits, clean scan provenance and archived graph hashes. README generation uses the latest complete verified final cohort, including the corrected stage when present, and checks that each suggested cut is an existing runtime edge.', '',
                   '```sh', 'python3 -B -m unittest discover -s showcase/tests',
                   'python3 -B showcase/edge_quality.py --report-output showcase/edge-quality-report.md',
                   'python3 -B showcase/edge_quality.py --readme-output README.md', '```', '',
@@ -564,7 +627,11 @@ def publish_readme(work, entries, output):
     complete, documents, _ = archived_stages(work, entries)
     if 'fix5' not in complete:
         raise RuntimeError('README generation requires the complete verified fix5 cohort')
-    output.write_text(readme_text((HERE.parent / 'README.md').read_text(), entries[:20], documents['fix5']))
+    text = readme_text((HERE.parent / 'README.md').read_text(), entries[:20], documents[complete[-1]])
+    if complete[-1] == 'corrected':
+        text = text.replace('Generated from the final pinned scans in ',
+                            'Generated from the final pinned scans, including the exact-case Python resolver correction, in ', 1)
+    output.write_text(text)
 
 
 def scan(entry, args, binary_hash):
@@ -623,7 +690,7 @@ def main():
     parser.add_argument('--stage')
     outputs = parser.add_mutually_exclusive_group()
     outputs.add_argument('--report-output', type=Path, help='Generate a report from complete archived stages; no scanning')
-    outputs.add_argument('--readme-output', type=Path, help='Generate README numeric rows from the complete verified fix5 cohort')
+    outputs.add_argument('--readme-output', type=Path, help='Generate README rows from the latest complete verified final cohort, including corrections')
     parser.add_argument('--work', type=Path, default=Path('/private/tmp/archgraph-edge-quality'))
     parser.add_argument('--cache', type=Path, default=Path('/private/tmp/archgraph-hotspot-validation'))
     parser.add_argument('--manifest', type=Path, default=HERE / 'repos.json')

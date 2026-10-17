@@ -146,7 +146,7 @@ archgraph on 20 open-source projects at pinned commits. Each name opens its live
 |---|--:|--:|---|
 | [vercel/next.js](https://dogebonker.github.io/archgraph/next.js.html)<br><sub><code>packages/next</code></sub> | 1,252 | 43 modules | review <code>src/cli/next-info.ts → src/server/config.ts</code> |
 | [nestjs/nest](https://dogebonker.github.io/archgraph/nest.html) | 666 | 15 modules | review <code>packages/core/adapters/http-adapter.ts → packages/core/helpers/cookies/serialize-cookie.ts</code> |
-| [django/django](https://dogebonker.github.io/archgraph/django.html) | 716 | 30 modules | review <code>django/apps/config.py → django/core/exceptions.py</code> |
+| [django/django](https://dogebonker.github.io/archgraph/django.html) | 706 | 30 modules | review <code>django/apps/config.py → django/core/exceptions.py</code> |
 | [typeorm/typeorm](https://dogebonker.github.io/archgraph/typeorm.html)<br><sub><code>packages/typeorm/src</code></sub> | 496 | 27 modules | review <code>driver/DriverFactory.ts → driver/aurora-mysql/AuroraMysqlDriver.ts</code> |
 | [outline/outline](https://dogebonker.github.io/archgraph/outline.html) | 2,231 | 22 modules | review <code>plugins/azure/server/auth/azure.ts → server/commands/accountProvisioner.ts</code> |
 | [payloadcms/payload](https://dogebonker.github.io/archgraph/payload.html)<br><sub><code>packages/payload</code></sub> | 817 | 21 modules | review <code>src/admin/initAdminContext.ts → src/index.ts</code> |
@@ -157,15 +157,15 @@ archgraph on 20 open-source projects at pinned commits. Each name opens its live
 | [trpc/trpc](https://dogebonker.github.io/archgraph/trpc.html)<br><sub><code>packages/server</code></sub> | 76 | 5 modules | review <code>src/unstable-core-do-not-import/error/TRPCError.ts → src/unstable-core-do-not-import/utils.ts</code> |
 | [vitejs/vite](https://dogebonker.github.io/archgraph/vite.html)<br><sub><code>packages/vite</code></sub> | 135 | 5 modules | review <code>src/node/optimizer/index.ts → src/node/constants.ts</code> |
 | [zulip/zulip](https://dogebonker.github.io/archgraph/zulip.html) | 775 | 19 modules | review <code>analytics/lib/counts.py → zerver/lib/timestamp.py</code> |
-| [sqlalchemy/sqlalchemy](https://dogebonker.github.io/archgraph/sqlalchemy.html)<br><sub><code>lib</code></sub> | 245 | 3 modules | review <code>sqlalchemy/sql/sqltypes.py → sqlalchemy/engine/processors.py</code> |
-| [celery/celery](https://dogebonker.github.io/archgraph/celery.html) | 164 | 5 modules | review <code>celery/app/trace.py → celery/worker/state.py</code> |
-| [scrapy/scrapy](https://dogebonker.github.io/archgraph/scrapy.html) | 198 | 18 modules | review <code>scrapy/core/downloader/__init__.py → scrapy/__init__.py</code> |
+| [sqlalchemy/sqlalchemy](https://dogebonker.github.io/archgraph/sqlalchemy.html)<br><sub><code>lib</code></sub> | 240 | 3 modules | review <code>sqlalchemy/sql/sqltypes.py → sqlalchemy/engine/processors.py</code> |
+| [celery/celery](https://dogebonker.github.io/archgraph/celery.html) | 161 | 5 modules | review <code>celery/app/trace.py → celery/worker/state.py</code> |
+| [scrapy/scrapy](https://dogebonker.github.io/archgraph/scrapy.html) | 194 | 18 modules | review <code>scrapy/core/downloader/__init__.py → scrapy/__init__.py</code> |
 | [pydantic/pydantic](https://dogebonker.github.io/archgraph/pydantic.html) | 79 | 8 modules | review <code>pydantic/_internal/_dataclasses.py → pydantic/fields.py</code> |
 | [fastapi/fastapi](https://dogebonker.github.io/archgraph/fastapi.html) | 52 | 9 modules | review <code>fastapi/telemetry/_asgi.py → fastapi/__init__.py</code> |
 | [pallets/flask](https://dogebonker.github.io/archgraph/flask.html) | 24 | none | no module cycles |
 | [encode/httpx](https://dogebonker.github.io/archgraph/httpx.html) | 23 | none | no module cycles |
 
-<sub>Generated from the final pinned scans in [showcase/repos.json](showcase/repos.json). Runtime cycles now exclude lazy, type-only and structural re-export edges; named imports resolve through barrels. Default test/generated/vendor/example exclusions change scan scope and can exclude real source in folders such as Next.js `src/build` or Django `test`. Include overrides restore file coverage; test-classified files still stay outside runtime cycles. [The measured comparison and caveats](showcase/edge-quality-report.md) document the methodology change. Suggested cuts are existing break-set edges from the largest remaining module SCC, to review rather than apply automatically. Rebuild with [`showcase/build.sh`](showcase/).</sub>
+<sub>Generated from the final pinned scans, including the exact-case Python resolver correction, in [showcase/repos.json](showcase/repos.json). Runtime cycles now exclude lazy, type-only and structural re-export edges; named imports resolve through barrels. Default test/generated/vendor/example exclusions change scan scope and can exclude real source in folders such as Next.js `src/build` or Django `test`. Include overrides restore file coverage; test-classified files still stay outside runtime cycles. [The measured comparison and caveats](showcase/edge-quality-report.md) document the methodology change. Suggested cuts are existing break-set edges from the largest remaining module SCC, to review rather than apply automatically. Rebuild with [`showcase/build.sh`](showcase/).</sub>
 
 ## Gate pull requests
 
