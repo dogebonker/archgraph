@@ -5,6 +5,7 @@ pub mod cochange;
 pub mod codeowners;
 pub mod collect;
 pub mod compat;
+pub mod context;
 pub mod diff;
 pub mod findings;
 pub mod grabbag;

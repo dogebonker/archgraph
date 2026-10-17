@@ -20,7 +20,8 @@
         "hotspots",
         "impact",
         "surface",
-        "package-splits"
+        "package-splits",
+        "context"
       ]
     }
   },
@@ -131,6 +132,18 @@
       },
       "then": {
         "$ref": "#/$defs/package-splits"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "context"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/context"
       }
     }
   ],
@@ -3545,6 +3558,126 @@
                     ]
                   }
                 }
+              }
+            }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "required": [
+        "schema",
+        "kind",
+        "task",
+        "budget",
+        "used_tokens",
+        "overhead_tokens",
+        "entries",
+        "omitted",
+        "limitations"
+      ],
+      "properties": {
+        "schema": {
+          "const": "archgraph/v1.1"
+        },
+        "kind": {
+          "const": "context"
+        },
+        "task": {
+          "type": "string"
+        },
+        "budget": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "used_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overhead_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "tier",
+              "path",
+              "reason",
+              "tokens",
+              "mode",
+              "content",
+              "depth",
+              "score"
+            ],
+            "properties": {
+              "tier": {
+                "enum": [
+                  "constraints",
+                  "must-read",
+                  "should-read",
+                  "skim"
+                ]
+              },
+              "path": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "mode": {
+                "enum": [
+                  "rules",
+                  "body",
+                  "exports"
+                ]
+              },
+              "content": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "score": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "omitted": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "reason"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
               }
             }
           }

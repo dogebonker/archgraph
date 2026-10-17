@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt": [
+      {
+        "command": "python3 integrations/context-hook.py cursor",
+        "timeout": 10,
+        "failClosed": false
+      }
+    ],
+    "sessionStart": [
+      {
+        "command": "python3 integrations/context-hook.py cursor-session",
+        "timeout": 10,
+        "failClosed": false
+      }
+    ]
+  }
+}

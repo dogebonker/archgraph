@@ -104,6 +104,8 @@ The map is one HTML file with no network requests. Zoom until files appear, drag
 
 Find folders that could become packages with `archgraph package-splits graph.json --root .`. Suggestions distinguish free boundaries from cheap cuts, rank importing modules × file count, check existing workspaces, and simulate the remaining cycles. Save an enriched graph with `--output packages.json`, then `archgraph render packages.json -o packages.html` to highlight candidate islands. These are **import-level** suggestions; package exports, builds, tests, and environment assumptions still need review. See [package splits](docs/guide.md#package-splits).
 
+Prepare an agent reading plan with `archgraph context --task "Fix billing tax rounding" --files src/billing/tax.ts --budget 40k`. It packs rules, imports/importers and saved export summaries into an estimated budget, with reasons and omissions. Use `--format markdown` for a pasteable plan; scan with `--symbols` for summaries. Includes an [archgraph-context skill](skills/archgraph-context/SKILL.md) and opt-in Claude Code/Cursor adapters; see [context pruning](docs/guide.md#context-pruning).
+
 Add a `CODEOWNERS` file and the report shows declared responsibility by file and module. Ownership qualifies misplaced-file findings: conflicting team boundaries keep the dependency evidence and require review before a move. Shared ownership and incomplete coverage stay visible.
 
 ```sh

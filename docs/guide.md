@@ -50,7 +50,7 @@ The collector runs inside the scanned repository:
 
 ## Commands
 
-`scan`, `report`, `history` and `impact` run collectors. `infer-layout` reads a saved graph to draft rules without running collectors. Other analysis commands read a scan document and recompute modules, metrics, cycles, verdicts and findings from its files, edges and config with the same code, so their output agrees with the rules in effect.
+`scan`, `report`, `history` and `impact` run collectors. `infer-layout` drafts rules and `context` selects reading context from saved graphs without running collectors. Other analysis commands read a scan document and recompute modules, metrics, cycles, verdicts and findings from its files, edges and config with the same code, so their output agrees with the rules in effect.
 
 **scan** writes the scan document (`kind: scan`).
 
@@ -159,6 +159,26 @@ archgraph infer-layout graph.json --max-rules 0           # layers only
 ```
 
 These thresholds limit over-fitting; zero observed imports still do not establish an intended boundary. Review the draft before making it a CI policy. No scan-schema or rules-format migration is required.
+
+## Context pruning
+
+```sh
+archgraph scan . --symbols -o .archgraph/archgraph.json
+archgraph context --task "Fix billing tax rounding" --files src/billing/tax.ts --budget 40k
+archgraph context --graph graph.json --root . --task "Fix billing tax rounding" --files src/billing/tax.ts --symbols TaxRate --budget 20k --depth 3 --format markdown
+```
+
+`context` reads v1 or v1.1 scans and prints a standalone v1.1 JSON reading plan (`kind: context`); `--format markdown` prints a pasteable plan. It does not modify files or run collectors. Use the source root corresponding to the saved graph. Current files supply sizes and layouts; graph dependencies and export names reflect the saved scan, so rescan after structural changes. JSON contains ordered `entries` with `tier`, `path`, `reason`, `tokens`, `mode`, optional inline `content`, `depth` and `score`, plus omissions and limitations. Body entries name files for the agent to open; they do not inline their bodies.
+
+Explicit files seed the search; task words match paths, and `--symbols` matches saved exported names. At most 20 automatic seeds are added. The selector follows imports and importers (every recorded kind) to `--depth` (default 3), using inverse depth, same-module, and available saved hotspot/co-change evidence. Explicit files rank first. Dependency directories are excluded; tests, generated files and support content are downranked unless explicitly named. It never opens an `index.ts` body or a recorded pure barrel: recorded direct consumers can redirect a barrel seed to the definitions they actually use, without expanding every re-export.
+
+Root and seed-ancestor `layout.yaml` files and the saved graph's embedded rules come first. Nested layouts are constraint evidence, not proof that the saved graph enforced them. Different on-disk and saved rules are both labeled. Constraints that exceed the budget cause an error with the required estimate. Then `must-read` covers seeds and distance 1, `should-read` covers same-module distance 2, and `skim` uses export names for other distance-2 and deeper files. Oversized bodies fall back to saved export names. These are names, **not full type signatures**; without symbol/surface evidence such summaries are omitted explicitly.
+
+Budgets accept positive integers or decimal suffixes `k` (1000) and `m` (1000000). Estimated tokens use UTF-8 bytes / 4, rounded up, including task/framing, mandatory constraints, selected bodies, and inline export summaries. Greedy packing guarantees `used_tokens <= budget` for this estimate, not an exact model tokenizer limit or the serialized JSON envelope. Large required files may fit only as exports or be omitted. Missing dynamic dependencies and stale graph evidence still require judgment.
+
+The project skill is [archgraph-context](../skills/archgraph-context/SKILL.md). Editor integration is opt-in: merge [Claude settings](../integrations/claude-context.settings.json) into project `.claude/settings.json`, or [Cursor hooks](../integrations/cursor-context.hooks.json) into `.cursor/hooks.json` and copy [the rule](../integrations/cursor-context.mdc) to `.cursor/rules/archgraph-context.mdc`. Keep `integrations/context-hook.py` in the project. Install the skill in the editor's project skill directory when desired. Nothing is installed automatically.
+
+Claude `UserPromptSubmit` receives a compact, constraints-first context handoff and artifact paths; it must read the plan. Cursor `beforeSubmitPrompt` prepares artifacts but cannot inject context. Its asynchronous `sessionStart` guidance is best effort; the always-apply rule reruns the CLI when an artifact's workspace, task, generation or seeds cannot be verified. Hook subprocesses time out after eight seconds and fail softly; failure invalidates previous context for that conversation. `ARCHGRAPH_BINARY`, `ARCHGRAPH_CONTEXT_GRAPH`, `ARCHGRAPH_CONTEXT_BUDGET`, and optional `ARCHGRAPH_CONTEXT_FILES` (JSON array for Claude seeds) configure the adapter. Missing graphs do not block normal editing. See [the preregistered PR benchmark](../benchmarks/CONTEXT.md) for recall methodology and results.
 
 ## Package splits
 

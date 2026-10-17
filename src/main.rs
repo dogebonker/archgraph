@@ -19,6 +19,8 @@ use archgraph::{cochange, codeowners, diff, history, modules, render, rules, sim
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use sha2::Digest;
 
+#[path = "cli/context.rs"]
+mod context_cli;
 #[path = "cli/hotspots.rs"]
 mod hotspots_cli;
 #[path = "cli/impact.rs"]
@@ -80,6 +82,8 @@ enum Cmd {
     InferLayout(infer_layout_cli::InferLayoutArgs),
     /// Rank folders that could become packages, with cuts and cycle evidence
     PackageSplits(package_splits_cli::PackageSplitsArgs),
+    /// Select ordered source context within an estimated token budget
+    Context(context_cli::ContextArgs),
     /// List default file exclusions and their categories
     ShowExcludes,
     /// List imports whose file or external package could not be resolved
@@ -329,6 +333,7 @@ fn main() -> ExitCode {
         Cmd::Surface(args) => surface_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::InferLayout(args) => infer_layout_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::PackageSplits(args) => package_splits_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Context(args) => context_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::ShowExcludes => show_excludes().map(|()| ExitCode::SUCCESS),
         Cmd::Unresolved(args) => unresolved(args).map(|()| ExitCode::SUCCESS),
     };
