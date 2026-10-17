@@ -66,14 +66,14 @@ pub fn validate(doc: &Value) {
     }
 }
 
-/// Output with the `generated_at` line removed: the only part two scans of one tree in one
-/// checkout may differ in (`git` is the same within one checkout).
+/// Ignore timestamp and Git-relative location when comparing scans of copied fixtures.
 pub fn stable(stdout: &str) -> String {
-    stdout
-        .lines()
-        .filter(|l| !l.contains("\"generated_at\""))
-        .collect::<Vec<_>>()
-        .join("\n")
+    let mut doc: Value = serde_json::from_str(stdout).unwrap();
+    if let Some(source) = doc.get_mut("source").and_then(Value::as_object_mut) {
+        source.remove("generated_at");
+        source.remove("scan_root");
+    }
+    serde_json::to_string_pretty(&doc).unwrap()
 }
 
 /// Existing graph assertions retain targets, kinds, weights and verdicts while source-evidence

@@ -155,6 +155,17 @@ fn ts_basic_output_is_byte_stable_and_location_free() {
     assert_eq!(graph_data(&first), graph_data(&moved));
 }
 
+#[test]
+fn stable_fixture_comparison_ignores_provenance_but_preserves_graph_changes() {
+    let first = json!({"source":{"generated_at":"first","scan_root":"original"},"edges":[{"from":"a.ts","to":"b.ts"}]}).to_string();
+    let mut copied: Value = serde_json::from_str(&first).unwrap();
+    copied["source"]["generated_at"] = json!("second");
+    copied["source"]["scan_root"] = json!("copied");
+    assert_eq!(stable(&first), stable(&copied.to_string()));
+    copied["edges"][0]["to"] = json!("changed.ts");
+    assert_ne!(stable(&first), stable(&copied.to_string()));
+}
+
 fn copy_dir(from: &std::path::Path, to: &std::path::Path) {
     fs::create_dir_all(to).unwrap();
     for entry in fs::read_dir(from).unwrap() {
