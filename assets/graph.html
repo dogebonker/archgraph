@@ -125,6 +125,7 @@ kbd { position: absolute; right: 14px; min-width: 18px; padding: 0 5px; border-r
 .tbtn[aria-pressed="true"] { color: #fff; background: rgba(10, 132, 255, .9); }
 .tbtn[aria-expanded="true"] { background: rgba(255, 255, 255, .16); }
 .tools { display: inline-flex; align-items: center; gap: 2px; padding: 4px; }
+#t-churn[hidden], #churn-legend[hidden] { display: none; }
 /* Labels show where they fit: the tools capsule drops them first, then the filters. */
 .no-tool-lbl .tools .lbl, .no-seg-lbl .seg .lbl { display: none; }
 .no-tool-lbl .tools .tbtn, .no-seg-lbl .seg .tbtn { min-width: 32px; padding: 0 8px; }
@@ -527,6 +528,8 @@ p { margin: 6px 0; }
     <div class="tools glass capsule">
       <button type="button" class="tbtn" id="t-types" aria-pressed="false" aria-label="Hide type-only imports" title="Hide type-only imports">
         <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3M10.5 12h3M17 12h3"/></svg><span class="lbl">Type-only</span></button>
+      <button type="button" class="tbtn" id="t-churn" hidden aria-pressed="false" aria-label="Churn view" title="Size and color files by commit frequency; module fills show their most changed file">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16M7 15l4-5 4 2 5-7"/></svg><span class="lbl">Churn</span></button>
       <div class="menu" id="hide">
         <button type="button" class="tbtn" id="hide-btn" aria-expanded="false" aria-controls="hide-list" aria-haspopup="true" aria-label="Hide modules" title="Hide modules">
           <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12s3-6 8.5-6c1.6 0 3 .5 4.2 1.2M20.5 12s-3 6-8.5 6c-1.6 0-3-.5-4.2-1.2"/><path d="M4.5 19.5l15-15"/></svg><span class="lbl">Hide modules</span><span class="badge" id="hide-sum" hidden></span></button>
@@ -556,6 +559,7 @@ p { margin: 6px 0; }
             <span><i class="sw ln move"></i>suggested move</span>
             <span><i class="sw ln co"></i>changed together</span>
             <p>Ring colours are a reading aid, not a score. Drag a module or a file to move it; with a module focused, Shift and an arrow key moves it.</p>
+            <p id="churn-legend" hidden>Churn view: larger, warmer file discs changed more often. Module fill size and color show the highest file churn in that module. Outer rings still show architecture checks. Churn is normalized within the scanned files and selected history window.</p>
           </div>
         </div>
       </div>
@@ -615,6 +619,45 @@ const dirname = p => p.slice(0, Math.max(p.lastIndexOf("/"), 0));
 const basename = p => p.slice(p.lastIndexOf("/") + 1);
 const TAU = Math.PI * 2;
 
+/* ---------- history context helpers ---------- */
+function churnMark(value) {
+  const n = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
+  return { scale: 1 + 2 * n, color: `hsl(${Math.round(210 - 180 * n)}, 85%, 60%)` };
+}
+function hotspotSummary(h) {
+  return `Changed ${count(h.commits, "time", "times")} by ${count(h.authors, "author", "authors")}` +
+    (h.cycle_size ? `; in a ${h.cycle_size}-module cycle.` : "; outside module cycles.");
+}
+function provenanceLines(f) {
+  const p = f.provenance, c = f.introduced_by;
+  if (!p && !c && f.age_days == null) return [];
+  const lines = [];
+  if (p && p.status === "verified-transition" && c) {
+    lines.push(`Verified introduction: ${c.commit.slice(0, 12)} by ${c.author}${c.email ? ` <${c.email}>` : ""} on ${c.committed_at}.`);
+    lines.push(`Age: ${count(f.age_days ?? c.age_days, "day", "days")}. ${c.subject}`);
+    if ((f.age_days ?? c.age_days) <= 7) lines.push("Recent architecture change: verified introduction within the last seven days of Git history.");
+    if (c.pull_request != null) lines.push(`PR #${c.pull_request} inferred from the commit message; identity and PR ownership are not verified.`);
+  } else {
+    lines.push(p && p.status === "present-at-boundary"
+      ? "Introduction unknown: already present at the inspected history boundary."
+      : `Introduction unknown${p ? ` (${p.status})` : ": no verified transition recorded"}.`);
+    if (f.age_days != null) lines.push(`Recorded age: ${count(f.age_days, "day", "days")}; introduction is unverified.`);
+  }
+  if (p) {
+    lines.push(`History method: ${p.method}; ${count(p.scans, "scan", "scans")}; range ${p.from || "repository boundary"} → ${p.to}.`);
+    if (p.previous_commit) lines.push(`Previous absent commit: ${p.previous_commit}.`);
+    if (p.closing_edge) lines.push(`Cycle-closing import: ${p.closing_edge.from} → ${p.closing_edge.to}.`);
+    for (const limit of p.limitations || []) lines.push(limit);
+  }
+  return lines;
+}
+function findingAge(f) {
+  if (f.provenance?.status !== "verified-transition") return "";
+  const age = f.age_days ?? f.introduced_by?.age_days;
+  return age == null ? "" : (age <= 7 ? "new · " : "") + count(age, "day", "days");
+}
+/* ---------- end history context helpers ---------- */
+
 /* ---------- header ---------- */
 const mods = doc.modules, N = mods.length;
 const forbidden = doc.edges.filter(e => e.verdict === "forbidden").length;
@@ -657,9 +700,17 @@ $("stats-text").textContent =
 /* ---------- model ---------- */
 const modIndex = new Map(mods.map((m, i) => [m.id, i]));
 const files = doc.files.map((f, i) => ({ i, path: f.path, name: basename(f.path), mod: modIndex.get(f.module),
-  barrel: f.barrel, x: 0, y: 0, ins: [], outs: [] }));
+  barrel: f.barrel, owners: f.owners || [], x: 0, y: 0, ins: [], outs: [] }));
 const F = files.length;
 const fileIndex = new Map(files.map(f => [f.path, f.i]));
+const hotspotFiles = doc.hotspots ? doc.hotspots.files : [];
+const hotspotByPath = new Map(hotspotFiles.map(h => [h.path, h]));
+const moduleChurn = mods.map(() => 0);
+for (const h of hotspotFiles) if (modIndex.has(h.module)) {
+  const i = modIndex.get(h.module);
+  moduleChurn[i] = Math.max(moduleChurn[i], h.churn || 0);
+}
+let churnView = false;
 const modFiles = mods.map(() => []);
 for (const f of files) modFiles[f.mod].push(f.i);
 
@@ -980,7 +1031,10 @@ const KIND_ADVICE = {
     "Depend on an abstraction the stable module owns, or move the code it needs."],
 };
 function advice(kind, f) {
-  const a = kind === "misplaced-file" && f && !f.suggestion ? [KIND_ADVICE[kind][0],
+  const a = kind === "misplaced-file" && f && f.evidence.ownership && f.evidence.ownership.assessment === "conflicts" ? [
+    "Dependencies point toward another module, while declared ownership marks a different team boundary.",
+    "Review the ownership boundary with the named owners before proposing a move."]
+    : kind === "misplaced-file" && f && !f.suggestion ? [KIND_ADVICE[kind][0],
     "No move is suggested: a file of that name already sits at the destination, or the destination would fall in another module. Pick a new name there and run archgraph simulate on that move before proposing it."]
     : KIND_ADVICE[kind];
   if (!a) return [];
@@ -1087,6 +1141,26 @@ const findingsOfModule = mods.map(() => []), findingsOfFile = new Map();
 for (const fd of findings) {
   for (const m of fd.ms) findingsOfModule[m].push(fd);
   for (const j of fd.fs) { if (!findingsOfFile.has(j)) findingsOfFile.set(j, []); findingsOfFile.get(j).push(fd); }
+}
+
+/* Existing cut suggestions keep their evidence; history only changes their order. */
+function hotspotStepPriority(parts) {
+  if (!doc.hotspots || doc.hotspots.shallow) return 0;
+  let priority = 0;
+  for (const p of parts) {
+    if (typeof p === "string") continue;
+    if (p.fd !== undefined) {
+      const f = findings[p.fd].f;
+      if (f.kind === "cycle" && Number.isFinite(f.hotspot_priority)) priority = Math.max(priority, f.hotspot_priority);
+    }
+    if (p.e !== undefined) {
+      const e = edges[p.e], from = files[e.a].path, to = files[e.b].path;
+      if (e.verdict === "forbidden" || breaks.has(from + "\n" + to)) {
+        priority = Math.max(priority, hotspotByPath.get(from)?.score || 0, hotspotByPath.get(to)?.score || 0);
+      }
+    }
+  }
+  return priority;
 }
 
 /* Ring colour comes only from what archgraph checked, the strongest signal first. Red: either end
@@ -1397,6 +1471,10 @@ const assessment = (() => {
   });
   const moves = ofKind("misplaced-file").filter(fd => fd.f.simulation).sort((p, q) => cohesionGain(q) - cohesionGain(p));
   for (const fd of moves.slice(0, 2)) {
+    if (fd.f.evidence.ownership?.assessment === "conflicts") {
+      next.push([{ fd: fd.i, label: `Review ownership of ${short(fd.f.subject)}` }, ` before moving it into ${fd.f.evidence.target_module}: dependencies and declared ownership suggest different boundaries.`]);
+      continue;
+    }
     const after = fd.f.simulation.after.modules, parts = [];
     for (const [m, a] of Object.entries(after)) {
       const b = doc.summary.modules[m];
@@ -1423,6 +1501,7 @@ const assessment = (() => {
   }
   /* The generic advice comes after every concrete step. */
   if (!doc.config.rules && N > 2) next.push(["Write a layout.yaml with layers and public entries for the boundaries you agree on, so archgraph check can hold them in CI."]);
+  if (doc.hotspots) next.sort((a, b) => hotspotStepPriority(b) - hotspotStepPriority(a));
   return { good, bad, next: next.slice(0, MAX_NEXT) };
 })();
 
@@ -1469,7 +1548,8 @@ function diagnosis(i) {
   const cyc = c ? firstCut(c) : null;
   const cutHere = cyc && cyc.e !== undefined && (cyc.p.from === m.id || cyc.p.to === m.id) ? cyc : null;
   const sink = pick("sink-split").find(fd => fd.f.subject === m.id);
-  if (mv) say({ b: "Next:" }, " ", { fd: mv.i, label: `move ${short(mv.f.subject)} into ${mv.f.evidence.target_module}` }, ".");
+  if (mv) say({ b: "Next:" }, " ", { fd: mv.i, label: mv.f.evidence.ownership?.assessment === "conflicts"
+    ? `review ownership of ${short(mv.f.subject)} before proposing a move` : `move ${short(mv.f.subject)} into ${mv.f.evidence.target_module}` }, ".");
   else if (cutHere) say({ b: "Next:" }, " ", { e: cutHere.e, label: `cut ${short(files[edges[cutHere.e].a].path)} → ${short(files[edges[cutHere.e].b].path)}` }, `, the lighter side of ${cutHere.p.from} and ${cutHere.p.to} importing each other.`);
   else if (sink) say({ b: "Next:" }, " ", { fd: sink.i, label: `split it along its ${sink.f.evidence.components.length} groups of importers` }, ".");
   else if (unst.length) say({ b: "Next:" }, " ", { fd: unst[0].i, label: `untie it from ${unst[0].f.evidence.to}` }, ".");
@@ -1910,6 +1990,11 @@ function draw() {
     ctx.globalAlpha = (dim ? 0.55 : 1) * hid * (1 - 0.25 * fileT);
     ctx.fillStyle = C.surface;
     ctx.fill();
+    if (churnView) {
+      const mark = churnMark(moduleChurn[i]), cr = r * (0.2 + 0.7 * moduleChurn[i]);
+      ctx.beginPath(); ctx.arc(x, y, cr, 0, TAU);
+      ctx.fillStyle = mark.color; ctx.globalAlpha *= 0.3; ctx.fill();
+    }
     ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     ctx.globalAlpha = (dim ? 0.4 : 1) * hid;
     ctx.strokeStyle = "rgba(255, 255, 255, .07)";
@@ -2049,9 +2134,11 @@ function draw() {
     /* Subtle until you zoom in. */
     const base = 0.2 + 0.55 * fileT;
     for (const f of files) {
-      if (f.x < v0x - 6 || f.x > v1x + 6 || f.y < v0y - 6 || f.y > v1y + 6) continue;
+      const pad = churnView ? R_DOT * 3 + 1 : 6;
+      if (f.x < v0x - pad || f.x > v1x + pad || f.y < v0y - pad || f.y > v1y + pad) continue;
       const s = focused ? fileS[f.i] : S_NORM;
-      const color = s === S_IN ? C.in : s === S_OUT ? C.out : C.fg;
+      const mark = churnView ? churnMark(hotspotByPath.get(f.path)?.churn) : null;
+      const color = s === S_IN ? C.in : s === S_OUT ? C.out : mark ? mark.color : C.fg;
       const alpha = s === S_DIM ? 0.12 : s === S_NORM ? base : 1;
       const key = color + alpha;
       let b = dots.get(key);
@@ -2064,7 +2151,9 @@ function draw() {
       ctx.fillStyle = b.color;
       ctx.beginPath();
       for (const f of b.list) {
-        if (f.barrel) {
+        const size = churnView ? churnMark(hotspotByPath.get(f.path)?.churn).scale : 1;
+        if (churnView) { const r = dr * size; ctx.moveTo(f.x + r, f.y); ctx.arc(f.x, f.y, r, 0, TAU); }
+        else if (f.barrel) {
           const r = dotR * 1.75;
           ctx.moveTo(f.x, f.y - r); ctx.lineTo(f.x + r, f.y); ctx.lineTo(f.x, f.y + r); ctx.lineTo(f.x - r, f.y); ctx.closePath();
         } else if (rs < 1.6) ctx.rect(f.x - dr, f.y - dr, dr * 2, dr * 2);
@@ -2076,7 +2165,8 @@ function draw() {
     if (t && t.type === "file") {
       const f = files[t.i];
       ctx.globalAlpha = 1; ctx.strokeStyle = C.focus; ctx.lineWidth = 2 * px;
-      ctx.beginPath(); ctx.arc(f.x, f.y, dotR + 3 * px, 0, TAU); ctx.stroke();
+      const size = churnView ? churnMark(hotspotByPath.get(f.path)?.churn).scale : 1;
+      ctx.beginPath(); ctx.arc(f.x, f.y, dotR * size + 3 * px, 0, TAU); ctx.stroke();
     }
     ctx.strokeStyle = C.fg; ctx.lineWidth = px;
     for (const j of pinnedF) {
@@ -2265,12 +2355,13 @@ function hit(sx, sy) {
   const k = view.k, x = (sx - view.x) / k, y = (sy - view.y) / k;
   const fileT = smooth((k - K_FILE0) / (K_FILE1 - K_FILE0));
   if (fileT > 0.4) {
-    const tol = Math.max(R_DOT + 1, 6 / k);
+    const tol = Math.max(R_DOT * (churnView ? 3 : 1) + 1, 6 / k);
     let best = -1, bd = tol;
     for (let cx = -1; cx <= 1; cx++) for (let cy = -1; cy <= 1; cy++) {
       for (const j of fgrid.get(gkey(x + cx * CELL, y + cy * CELL)) || []) {
         const d = Math.hypot(files[j].x - x, files[j].y - y);
-        if (d < bd) { bd = d; best = j; }
+        const size = churnView ? churnMark(hotspotByPath.get(files[j].path)?.churn).scale : 1;
+        if (d < Math.max(R_DOT * size + 1, 6 / k) && d < bd) { bd = d; best = j; }
       }
     }
     if (best >= 0) return { type: "file", i: best };
@@ -2782,6 +2873,15 @@ $("t-types").addEventListener("click", ev => {
   applyFocus();
   redraw();
 });
+if (doc.hotspots && !doc.hotspots.shallow && hotspotFiles.length) {
+  $("t-churn").hidden = false;
+  $("t-churn").addEventListener("click", ev => {
+    churnView = !churnView;
+    ev.currentTarget.setAttribute("aria-pressed", String(churnView));
+    $("churn-legend").hidden = !churnView;
+    redraw();
+  });
+}
 
 /* Popovers grow out of their capsule; a transition, so a quick second click reverses it mid-way. */
 const pops = [[$("hide-btn"), $("hide-list")], [$("legend-btn"), $("legend")]];
@@ -3492,10 +3592,33 @@ function findingList(list) {
     const t = el("span", { class: "clamp" });
     t.append(el("span", { class: "muted" }, fd.f.kind + "  "), document.createTextNode(subjectText(fd.f)));
     b.append(t);
+    if (findingAge(fd.f)) b.append(el("span", { class: "pill" }, findingAge(fd.f)));
     li.append(b);
     ul.append(li);
   }
   return ul;
+}
+function hotspotContext(rows, limit = 3) {
+  if (!doc.hotspots) return;
+  panel.append(el("h3", {}, "Change history"));
+  if (doc.hotspots.shallow) {
+    panel.append(el("p", { class: "note" }, "Churn unknown: this shallow clone does not contain the required history."));
+    return;
+  }
+  if (!rows.length) {
+    panel.append(el("p", { class: "muted" }, "No change-history record for this selection."));
+    return;
+  }
+  if (rows.length > limit) panel.append(el("p", { class: "muted" }, `Top ${limit} of ${rows.length} files by hotspot score.`));
+  for (const h of [...rows].sort((a, b) => b.score - a.score).slice(0, limit)) {
+    const p = el("p"), i = fileIndex.get(h.path);
+    p.append(i === undefined ? el("span", {}, h.path) : btn(short(h.path), "path", () => go({ type: "file", i })));
+    panel.append(p, el("p", {}, hotspotSummary(h)), el("p", { class: "muted" },
+      `Score ${fmt(h.score)} = normalized churn ${fmt(h.churn)} × (coupling ${fmt(h.coupling)} + cycle factor ${fmt(h.cycle)}) × (1 + author factor ${fmt(h.author_factor)}). ` +
+      `${h.lines_added} lines added, ${h.lines_deleted} deleted.${h.cut_candidate ? " Touches an existing cycle-cut candidate." : ""}`));
+    const linked = (h.finding_indices || []).map(j => findings[j]).filter(Boolean);
+    if (linked.length) panel.append(findingList(linked));
+  }
 }
 
 /* A sentence of text and references; each reference highlights its target on hover and selects
@@ -3564,7 +3687,28 @@ function overview() {
   panel.append(peekbar());
   panel.append(el("h2", {}, "Assessment"));
   panel.append(el("p", { class: "sub" }, `${nf(F)} ${F === 1 ? "file" : "files"} in ${nf(N)} ${N === 1 ? "module" : "modules"}`));
-  panel.append(el("p", { class: "intro" }, "Read from the imports alone; every line names its evidence. Select a name to see it on the map."));
+  panel.append(el("p", { class: "intro" }, "Read from imports" + (doc.config.codeowners ? " and declared ownership" : "") + "; every line names its evidence. Select a name to see it on the map."));
+  if (doc.config.codeowners) {
+    const counts = new Map();
+    let owned = 0;
+    for (const f of files) {
+      if (f.owners.length) owned++;
+      for (const owner of f.owners) {
+        if (!counts.has(owner)) counts.set(owner, { files: 0, modules: new Set() });
+        counts.get(owner).files++;
+        counts.get(owner).modules.add(f.mod);
+      }
+    }
+    panel.append(el("h3", {}, "Who owns the code"), el("p", { class: "muted" }, `${owned} of ${F} files owned in ${doc.config.codeowners.path}; shared files count for each owner.`));
+    const list = el("ul");
+    for (const [owner, stats] of [...counts].sort((a,b) => b[1].files-a[1].files || a[0].localeCompare(b[0]))) {
+      const item = el("li", {}, `${owner}: ${count(stats.files, "file", "files")} across ${count(stats.modules.size, "module", "modules")} `);
+      for (const m of stats.modules) item.append(modBtn(m));
+      list.append(item);
+    }
+    panel.append(list);
+    if (doc.config.codeowners.warnings.length) panel.append(el("p", { class: "note" }, `${doc.config.codeowners.warnings.length} CODEOWNERS rules were skipped; ownership may be incomplete.`));
+  }
   if (ofKind("small-repo").length) panel.append(el("p", { class: "note" }, "Few files or modules: read the lines below as hints, the signal is weak."));
   if (doc.source.collector.type_marking === "unavailable") panel.append(el("p", { class: "note" }, "Type-only imports could not be told apart in this repository, so some cycles may include imports TypeScript removes."));
   if (foundations.length && !hasOutgoingTo) panel.append(el("p", { class: "note" }, "This scan has no outgoing_to per module (an older archgraph), so cohesion here also counts imports of foundations. Rescan to judge it without them."));
@@ -3602,6 +3746,7 @@ function overview() {
       const text = subjectText(fd.f);
       const b = btn("", looksLikePath(text) ? "path" : "", () => go({ type: "finding", i: fd.i }), fd.f.subject);
       b.append(el("span", { class: "clamp" }, text));
+      if (findingAge(fd.f)) b.append(el("span", { class: "pill" }, findingAge(fd.f)));
       li.append(b);
       ul.append(li);
     }
@@ -3609,12 +3754,27 @@ function overview() {
     kinds.append(d);
   }
   if (byKind.size) panel.append(kinds);
+  if (doc.hotspots) {
+    hotspotContext(hotspotFiles, 5);
+    panel.append(el("p", { class: "muted" }, `Window: ${doc.hotspots.since}; as of ${doc.hotspots.as_of}. ${doc.hotspots.commits} commits included; ${doc.hotspots.skipped} skipped.`));
+    const v = doc.hotspots.validation;
+    if (v) panel.append(el("p", { class: "muted" }, `Fix-message proxy: top ${v.top_files} of ${v.files} files touch ${v.top_bugfix_commits} of ${v.bugfix_commits} matching commits; share ${fmt(v.share)}, lift ${fmt(v.lift)}. This is in-sample concentration, not predictive validation.`));
+    for (const limit of doc.hotspots.limitations || []) panel.append(el("p", { class: "note" }, limit));
+  }
 }
 function modulePanel(i) {
   const m = mods[i];
   const chip = el("span", { class: "pill" });
   chip.append(el("i", { class: "sw h " + modHealth[i] }), document.createTextNode(HEALTH_TEXT[modSignal[i]]));
   head("Module", m.id, chip);
+  if (m.ownership) {
+    panel.append(el("h3", {}, "Responsibility"));
+    panel.append(el("p", { class: "muted" }, `${m.ownership.owned_files} of ${m.files} files owned. Primary ownership requires a majority of all files.`));
+    const owners = el("ul");
+    for (const [owner,n] of Object.entries(m.ownership.owners).sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]))) owners.append(el("li", {}, `${owner}: ${count(n,"file","files")}${m.ownership.primary.includes(owner) ? " · primary" : ""}`));
+    panel.append(owners);
+  }
+  if (doc.hotspots) hotspotContext(hotspotFiles.filter(h => h.module === m.id));
   panel.append(sentence(diagnosis(i), "p"));
   panel.lastChild.className = "diag";
   panel.append(metrics([
@@ -3647,6 +3807,8 @@ function filePanel(i) {
   const p = el("p");
   p.append(el("span", { class: "muted" }, "module "), modBtn(f.mod));
   panel.append(p);
+  if (doc.config.codeowners) panel.append(el("p", {}, "Owners: " + (f.owners.join(", ") || "unowned")));
+  if (doc.hotspots) hotspotContext(hotspotByPath.has(f.path) ? [hotspotByPath.get(f.path)] : []);
   panel.append(el("h3", {}, f.outs.length ? `Imports ${count(f.outs.length, "file", "files")}` : "Imports no file"));
   panel.append(importList(f.outs, "to"));
   panel.append(el("h3", {}, f.ins.length ? `Imported by ${count(f.ins.length, "file", "files")}` : "Imported by no file"));
@@ -3719,6 +3881,12 @@ function findingPanel(j) {
   if (KIND_TEXT[f.kind]) panel.append(el("p", { class: "muted" }, KIND_TEXT[f.kind]));
   panel.append(...advice(f.kind, f));
   const line = t => panel.append(el("p", {}, t));
+  const history = provenanceLines(f);
+  if (history.length) {
+    panel.append(el("h3", {}, "Introduction and age"));
+    history.forEach(line);
+  }
+  if (f.hotspot_priority != null) line(`Hotspot priority: ${fmt(f.hotspot_priority)}. Change history affects ordering, not the architectural evidence.`);
   const acts = el("div", { class: "actions" });
   acts.append(btn("Zoom to it", "act", () => { reveal(); zoomToFinding(fd); }));
   panel.append(acts);
@@ -3772,6 +3940,12 @@ function findingPanel(j) {
   } else if (f.kind === "misplaced-file") {
     line(`Imported by ${count(ev.imports_from_target, "file", "files")} of ${ev.target_module}, ` +
       `${count(ev.own_module_edges, "edge", "edges")} within its own module` + (ev.via_barrel ? ", through a barrel." : "."));
+    if (ev.ownership) {
+      const o = ev.ownership;
+      const text = {supports:"Ownership supports this destination.", conflicts:"Ownership conflicts with this destination. Review the team boundary before moving the file.", shared:"The file and destination share declared ownership.", unknown:"Ownership is incomplete; placement is judged from dependencies."};
+      line(text[o.assessment]);
+      line(`File: ${o.file_owners.join(", ") || "unowned"}. Target module: ${o.target_module_owners.join(", ") || "no primary owner"}. Destination path: ${o.destination_owners.join(", ") || "unowned"}.`);
+    }
   } else if (f.kind === "sink-split") {
     line(`Imported by ${count(ev.ca, "module", "modules")}; its files serve ${count(ev.components.length, "separate group", "separate groups")}.`);
     ev.components.forEach((c, n) => {

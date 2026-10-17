@@ -3,13 +3,65 @@
   "title": "archgraph v1 document",
   "type": "object",
   "required": ["schema", "kind"],
-  "properties": { "schema": {"const": "archgraph/v1"}, "kind": {"enum": ["scan", "simulation", "diff"]} },
+  "properties": { "schema": {"const": "archgraph/v1"}, "kind": {"enum": ["scan", "simulation", "diff", "history", "bisect", "hotspots", "impact"]} },
   "allOf": [
     { "if": {"properties": {"kind": {"const": "scan"}}}, "then": {"$ref": "#/$defs/scan"} },
     { "if": {"properties": {"kind": {"const": "simulation"}}}, "then": {"$ref": "#/$defs/simulation"} },
-    { "if": {"properties": {"kind": {"const": "diff"}}}, "then": {"$ref": "#/$defs/diff"} }
+    { "if": {"properties": {"kind": {"const": "diff"}}}, "then": {"$ref": "#/$defs/diff"} },
+    { "if": {"properties": {"kind": {"const": "history"}}}, "then": {"$ref": "#/$defs/history"} },
+    { "if": {"properties": {"kind": {"const": "bisect"}}}, "then": {"$ref": "#/$defs/bisect"} },
+    { "if": {"properties": {"kind": {"const": "hotspots"}}}, "then": {"$ref": "#/$defs/hotspots"} },
+    { "if": {"properties": {"kind": {"const": "impact"}}}, "then": {"$ref": "#/$defs/impact"} }
   ],
   "$defs": {
+    "impact": {
+      "type": "object",
+      "required": ["changed_files", "unscanned_files", "affected_files", "affected_modules", "selected_tests", "go_test_packages", "reviewers", "risk", "limitations"],
+      "properties": {
+        "changed_files": {"type": "array", "items": {"$ref": "#/$defs/path"}, "uniqueItems": true},
+        "unscanned_files": {"type": "array", "items": {"$ref": "#/$defs/path"}, "uniqueItems": true},
+        "affected_files": {"type": "array", "items": {"type": "object", "required": ["path", "module", "depth", "weight"], "properties": {"path": {"$ref": "#/$defs/path"}, "module": {"type": "string"}, "depth": {"$ref": "#/$defs/count"}, "weight": {"$ref": "#/$defs/ratio"}}}},
+        "affected_modules": {"type": "array", "items": {"type": "object", "required": ["id", "depth", "weight", "in_cycle", "hotspot"], "properties": {"id": {"type": "string"}, "depth": {"$ref": "#/$defs/count"}, "weight": {"$ref": "#/$defs/ratio"}, "in_cycle": {"type": "boolean"}, "hotspot": {"type": "boolean"}}}},
+        "selected_tests": {"type": "array", "items": {"$ref": "#/$defs/path"}, "uniqueItems": true},
+        "go_test_packages": {"type": "array", "items": {"$ref": "#/$defs/path"}, "uniqueItems": true},
+        "reviewers": {"type": "array", "items": {"type": "object", "required": ["identity", "source", "commits", "modules"], "properties": {"identity": {"type": "string"}, "source": {"enum": ["codeowners", "git"]}, "commits": {"$ref": "#/$defs/count"}, "modules": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}}}},
+        "risk": {"type": "boolean"},
+        "limitations": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "introduced-commit": {"type": "object", "required": ["commit", "author", "email", "authored_at", "committed_at", "subject", "pull_request", "age_days"], "properties": {"commit": {"type": "string"}, "author": {"type": "string"}, "email": {"type": "string"}, "authored_at": {"type": "string"}, "committed_at": {"type": "string"}, "subject": {"type": "string"}, "pull_request": {"type": ["integer", "null"], "minimum": 1}, "age_days": {"$ref": "#/$defs/count"}}},
+    "provenance": {"type": "object", "required": ["status", "method", "from", "to", "previous_commit", "closing_edge", "limitations", "scans"], "properties": {"status": {"type": "string"}, "method": {"type": "string"}, "to": {"type": "string"}, "from": {"type": ["string", "null"]}, "previous_commit": {"type": ["string", "null"]}, "closing_edge": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/link"}]}, "limitations": {"type": "array", "items": {"type": "string"}}, "scans": {"$ref": "#/$defs/count"}}},
+    "hotspot-file": {"type": "object", "required": ["path", "module", "commits", "lines_added", "lines_deleted", "authors", "bugfix_commits", "churn", "coupling", "cycle", "author_factor", "score", "cycle_size", "cut_candidate", "finding_indices"], "properties": {"path": {"type": "string"}, "module": {"type": "string"}, "commits": {"$ref": "#/$defs/count"}, "lines_added": {"$ref": "#/$defs/count"}, "lines_deleted": {"$ref": "#/$defs/count"}, "authors": {"$ref": "#/$defs/count"}, "bugfix_commits": {"$ref": "#/$defs/count"}, "cycle_size": {"$ref": "#/$defs/count"}, "churn": {"type": "number", "minimum": 0, "maximum": 1}, "coupling": {"type": "number", "minimum": 0, "maximum": 1}, "cycle": {"type": "number", "minimum": 0, "maximum": 1}, "author_factor": {"type": "number", "minimum": 0, "maximum": 1}, "score": {"type": "number", "minimum": 0, "maximum": 4}, "cut_candidate": {"type": "boolean"}, "finding_indices": {"type": "array", "items": {"$ref": "#/$defs/count"}}}},
+    "hotspots": {"type": "object", "required": ["since", "since_timestamp", "as_of", "max_files", "authors_enabled", "shallow", "commits", "skipped", "limitations", "files", "validation"], "properties": {"since": {"type": "string"}, "as_of": {"type": "string"}, "since_timestamp": {"type": "integer"}, "max_files": {"$ref": "#/$defs/count"}, "commits": {"$ref": "#/$defs/count"}, "skipped": {"$ref": "#/$defs/count"}, "authors_enabled": {"type": "boolean"}, "shallow": {"type": "boolean"}, "limitations": {"type": "array", "items": {"type": "string"}}, "files": {"type": "array", "items": {"$ref": "#/$defs/hotspot-file"}}, "validation": {"type": "object", "required": ["files", "top_files", "bugfix_commits", "top_bugfix_commits", "share", "lift"], "properties": {"files": {"$ref": "#/$defs/count"}, "top_files": {"$ref": "#/$defs/count"}, "bugfix_commits": {"$ref": "#/$defs/count"}, "top_bugfix_commits": {"$ref": "#/$defs/count"}, "share": {"$ref": "#/$defs/ratio"}, "expected_random_share": {"$ref": "#/$defs/ratio"}, "lift": {"type": ["number", "null"], "minimum": 0}, "random_lift": {"type": ["number", "null"], "minimum": 0}}}}},
+    "bisect": {"type": "object", "required": ["status", "method", "from", "to", "previous_commit", "closing_edge", "limitations", "scans", "target", "introduced_by", "commits"], "properties": {"status": {"type": "string"}, "method": {"type": "string"}, "to": {"type": "string"}, "from": {"type": ["string", "null"]}, "previous_commit": {"type": ["string", "null"]}, "closing_edge": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/link"}]}, "limitations": {"type": "array", "items": {"type": "string"}}, "scans": {"$ref": "#/$defs/count"}, "target": {"type": "object", "required": ["kind"], "properties": {"kind": {"enum": ["cycle", "forbidden-edge", "finding"]}, "finding_kind": {"type":"string"}, "subject": {"type":"string"}, "level": {"enum": ["module", "file"]}, "members": {"type": "array", "items": {"type": "string"}}, "from": {"type": "string"}, "to": {"type": "string"}}}, "introduced_by": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/introduced-commit"}]}, "commits": {"$ref": "#/$defs/count"}}},
+    "history-summary": {"type": "object", "required": ["files", "modules", "edges", "cycles", "largest_cycle", "modules_in_cycles_percent", "cycles_per_100_modules", "mean_instability", "forbidden", "hotspot_concentration"], "properties": {"files": {"$ref": "#/$defs/count"}, "modules": {"$ref": "#/$defs/count"}, "edges": {"$ref": "#/$defs/count"}, "cycles": {"$ref": "#/$defs/count"}, "largest_cycle": {"$ref": "#/$defs/count"}, "modules_in_cycles_percent": {"type": "number", "minimum": 0, "maximum": 100}, "cycles_per_100_modules": {"type": "number", "minimum": 0}, "mean_instability": {"$ref": "#/$defs/ratio"}, "forbidden": {"type": ["integer", "null"], "minimum": 0}, "hotspot_concentration": {"$ref": "#/$defs/ratio"}}},
+    "codeowners": {"type": "object", "required": ["path", "prefix", "rules", "warnings"], "properties": {"path": {"$ref": "#/$defs/path"}, "prefix": {"$ref": "#/$defs/path"}, "rules": {"type": "array", "items": {"type": "object", "required": ["pattern", "owners", "line"], "properties": {"pattern": {"type": "string", "minLength": 1}, "owners": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}, "line": {"type": "integer", "minimum": 1}}}}, "warnings": {"type": "array", "items": {"type": "object", "required": ["line", "message"], "properties": {"line": {"$ref": "#/$defs/count"}, "message": {"type": "string"}}}}}},
+    "ownership": {"type": "object", "required": ["owned_files", "owners", "primary"], "properties": {"owned_files": {"$ref": "#/$defs/count"}, "owners": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}}, "primary": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}}},
+    "placement-ownership": {"type": "object", "required": ["assessment", "file_owners", "current_module_owners", "target_module_owners", "destination_owners"], "properties": {"assessment": {"enum": ["supports", "conflicts", "shared", "unknown"]}, "file_owners": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}, "current_module_owners": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}, "target_module_owners": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}, "destination_owners": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}}},
+    "history": {
+      "type": "object",
+      "required": ["snapshots"],
+      "properties": {
+        "failures": { "type": "array", "items": { "type": "object", "required": ["commit", "error"], "properties": {"commit": {"type":"string"}, "error": {"type":"string"}} } },
+        "release_markers": { "type": "array", "items": { "type": "object", "required": ["commit","committed_at","tags"], "properties": {"commit":{"type":"string"},"committed_at":{"type":"string"},"tags":{"type":"array","items":{"type":"string"}}} } },
+        "snapshots": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["commit", "committed_at", "subject", "graph", "diff"],
+            "properties": {
+              "summary": {"$ref":"#/$defs/history-summary"},
+              "tags": {"type":"array","items":{"type":"string"}},
+              "commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+              "committed_at": {"type": "string"},
+              "subject": {"type": "string"},
+              "graph": {"allOf": [{"$ref": "#"}, {"properties": {"kind": {"const": "scan"}}}]},
+              "diff": {"oneOf": [{"type": "null"}, {"allOf": [{"$ref": "#"}, {"properties": {"kind": {"const": "diff"}}}]}]}
+            }
+          }
+        }
+      }
+    },
     "path": { "type": "string", "minLength": 1, "not": {"pattern": "^/"} },
     "ratio": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
     "count": { "type": "integer", "minimum": 0 },
@@ -38,12 +90,12 @@
           "type": "object",
           "required": ["language", "collector", "git", "generated_at"],
           "properties": {
-            "language": { "description": "May grow within archgraph/v1 as languages are added.", "enum": ["typescript", "python", "go"] },
+            "language": { "description": "May grow within archgraph/v1 as languages are added.", "enum": ["typescript", "python", "go", "rust", "java"] },
             "collector": {
               "type": "object",
               "required": ["name", "version", "cruised"],
               "properties": {
-                "name": { "description": "May grow within archgraph/v1 as collectors are added.", "enum": ["dependency-cruiser", "grimp", "go-types"] },
+                "name": { "description": "May grow within archgraph/v1 as collectors are added.", "enum": ["dependency-cruiser", "grimp", "go-types", "rust-analyzer", "java-javac"] },
                 "version": { "type": ["string", "null"] },
                 "cruised": { "$ref": "#/$defs/count" },
                 "type_marking": { "description": "unavailable when dependency-cruiser could not tell imports of types only (written without import type) from value imports; they are then static. Absent otherwise.", "enum": ["unavailable"] },
@@ -71,10 +123,13 @@
           "required": ["depth", "source_root", "excludes", "include_tests", "rules"],
           "properties": {
             "depth": { "$ref": "#/$defs/count" },
-            "package_modules": { "description": "Go scanned without --depth: every package (directory) is a module and depth is unused. Absent otherwise.", "type": "boolean" },
+            "package_modules": { "description": "Go or Java scanned without --depth: every package directory is a module and depth is unused. Absent otherwise.", "type": "boolean" },
             "source_root": { "$ref": "#/$defs/path" },
             "excludes": { "type": "array", "items": {"type": "string"} },
             "include_tests": { "type": "boolean" },
+            "no_default_excludes": { "type": "boolean" },
+            "codeowners": { "$ref": "#/$defs/codeowners" },
+            "collection": { "type": "object", "required": ["python_package", "rust_features", "rust_build_scripts"], "properties": {"python_package": {"type":["string","null"]}, "rust_features": {"enum":["all","default",null]}, "rust_build_scripts": {"type":"boolean"}} },
             "rules": {
               "oneOf": [
                 { "type": "null" },
@@ -99,7 +154,8 @@
             "properties": {
               "path": { "$ref": "#/$defs/path" },
               "module": { "type": "string", "minLength": 1 },
-              "barrel": { "type": "boolean" }
+              "barrel": { "type": "boolean" },
+              "owners": { "type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true }
             }
           }
         },
@@ -119,6 +175,7 @@
               "internal_edges": { "$ref": "#/$defs/count" },
               "outgoing_edges": { "$ref": "#/$defs/count" },
               "cohesion": { "$ref": "#/$defs/ratio" },
+              "ownership": { "$ref": "#/$defs/ownership" },
               "outgoing_to": {
                 "description": "outgoing_edges split by target module id, counted the same way (barrel-attributed file pairs); the values sum to outgoing_edges. Optional: absent in documents written before it was added.",
                 "type": "object",
@@ -143,6 +200,7 @@
         "cycles": { "type": "array", "items": {"$ref": "#/$defs/cycle"} },
         "summary": { "$ref": "#/$defs/summary" },
         "findings": { "type": "array", "items": {"$ref": "#/$defs/finding"} },
+        "hotspots": {"$ref": "#/$defs/hotspots"},
         "cochange": { "oneOf": [ { "type": "null" }, { "$ref": "#/$defs/cochange" } ] }
       }
     },
@@ -317,6 +375,10 @@
       "type": "object",
       "required": ["kind", "subject", "evidence"],
       "properties": {
+        "introduced_by": { "$ref": "#/$defs/introduced-commit" },
+        "age_days": { "$ref": "#/$defs/count" },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "hotspot_priority": { "type": "number", "minimum": 0 },
         "kind": {
           "description": "Open: consumers ignore kinds they do not know. Known kinds type their evidence below.",
           "type": "string",
@@ -387,6 +449,7 @@
       "type": "object",
       "required": ["own_module_edges", "target_module", "imports_from_target", "via_barrel"],
       "properties": {
+        "ownership": { "$ref": "#/$defs/placement-ownership" },
         "own_module_edges": { "description": "Edges in either direction between the file and the rest of its own module.", "$ref": "#/$defs/count" },
         "target_module": { "type": "string" },
         "imports_from_target": { "description": "Files of the target module that import the file.", "$ref": "#/$defs/count" },

@@ -9,7 +9,7 @@
   An architecture linter for your codebase.<br>
   It finds the folders that import each other, names the import that breaks each loop,<br>
   and simulates a suggested file move before you make it.<br>
-  <sub>Reads TypeScript, JavaScript, Python and Go today. Rust and Java/Kotlin are next.</sub>
+  <sub>Reads TypeScript, JavaScript, Python, Go, Rust and Java.</sub>
 </p>
 
 <p align="center">
@@ -45,6 +45,8 @@ That prints a summary and writes `.archgraph/archgraph.html`: open it in a brows
 - TypeScript and JavaScript: dependency-cruiser 18.4.0 and typescript 6.0.3, in the scanned repository or anywhere (`--depcruise <path>`).
 - Python: any Python 3.10+ with grimp 3.17 (`--python <interpreter>`).
 - Go: Go 1.21+ on `PATH` (`--go <path>`). It compiles and runs nothing from the repository.
+- Rust: rustup with `rust-analyzer` and `rust-src`, a Cargo workspace with a lockfile and cached dependencies. Build scripts and proc macros are disabled unless `--rust-build-scripts` is given.
+- Java: JDK 11+ (`--java <path>`). Uses compiler references without running a project build.
 
 </details>
 
@@ -95,6 +97,37 @@ forbidden src/domain/user.ts -> src/adapters/out/pg.ts (layers)
 </p>
 
 The map is one HTML file with no network requests. Zoom until files appear, drag modules to make sense of a cluster (your layout is remembered), click anything for who imports it and what to do about it.
+
+## Does this code belong here?
+
+Add a `CODEOWNERS` file and the report shows declared responsibility by file and module. Ownership qualifies misplaced-file findings: conflicting team boundaries keep the dependency evidence and require review before a move. Shared ownership and incomplete coverage stay visible.
+
+```sh
+archgraph report . --hotspots
+archgraph bisect .archgraph/archgraph.json --root . --finding 0 --format markdown
+```
+
+Hotspots prioritize findings using concrete churn, coupling, cycle and author factors. Bisect verifies which commit introduced a finding, with author/date and optional PR attribution. The [guide](docs/guide.md#ownership) explains ownership, history boundaries and confidence limits.
+
+For daily changes, ask which modules, tests and reviewers a diff can affect:
+
+```sh
+archgraph impact origin/main..HEAD
+archgraph impact origin/main..HEAD --format json --tests-output tests.txt
+```
+
+Impact follows reverse imports up to three steps, marks cycle and hotspot risk, and suggests CODEOWNERS or recent contributors. It scans committed code with tests included. Results mean **at least these**; dynamic wiring and symbol ambiguity through barrels limit coverage. See [impact options and CI comments](docs/guide.md#impact).
+
+## How the architecture changed
+
+```sh
+archgraph history path/to/repo --append
+archgraph history path/to/repo --sample tags --limit 20
+```
+
+Open `.archgraph/history.html` to step through commits, inspect each architecture map, and see changes in cycles, forbidden imports and module metrics. `history.json` contains the complete snapshots and adjacent diffs. History uses a temporary local clone and leaves your checkout untouched. See the [history options and collector requirements](docs/guide.md#history).
+
+The [benchmark suite](benchmarks/) checks pinned Java/Rust repositories and real historical changes, with repeatable timings and source-reference assertions.
 
 ## Results on 20 well-known repositories
 
@@ -157,7 +190,7 @@ Four skills in the open Agent Skills format, for Claude Code, Codex, Cursor and 
 
 ## How it works
 
-archgraph has no parser of its own. It asks [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) (TypeScript, JavaScript) or [grimp](https://github.com/python-grimp/grimp) (Python) for every file-level import, or type-checks Go with the standard `go/types` package, groups files into modules by folder or by your rules, and computes coupling, cohesion, cycles over runtime imports, rule verdicts and findings. For Python it also reads each importing file with the standard `ast` module, without running it, to tell imports inside functions and `TYPE_CHECKING` blocks apart from load-time ones. Everything lands in one JSON document with a versioned schema ([`archgraph/v1`](schema/archgraph.v1.schema.json)) that `check`, `simulate`, `render` and `diff` read. The [guide](docs/guide.md) has every command, flag and rule.
+archgraph has no parser of its own. It asks [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) (TypeScript, JavaScript) or [grimp](https://github.com/python-grimp/grimp) (Python) for every file-level import, uses the standard `go/types` package for Go, `rust-analyzer` for Rust, or the JDK compiler for Java, groups files into modules by folder or by your rules, and computes coupling, cohesion, cycles over runtime imports, rule verdicts and findings. For Python it also reads each importing file with the standard `ast` module, without running it, to tell imports inside functions and `TYPE_CHECKING` blocks apart from load-time ones. Everything lands in one JSON document with a versioned schema ([`archgraph/v1`](schema/archgraph.v1.schema.json)) that `check`, `simulate`, `render` and `diff` read. The [guide](docs/guide.md) has every command, flag and rule.
 
 ## Limits
 
@@ -165,11 +198,11 @@ archgraph has no parser of its own. It asks [dependency-cruiser](https://github.
 - Findings are suggestions with evidence, not a score to optimise. Read the evidence, then decide.
 - Module boundaries come from folders or your rules. Wrong boundaries give wrong numbers.
 - Small repositories have little signal, and the report says so.
-- TypeScript, JavaScript, Python and Go today. In Go each package is a module, so findings there are fewer and mostly about which package depends on which.
+- TypeScript, JavaScript, Python, Go, Rust and Java. In Go each package is a module, so findings there are fewer and mostly about which package depends on which.
 
 ## Free, all of it
 
-No paid tier, no account, no telemetry. What comes next is open source too: Rust and Java/Kotlin collectors, history across repositories, shared rule libraries, team coupling from CODEOWNERS and co-change, and migration plans that sequence simulated moves into a target layout.
+No paid tier, no account, no telemetry. What comes next is open source too: Kotlin support, history across repositories, shared rule libraries, cross-team coupling summaries, and migration plans that sequence simulated moves into a target layout.
 
 ## License
 

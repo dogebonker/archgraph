@@ -1,0 +1,49 @@
+[
+  {
+    "name": "json-java",
+    "repo": "https://github.com/stleary/JSON-java",
+    "commit": "f9b5587c87aaf02e4a5ed1991d48d6c05993624a",
+    "language": "java",
+    "files": 25,
+    "unresolved": 0,
+    "edges": [
+      ["src/main/java/org/json/JSONTokener.java", "src/main/java/org/json/JSONObject.java"],
+      ["src/main/java/org/json/JSONTokener.java", "src/main/java/org/json/JSONArray.java"],
+      ["src/main/java/org/json/HTTPTokener.java", "src/main/java/org/json/JSONTokener.java"]
+    ]
+  },
+  {
+    "name": "gson",
+    "repo": "https://github.com/google/gson",
+    "commit": "2ce6a6106c22bf0cce2e39f68b0da2f117d6e66b",
+    "language": "java",
+    "files": 99,
+    "no_package_edges": true,
+    "edges": [
+      ["gson/src/main/java/com/google/gson/Gson.java", "gson/src/main/java/com/google/gson/reflect/TypeToken.java"]
+    ]
+  },
+  {
+    "name": "ripgrep",
+    "repo": "https://github.com/BurntSushi/ripgrep",
+    "commit": "4649aa9700619f94cf9c66876e9549d83420e16c",
+    "language": "rust",
+    "flags": ["--rust-features", "default"],
+    "edges": [
+      ["crates/core/main.rs", "crates/ignore/src/walk.rs"],
+      ["crates/core/main.rs", "crates/core/flags/hiargs.rs"]
+    ]
+  },
+  {
+    "name": "json-java-history",
+    "checkout": "json-java",
+    "repo": "https://github.com/stleary/JSON-java",
+    "commit": "f9b5587c87aaf02e4a5ed1991d48d6c05993624a",
+    "language": "java",
+    "mode": "history",
+    "flags": ["--sample", "commits", "--limit", "4"],
+    "files": [26, 25, 25, 25],
+    "unchanged": [1, 2, 3],
+    "removed_file": "src/main/java/org/json/NumberConversionUtil.java"
+  }
+]

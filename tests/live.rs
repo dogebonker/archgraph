@@ -1,6 +1,7 @@
 //! Runs the real collectors. Needs depcruise 18.4.0 (with typescript 6.0.3 beside it), a
 //! python with grimp 3.17 and go 1.27.1, from ARCHGRAPH_DEPCRUISE / ARCHGRAPH_PYTHON /
-//! ARCHGRAPH_GO or PATH, plus node and git (ARCHGRAPH_NODE / ARCHGRAPH_GIT or PATH).
+//! ARCHGRAPH_GO or PATH, plus node and git (ARCHGRAPH_NODE / ARCHGRAPH_GIT or PATH). The Rust
+//! tests need rustup, whose active toolchain (1.95.0) has rust-analyzer and rust-src, and cc.
 
 mod common;
 
@@ -392,4 +393,717 @@ fn go_scan_reads_a_module_go_list_rejects_with_go_build() {
         doc["files"],
         json!([{ "path": "a/a.go", "module": "a", "barrel": false }])
     );
+}
+
+/// An empty directory for a Rust repository, under the system temp dir: archgraph's own
+/// rust-toolchain.toml (1.95.0 by name) would be refused from any directory below it.
+fn rust_dir(name: &str) -> PathBuf {
+    let dir = env::temp_dir().join("archgraph-live-rust").join(name);
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::canonicalize(&dir).unwrap()
+}
+
+fn write_files(root: &Path, files: &[(&str, &str)]) {
+    for (file, text) in files {
+        let path = root.join(file);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, text).unwrap();
+    }
+}
+
+const LOCK_W: &str = "version = 4\n\n[[package]]\nname = \"w\"\nversion = \"0.1.0\"\n";
+
+/// A library crate `w` with a Cargo.lock at `rust_dir(name)/repo`, plus `files`.
+fn rust_crate(name: &str, files: &[(&str, &str)]) -> PathBuf {
+    let root = rust_dir(name).join("repo");
+    write_files(
+        &root,
+        &[
+            (
+                "Cargo.toml",
+                "[package]\nname = \"w\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+            ),
+            ("Cargo.lock", LOCK_W),
+            ("src/lib.rs", "pub mod a;\npub fn top() -> u32 { a::f() }\n"),
+            ("src/a.rs", "pub fn f() -> u32 { 1 }\n"),
+        ],
+    );
+    write_files(&root, files);
+    root
+}
+
+/// Where hostile code reports that it ran: `dylib` writes `dylib-<pid>` into `dir` from any
+/// process that loads it, and `script` writes `script-<pid>` and runs its arguments.
+struct Markers {
+    dir: PathBuf,
+    dylib: String,
+    script: String,
+}
+
+impl Markers {
+    fn new(name: &str) -> Markers {
+        let base = rust_dir(&format!("{name}-markers"));
+        let dir = base.join("fired");
+        fs::create_dir(&dir).unwrap();
+        let ext = if cfg!(target_os = "macos") {
+            "dylib"
+        } else {
+            "so"
+        };
+        let dylib = base.join(format!("libmarker.{ext}"));
+        let status = std::process::Command::new("cc")
+            .args(["-shared", "-fPIC", "-o"])
+            .arg(&dylib)
+            .arg(format!("-DMARKER_DIR=\"{}\"", dir.display()))
+            .arg(fixture("rust-hostile/marker.c"))
+            .status()
+            .unwrap();
+        assert!(status.success());
+        let script = base.join("marker.sh");
+        fs::write(
+            &script,
+            format!(
+                "#!/bin/sh\ntouch '{}/script-'$$\nexec \"$@\"\n",
+                dir.display()
+            ),
+        )
+        .unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+        let s = |p: PathBuf| p.to_str().unwrap().to_owned();
+        Markers {
+            dir,
+            dylib: s(dylib),
+            script: s(script),
+        }
+    }
+
+    /// `text` with `{dylib}` and `{script}` filled in.
+    fn fill(&self, text: &str) -> String {
+        text.replace("{dylib}", &self.dylib)
+            .replace("{script}", &self.script)
+    }
+
+    fn fired(&self) -> Vec<String> {
+        let mut names: Vec<String> = fs::read_dir(&self.dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        names
+    }
+}
+
+/// Every directory and file under `root` with its contents.
+fn tree(root: &Path) -> std::collections::BTreeMap<PathBuf, Vec<u8>> {
+    let mut out = std::collections::BTreeMap::new();
+    let mut dirs = vec![root.to_path_buf()];
+    while let Some(dir) = dirs.pop() {
+        for entry in fs::read_dir(&dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                dirs.push(path.clone());
+                out.insert(path, Vec::new());
+            } else {
+                out.insert(path.clone(), fs::read(&path).unwrap());
+            }
+        }
+    }
+    out
+}
+
+fn host() -> String {
+    let out = std::process::Command::new("rustc")
+        .arg("-vV")
+        .output()
+        .unwrap();
+    String::from_utf8(out.stdout)
+        .unwrap()
+        .lines()
+        .find_map(|l| l.strip_prefix("host: "))
+        .unwrap()
+        .to_owned()
+}
+
+/// `scan --language rust` on `root`, with and without `--rust-build-scripts`: each must exit 2
+/// with `want` in its message.
+fn rust_refused(root: &Path, want: &str) {
+    for extra in [&[][..], &["--rust-build-scripts"]] {
+        let root = root.to_str().unwrap();
+        let out = archgraph(&[&["scan", root, "--language", "rust"], extra].concat());
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(2), "{stderr}");
+        assert!(stderr.contains(want), "{want} not in: {stderr}");
+    }
+}
+
+/// A Cargo config at `file` (relative to the repository, `..` for an ancestor) setting `key`
+/// is refused before cargo runs: no marker, no change to the tree.
+fn assert_config_refused(name: &str, file: &str, config: &str, key: &str) {
+    let m = Markers::new(name);
+    let root = rust_crate(name, &[]);
+    write_files(&root, &[(file, &m.fill(config))]);
+    let before = tree(root.parent().unwrap());
+    rust_refused(&root, &format!("sets `{key}`"));
+    assert_eq!(m.fired(), Vec::<String>::new());
+    assert_eq!(tree(root.parent().unwrap()), before);
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_scan_resolves_cross_file_calls_without_changing_the_repository() {
+    let root = rust_crate(
+        "rust-edges",
+        &[
+            ("src/lib.rs", "pub mod a;\npub mod b;\n"),
+            ("src/a.rs", "pub fn a() -> u32 { crate::b::b() }\n"),
+            ("src/b.rs", "pub fn b() -> u32 { 1 }\n"),
+        ],
+    );
+    let before = tree(&root);
+    let (doc, _, _) = scan(&[root.to_str().unwrap(), "--language", "rust"]);
+    assert_eq!(
+        doc["edges"],
+        json!([
+            { "from": "src/a.rs", "to": "src/b.rs", "kind": "static", "verdict": null,
+              "rule": null },
+            { "from": "src/lib.rs", "to": "src/a.rs", "kind": "static", "verdict": null,
+              "rule": null },
+            { "from": "src/lib.rs", "to": "src/b.rs", "kind": "static", "verdict": null,
+              "rule": null }
+        ])
+    );
+    assert_eq!(tree(&root), before);
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_history_scans_real_commits_and_preserves_the_checkout() {
+    let root = rust_crate(
+        "rust-history",
+        &[("src/lib.rs", "pub mod a;\npub fn top() -> u32 { 1 }\n")],
+    );
+    let git = |args: &[&str]| {
+        let out = std::process::Command::new("git")
+            .arg("-C")
+            .arg(&root)
+            .args([
+                "-c",
+                "user.name=archgraph-test",
+                "-c",
+                "user.email=test@example.invalid",
+                "-c",
+                "core.hooksPath=/dev/null",
+                "-c",
+                "commit.gpgsign=false",
+            ])
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        String::from_utf8(out.stdout).unwrap().trim().to_owned()
+    };
+    git(&["init", "-q"]);
+    git(&["add", "."]);
+    git(&["commit", "-qm", "before"]);
+    let first = git(&["rev-parse", "HEAD"]);
+    fs::write(
+        root.join("src/a.rs"),
+        "pub fn f() -> u32 { crate::top() }\n",
+    )
+    .unwrap();
+    git(&["add", "."]);
+    git(&["commit", "-qm", "dependency on parent"]);
+    let second = git(&["rev-parse", "HEAD"]);
+    fs::write(root.join("src/a.rs"), "dirty source must survive\n").unwrap();
+    let before = tree(&root);
+    let reports = root.parent().unwrap().join("reports");
+    let out = archgraph(&[
+        "history",
+        "--sample",
+        "commits",
+        root.to_str().unwrap(),
+        "--language",
+        "rust",
+        "--limit",
+        "2",
+        "--out-dir",
+        reports.to_str().unwrap(),
+    ]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let doc: serde_json::Value =
+        serde_json::from_slice(&fs::read(reports.join("history.json")).unwrap()).unwrap();
+    validate(&doc);
+    let snapshots = doc["snapshots"].as_array().unwrap();
+    assert_eq!(snapshots.len(), 2);
+    assert_eq!(snapshots[0]["commit"], first);
+    assert_eq!(snapshots[1]["commit"], second);
+    assert!(snapshots[0]["diff"].is_null());
+    assert_eq!(snapshots[0]["graph"]["edges"].as_array().unwrap().len(), 1);
+    assert_eq!(snapshots[1]["graph"]["edges"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        snapshots[1]["diff"]["new_cycles"].as_array().unwrap().len(),
+        1
+    );
+    for snapshot in snapshots {
+        validate(&snapshot["graph"]);
+        assert_eq!(snapshot["graph"]["source"]["language"], "rust");
+        assert_eq!(
+            snapshot["graph"]["source"]["git"]["commit"],
+            snapshot["commit"]
+        );
+    }
+    assert!(reports.join("history.html").is_file());
+    assert_eq!(tree(&root), before);
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_scan_runs_no_build_script_or_proc_macro() {
+    let m = Markers::new("rust-codegen");
+    let root = rust_dir("rust-codegen");
+    let fired = m.dir.display().to_string();
+    write_files(
+        &root,
+        &[
+            (
+                "Cargo.toml",
+                "[workspace]\nmembers = [\"app\", \"pm\"]\nresolver = \"2\"\n",
+            ),
+            (
+                "Cargo.lock",
+                "version = 4\n\n[[package]]\nname = \"app\"\nversion = \"0.1.0\"\n\
+                 dependencies = [\"pm\"]\n\n[[package]]\nname = \"pm\"\nversion = \"0.1.0\"\n",
+            ),
+            (
+                "app/Cargo.toml",
+                "[package]\nname = \"app\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\
+                 [dependencies]\npm = { path = \"../pm\" }\n",
+            ),
+            (
+                "app/build.rs",
+                &format!("fn main() {{ std::fs::write(\"{fired}/build-rs\", \"\").unwrap(); }}\n"),
+            ),
+            ("app/src/lib.rs", "pm::mark!();\npub fn f() {}\n"),
+            (
+                "pm/Cargo.toml",
+                "[package]\nname = \"pm\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\
+                 [lib]\nproc-macro = true\n",
+            ),
+            (
+                "pm/src/lib.rs",
+                &format!(
+                    "use proc_macro::TokenStream;\n#[proc_macro]\n\
+                     pub fn mark(_: TokenStream) -> TokenStream {{\n\
+                     std::fs::write(\"{fired}/proc-macro\", \"\").unwrap();\n\
+                     TokenStream::new()\n}}\n"
+                ),
+            ),
+        ],
+    );
+    let before = tree(&root);
+    let (doc, _, _) = scan(&[root.to_str().unwrap(), "--language", "rust"]);
+    let files: Vec<&str> = doc["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["path"].as_str().unwrap())
+        .collect();
+    assert!(files.contains(&"app/src/lib.rs"), "{files:?}");
+    assert_eq!(m.fired(), Vec::<String>::new());
+    assert_eq!(tree(&root), before);
+    // The flag runs both, which shows the fixture's code is reachable; the build output still
+    // goes to a temporary directory.
+    scan(&[
+        root.to_str().unwrap(),
+        "--language",
+        "rust",
+        "--rust-build-scripts",
+    ]);
+    assert_eq!(m.fired(), ["build-rs", "proc-macro"]);
+    assert_eq!(tree(&root), before);
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_refuses_a_cargo_env_table() {
+    assert_config_refused(
+        "rust-env",
+        ".cargo/config.toml",
+        "[env]\nDYLD_INSERT_LIBRARIES = \"{dylib}\"\nLD_PRELOAD = \"{dylib}\"\n",
+        "env",
+    );
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_refuses_a_cargo_unstable_table() {
+    // rust-analyzer runs some cargo commands with RUSTC_BOOTSTRAP=1, where [unstable] applies.
+    assert_config_refused(
+        "rust-unstable",
+        ".cargo/config.toml",
+        "[unstable]\nhost-config = true\ntarget-applies-to-host = false\n",
+        "unstable",
+    );
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_refuses_a_cargo_build_target() {
+    assert_config_refused(
+        "rust-build-target",
+        ".cargo/config.toml",
+        "[build]\ntarget = \"wasm32-unknown-unknown\"\n",
+        "build.target",
+    );
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_refuses_a_cargo_rustc() {
+    assert_config_refused(
+        "rust-rustc",
+        ".cargo/config.toml",
+        "[build]\nrustc = \"{script}\"\n",
+        "build.rustc",
+    );
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_refuses_a_cargo_rustc_wrapper() {
+    assert_config_refused(
+        "rust-rustc-wrapper",
+        ".cargo/config.toml",
+        "[build]\nrustc-wrapper = \"{script}\"\n",
+        "build.rustc-wrapper",
+    );
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_refuses_a_cargo_rustc_workspace_wrapper() {
+    assert_config_refused(
+        "rust-rustc-workspace-wrapper",
+        ".cargo/config.toml",
+        "[build]\nrustc-workspace-wrapper = \"{script}\"\n",
+        "build.rustc-workspace-wrapper",
+    );
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_refuses_a_cargo_linker_in_an_ancestor_config() {
+    // `.cargo/config`, without extension, one directory above the repository.
+    let host = host();
+    assert_config_refused(
+        "rust-linker",
+        "../.cargo/config",
+        &format!("[target.{host}]\nlinker = \"{{script}}\"\n"),
+        &format!("target.{host}.linker"),
+    );
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_refuses_a_cargo_runner() {
+    assert_config_refused(
+        "rust-runner",
+        ".cargo/config.toml",
+        "[target.'cfg(all())']\nrunner = \"{script}\"\n",
+        "target.cfg(all()).runner",
+    );
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_scan_drops_repository_rustflags() {
+    // rust-analyzer runs `cargo rustc --print` with RUSTC_BOOTSTRAP=1, where -Z flags apply:
+    // either form would load the marker into rustc without CARGO_ENCODED_RUSTFLAGS.
+    let host = host();
+    for (name, config) in [
+        (
+            "rust-build-rustflags",
+            "[build]\nrustflags = [\"-Zcodegen-backend={dylib}\"]\n".to_owned(),
+        ),
+        (
+            "rust-target-rustflags",
+            format!("[target.{host}]\nrustflags = [\"-Zcodegen-backend={{dylib}}\"]\n"),
+        ),
+    ] {
+        let m = Markers::new(name);
+        let root = rust_crate(name, &[(".cargo/config.toml", &m.fill(&config))]);
+        let before = tree(&root);
+        for extra in [&[][..], &["--rust-build-scripts"]] {
+            let (doc, _, _) =
+                scan(&[&[root.to_str().unwrap(), "--language", "rust"], extra].concat());
+            assert_eq!(doc["files"].as_array().unwrap().len(), 2, "{name}");
+        }
+        assert_eq!(m.fired(), Vec::<String>::new(), "{name}");
+        assert_eq!(tree(&root), before, "{name}");
+    }
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_never_downloads_or_runs_a_repository_toolchain() {
+    let m = Markers::new("rust-toolchain");
+    // A channel that is not installed, with rustup's download server unreachable.
+    let root = rust_crate(
+        "rust-toolchain",
+        &[("rust-toolchain.toml", "[toolchain]\nchannel = \"1.60.0\"\n")],
+    );
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        .args(["scan", root.to_str().unwrap(), "--language", "rust"])
+        .env("RUSTUP_DIST_SERVER", "http://127.0.0.1:9")
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(2), "{stderr}");
+    assert!(
+        stderr.contains("names toolchain 1.60.0, which is not installed"),
+        "{stderr}"
+    );
+    assert!(
+        !stderr.contains("127.0.0.1"),
+        "rustup tried a download: {stderr}"
+    );
+    // A plain `rust-toolchain` in an ancestor counts as well.
+    let root = rust_crate("rust-toolchain-legacy", &[]);
+    fs::write(
+        root.parent().unwrap().join("rust-toolchain"),
+        "nightly-2001-01-01\n",
+    )
+    .unwrap();
+    rust_refused(
+        &root,
+        "names toolchain nightly-2001-01-01, which is not installed",
+    );
+    // A toolchain by path names programs in the repository.
+    let tc = "#!/bin/sh\ntouch '{fired}/tc-'$$\n";
+    let tc = tc.replace("{fired}", &m.dir.display().to_string());
+    let root = rust_crate(
+        "rust-toolchain-path",
+        &[
+            ("rust-toolchain.toml", "[toolchain]\npath = \"evil-tc\"\n"),
+            ("evil-tc/bin/cargo", &tc),
+            ("evil-tc/bin/rustc", &tc),
+        ],
+    );
+    rust_refused(&root, "sets `toolchain.path`");
+    assert_eq!(m.fired(), Vec::<String>::new());
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_analyzer_toml_is_ignored() {
+    // `rust-analyzer scip` 1.95 reads no rust-analyzer.toml: none of these keys applies.
+    let m = Markers::new("rust-ratoml");
+    let ratoml = m.fill(
+        "[cargo]\nextraEnv = { DYLD_INSERT_LIBRARIES = \"{dylib}\", LD_PRELOAD = \"{dylib}\" }\n\
+         [cargo.buildScripts]\noverrideCommand = [\"{script}\"]\n\
+         [procMacro]\nserver = \"{script}\"\n",
+    );
+    let root = rust_crate("rust-ratoml", &[("rust-analyzer.toml", &ratoml)]);
+    let before = tree(&root);
+    for extra in [&[][..], &["--rust-build-scripts"]] {
+        scan(&[&[root.to_str().unwrap(), "--language", "rust"], extra].concat());
+    }
+    assert_eq!(m.fired(), Vec::<String>::new());
+    assert_eq!(tree(&root), before);
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_refuses_a_repository_without_cargo_lock() {
+    let root = rust_crate("rust-no-lock", &[]);
+    fs::remove_file(root.join("Cargo.lock")).unwrap();
+    let before = tree(&root);
+    rust_refused(&root, "run `cargo generate-lockfile`");
+    assert_eq!(tree(&root), before);
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_refuses_a_rust_project_json() {
+    // rust-analyzer would prefer it to Cargo.toml and load the proc-macro library it names.
+    let m = Markers::new("rust-project");
+    let project = m.fill(
+        "{\"crates\": [{\"root_module\": \"src/lib.rs\", \"edition\": \"2021\", \"deps\": [], \
+         \"is_proc_macro\": true, \"proc_macro_dylib_path\": \"{dylib}\"}]}",
+    );
+    let root = rust_crate("rust-project", &[("rust-project.json", &project)]);
+    rust_refused(&root, "rust-project.json");
+    let root = rust_crate("rust-project-ancestor", &[]);
+    fs::write(root.parent().unwrap().join(".rust-project.json"), &project).unwrap();
+    rust_refused(&root, ".rust-project.json");
+    assert_eq!(m.fired(), Vec::<String>::new());
+}
+
+#[test]
+#[ignore = "needs rustup's active toolchain with rust-analyzer and rust-src; run with --ignored"]
+fn rust_fails_on_a_degraded_load() {
+    // A locked dependency missing from the cargo cache: rust-analyzer would index the
+    // workspace without it.
+    let root = rust_crate(
+        "rust-missing-dep",
+        &[
+            (
+                "Cargo.toml",
+                "[package]\nname = \"w\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\
+                 [dependencies]\nzzzz-archgraph-missing = \"1\"\n",
+            ),
+            (
+                "Cargo.lock",
+                "version = 4\n\n[[package]]\nname = \"w\"\nversion = \"0.1.0\"\n\
+                 dependencies = [\"zzzz-archgraph-missing\"]\n\n[[package]]\n\
+                 name = \"zzzz-archgraph-missing\"\nversion = \"1.0.0\"\n\
+                 source = \"registry+https://github.com/rust-lang/crates.io-index\"\n\
+                 checksum = \"0000000000000000000000000000000000000000000000000000000000000000\"\n",
+            ),
+        ],
+    );
+    let before = tree(&root);
+    rust_refused(&root, "cargo fetch --locked");
+    assert_eq!(tree(&root), before);
+    // A crate whose only source is outside the scanned root: nothing indexed under it.
+    let root = rust_crate(
+        "rust-empty",
+        &[(
+            "Cargo.toml",
+            "[package]\nname = \"w\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\
+             [lib]\npath = \"../outside/lib.rs\"\n",
+        )],
+    );
+    fs::remove_dir_all(root.join("src")).unwrap();
+    write_files(
+        root.parent().unwrap(),
+        &[("outside/lib.rs", "pub fn f() {}\n")],
+    );
+    rust_refused(&root, "indexed no files");
+}
+
+#[test]
+#[ignore = "needs depcruise with TypeScript beside it; run with --ignored"]
+fn impact_collects_external_tests_and_resolves_barrels() {
+    use std::process::Command;
+
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("live-impact-barrels-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    write_files(
+        &root,
+        &[
+            ("src/a.ts", "export const a = 1;\n"),
+            ("src/b.ts", "export const b = 1;\n"),
+            (
+                "src/index.ts",
+                "export { a } from './a';\nexport { b } from './b';\n",
+            ),
+            (
+                "app/a.ts",
+                "import { a } from '../src';\nexport const valueA = a;\n",
+            ),
+            (
+                "app/b.ts",
+                "import { b } from '../src';\nexport const valueB = b;\n",
+            ),
+            (
+                "tests/a.spec.ts",
+                "import { valueA } from '../app/a';\nconsole.log(valueA);\n",
+            ),
+            (
+                "tests/b.spec.ts",
+                "import { valueB } from '../app/b';\nconsole.log(valueB);\n",
+            ),
+        ],
+    );
+    let git = |args: &[&str]| {
+        let output = Command::new(tool("ARCHGRAPH_GIT", "git"))
+            .arg("-C")
+            .arg(&root)
+            .args([
+                "-c",
+                "user.name=Impact Live",
+                "-c",
+                "user.email=impact-live@example.invalid",
+                "-c",
+                "commit.gpgsign=false",
+                "-c",
+                "core.hooksPath=/dev/null",
+            ])
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).unwrap().trim().to_owned()
+    };
+    git(&["init", "-q"]);
+    git(&["add", "."]);
+    git(&["commit", "-qm", "initial barrel consumers"]);
+    let base = git(&["rev-parse", "HEAD"]);
+    fs::write(root.join("src/a.ts"), "export const a = 2;\n").unwrap();
+    git(&["add", "."]);
+    git(&["commit", "-qm", "change a"]);
+    let head = git(&["rev-parse", "HEAD"]);
+    let depcruise = fs::canonicalize(tool("ARCHGRAPH_DEPCRUISE", "depcruise")).unwrap();
+    let out = archgraph(&[
+        "impact",
+        &format!("{base}..{head}"),
+        "--root",
+        root.to_str().unwrap(),
+        "--depcruise",
+        depcruise.to_str().unwrap(),
+        "--format",
+        "json",
+    ]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let report: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    validate(&report);
+    assert_eq!(report["changed_files"], json!(["src/a.ts"]));
+    assert_eq!(report["selected_tests"], json!(["tests/a.spec.ts"]));
+    assert!(
+        report["affected_files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|file| file["path"] == "app/a.ts")
+    );
+    assert!(
+        !report["affected_files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|file| file["path"] == "app/b.ts")
+    );
+    assert!(
+        report["limitations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|line| line
+                .as_str()
+                .unwrap()
+                .contains("barrel import edges to their source declarations"))
+    );
+    assert_eq!(git(&["status", "--porcelain"]), "");
+    assert_eq!(git(&["rev-parse", "HEAD"]), head);
+    fs::remove_dir_all(root).unwrap();
 }

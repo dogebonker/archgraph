@@ -1,0 +1,20 @@
+[
+  {
+    "project": "gson-2.10.1",
+    "files": 99,
+    "edges_before": 682,
+    "edges_after": 452,
+    "false_package_edges_removed": 230,
+    "added": 0,
+    "unresolved": 312
+  },
+  {
+    "project": "json-java-20240303",
+    "files": 25,
+    "edges_before": 75,
+    "edges_after": 75,
+    "false_package_edges_removed": 0,
+    "added": 0,
+    "unresolved": 0
+  }
+]

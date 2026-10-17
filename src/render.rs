@@ -4,7 +4,7 @@ use anyhow::Result;
 
 use crate::model::Document;
 
-const TEMPLATE: &str = include_str!("../assets/graph.html");
+pub(crate) const TEMPLATE: &str = include_str!("../assets/graph.html");
 
 /// The page with `doc` embedded as JSON. Every `<` is escaped, so no path can close the script
 /// element it sits in.

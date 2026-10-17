@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
@@ -7,13 +7,26 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, bail};
 use archgraph::collect::{
-    self, DEFAULT_EXCLUDES, GO_EXCLUDES, GO_TEST_EXCLUDES, TEST_EXCLUDES, depcruise, go, grimp,
+    self, DEFAULT_EXCLUDES, GO_EXCLUDES, GO_TEST_EXCLUDES, JAVA_EXCLUDES, JAVA_TEST_EXCLUDES,
+    RUST_EXCLUDES, TEST_EXCLUDES, depcruise, go, grimp, java, rust,
 };
 use archgraph::model::{
     Config, CycleLevel, Document, Git, Language, SCHEMA, ScanInput, Source, Verdict,
 };
-use archgraph::{cochange, diff, modules, render, rules, simulate};
+use archgraph::{cochange, codeowners, diff, history, modules, render, rules, simulate};
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use sha2::Digest;
+
+#[path = "cli/hotspots.rs"]
+mod hotspots_cli;
+#[path = "cli/impact.rs"]
+mod impact_cli;
+#[path = "cli/impact_context.rs"]
+mod impact_context;
+#[path = "cli/impact_typescript.rs"]
+mod impact_typescript;
+#[path = "cli/provenance.rs"]
+mod provenance_cli;
 
 #[derive(Parser)]
 #[command(version, about = "Import-graph evidence for architecture decisions")]
@@ -36,6 +49,49 @@ enum Cmd {
     Simulate(Simulate),
     /// Compare two scan documents: module metrics, cycles and forbidden imports
     Diff(DiffArgs),
+    /// Scan recent Git commits and write an architecture timeline
+    History(HistoryArgs),
+    /// Find a verified commit boundary that introduced a cycle or forbidden edge
+    Bisect(provenance_cli::BisectArgs),
+    /// Rank changed files by churn, coupling, cycles and coordination cost
+    Hotspots(hotspots_cli::HotspotsArgs),
+    /// Show affected modules, tests and reviewers for a Git diff
+    Impact(impact_cli::ImpactArgs),
+}
+
+#[derive(Args)]
+struct HistoryArgs {
+    /// Repository root (or a directory within it)
+    #[arg(default_value = ".")]
+    root: PathBuf,
+    /// Revision or range to walk along its first-parent history
+    #[arg(long, default_value = "HEAD")]
+    rev: String,
+    /// Maximum number of recent commits, ordered oldest to newest
+    #[arg(long, default_value_t = 24, value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..))]
+    limit: usize,
+    /// Monthly first commits, every-N commits, or tagged releases
+    #[arg(long, value_enum, default_value_t = history::Sampling::Monthly)]
+    sample: history::Sampling,
+    #[arg(long, default_value_t = 1, value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..))]
+    every: usize,
+    /// Start date (default: two years before the selected endpoint)
+    #[arg(long)]
+    since: Option<String>,
+    /// Keep cached points and scan only missing samples
+    #[arg(long)]
+    append: bool,
+    /// Compare two release refs and print release-note Markdown
+    #[arg(long, num_args = 2, value_names = ["OLD", "NEW"])]
+    diff: Vec<String>,
+    /// Verify the commits behind cycle increases (uses additional scan probes)
+    #[arg(long)]
+    annotate: bool,
+    #[command(flatten)]
+    opts: ScanOpts,
+    /// Directory for history.json and history.html [default: <root>/.archgraph]
+    #[arg(long)]
+    out_dir: Option<PathBuf>,
 }
 
 #[derive(Args)]
@@ -59,12 +115,15 @@ struct Report {
     /// Directory for archgraph.json and archgraph.html [default: <root>/.archgraph]
     #[arg(long)]
     out_dir: Option<PathBuf>,
+    /// Skip bounded Git provenance probes
+    #[arg(long)]
+    no_provenance: bool,
 }
 
-/// What `scan` and `report` share.
-#[derive(Args)]
+/// What `scan`, `report` and `history` share.
+#[derive(Args, Clone, serde::Serialize)]
 struct ScanOpts {
-    /// Directory segments below the source root that form a module [default: 2; Go: each
+    /// Directory segments below the source root that form a module [default: 2; Go/Java: each
     /// package is a module]
     #[arg(long)]
     depth: Option<usize>,
@@ -95,6 +154,19 @@ struct ScanOpts {
     /// Go toolchain (1.21 or later) that runs the Go helper
     #[arg(long, default_value = "go")]
     go: String,
+    /// Java launcher from a JDK 11 or later
+    #[arg(long, default_value = "java")]
+    java: String,
+    /// rust-analyzer to run instead of the active rustup toolchain's
+    #[arg(long)]
+    rust_analyzer: Option<PathBuf>,
+    /// Cargo features rust-analyzer enables
+    #[arg(long, value_enum, default_value_t = rust::Features::All)]
+    rust_features: rust::Features,
+    /// Run build scripts and proc macros, as rust-analyzer does in an editor. This compiles
+    /// and runs code from the scanned repository with your permissions
+    #[arg(long)]
+    rust_build_scripts: bool,
     /// layout.yaml with modules, layers, public entries and forbid/allow rules
     #[arg(long)]
     rules: Option<PathBuf>,
@@ -102,6 +174,15 @@ struct ScanOpts {
     #[arg(long, value_name = "N", num_args = 0..=1, require_equals = true, default_missing_value = "300",
           value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..))]
     cochange: Option<usize>,
+    /// Collect explainable churn factors [default window: 12 months ago]
+    #[arg(long, num_args = 0..=1, require_equals = true, default_missing_value = "12 months ago")]
+    hotspots: Option<String>,
+    /// Include the distinct-author coordination factor in hotspot scores
+    #[arg(long)]
+    hotspot_authors: bool,
+    /// Ignore commits touching more than this many repository files
+    #[arg(long, default_value_t = 30, value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..))]
+    hotspot_max_files: usize,
 }
 
 #[derive(Args)]
@@ -184,6 +265,10 @@ fn main() -> ExitCode {
         Cmd::Render(args) => render(args).map(|()| ExitCode::SUCCESS),
         Cmd::Simulate(args) => simulate(args).map(|()| ExitCode::SUCCESS),
         Cmd::Diff(args) => diff(args),
+        Cmd::History(args) => history(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Bisect(args) => provenance_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Hotspots(args) => hotspots_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Impact(args) => impact_cli::run(args),
     };
     result.unwrap_or_else(|e| {
         eprintln!("error: {e:#}");
@@ -194,6 +279,286 @@ fn main() -> ExitCode {
 fn scan(args: Scan) -> Result<()> {
     let doc = scan_doc(&args.root, &args.opts, args.opts.rules.as_deref())?;
     write(args.output.as_deref(), &doc)
+}
+
+fn history(mut args: HistoryArgs) -> Result<()> {
+    if args.opts.collector_input.is_some() {
+        bail!(
+            "history needs live collectors; --collector-input would reuse one graph for every commit"
+        );
+    }
+    let language = match args.opts.language {
+        Some(language) => language,
+        None => collect::detect_language(&args.root, collect::source_dir(&args.root))?,
+    };
+    args.opts.language = Some(language);
+    let program = match language {
+        Language::Python => Some(&mut args.opts.python),
+        Language::Go => Some(&mut args.opts.go),
+        Language::Java => Some(&mut args.opts.java),
+        _ => None,
+    };
+    if let Some(program) = program
+        && program.contains(['/', '\\'])
+    {
+        *program = fs::canonicalize(&*program)?.to_string_lossy().into_owned();
+    }
+    // Ignored node_modules are absent from snapshots; reuse the installed collector.
+    if language == Language::Typescript && args.opts.depcruise.is_none() {
+        args.opts.depcruise = fs::canonicalize(&args.root)?
+            .ancestors()
+            .map(|dir| dir.join("node_modules/.bin/depcruise"))
+            .find(|path| path.is_file());
+    }
+    if language == Language::Typescript {
+        args.opts.depcruise = args
+            .opts
+            .depcruise
+            .as_ref()
+            .map(fs::canonicalize)
+            .transpose()?;
+    }
+    // Explicit rules stay fixed across the timeline; otherwise each commit supplies its own.
+    let rules = args
+        .opts
+        .rules
+        .as_deref()
+        .map(fs::canonicalize)
+        .transpose()?;
+    let scan = |root: &Path| {
+        let local = root.join("layout.yaml");
+        scan_doc(
+            root,
+            &args.opts,
+            rules
+                .as_deref()
+                .or_else(|| local.is_file().then_some(local.as_path())),
+        )
+    };
+    if let [old, new] = args.diff.as_slice() {
+        let resolve = |rev: &str| -> Result<String> {
+            let out = Command::new("git")
+                .arg("-C")
+                .arg(&args.root)
+                .args([
+                    "-c",
+                    "core.fsmonitor=false",
+                    "rev-parse",
+                    "--verify",
+                    "--end-of-options",
+                ])
+                .arg(format!("{rev}^{{commit}}"))
+                .output()?;
+            if !out.status.success() {
+                bail!(
+                    "unknown release ref {rev}: {}",
+                    String::from_utf8_lossy(&out.stderr)
+                );
+            }
+            Ok(String::from_utf8(out.stdout)?.trim().to_owned())
+        };
+        let checkout = history::Checkout::new(&args.root)?;
+        let old = scan(&checkout.at(&resolve(old)?)?)?;
+        let new = scan(&checkout.at(&resolve(new)?)?)?;
+        print!("{}", diff::markdown(&diff::diff(&old, &new), &[]));
+        return Ok(());
+    }
+    let out_dir = args
+        .out_dir
+        .clone()
+        .unwrap_or_else(|| args.root.join(".archgraph"));
+    let mut key = serde_json::to_vec(&args.opts)?;
+    key.extend_from_slice(env!("CARGO_PKG_VERSION").as_bytes());
+    key.extend_from_slice(include_bytes!("../Cargo.lock"));
+    key.extend_from_slice(&sha2::Sha256::digest(fs::read(std::env::current_exe()?)?));
+    if let Some(path) = &rules {
+        key.extend_from_slice(&fs::read(path)?);
+    }
+    // A caller-supplied collector may change in place without its path changing.
+    let executable = match language {
+        Language::Typescript => args.opts.depcruise.as_ref(),
+        Language::Rust => args.opts.rust_analyzer.as_ref(),
+        _ => None,
+    };
+    if let Some(executable) = executable {
+        key.extend_from_slice(&fs::read(executable)?);
+    }
+    let runtime = match language {
+        Language::Typescript => ("node", vec!["--version"]),
+        Language::Python => (args.opts.python.as_str(), vec!["--version"]),
+        Language::Go => (args.opts.go.as_str(), vec!["version"]),
+        Language::Java => (args.opts.java.as_str(), vec!["-version"]),
+        Language::Rust => ("rustup", vec!["show", "active-toolchain"]),
+    };
+    {
+        let (program, version_args) = runtime;
+        if let Ok(output) = Command::new(program)
+            .args(version_args)
+            .current_dir(std::env::temp_dir())
+            .env("RUSTUP_AUTO_INSTALL", "0")
+            .output()
+        {
+            key.extend_from_slice(&output.stdout);
+            key.extend_from_slice(&output.stderr);
+        }
+    }
+    // Collector packages can change independently of their interpreter or toolchain label.
+    for (query_language, program, version_args, cwd) in [
+        (
+            Language::Python,
+            args.opts.python.clone(),
+            vec![
+                "-I".to_owned(),
+                "-c".to_owned(),
+                "import importlib.metadata; print(importlib.metadata.version('grimp'))".to_owned(),
+            ],
+            std::env::temp_dir(),
+        ),
+        (
+            Language::Typescript,
+            args.opts
+                .depcruise
+                .as_ref()
+                .map_or_else(|| "npx".to_owned(), |p| p.to_string_lossy().into_owned()),
+            if args.opts.depcruise.is_some() {
+                vec!["--version".to_owned()]
+            } else {
+                vec![
+                    "--no-install".to_owned(),
+                    "depcruise".to_owned(),
+                    "--version".to_owned(),
+                ]
+            },
+            fs::canonicalize(&args.root)?,
+        ),
+    ] {
+        if language != query_language {
+            continue;
+        }
+        if let Ok(output) = Command::new(program)
+            .args(version_args)
+            .current_dir(cwd)
+            .output()
+            && output.status.success()
+        {
+            key.extend_from_slice(&output.stdout);
+        }
+    }
+    let analyzer = (language == Language::Rust)
+        .then(|| {
+            args.opts.rust_analyzer.clone().or_else(|| {
+                let output = Command::new("rustup")
+                    .args(["which", "rust-analyzer"])
+                    .current_dir(std::env::temp_dir())
+                    .env("RUSTUP_AUTO_INSTALL", "0")
+                    .output()
+                    .ok()?;
+                output
+                    .status
+                    .success()
+                    .then(|| PathBuf::from(String::from_utf8_lossy(&output.stdout).trim()))
+            })
+        })
+        .flatten();
+    if let Some(analyzer) = analyzer
+        && let Ok(output) = Command::new(analyzer)
+            .arg("--version")
+            .current_dir(std::env::temp_dir())
+            .output()
+        && output.status.success()
+    {
+        key.extend_from_slice(&output.stdout);
+    }
+    let mut package_roots = Vec::new();
+    if language == Language::Typescript {
+        package_roots.push(fs::canonicalize(&args.root)?);
+    }
+    if let Some(executable) = &args.opts.depcruise {
+        package_roots.push(fs::canonicalize(executable)?);
+    }
+    for root in package_roots {
+        for directory in root.ancestors() {
+            for package in ["dependency-cruiser", "typescript"] {
+                if let Ok(bytes) = fs::read(
+                    directory
+                        .join("node_modules")
+                        .join(package)
+                        .join("package.json"),
+                ) {
+                    key.extend_from_slice(&bytes);
+                }
+            }
+        }
+    }
+    let identity = format!("{:?}", sha2::Sha256::digest(&key));
+    let history_options = history::HistoryOptions {
+        sampling: args.sample,
+        limit: args.limit,
+        every: args.every,
+        since: args.since,
+        cache_dir: Some(out_dir.join("history")),
+        cache_key: identity,
+        append: args.append,
+    };
+    let mut history = history::collect_with_options(&args.root, &args.rev, &history_options, scan)?;
+    if args.annotate {
+        for i in 1..history.snapshots.len() {
+            let (before, after) = history.snapshots.split_at_mut(i);
+            let previous = &before[i - 1];
+            let current = &mut after[0];
+            if (current.summary.modules_in_cycles_percent
+                > previous.summary.modules_in_cycles_percent
+                || current.summary.cycles > previous.summary.cycles)
+                && current
+                    .graph
+                    .findings
+                    .iter()
+                    .all(|f| f.provenance.is_none())
+            {
+                provenance_cli::enrich_from(
+                    &args.root,
+                    &args.opts,
+                    &mut current.graph,
+                    Some(previous.commit.clone()),
+                )?;
+                history::persist_context(&args.root, &history_options, &current.graph)?;
+            }
+        }
+    }
+    let html = history::render(&history)?;
+    let json = out_dir.join("history.json");
+    let page = out_dir.join("history.html");
+    for path in [&out_dir, &json, &page] {
+        if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()) {
+            bail!(
+                "{} is a symbolic link; refusing to write through it",
+                path.display()
+            );
+        }
+    }
+    fs::create_dir_all(&out_dir).with_context(|| format!("creating {}", out_dir.display()))?;
+    write(Some(&json), &history)?;
+    fs::write(&page, html).with_context(|| format!("writing {}", page.display()))?;
+    println!("commit       files modules cycles  % in cycles  cycles/100");
+    for point in &history.snapshots {
+        let s = &point.summary;
+        println!(
+            "{} {:>6} {:>7} {:>6} {:>12.1} {:>11.2}",
+            &point.commit[..point.commit.len().min(10)],
+            s.files,
+            s.modules,
+            s.cycles,
+            s.modules_in_cycles_percent,
+            s.cycles_per_100_modules
+        );
+    }
+    println!(
+        "{} snapshots\n{}\n{}",
+        history.snapshots.len(),
+        json.display(),
+        page.display()
+    );
+    Ok(())
 }
 
 /// Runs the collector under `root` and analyzes its output with `rules`.
@@ -215,10 +580,11 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
     };
     let mut excludes: Vec<String> = Vec::new();
     if !args.no_default_excludes {
-        let (generated, tests): (&[&str], &[&str]) = if language == Language::Go {
-            (GO_EXCLUDES, GO_TEST_EXCLUDES)
-        } else {
-            (&[], &[])
+        let (generated, tests): (&[&str], &[&str]) = match language {
+            Language::Go => (GO_EXCLUDES, GO_TEST_EXCLUDES),
+            Language::Rust => (RUST_EXCLUDES, &[]),
+            Language::Java => (JAVA_EXCLUDES, JAVA_TEST_EXCLUDES),
+            _ => (&[], &[]),
         };
         excludes.extend(
             DEFAULT_EXCLUDES
@@ -240,11 +606,16 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
     let excludes_set = collect::globset(&excludes)?;
     // Go: files that cannot be split across packages, in pairs.
     let mut bound = Vec::new();
+    let mut python_package = None;
     let (raw, source_root) = match language {
         Language::Typescript => {
             let (json, type_marking) = match input {
                 Some(json) => (json, None),
-                None => depcruise::run(root, source_dir, depcruise.as_deref())?,
+                None => depcruise::run(
+                    root,
+                    if args.include_tests { "." } else { source_dir },
+                    depcruise.as_deref(),
+                )?,
             };
             let mut raw = depcruise::parse(&json)?;
             raw.collector.type_marking = type_marking.map(str::to_owned);
@@ -252,6 +623,7 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         }
         Language::Python => {
             let package = grimp::package(root, source_dir, args.package.as_deref(), &excludes_set)?;
+            python_package = Some(package.clone());
             let json = match input {
                 Some(json) => json,
                 None => grimp::run(root, source_dir, &package, &args.python)?,
@@ -287,6 +659,27 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
             bound = parsed.bound;
             (parsed.raw, ".".to_owned())
         }
+        Language::Rust => {
+            let json = match input {
+                Some(json) => json,
+                None => rust::run(
+                    root,
+                    &rust::Options {
+                        rust_analyzer: args.rust_analyzer.as_deref(),
+                        features: args.rust_features,
+                        build_scripts: args.rust_build_scripts,
+                    },
+                )?,
+            };
+            (rust::parse(&json)?, ".".to_owned())
+        }
+        Language::Java => {
+            let json = match input {
+                Some(json) => json,
+                None => java::run(root, &args.java, &excludes_set)?,
+            };
+            (java::parse(&json)?, ".".to_owned())
+        }
     };
     let mut raw = raw.exclude(&excludes_set);
     if !args.no_default_excludes {
@@ -306,26 +699,55 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         git: git(root),
         generated_at: now_utc(),
     };
-    // Go packages are the language's own modules; merging them by folder invents cycles Go
-    // forbids.
-    let package_modules = language == Language::Go && args.depth.is_none();
+    // Keep package directories intact unless a depth is explicitly requested.
+    let package_modules = matches!(language, Language::Go | Language::Java) && args.depth.is_none();
     let config = Config {
         depth: args.depth.unwrap_or(if package_modules { 0 } else { 2 }),
         package_modules,
         source_root,
         excludes,
         include_tests: args.include_tests || args.no_default_excludes,
+        no_default_excludes: args.no_default_excludes,
         rules: rules.map(rules::load).transpose()?,
+        codeowners: codeowners::load(root)?,
+        collection: matches!(language, Language::Python | Language::Rust).then_some(
+            archgraph::model::CollectionOptions {
+                python_package,
+                rust_features: (language == Language::Rust).then_some(args.rust_features),
+                rust_build_scripts: language == Language::Rust && args.rust_build_scripts,
+            },
+        ),
     };
+    if let Some(owners) = &config.codeowners {
+        for warning in &owners.warnings {
+            eprintln!(
+                "warning: {}:{}: {}",
+                owners.path, warning.line, warning.message
+            );
+        }
+    }
     let cochange = args
         .cochange
         .map(|n| cochange::collect(root, n, &raw.files))
         .transpose()?;
     let entries = match language {
         Language::Typescript => depcruise::package_entries(root, &raw.files),
-        Language::Python | Language::Go => Vec::new(),
+        Language::Python | Language::Go | Language::Rust | Language::Java => Vec::new(),
     };
-    archgraph::analyze(source, config, raw.files, raw.edges, entries, cochange)
+    let mut doc = archgraph::analyze(source, config, raw.files, raw.edges, entries, cochange)?;
+    if let Some(since) = &args.hotspots {
+        let report = archgraph::hotspots::collect(
+            root,
+            &doc,
+            &archgraph::hotspots::Options {
+                since: since.clone(),
+                max_files: args.hotspot_max_files,
+                authors: args.hotspot_authors,
+            },
+        )?;
+        archgraph::apply_hotspots(&mut doc, report);
+    }
+    Ok(doc)
 }
 
 fn report(args: Report) -> Result<ExitCode> {
@@ -334,7 +756,10 @@ fn report(args: Report) -> Result<ExitCode> {
         let found = root.join("layout.yaml");
         found.is_file().then_some(found)
     });
-    let doc = scan_doc(root, &args.opts, rules.as_deref())?;
+    let mut doc = scan_doc(root, &args.opts, rules.as_deref())?;
+    if !args.no_provenance && args.opts.collector_input.is_none() && doc.source.git.is_some() {
+        provenance_cli::enrich(root, &args.opts, &mut doc)?;
+    }
     let out_dir = args.out_dir.unwrap_or_else(|| root.join(".archgraph"));
     let (json, html) = (
         out_dir.join("archgraph.json"),
@@ -382,6 +807,26 @@ fn report(args: Report) -> Result<ExitCode> {
         count(doc.modules.len(), "module"),
         count(doc.edges.len(), "import")
     );
+    if let Some(owners) = &doc.config.codeowners {
+        let owned = doc.files.iter().filter(|f| !f.owners.is_empty()).count();
+        let mut counts = BTreeMap::new();
+        for file in &doc.files {
+            for owner in &file.owners {
+                *counts.entry(owner.as_str()).or_insert(0usize) += 1;
+            }
+        }
+        let mut counts: Vec<_> = counts.into_iter().collect();
+        counts.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+        out += &format!(
+            "\n{} ({})\n  {owned} of {} files owned; shared files count for each owner\n",
+            heading("Ownership"),
+            owners.path,
+            doc.files.len()
+        );
+        for (owner, n) in counts.iter().take(10) {
+            out += &format!("  {owner}: {}\n", count(*n, "file"));
+        }
+    }
     if rules.is_some() {
         out += &format!("\n{}\n", heading("Rules"));
         for (verdict, label) in [
@@ -580,6 +1025,11 @@ fn simulate(args: Simulate) -> Result<()> {
         config.rules = Some(rules::load(path)?);
     }
     let rules = rules::compile(&config)?;
+    let owners = config
+        .codeowners
+        .as_ref()
+        .map(codeowners::compile)
+        .transpose()?;
     let files = input.files.into_iter().map(|f| f.path).collect();
     let doc = archgraph::build(
         input.source,
@@ -588,6 +1038,7 @@ fn simulate(args: Simulate) -> Result<()> {
         input.edges,
         input.package_entries,
         rules.as_ref(),
+        owners.as_ref(),
     );
     write(None, &simulate::simulate(&doc, rules.as_ref(), file, to)?)
 }
@@ -629,20 +1080,23 @@ fn diff(args: DiffArgs) -> Result<ExitCode> {
 /// A scan document recomputed from its files, edges and config, with `rules` replacing the
 /// embedded ones.
 fn recompute(path: &Path, rules: Option<&Path>) -> Result<Document> {
-    let input = read_scan(path)?;
-    let mut config = input.config;
+    let mut input = read_scan(path)?;
     if let Some(path) = rules {
-        config.rules = Some(rules::load(path)?);
+        input.config.rules = Some(rules::load(path)?);
+        let compiled = rules::compile(&input.config)?;
+        for file in &mut input.files {
+            file.module = compiled
+                .as_ref()
+                .and_then(|r| r.module_of(&file.path))
+                .unwrap_or_else(|| {
+                    modules::module_of(&file.path, &input.config, input.source.language)
+                });
+        }
+        // Scores and introductions were judged under the old module/rule configuration.
+        input.findings.clear();
+        input.hotspots = None;
     }
-    let files = input.files.into_iter().map(|f| f.path).collect();
-    archgraph::analyze(
-        input.source,
-        config,
-        files,
-        input.edges,
-        input.package_entries,
-        input.cochange,
-    )
+    archgraph::restore_scan(input)
 }
 
 fn read_scan(path: &Path) -> Result<ScanInput> {
@@ -657,48 +1111,9 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
             input.kind
         );
     }
-    consistent(&input).with_context(|| format!("inconsistent scan document {}", path.display()))?;
+    archgraph::validate_scan(&input)
+        .with_context(|| format!("inconsistent scan document {}", path.display()))?;
     Ok(input)
-}
-
-/// Every file listed once, with the module its embedded config gives it, and every edge between
-/// two listed files: what the recomputation relies on.
-fn consistent(input: &ScanInput) -> Result<()> {
-    let rules = rules::compile(&input.config)?;
-    let mut paths = HashSet::new();
-    for f in &input.files {
-        if !paths.insert(f.path.as_str()) {
-            bail!("{} is listed twice", f.path);
-        }
-        let module = rules
-            .as_ref()
-            .and_then(|r| r.module_of(&f.path))
-            .unwrap_or_else(|| modules::module_of(&f.path, &input.config, input.source.language));
-        if f.module != module {
-            bail!(
-                "{} has module `{}`, its config gives `{module}`",
-                f.path,
-                f.module
-            );
-        }
-    }
-    for entry in &input.package_entries {
-        if !paths.contains(entry.as_str()) {
-            bail!("package entry {entry} is not in files");
-        }
-    }
-    for e in &input.edges {
-        for end in [&e.from, &e.to] {
-            if !paths.contains(end.as_str()) {
-                bail!(
-                    "edge {} -> {} names {end}, which is not in files",
-                    e.from,
-                    e.to
-                );
-            }
-        }
-    }
-    Ok(())
 }
 
 /// Pretty JSON to `output`, or stdout.

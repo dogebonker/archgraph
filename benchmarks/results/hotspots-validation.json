@@ -1,0 +1,1393 @@
+{
+  "measured_at": "2026-10-17T14:34:29.518849+00:00",
+  "binary_sha256": "db67502f5dc78ba6ae4d8be0296d294c64ffb45aab620ef8f021052c47caf425",
+  "method": {
+    "window": "365 days ending at each graph commit",
+    "top_files": "ceil(10% of scanned files), ranked per repository",
+    "authors": true,
+    "max_commit_files": 30,
+    "merges": "excluded",
+    "normalization": "per scanned root",
+    "random_baseline": "uniform sampling without replacement, controlling each fix commit's scanned file count",
+    "validation": "in-sample fix/bug/regression message association; no causal or predictive claim"
+  },
+  "summary": {
+    "attempted": 20,
+    "completed": 20,
+    "with_fix_commits": 20,
+    "bugfix_commits": 5253,
+    "top_bugfix_commits": 3794,
+    "share": 0.7222539501237388,
+    "expected_random_share": 0.19554575297545204,
+    "random_lift": 3.693529208043743,
+    "caveat": "In-sample association with fix/bug/regression commit messages, not verified defects or predictive validation. Random comparison controls each commit's number of touched scanned files."
+  },
+  "repositories": [
+    {
+      "name": "activepieces",
+      "repo": "https://github.com/activepieces/activepieces",
+      "commit": "55134042a88da01be2229e06302a78c80f209ea0",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.774360625015106
+      },
+      "status": "ok",
+      "commits": 4939,
+      "skipped": 452,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 675,
+        "expected_random_share": 0.19327077974643211,
+        "files": 757,
+        "lift": 6.905964912280702,
+        "random_lift": 3.587367600228936,
+        "share": 0.6933333333333334,
+        "top_bugfix_commits": 468,
+        "top_files": 76
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "c72c4784312a1542e85ef7bad8960f60417605b755232760cb4a642287b0be4f",
+      "top_examples": [
+        {
+          "path": "src/app/database/postgres-connection.ts",
+          "commits": 155,
+          "authors": 18,
+          "churn": 1.0,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 4.0,
+          "cycle_size": 32,
+          "cut_candidate": true
+        },
+        {
+          "path": "src/app/app.ts",
+          "commits": 83,
+          "authors": 17,
+          "churn": 0.8774144832015932,
+          "coupling": 0.5714285714285714,
+          "cycle": 1.0,
+          "score": 2.680988698671535,
+          "cycle_size": 32,
+          "cut_candidate": true
+        },
+        {
+          "path": "src/app/database/database-connection.ts",
+          "commits": 44,
+          "authors": 13,
+          "churn": 0.7538160463002316,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 2.5964774928119088,
+          "cycle_size": 32,
+          "cut_candidate": true
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/activepieces.json",
+      "scan_root_path": "packages/server/api",
+      "collector_unresolved": 2011,
+      "seconds": 8.689491582976189
+    },
+    {
+      "name": "celery",
+      "repo": "https://github.com/celery/celery",
+      "commit": "ef37e616ef6726a2e08126635c000f3eacffcbc2",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.06439270795090124
+      },
+      "status": "ok",
+      "commits": 535,
+      "skipped": 0,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 187,
+        "expected_random_share": 0.15110784647443107,
+        "files": 161,
+        "lift": 5.4696445423089015,
+        "random_lift": 3.8220391622720737,
+        "share": 0.5775401069518716,
+        "top_bugfix_commits": 108,
+        "top_files": 17
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "387063f459c0cb8b2307597869e2e618368a56430470b6f7782d6d9f28517c5b",
+      "top_examples": [
+        {
+          "path": "celery/canvas.py",
+          "commits": 24,
+          "authors": 19,
+          "churn": 1.0,
+          "coupling": 0.5806451612903226,
+          "cycle": 1.0,
+          "score": 3.161290322580645,
+          "cycle_size": 5,
+          "cut_candidate": false
+        },
+        {
+          "path": "celery/app/defaults.py",
+          "commits": 16,
+          "authors": 11,
+          "churn": 0.8801872138612941,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 2.779538570088297,
+          "cycle_size": 5,
+          "cut_candidate": false
+        },
+        {
+          "path": "celery/app/base.py",
+          "commits": 14,
+          "authors": 10,
+          "churn": 0.8413030972429927,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 2.568188402110188,
+          "cycle_size": 5,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/celery.json",
+      "scan_root_path": ".",
+      "collector_unresolved": null,
+      "seconds": 0.2611426250077784
+    },
+    {
+      "name": "django",
+      "repo": "https://github.com/django/django",
+      "commit": "d430084791a61b31cecec132bce3dca19194f7f2",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.16033712500939146
+      },
+      "status": "ok",
+      "commits": 1063,
+      "skipped": 13,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 367,
+        "expected_random_share": 0.15199568158716156,
+        "files": 713,
+        "lift": 6.691795337571905,
+        "random_lift": 4.44584551182517,
+        "share": 0.6757493188010899,
+        "top_bugfix_commits": 248,
+        "top_files": 72
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "e5720d57712ee1f135218cf85274272b90c58165e7be9b2b45ec4254726c994b",
+      "top_examples": [
+        {
+          "path": "django/db/models/query.py",
+          "commits": 26,
+          "authors": 16,
+          "churn": 1.0,
+          "coupling": 0.559322033898305,
+          "cycle": 1.0,
+          "score": 3.11864406779661,
+          "cycle_size": 31,
+          "cut_candidate": true
+        },
+        {
+          "path": "django/contrib/admin/options.py",
+          "commits": 26,
+          "authors": 15,
+          "churn": 1.0,
+          "coupling": 0.4576271186440678,
+          "cycle": 1.0,
+          "score": 2.8241525423728815,
+          "cycle_size": 4,
+          "cut_candidate": true
+        },
+        {
+          "path": "django/utils/deprecation.py",
+          "commits": 11,
+          "authors": 9,
+          "churn": 0.7539531690476383,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 2.3561036532738697,
+          "cycle_size": 31,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/django.json",
+      "scan_root_path": ".",
+      "collector_unresolved": null,
+      "seconds": 0.7171634170226753
+    },
+    {
+      "name": "excalidraw",
+      "repo": "https://github.com/excalidraw/excalidraw",
+      "commit": "4c37956ba5f04ec342a9d9d5891a38f22c5b7b4e",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.1131639169761911
+      },
+      "status": "ok",
+      "commits": 258,
+      "skipped": 20,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 133,
+        "expected_random_share": 0.23726631567431997,
+        "files": 364,
+        "lift": 8.210526315789474,
+        "random_lift": 3.517509275572838,
+        "share": 0.8345864661654135,
+        "top_bugfix_commits": 111,
+        "top_files": 37
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "d9ac5bc235e5900a27381b38fcb672117bf8cf1e3709db68c9bbdf3dbb40c163",
+      "top_examples": [
+        {
+          "path": "components/App.tsx",
+          "commits": 99,
+          "authors": 9,
+          "churn": 1.0,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 4.0,
+          "cycle_size": 29,
+          "cut_candidate": true
+        },
+        {
+          "path": "components/Actions.tsx",
+          "commits": 10,
+          "authors": 5,
+          "churn": 0.5206963425791125,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 1.6199441769127942,
+          "cycle_size": 29,
+          "cut_candidate": true
+        },
+        {
+          "path": "components/LayerUI.tsx",
+          "commits": 14,
+          "authors": 2,
+          "churn": 0.5880456295278406,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 1.437444872179166,
+          "cycle_size": 29,
+          "cut_candidate": true
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/excalidraw.json",
+      "scan_root_path": "packages/excalidraw",
+      "collector_unresolved": 1341,
+      "seconds": 0.8872694169986062
+    },
+    {
+      "name": "fastapi",
+      "repo": "https://github.com/fastapi/fastapi",
+      "commit": "0b919816378eaa773df7ce4204414c712c9fdbea",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.1481110830209218
+      },
+      "status": "ok",
+      "commits": 1590,
+      "skipped": 90,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 50,
+        "expected_random_share": 0.1415843558372612,
+        "files": 52,
+        "lift": 7.106666666666666,
+        "random_lift": 5.7916003159453435,
+        "share": 0.82,
+        "top_bugfix_commits": 41,
+        "top_files": 6
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "8db9c2c5253e38a313ee69dc69636e0e47cbad29c57e21919c2d5d1f58941685",
+      "top_examples": [
+        {
+          "path": "fastapi/dependencies/utils.py",
+          "commits": 43,
+          "authors": 14,
+          "churn": 0.8329174784532768,
+          "coupling": 0.6470588235294118,
+          "cycle": 1.0,
+          "score": 2.743728164316676,
+          "cycle_size": 14,
+          "cut_candidate": false
+        },
+        {
+          "path": "fastapi/routing.py",
+          "commits": 42,
+          "authors": 8,
+          "churn": 0.8278573801487569,
+          "coupling": 0.8235294117647058,
+          "cycle": 1.0,
+          "score": 2.372263585132152,
+          "cycle_size": 14,
+          "cut_candidate": false
+        },
+        {
+          "path": "fastapi/openapi/utils.py",
+          "commits": 18,
+          "authors": 5,
+          "churn": 0.6480845114116249,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 1.7590865309744106,
+          "cycle_size": 14,
+          "cut_candidate": true
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/fastapi.json",
+      "scan_root_path": ".",
+      "collector_unresolved": null,
+      "seconds": 1.6740355000365525
+    },
+    {
+      "name": "flask",
+      "repo": "https://github.com/pallets/flask",
+      "commit": "d086db856be187255b8ec61ef409357393020f32",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.06400895799743012
+      },
+      "status": "ok",
+      "commits": 59,
+      "skipped": 0,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 6,
+        "expected_random_share": 0.1428571428571429,
+        "files": 21,
+        "lift": 5.833333333333334,
+        "random_lift": 5.833333333333331,
+        "share": 0.8333333333333334,
+        "top_bugfix_commits": 5,
+        "top_files": 3
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "9fefb7703f031e3b1695d5eeaa18a0c8df6056825976e870f6db2ca855e54127",
+      "top_examples": [
+        {
+          "path": "src/flask/app.py",
+          "commits": 9,
+          "authors": 2,
+          "churn": 1.0,
+          "coupling": 1.0,
+          "cycle": 0.0,
+          "score": 2.0,
+          "cycle_size": 0,
+          "cut_candidate": false
+        },
+        {
+          "path": "src/flask/cli.py",
+          "commits": 4,
+          "authors": 1,
+          "churn": 0.6989700043360187,
+          "coupling": 0.875,
+          "cycle": 0.0,
+          "score": 0.9173981306910246,
+          "cycle_size": 0,
+          "cut_candidate": false
+        },
+        {
+          "path": "src/flask/ctx.py",
+          "commits": 5,
+          "authors": 1,
+          "churn": 0.7781512503836435,
+          "coupling": 0.6875,
+          "cycle": 0.0,
+          "score": 0.8024684769581324,
+          "cycle_size": 0,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/flask.json",
+      "scan_root_path": ".",
+      "collector_unresolved": null,
+      "seconds": 0.15564058400923386
+    },
+    {
+      "name": "httpx",
+      "repo": "https://github.com/encode/httpx",
+      "commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.031071792007423937
+      },
+      "status": "ok",
+      "commits": 20,
+      "skipped": 0,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 1,
+        "expected_random_share": 0.2490118577075099,
+        "files": 23,
+        "lift": 7.666666666666667,
+        "random_lift": 4.015873015873016,
+        "share": 1.0,
+        "top_bugfix_commits": 1,
+        "top_files": 3
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "ff33c27a5a9ab8db2a47cd287c82a6fbe21216ba8ea308738e708478dabfec90",
+      "top_examples": [
+        {
+          "path": "httpx/_models.py",
+          "commits": 1,
+          "authors": 1,
+          "churn": 1.0,
+          "coupling": 1.0,
+          "cycle": 0.0,
+          "score": 2.0,
+          "cycle_size": 0,
+          "cut_candidate": false
+        },
+        {
+          "path": "httpx/_client.py",
+          "commits": 1,
+          "authors": 1,
+          "churn": 1.0,
+          "coupling": 0.875,
+          "cycle": 0.0,
+          "score": 1.75,
+          "cycle_size": 0,
+          "cut_candidate": false
+        },
+        {
+          "path": "httpx/_transports/default.py",
+          "commits": 1,
+          "authors": 1,
+          "churn": 1.0,
+          "coupling": 0.8125,
+          "cycle": 0.0,
+          "score": 1.625,
+          "cycle_size": 0,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/httpx.json",
+      "scan_root_path": ".",
+      "collector_unresolved": null,
+      "seconds": 0.08034645800944418
+    },
+    {
+      "name": "immich",
+      "repo": "https://github.com/immich-app/immich",
+      "commit": "3ae71117413cc0a79e4a0555df015e3ffde11786",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.21654699998907745
+      },
+      "status": "ok",
+      "commits": 2740,
+      "skipped": 126,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 302,
+        "expected_random_share": 0.19128848202086204,
+        "files": 458,
+        "lift": 7.384969766772243,
+        "random_lift": 3.8775040006002195,
+        "share": 0.7417218543046358,
+        "top_bugfix_commits": 224,
+        "top_files": 46
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "b96a39e4615b968ce049c1aabf6f051f23ba0ad924681c72250339a6759d299d",
+      "top_examples": [
+        {
+          "path": "src/repositories/asset.repository.ts",
+          "commits": 32,
+          "authors": 16,
+          "churn": 0.9478508595793452,
+          "coupling": 0.9230769230769231,
+          "cycle": 1.0,
+          "score": 3.645580229151328,
+          "cycle_size": 9,
+          "cut_candidate": false
+        },
+        {
+          "path": "src/services/metadata.service.ts",
+          "commits": 35,
+          "authors": 14,
+          "churn": 0.9714383413802461,
+          "coupling": 0.8076923076923077,
+          "cycle": 1.0,
+          "score": 3.2926155320820842,
+          "cycle_size": 3,
+          "cut_candidate": false
+        },
+        {
+          "path": "src/enum.ts",
+          "commits": 39,
+          "authors": 14,
+          "churn": 1.0,
+          "coupling": 0.6153846153846154,
+          "cycle": 1.0,
+          "score": 3.0288461538461537,
+          "cycle_size": 9,
+          "cut_candidate": true
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/immich.json",
+      "scan_root_path": "server",
+      "collector_unresolved": 1015,
+      "seconds": 2.9957402090076357
+    },
+    {
+      "name": "nest",
+      "repo": "https://github.com/nestjs/nest",
+      "commit": "1c2f689518412cbc6a6bc09662dd5cfed779f2bf",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.18801104096928611
+      },
+      "status": "ok",
+      "commits": 1626,
+      "skipped": 203,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 316,
+        "expected_random_share": 0.15294652814284948,
+        "files": 666,
+        "lift": 7.98998677498583,
+        "random_lift": 5.255414935628333,
+        "share": 0.8037974683544303,
+        "top_bugfix_commits": 254,
+        "top_files": 67
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "2391d04f8cbee2d2687992ffd8ce39a2d93689b7ab5077c29812ba8f2507ef0d",
+      "top_examples": [
+        {
+          "path": "packages/core/injector/injector.ts",
+          "commits": 25,
+          "authors": 14,
+          "churn": 0.9579263337046495,
+          "coupling": 0.6268656716417911,
+          "cycle": 1.0,
+          "score": 2.9220327529983248,
+          "cycle_size": 16,
+          "cut_candidate": false
+        },
+        {
+          "path": "packages/platform-fastify/adapters/fastify-adapter.ts",
+          "commits": 29,
+          "authors": 16,
+          "churn": 1.0,
+          "coupling": 0.373134328358209,
+          "cycle": 1.0,
+          "score": 2.746268656716418,
+          "cycle_size": 3,
+          "cut_candidate": true
+        },
+        {
+          "path": "packages/core/nest-application.ts",
+          "commits": 23,
+          "authors": 7,
+          "churn": 0.934392648742673,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 2.6863788651351848,
+          "cycle_size": 16,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/nest.json",
+      "scan_root_path": ".",
+      "collector_unresolved": 980,
+      "seconds": 2.283169624977745
+    },
+    {
+      "name": "next.js",
+      "repo": "https://github.com/vercel/next.js",
+      "commit": "00c4ba8b6e268c792da64207fa9453132bfcec5f",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.6570491250022314
+      },
+      "status": "ok",
+      "commits": 4642,
+      "skipped": 374,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 575,
+        "expected_random_share": 0.23649649874746057,
+        "files": 1542,
+        "lift": 8.114423562412341,
+        "random_lift": 3.448897460355327,
+        "share": 0.8156521739130435,
+        "top_bugfix_commits": 469,
+        "top_files": 155
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "9f254595d1e8117702898f1ecfb8308451a38a6bd01e2452695d36f2053c3b00",
+      "top_examples": [
+        {
+          "path": "src/server/config-shared.ts",
+          "commits": 173,
+          "authors": 31,
+          "churn": 0.9434891288784444,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 3.7739565155137775,
+          "cycle_size": 62,
+          "cut_candidate": false
+        },
+        {
+          "path": "src/server/config-schema.ts",
+          "commits": 121,
+          "authors": 29,
+          "churn": 0.8785603890113716,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 3.4008789252053093,
+          "cycle_size": 62,
+          "cut_candidate": true
+        },
+        {
+          "path": "src/server/config.ts",
+          "commits": 94,
+          "authors": 28,
+          "churn": 0.8328139731570668,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 3.170066091372061,
+          "cycle_size": 62,
+          "cut_candidate": true
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/next.js.json",
+      "scan_root_path": "packages/next",
+      "collector_unresolved": 1401,
+      "seconds": 15.752799167006742
+    },
+    {
+      "name": "outline",
+      "repo": "https://github.com/outline/outline",
+      "commit": "095b096c2197f35e57057e6cc6ae9d7ef562330a",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.13233695802045986
+      },
+      "status": "ok",
+      "commits": 2172,
+      "skipped": 44,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 1229,
+        "expected_random_share": 0.2275147867956956,
+        "files": 2243,
+        "lift": 7.365135159569659,
+        "random_lift": 3.24731439532439,
+        "share": 0.7388120423108218,
+        "top_bugfix_commits": 908,
+        "top_files": 225
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "399f68dfa425175341ca4cbaa7a679653168e0a5231b296404d806c532d731c9",
+      "top_examples": [
+        {
+          "path": "shared/editor/components/Styles.ts",
+          "commits": 100,
+          "authors": 6,
+          "churn": 1.0,
+          "coupling": 0.423728813559322,
+          "cycle": 1.0,
+          "score": 2.6440677966101696,
+          "cycle_size": 40,
+          "cut_candidate": false
+        },
+        {
+          "path": "server/env.ts",
+          "commits": 23,
+          "authors": 7,
+          "churn": 0.6886177335457992,
+          "coupling": 0.7457627118644068,
+          "cycle": 1.0,
+          "score": 2.404326323905672,
+          "cycle_size": 40,
+          "cut_candidate": true
+        },
+        {
+          "path": "server/routes/api/documents/documents.ts",
+          "commits": 57,
+          "authors": 5,
+          "churn": 0.8798129963733905,
+          "coupling": 0.5084745762711864,
+          "cycle": 1.0,
+          "score": 2.2751580632609714,
+          "cycle_size": 40,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/outline.json",
+      "scan_root_path": ".",
+      "collector_unresolved": 4814,
+      "seconds": 2.0586259579868056
+    },
+    {
+      "name": "payload",
+      "repo": "https://github.com/payloadcms/payload",
+      "commit": "f177a26219996b75afc5d45cd07165001e9afd8c",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.24919008399592713
+      },
+      "status": "ok",
+      "commits": 1582,
+      "skipped": 262,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 233,
+        "expected_random_share": 0.20596593347772554,
+        "files": 819,
+        "lift": 7.501570187375693,
+        "random_lift": 3.6465882910419083,
+        "share": 0.7510729613733905,
+        "top_bugfix_commits": 175,
+        "top_files": 82
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "100b8152f75676a514f910f5a28178cbf98c2d1616babd8629836417c5f5d88f",
+      "top_examples": [
+        {
+          "path": "src/config/types.ts",
+          "commits": 34,
+          "authors": 15,
+          "churn": 0.9638016383333955,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 3.855206553333582,
+          "cycle_size": 21,
+          "cut_candidate": false
+        },
+        {
+          "path": "src/index.ts",
+          "commits": 39,
+          "authors": 15,
+          "churn": 1.0,
+          "coupling": 0.926829268292683,
+          "cycle": 1.0,
+          "score": 3.8536585365853657,
+          "cycle_size": 21,
+          "cut_candidate": false
+        },
+        {
+          "path": "src/collections/config/types.ts",
+          "commits": 25,
+          "authors": 11,
+          "churn": 0.8832211999738746,
+          "coupling": 0.926829268292683,
+          "cycle": 1.0,
+          "score": 2.9498151947094935,
+          "cycle_size": 21,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/payload.json",
+      "scan_root_path": "packages/payload",
+      "collector_unresolved": 379,
+      "seconds": 2.580599249980878
+    },
+    {
+      "name": "pydantic",
+      "repo": "https://github.com/pydantic/pydantic",
+      "commit": "5adfeaaaea947f81f0f01868604f219084ec151a",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.08708562498213723
+      },
+      "status": "ok",
+      "commits": 603,
+      "skipped": 17,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 47,
+        "expected_random_share": 0.12444400917333846,
+        "files": 79,
+        "lift": 5.462765957446809,
+        "random_lift": 4.445304302203571,
+        "share": 0.5531914893617021,
+        "top_bugfix_commits": 26,
+        "top_files": 8
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "785802a33747bf34c704ddc82c8761afbb35d16fe0d4e82e467b0e396f219365",
+      "top_examples": [
+        {
+          "path": "pydantic/json_schema.py",
+          "commits": 33,
+          "authors": 11,
+          "churn": 1.0,
+          "coupling": 0.8,
+          "cycle": 1.0,
+          "score": 3.3230769230769233,
+          "cycle_size": 8,
+          "cut_candidate": true
+        },
+        {
+          "path": "pydantic/_internal/_generate_schema.py",
+          "commits": 29,
+          "authors": 8,
+          "churn": 0.9645064246606975,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 3.1160976796730226,
+          "cycle_size": 8,
+          "cut_candidate": true
+        },
+        {
+          "path": "pydantic/main.py",
+          "commits": 25,
+          "authors": 13,
+          "churn": 0.9239261032098017,
+          "coupling": 0.725,
+          "cycle": 0.5,
+          "score": 2.2636189528640145,
+          "cycle_size": 0,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/pydantic.json",
+      "scan_root_path": ".",
+      "collector_unresolved": null,
+      "seconds": 0.4681994169950485
+    },
+    {
+      "name": "scrapy",
+      "repo": "https://github.com/scrapy/scrapy",
+      "commit": "fbfc89ae7b72531a97fb4ef6d65ef3af392aa45c",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.09759179200045764
+      },
+      "status": "ok",
+      "commits": 685,
+      "skipped": 24,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 95,
+        "expected_random_share": 0.21381395411734164,
+        "files": 194,
+        "lift": 5.615789473684211,
+        "random_lift": 2.7077155502363746,
+        "share": 0.5789473684210527,
+        "top_bugfix_commits": 55,
+        "top_files": 20
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "54c094d2afdf0e4685834e2ebf8c84318b68b91246fd5f89aae14a126de94ac1",
+      "top_examples": [
+        {
+          "path": "scrapy/crawler.py",
+          "commits": 29,
+          "authors": 6,
+          "churn": 0.9220136965628004,
+          "coupling": 0.8095238095238095,
+          "cycle": 1.0,
+          "score": 3.3368114732748966,
+          "cycle_size": 18,
+          "cut_candidate": true
+        },
+        {
+          "path": "scrapy/settings/default_settings.py",
+          "commits": 39,
+          "authors": 6,
+          "churn": 1.0,
+          "coupling": 0.40476190476190477,
+          "cycle": 1.0,
+          "score": 2.8095238095238093,
+          "cycle_size": 18,
+          "cut_candidate": false
+        },
+        {
+          "path": "scrapy/core/downloader/handlers/http11.py",
+          "commits": 31,
+          "authors": 5,
+          "churn": 0.939509123545538,
+          "coupling": 0.5714285714285714,
+          "cycle": 1.0,
+          "score": 2.706681046405002,
+          "cycle_size": 18,
+          "cut_candidate": true
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/scrapy.json",
+      "scan_root_path": ".",
+      "collector_unresolved": null,
+      "seconds": 0.42945875000441447
+    },
+    {
+      "name": "sqlalchemy",
+      "repo": "https://github.com/sqlalchemy/sqlalchemy",
+      "commit": "262c0f0ef49a46fbc4c58df167a858d58313032b",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.12650616699829698
+      },
+      "status": "ok",
+      "commits": 479,
+      "skipped": 12,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 219,
+        "expected_random_share": 0.21414171230203072,
+        "files": 245,
+        "lift": 6.30958904109589,
+        "random_lift": 3.0065866641164924,
+        "share": 0.6438356164383562,
+        "top_bugfix_commits": 141,
+        "top_files": 25
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "e766748be3f2157aac715804df78ff6a4dd50d9ae536e6e0c4e8a467ab37ee05",
+      "top_examples": [
+        {
+          "path": "sqlalchemy/sql/compiler.py",
+          "commits": 31,
+          "authors": 10,
+          "churn": 0.9911993158528026,
+          "coupling": 0.9310344827586207,
+          "cycle": 1.0,
+          "score": 3.1900667636641917,
+          "cycle_size": 3,
+          "cut_candidate": false
+        },
+        {
+          "path": "sqlalchemy/sql/selectable.py",
+          "commits": 20,
+          "authors": 8,
+          "churn": 0.8707324048933305,
+          "coupling": 0.9310344827586207,
+          "cycle": 1.0,
+          "score": 2.5781685919600217,
+          "cycle_size": 3,
+          "cut_candidate": false
+        },
+        {
+          "path": "sqlalchemy/sql/elements.py",
+          "commits": 16,
+          "authors": 6,
+          "churn": 0.8102980743642179,
+          "coupling": 0.9310344827586207,
+          "cycle": 1.0,
+          "score": 2.1905989320742987,
+          "cycle_size": 3,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/sqlalchemy.json",
+      "scan_root_path": "lib",
+      "collector_unresolved": null,
+      "seconds": 0.6861992090125568
+    },
+    {
+      "name": "strapi",
+      "repo": "https://github.com/strapi/strapi",
+      "commit": "d764743be322a70b98cb7b43c5d1a3e0d67d7efd",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.22841016697930172
+      },
+      "status": "ok",
+      "commits": 1330,
+      "skipped": 114,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 83,
+        "expected_random_share": 0.15620192674885147,
+        "files": 236,
+        "lift": 6.753012048192771,
+        "random_lift": 4.396533399078938,
+        "share": 0.6867469879518072,
+        "top_bugfix_commits": 57,
+        "top_files": 24
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "3fed460d9fecef2a0406511968f8fbbbc4d34b9bd91f194f828c7c8a86982feb",
+      "top_examples": [
+        {
+          "path": "Strapi.ts",
+          "commits": 6,
+          "authors": 5,
+          "churn": 0.7586544129592989,
+          "coupling": 1.0,
+          "cycle": 0.5,
+          "score": 2.0862996356380723,
+          "cycle_size": 0,
+          "cut_candidate": false
+        },
+        {
+          "path": "migrations/database/5.0.0-discard-drafts.ts",
+          "commits": 12,
+          "authors": 6,
+          "churn": 1.0,
+          "coupling": 0.17647058823529413,
+          "cycle": 0.5,
+          "score": 1.3529411764705883,
+          "cycle_size": 0,
+          "cut_candidate": false
+        },
+        {
+          "path": "services/document-service/repository.ts",
+          "commits": 11,
+          "authors": 6,
+          "churn": 0.9687936498860342,
+          "coupling": 0.17647058823529413,
+          "cycle": 0.5,
+          "score": 1.3107208204340464,
+          "cycle_size": 0,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/strapi.json",
+      "scan_root_path": "packages/core/core/src",
+      "collector_unresolved": 534,
+      "seconds": 2.0257261659717187
+    },
+    {
+      "name": "trpc",
+      "repo": "https://github.com/trpc/trpc",
+      "commit": "10e2ef98f7842b94eb3026e4f9bcfe62cc39b088",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.085089375032112
+      },
+      "status": "ok",
+      "commits": 238,
+      "skipped": 38,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 23,
+        "expected_random_share": 0.15952570168736682,
+        "files": 83,
+        "lift": 4.811594202898551,
+        "random_lift": 3.2705647109910205,
+        "share": 0.5217391304347826,
+        "top_bugfix_commits": 12,
+        "top_files": 9
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "0750bf179caf7990cbe6a2bb8d720faa20ce7dc2519a57b9f12fb565e8787dd6",
+      "top_examples": [
+        {
+          "path": "src/unstable-core-do-not-import/http/resolveResponse.ts",
+          "commits": 7,
+          "authors": 6,
+          "churn": 1.0,
+          "coupling": 0.5,
+          "cycle": 1.0,
+          "score": 3.0,
+          "cycle_size": 5,
+          "cut_candidate": true
+        },
+        {
+          "path": "src/unstable-core-do-not-import/router.ts",
+          "commits": 4,
+          "authors": 4,
+          "churn": 0.7739760316291208,
+          "coupling": 0.7222222222222222,
+          "cycle": 1.0,
+          "score": 2.221597868565069,
+          "cycle_size": 5,
+          "cut_candidate": false
+        },
+        {
+          "path": "src/unstable-core-do-not-import/stream/jsonl.ts",
+          "commits": 4,
+          "authors": 4,
+          "churn": 0.7739760316291208,
+          "coupling": 0.4444444444444444,
+          "cycle": 1.0,
+          "score": 1.8632756316997352,
+          "cycle_size": 5,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/trpc.json",
+      "scan_root_path": "packages/server",
+      "collector_unresolved": 34,
+      "seconds": 0.7435498749837279
+    },
+    {
+      "name": "typeorm",
+      "repo": "https://github.com/typeorm/typeorm",
+      "commit": "fe92394287516feeada6e9c308ebe22deca2458e",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.13551145902602002
+      },
+      "status": "ok",
+      "commits": 444,
+      "skipped": 37,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 122,
+        "expected_random_share": 0.18104940150843926,
+        "files": 496,
+        "lift": 7.399344262295083,
+        "random_lift": 4.119879066871666,
+        "share": 0.7459016393442623,
+        "top_bugfix_commits": 91,
+        "top_files": 50
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "46547cd1c6364add396914bd9acbae84adde6127f309cc579cd77a41a5bc534a",
+      "top_examples": [
+        {
+          "path": "query-builder/SelectQueryBuilder.ts",
+          "commits": 39,
+          "authors": 14,
+          "churn": 1.0,
+          "coupling": 0.527027027027027,
+          "cycle": 1.0,
+          "score": 3.054054054054054,
+          "cycle_size": 2,
+          "cut_candidate": false
+        },
+        {
+          "path": "query-builder/QueryBuilder.ts",
+          "commits": 21,
+          "authors": 10,
+          "churn": 0.8379353383074374,
+          "coupling": 0.527027027027027,
+          "cycle": 1.0,
+          "score": 2.1935141288511293,
+          "cycle_size": 2,
+          "cut_candidate": false
+        },
+        {
+          "path": "util/OrmUtils.ts",
+          "commits": 11,
+          "authors": 7,
+          "churn": 0.6736209953992307,
+          "coupling": 0.8243243243243243,
+          "cycle": 1.0,
+          "score": 1.8433547509235704,
+          "cycle_size": 27,
+          "cut_candidate": true
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/typeorm.json",
+      "scan_root_path": "packages/typeorm/src",
+      "collector_unresolved": 39,
+      "seconds": 0.7613951250095852
+    },
+    {
+      "name": "vite",
+      "repo": "https://github.com/vitejs/vite",
+      "commit": "928e721b36690ac0f3f118290a21fc0cc4349055",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.11534729204140604
+      },
+      "status": "ok",
+      "commits": 1208,
+      "skipped": 27,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 280,
+        "expected_random_share": 0.13734890006530756,
+        "files": 135,
+        "lift": 5.751275510204081,
+        "random_lift": 4.342434276102521,
+        "share": 0.5964285714285714,
+        "top_bugfix_commits": 167,
+        "top_files": 14
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "baf7a9ad253e276466731ad09a04bd25b6ef9ba7e72313dec11fbf5a4bf42412",
+      "top_examples": [
+        {
+          "path": "src/node/config.ts",
+          "commits": 64,
+          "authors": 21,
+          "churn": 1.0,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 3.5,
+          "cycle_size": 5,
+          "cut_candidate": true
+        },
+        {
+          "path": "src/node/plugins/css.ts",
+          "commits": 52,
+          "authors": 28,
+          "churn": 0.951107709192344,
+          "coupling": 0.8333333333333334,
+          "cycle": 1.0,
+          "score": 3.4873949337052617,
+          "cycle_size": 5,
+          "cut_candidate": true
+        },
+        {
+          "path": "src/node/utils.ts",
+          "commits": 42,
+          "authors": 23,
+          "churn": 0.9010184902627867,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 3.2822816431001516,
+          "cycle_size": 5,
+          "cut_candidate": false
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/vite.json",
+      "scan_root_path": "packages/vite",
+      "collector_unresolved": 448,
+      "seconds": 0.7673123329877853
+    },
+    {
+      "name": "zulip",
+      "repo": "https://github.com/zulip/zulip",
+      "commit": "fb4f7abc378de7308a572d9af375101707e0c1ee",
+      "preparation": {
+        "missing_objects": 0,
+        "seconds": 0.258656041987706
+      },
+      "status": "ok",
+      "commits": 5026,
+      "skipped": 57,
+      "shallow": false,
+      "validation": {
+        "bugfix_commits": 310,
+        "expected_random_share": 0.17107562349494695,
+        "files": 733,
+        "lift": 7.445030514385352,
+        "random_lift": 4.393454122048,
+        "share": 0.7516129032258064,
+        "top_bugfix_commits": 233,
+        "top_files": 74
+      },
+      "limitations": [
+        "Commit-message fix/bug/regression matches are a proxy, not verified defects; concentration is in-sample, not predictive validation.",
+        "Merge commits are excluded; rename following uses Git similarity detection and may miss rewritten files or divergent branch renames.",
+        "Only scanned files contribute to normalization; commits touching more than max_files anywhere in the repository are excluded."
+      ],
+      "raw_report_sha256": "d2cec42820cc10cfccd65f31dd1a5634682dc7d6e28c59b62d66cc49dbf4157d",
+      "top_examples": [
+        {
+          "path": "zerver/lib/event_types.py",
+          "commits": 66,
+          "authors": 16,
+          "churn": 0.9964889065691319,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 3.9859556262765277,
+          "cycle_size": 14,
+          "cut_candidate": false
+        },
+        {
+          "path": "zerver/lib/integrations.py",
+          "commits": 67,
+          "authors": 13,
+          "churn": 1.0,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 3.625,
+          "cycle_size": 14,
+          "cut_candidate": true
+        },
+        {
+          "path": "zerver/lib/events.py",
+          "commits": 37,
+          "authors": 15,
+          "churn": 0.8620878106856227,
+          "coupling": 1.0,
+          "cycle": 1.0,
+          "score": 3.340590266406788,
+          "cycle_size": 14,
+          "cut_candidate": true
+        }
+      ],
+      "graph_url": "https://dogebonker.github.io/archgraph/zulip.json",
+      "scan_root_path": ".",
+      "collector_unresolved": null,
+      "seconds": 3.4155927499523386
+    }
+  ],
+  "preparation": {
+    "partial_clones": true,
+    "bulk_fetch_used": true,
+    "object_storage_bytes_added_lower_bound": 1064202019,
+    "note": "Excludes initial clones, earlier lazy fetches and a pilot batch; warm analysis time excludes this preparation."
+  }
+}

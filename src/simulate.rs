@@ -74,6 +74,12 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         })
         .collect();
     let entries = doc.package_entries.iter().map(|p| rename(p)).collect();
+    let owners = doc
+        .config
+        .codeowners
+        .as_ref()
+        .map(crate::codeowners::compile)
+        .transpose()?;
     Ok(crate::build(
         doc.source.clone(),
         doc.config.clone(),
@@ -81,6 +87,7 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         edges,
         entries,
         rules,
+        owners.as_ref(),
     ))
 }
 
@@ -208,10 +215,13 @@ mod tests {
             source_root: ".".into(),
             excludes: Vec::new(),
             include_tests: false,
+            no_default_excludes: false,
             rules: None,
+            codeowners: None,
+            collection: None,
         };
         let files = ["a/x.ts", "a/y.ts", "b/z.ts"].map(String::from).to_vec();
-        crate::build(source, config, files, Vec::new(), Vec::new(), None)
+        crate::build(source, config, files, Vec::new(), Vec::new(), None, None)
     }
 
     fn mv(file: &str, to: &str) -> Move {

@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use crate::model::{
     Cluster, Component, Document, Edge, EdgeKind, Evidence, Finding, FindingKind, Language, Link,
-    Move, RegistrarMove, Suggestion, Verdict,
+    Move, PlacementOwnership, RegistrarMove, Suggestion, Verdict,
 };
 use crate::rules::Compiled;
 use crate::simulate;
@@ -74,6 +74,7 @@ const EPSILON: f64 = 1e-9;
 struct Graph<'a> {
     doc: &'a Document,
     rules: Option<&'a Compiled>,
+    owners: Option<&'a crate::codeowners::Compiled>,
     module_of: BTreeMap<&'a str, &'a str>,
     /// Barrel-attributed file pairs.
     pairs: BTreeSet<(String, String)>,
@@ -205,7 +206,11 @@ impl Graph<'_> {
     }
 }
 
-pub fn find(doc: &Document, rules: Option<&Compiled>) -> Vec<Finding> {
+pub fn find(
+    doc: &Document,
+    rules: Option<&Compiled>,
+    owners: Option<&crate::codeowners::Compiled>,
+) -> Vec<Finding> {
     let module_of: BTreeMap<&str, &str> = doc
         .files
         .iter()
@@ -283,6 +288,7 @@ pub fn find(doc: &Document, rules: Option<&Compiled>) -> Vec<Finding> {
             .map(|f| f.path.as_str())
             .filter(|p| go_public(p, &doc.source.collector.main_packages))
             .collect(),
+        Language::Rust | Language::Java => Default::default(),
     };
     let wiring = graph::wiring(|p| module_of[p], &doc.edges);
     let consumed: Vec<Edge> = doc
@@ -292,6 +298,7 @@ pub fn find(doc: &Document, rules: Option<&Compiled>) -> Vec<Finding> {
         .cloned()
         .collect();
     let g = Graph {
+        owners,
         doc,
         rules,
         pairs: modules::attribute(&doc.edges, &barrels),
@@ -369,6 +376,10 @@ fn finding(kind: FindingKind, subject: String, evidence: Evidence) -> Finding {
         evidence,
         suggestion: None,
         simulation: None,
+        age_days: None,
+        introduced_by: None,
+        provenance: None,
+        hotspot_priority: None,
     }
 }
 
@@ -452,6 +463,7 @@ fn sink_split(g: &Graph, out: &mut Vec<Finding>) {
                     .iter()
                     .filter(|f| !g.public.contains(f.as_str()) && !g.bound.contains(f.as_str()))
                     .filter_map(|f| g.move_into(f, only))
+                    .filter(|m| !ownership_conflict(g.owners, &m.file, &m.to))
                     .collect(),
                 _ => Vec::new(),
             };
@@ -617,6 +629,7 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
                 target_module: target.to_owned(),
                 imports_from_target: used.len(),
                 via_barrel: g.via_barrel(used.iter().copied()),
+                ownership: None,
             },
         );
         // ponytail: every proposed move reruns the whole pipeline; batch or make it incremental
@@ -646,7 +659,51 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
         {
             continue;
         }
-        if let Some(m) = suggested {
+        let ownership = g.owners.map(|owners| {
+            let primary = |id: &str| {
+                g.doc
+                    .modules
+                    .iter()
+                    .find(|m| m.id == id)
+                    .and_then(|m| m.ownership.as_ref())
+                    .map(|o| o.primary.clone())
+                    .unwrap_or_default()
+            };
+            let current = primary(module);
+            let target = primary(target);
+            let destination = owners.owners(&probe.to);
+            let overlaps = |a: &[String], b: &[String]| a.iter().any(|owner| b.contains(owner));
+            let conflict = !file.owners.is_empty()
+                && ((!target.is_empty() && !overlaps(&file.owners, &target))
+                    || (!destination.is_empty() && !overlaps(&file.owners, &destination)));
+            let assessment = if conflict {
+                "conflicts"
+            } else if file.owners.is_empty() || target.is_empty() {
+                "unknown"
+            } else if !overlaps(&file.owners, &current) {
+                "supports"
+            } else {
+                "shared"
+            };
+            PlacementOwnership {
+                assessment,
+                file_owners: file.owners.clone(),
+                current_module_owners: current,
+                target_module_owners: target,
+                destination_owners: destination,
+            }
+        });
+        let conflict = ownership
+            .as_ref()
+            .is_some_and(|o| o.assessment == "conflicts");
+        if let Evidence::MisplacedFile {
+            ownership: evidence,
+            ..
+        } = &mut f.evidence
+        {
+            *evidence = ownership;
+        }
+        if let Some(m) = suggested.filter(|_| !conflict) {
             f.simulation = Some(simulate::changes(g.doc, &after));
             f.suggestion = Some(Suggestion { move_to: m });
         }
@@ -1069,7 +1126,11 @@ fn round(x: f64) -> f64 {
 /// file's folder when that makes a module of its own at the scan's depth, else beside its
 /// module's folder; and the module of its one importer, when it has exactly one. The best by
 /// two-way pairs removed wins, among moves that add no new cycle; a move with none is dropped.
-pub fn place_registrars(doc: &mut Document, rules: Option<&Compiled>) {
+pub fn place_registrars(
+    doc: &mut Document,
+    rules: Option<&Compiled>,
+    owners: Option<&crate::codeowners::Compiled>,
+) {
     let module_of = |path: &str| {
         rules.and_then(|r| r.module_of(path)).unwrap_or_else(|| {
             let (config, language) = (&doc.config, doc.source.language);
@@ -1149,6 +1210,9 @@ pub fn place_registrars(doc: &mut Document, rules: Option<&Compiled>) {
             }
             let mut best: Option<RegistrarMove> = None;
             for to in candidates {
+                if ownership_conflict(owners, &r.file, &to) {
+                    continue;
+                }
                 let moved = [Move {
                     file: r.file.clone(),
                     to: to.clone(),
@@ -1209,6 +1273,14 @@ pub fn place_registrars(doc: &mut Document, rules: Option<&Compiled>) {
         }
         c.registrar_moves = moves;
     }
+}
+
+fn ownership_conflict(owners: Option<&crate::codeowners::Compiled>, file: &str, to: &str) -> bool {
+    owners.is_some_and(|owners| {
+        let before = owners.owners(file);
+        let after = owners.owners(to);
+        !before.is_empty() && !after.is_empty() && !before.iter().any(|o| after.contains(o))
+    })
 }
 
 /// `DriverFactory`, `LayerUI`, `HTTPServer` and `driver_factory` as `driver-factory`,

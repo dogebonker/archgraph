@@ -1,0 +1,31 @@
+{
+  "repository": "BurntSushi/ripgrep",
+  "commit": "4649aa9700619f94cf9c66876e9549d83420e16c",
+  "scope": "20 Rust SCIP JSON parses, optimized native Rust, interleaved runs",
+  "measurements": {
+    "before": {
+      "seconds": [
+        0.1305115,
+        0.130280916,
+        0.130294917,
+        0.129789167,
+        0.130007583,
+        0.132845833,
+        0.13320825
+      ],
+      "median_seconds": 0.130294917
+    },
+    "after": {
+      "seconds": [
+        0.1145745,
+        0.114138458,
+        0.11540425,
+        0.114860458,
+        0.115904083,
+        0.115971416,
+        0.116275959
+      ],
+      "median_seconds": 0.11540425
+    }
+  }
+}

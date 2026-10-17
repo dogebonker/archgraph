@@ -68,6 +68,7 @@ pub fn modules(
             outgoing_edges: a.outgoing,
             cohesion: ratio(a.internal, a.internal + a.outgoing),
             outgoing_to: a.outgoing_to,
+            ownership: None,
         })
         .collect()
 }

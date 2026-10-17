@@ -28,6 +28,8 @@ pub struct Document {
     pub findings: Vec<Finding>,
     /// `null` unless scanned with `--cochange`.
     pub cochange: Option<Cochange>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hotspots: Option<crate::hotspots::Hotspots>,
 }
 
 /// The parts of a scan document that every other subcommand recomputes the rest from.
@@ -43,6 +45,10 @@ pub struct ScanInput {
     pub package_entries: Vec<String>,
     #[serde(default)]
     pub cochange: Option<Cochange>,
+    #[serde(default)]
+    pub hotspots: Option<crate::hotspots::Hotspots>,
+    #[serde(default)]
+    pub findings: Vec<FindingContext>,
 }
 
 #[derive(Debug, Serialize)]
@@ -65,6 +71,8 @@ pub enum Language {
     Typescript,
     Python,
     Go,
+    Rust,
+    Java,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -104,14 +112,27 @@ pub struct Git {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub depth: usize,
-    /// Go without `--depth`: every package (directory) is a module, and `depth` is unused.
+    /// Go/Java without `--depth`: every package directory is a module; `depth` is unused.
     /// Absent otherwise.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub package_modules: bool,
     pub source_root: String,
     pub excludes: Vec<String>,
     pub include_tests: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub no_default_excludes: bool,
     pub rules: Option<RulesRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub codeowners: Option<crate::codeowners::Codeowners>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub collection: Option<CollectionOptions>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CollectionOptions {
+    pub python_package: Option<String>,
+    pub rust_features: Option<crate::collect::rust::Features>,
+    pub rust_build_scripts: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,6 +148,8 @@ pub struct File {
     pub path: String,
     pub module: String,
     pub barrel: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub owners: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -184,6 +207,26 @@ pub struct Module {
     pub cohesion: Option<f64>,
     /// `outgoing_edges` split by target module, counted the same way (barrel-attributed).
     pub outgoing_to: BTreeMap<String, usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ownership: Option<ModuleOwnership>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ModuleOwnership {
+    pub owned_files: usize,
+    /// Shared files count once for every declared owner.
+    pub owners: BTreeMap<String, usize>,
+    /// Owners of a strict majority of all files, including unowned files in the denominator.
+    pub primary: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PlacementOwnership {
+    pub assessment: &'static str,
+    pub file_owners: Vec<String>,
+    pub current_module_owners: Vec<String>,
+    pub target_module_owners: Vec<String>,
+    pub destination_owners: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -278,7 +321,7 @@ pub enum CycleLevel {
     File,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Link {
     pub from: String,
     pub to: String,
@@ -307,6 +350,38 @@ pub struct Finding {
     pub suggestion: Option<Suggestion>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub simulation: Option<FindingSimulation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub age_days: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub introduced_by: Option<crate::bisect::Commit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provenance: Option<Provenance>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hotspot_priority: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Provenance {
+    pub status: String,
+    pub method: String,
+    pub from: Option<String>,
+    pub to: String,
+    pub previous_commit: Option<String>,
+    pub closing_edge: Option<Link>,
+    pub limitations: Vec<String>,
+    pub scans: usize,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FindingContext {
+    pub kind: String,
+    pub subject: String,
+    #[serde(default)]
+    pub age_days: Option<u64>,
+    #[serde(default)]
+    pub introduced_by: Option<crate::bisect::Commit>,
+    #[serde(default)]
+    pub provenance: Option<Provenance>,
 }
 
 /// One shape per finding kind, each named in the schema's `$defs`.
@@ -325,6 +400,8 @@ pub enum Evidence {
         /// Files of the target module that import the file.
         imports_from_target: usize,
         via_barrel: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        ownership: Option<PlacementOwnership>,
     },
     Cycle(Cycle),
     HiddenCoupling {

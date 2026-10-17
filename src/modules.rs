@@ -34,7 +34,7 @@ pub fn module_of(path: &str, config: &Config, language: Language) -> String {
     };
     // `--depth 0` keeps every file below the root's top level in `.` (`..` outside it).
     let id = match rel.rsplit_once('/') {
-        None if language == Language::Go => String::new(),
+        None if matches!(language, Language::Go | Language::Java) => String::new(),
         None => rel.to_owned(),
         Some(_) if depth == 0 => String::new(),
         Some((dir, _)) => dir.split('/').take(depth).collect::<Vec<_>>().join("/"),

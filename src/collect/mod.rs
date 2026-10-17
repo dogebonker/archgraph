@@ -3,6 +3,8 @@
 pub mod depcruise;
 pub mod go;
 pub mod grimp;
+pub mod java;
+pub mod rust;
 
 use std::collections::HashSet;
 use std::fs;
@@ -57,6 +59,10 @@ pub const TEST_EXCLUDES: &[&str] = &[
 pub const GO_EXCLUDES: &[&str] = &["**/*.pb.go", "**/*.pb.gw.go", "**/zz_generated*.go"];
 
 pub const GO_TEST_EXCLUDES: &[&str] = &["**/*_test.go"];
+
+pub const RUST_EXCLUDES: &[&str] = &["**/target/**"];
+pub const JAVA_EXCLUDES: &[&str] = &["**/target/**", "**/out/**"];
+pub const JAVA_TEST_EXCLUDES: &[&str] = &["**/test/**", "**/*Test.java", "**/*Tests.java"];
 
 /// Files a root marker makes count for Go in language detection.
 const GO_MARKERS: &[&str] = &["go.mod", "go.work"];
@@ -168,8 +174,8 @@ pub fn join(dir: &str, rest: &str) -> String {
 }
 
 /// The language with the most source files after the default excludes: TypeScript and Python
-/// under `source_dir`, Go under the root, and Go only when the root has a `go.mod` or `go.work`.
-/// A tie keeps TypeScript, then Python, then Go.
+/// under `source_dir`, Java/Rust/Go under the root. Rust and Go require their root manifests.
+/// A tie keeps TypeScript, then Python, Go, Rust and Java.
 // ponytail: hidden directories and node_modules are not descended; add a flag if a repository
 // keeps sources in a dot-directory.
 pub fn detect_language(root: &Path, source_dir: &str) -> Result<Language> {
@@ -179,8 +185,27 @@ pub fn detect_language(root: &Path, source_dir: &str) -> Result<Language> {
         .map(|g| g.to_string())
         .collect();
     let defaults = globset(&defaults)?;
-    let (mut ts, mut py) = (0, 0);
-    let mut dirs = vec![root.join(source_dir)];
+    let java_tests = globset(
+        &JAVA_TEST_EXCLUDES
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>(),
+    )?;
+    let java_output = globset(
+        &JAVA_EXCLUDES
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>(),
+    )?;
+    let rust_output = globset(
+        &RUST_EXCLUDES
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>(),
+    )?;
+    let cargo = root.join("Cargo.toml").is_file();
+    let (mut ts, mut py, mut rust, mut java) = (0, 0, 0, 0);
+    let mut dirs = vec![root.to_path_buf()];
     while let Some(dir) = dirs.pop() {
         for entry in fs::read_dir(&dir).with_context(|| format!("reading {}", dir.display()))? {
             let entry = entry?;
@@ -201,8 +226,16 @@ pub fn detect_language(root: &Path, source_dir: &str) -> Result<Language> {
                 continue;
             }
             match name.rsplit_once('.').map(|(_, ext)| ext) {
-                Some("py") => py += 1,
-                Some(ext) if TS_EXTENSIONS.contains(&ext) => ts += 1,
+                Some("py") if path.starts_with(root.join(source_dir)) => py += 1,
+                Some("rs") if cargo && !rust_output.is_match(&rel) => rust += 1,
+                Some("java") if !java_tests.is_match(&rel) && !java_output.is_match(&rel) => {
+                    java += 1
+                }
+                Some(ext)
+                    if TS_EXTENSIONS.contains(&ext) && path.starts_with(root.join(source_dir)) =>
+                {
+                    ts += 1
+                }
                 _ => {}
             }
         }
@@ -212,11 +245,13 @@ pub fn detect_language(root: &Path, source_dir: &str) -> Result<Language> {
     } else {
         0
     };
-    match (ts, py, go) {
-        (0, 0, 0) => bail!(
-            "no .ts/.js or .py files under {} (nor .go files beside a go.mod); pass --language",
+    match (ts, py, go, rust, java) {
+        (0, 0, 0, 0, 0) => bail!(
+            "no .ts/.js, .py, .java, .rs (with Cargo.toml) or .go (with go.mod) files under {}; pass --language",
             root.join(source_dir).display()
         ),
+        _ if java > ts && java > py && java > go && java > rust => Ok(Language::Java),
+        _ if rust > ts && rust > py && rust > go => Ok(Language::Rust),
         _ if go > ts && go > py => Ok(Language::Go),
         _ if py > ts => Ok(Language::Python),
         _ => Ok(Language::Typescript),

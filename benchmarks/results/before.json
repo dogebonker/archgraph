@@ -1,0 +1,110 @@
+{
+  "binary_sha256": "6530483fc5150cc9fc0bcd71826a3932e1fb1d5f851fbeb9aa25274e8ddce08f",
+  "platform": "macOS-26.2-arm64-arm-64bit",
+  "machine": "arm64",
+  "python": "3.12.8",
+  "runs": 3,
+  "rustup_toolchain": "stable",
+  "benchmarks": [
+    {
+      "name": "json-java",
+      "repo": "https://github.com/stleary/JSON-java",
+      "commit": "f9b5587c87aaf02e4a5ed1991d48d6c05993624a",
+      "seconds": [
+        0.8257241669925861,
+        0.7581425420357846,
+        0.8289819579804316
+      ],
+      "median_seconds": 0.8257241669925861,
+      "files": 25,
+      "edges": 75,
+      "unresolved": 0,
+      "passed": true,
+      "errors": [],
+      "artifact_bytes": {
+        "scan.json": 24993
+      },
+      "graph_sha256": "7b5d9b2d8ade00546e5940431233d391d9864916a9171a059a8c43415f1e252d",
+      "collector": {
+        "name": "java-javac",
+        "version": "17.0.16"
+      }
+    },
+    {
+      "name": "gson",
+      "repo": "https://github.com/google/gson",
+      "commit": "2ce6a6106c22bf0cce2e39f68b0da2f117d6e66b",
+      "seconds": [
+        1.2614658329985105,
+        1.2517799159977585,
+        1.1264946659794077
+      ],
+      "median_seconds": 1.2517799159977585,
+      "files": 99,
+      "edges": 682,
+      "unresolved": 312,
+      "passed": false,
+      "errors": [
+        "package names created false dependencies on package-info.java"
+      ],
+      "artifact_bytes": {
+        "scan.json": 279700
+      },
+      "graph_sha256": "ae5347f87ca4dfd7e967235fc6622bf7c5a8d52632987bff62081c33b3609543",
+      "collector": {
+        "name": "java-javac",
+        "version": "17.0.16"
+      }
+    },
+    {
+      "name": "ripgrep",
+      "repo": "https://github.com/BurntSushi/ripgrep",
+      "commit": "4649aa9700619f94cf9c66876e9549d83420e16c",
+      "seconds": [
+        3.9576977910473943,
+        3.993474749964662,
+        4.011114249995444
+      ],
+      "median_seconds": 3.993474749964662,
+      "files": 82,
+      "edges": 282,
+      "unresolved": 0,
+      "passed": true,
+      "errors": [],
+      "artifact_bytes": {
+        "scan.json": 76034
+      },
+      "graph_sha256": "85180710db49c91dddf718d20a364247d255e8b40693553dbca56d0a96b0b2c5",
+      "collector": {
+        "name": "rust-analyzer",
+        "version": "1.95.0 (59807616 2026-04-14)"
+      }
+    },
+    {
+      "name": "json-java-history",
+      "repo": "https://github.com/stleary/JSON-java",
+      "commit": "f9b5587c87aaf02e4a5ed1991d48d6c05993624a",
+      "seconds": [
+        3.4611098330351524,
+        3.4251594999805093,
+        3.4564334170427173
+      ],
+      "median_seconds": 3.4564334170427173,
+      "files": 25,
+      "edges": 75,
+      "unresolved": 0,
+      "passed": true,
+      "errors": [],
+      "artifact_bytes": {
+        "history.json": 126674,
+        "history.html": 1067890
+      },
+      "graph_sha256": "7b5d9b2d8ade00546e5940431233d391d9864916a9171a059a8c43415f1e252d",
+      "collector": {
+        "name": "java-javac",
+        "version": "17.0.16"
+      }
+    }
+  ],
+  "note": "Rust samples were collected separately with CARGO_REGISTRIES_CRATES_IO_PROTOCOL=git. Source-reference assertions target declaring files, including WalkState in ignore/src/walk.rs."
+}
