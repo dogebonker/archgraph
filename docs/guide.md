@@ -50,7 +50,7 @@ The collector runs inside the scanned repository:
 
 ## Commands
 
-`scan`, `report`, `history` and `impact` run collectors. `infer-layout` drafts rules and `context` selects reading context from saved graphs without running collectors. Other analysis commands read a scan document and recompute modules, metrics, cycles, verdicts and findings from its files, edges and config with the same code, so their output agrees with the rules in effect.
+`scan`, `report`, `history` and `impact` run collectors. `infer-layout` drafts rules, `context` selects reading context, and `tour` prints a reading order from saved graphs without running collectors. Other analysis commands read a scan document and recompute modules, metrics, cycles, verdicts and findings from its files, edges and config with the same code, so their output agrees with the rules in effect.
 
 **scan** writes the scan document (`kind: scan`).
 
@@ -159,6 +159,24 @@ archgraph infer-layout graph.json --max-rules 0           # layers only
 ```
 
 These thresholds limit over-fitting; zero observed imports still do not establish an intended boundary. Review the draft before making it a CI policy. No scan-schema or rules-format migration is required.
+
+## Reading order
+
+```sh
+archgraph tour                                      # .archgraph/archgraph.json
+archgraph tour graph.json > TOUR.md                  # dependencies before their importers
+archgraph tour graph.json --reverse                 # entrypoints before dependencies
+archgraph tour graph.json --agent                   # include saved export names and locations
+archgraph tour graph.json --all-kinds                # include type, lazy and re-export imports
+```
+
+`tour` prints Markdown from a saved v1 or v1.1 scan without collecting imports, reading source bodies, or writing files. No schema migration or new dependencies are required. Runtime edges define the reading graph by default; a saved `config.all_kinds` or `--all-kinds` includes all recorded kinds. Dependencies use resolved semantic destinations, so an import through a resolved barrel points at its defining module. Included test files and external packages do not become stops or affect counts.
+
+Each strongly connected component becomes one stop. Leaf components come first; a component's layer is its longest dependency distance to a leaf. Within a layer, stops sort by descending fan-in, then module name. `--reverse` reverses layers, retaining that fan-in order. This starts at dependency roots; it does not identify executable `main` functions or infer domain/application roles from folder names. Disconnected modules remain visible.
+
+Every stop explains how many distinct outside modules import it and how many it imports. Repeated file imports count once. Cyclic stops say to read their modules together and start at the member with the fewest distinct outbound modules, including cycle peers; ties use module name. The stop's aggregate counts exclude its own members.
+
+`--agent` attaches saved public surface export names and declaring files. Without a surface report it falls back to the saved symbol index; without either, it reports unavailable evidence and suggests rescanning with `--symbols`. Partial coverage is labeled. These summaries contain names, not full type signatures or bodies. `--granularity file` also works: export evidence follows its declaring file. The tour reflects only the saved graph; unresolved imports, exclusions and dynamic dependencies can hide relationships.
 
 ## Context pruning
 

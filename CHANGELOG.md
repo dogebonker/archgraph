@@ -36,6 +36,8 @@
 
 ### Added
 
+- `tour` generates a Markdown reading order from saved graphs: dependency layers, fan-in priorities, grouped cycles with a suggested starting module, reversed layers, and optional saved export summaries for agents.
+
 - Budgeted `context` reading plans from saved graphs, with required layout constraints, import/importer tiers, barrel deduplication, export summaries and omission reasons; project skill and opt-in Claude Code/Cursor adapters. Includes a frozen 30-PR retrieval benchmark against grep + folder, reporting discovery and full-body recall separately.
 
 - `package-splits` ranks cohesive, externally used folder subtrees by importing modules × production files, with free/cheap classifications, full cut lists, workspace checks, uncertainty guards and cycle simulations. Optional graph attachments survive replay and power map island highlights; build and packaging compatibility remain unverified.

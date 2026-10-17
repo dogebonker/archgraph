@@ -37,6 +37,8 @@ mod package_splits_cli;
 mod provenance_cli;
 #[path = "cli/surface.rs"]
 mod surface_cli;
+#[path = "cli/tour.rs"]
+mod tour_cli;
 
 #[derive(Parser)]
 #[command(version, about = "Import-graph evidence for architecture decisions")]
@@ -84,6 +86,8 @@ enum Cmd {
     PackageSplits(package_splits_cli::PackageSplitsArgs),
     /// Select ordered source context within an estimated token budget
     Context(context_cli::ContextArgs),
+    /// Print a module reading tour, grouping cycles into a single stop
+    Tour(tour_cli::TourArgs),
     /// List default file exclusions and their categories
     ShowExcludes,
     /// List imports whose file or external package could not be resolved
@@ -334,6 +338,7 @@ fn main() -> ExitCode {
         Cmd::InferLayout(args) => infer_layout_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::PackageSplits(args) => package_splits_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Context(args) => context_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Tour(args) => tour_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::ShowExcludes => show_excludes().map(|()| ExitCode::SUCCESS),
         Cmd::Unresolved(args) => unresolved(args).map(|()| ExitCode::SUCCESS),
     };

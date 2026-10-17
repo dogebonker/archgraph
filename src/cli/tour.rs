@@ -1,0 +1,28 @@
+use super::*;
+
+#[derive(Args)]
+pub(super) struct TourArgs {
+    /// Saved scan document (v1 or v1.1)
+    #[arg(default_value = ".archgraph/archgraph.json")]
+    graph: PathBuf,
+    /// Start with entrypoints by reversing dependency layers
+    #[arg(long)]
+    reverse: bool,
+    /// Include saved export names and locations at each stop
+    #[arg(long)]
+    agent: bool,
+}
+
+pub(super) fn run(args: TourArgs) -> Result<()> {
+    use std::io::Write;
+    let input = read_scan(&args.graph)?;
+    let tour = archgraph::tour::markdown(
+        &input,
+        &archgraph::tour::Options {
+            reverse: args.reverse,
+            agent: args.agent,
+        },
+    )?;
+    std::io::stdout().lock().write_all(tour.as_bytes())?;
+    Ok(())
+}

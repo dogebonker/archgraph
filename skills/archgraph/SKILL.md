@@ -56,6 +56,8 @@ A scan document is input to `check`, `simulate`, `render` and `diff`: do not edi
 - Prefer few moves with clear gains over many small ones. Run the simulation for each move separately; moves interact, so re-scan after applying any.
 - Do not move files yourself unless the user approves the specific move.
 
+For onboarding, `archgraph tour graph.json` prints a dependency-first reading order; `--reverse` starts from entrypoints and `--agent` adds saved export names without opening bodies. Read cyclic stops together and follow their suggested starting module. Missing or partial export evidence is labeled.
+
 ## Acting on the evidence
 
 Related skills take the next step:

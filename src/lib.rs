@@ -24,6 +24,7 @@ pub mod rules;
 pub mod simulate;
 pub mod surface;
 pub mod symbols;
+pub mod tour;
 
 use std::collections::{BTreeMap, BTreeSet};
 
