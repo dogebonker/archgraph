@@ -3,6 +3,7 @@
 pub mod depcruise;
 pub mod go;
 pub mod grimp;
+pub mod imports;
 pub mod java;
 pub mod rust;
 

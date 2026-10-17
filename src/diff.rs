@@ -29,6 +29,8 @@ pub fn diff(old: &Document, new: &Document) -> Diff {
                 cohesion: [o.cohesion, n.cohesion],
                 ca: [o.ca, n.ca],
                 ce: [o.ce, n.ce],
+                weighted_ca: [o.weighted_ca, n.weighted_ca],
+                weighted_ce: [o.weighted_ce, n.weighted_ce],
                 instability: [o.instability, n.instability],
             };
             Some((id.to_string(), delta))

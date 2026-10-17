@@ -240,7 +240,7 @@ pub fn find(
     for e in doc
         .edges
         .iter()
-        .filter(|e| matches!(e.kind, EdgeKind::Reexport | EdgeKind::TypeReexport))
+        .filter(|e| e.is_reexport || matches!(e.kind, EdgeKind::Reexport | EdgeKind::TypeReexport))
     {
         reexports.entry(&e.from).or_default().push(&e.to);
     }

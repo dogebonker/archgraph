@@ -677,7 +677,7 @@ fn inconsistent_scan_documents_are_input_errors() {
     };
     let stderr = broken("ghost-edge", &|d| {
         d["edges"].as_array_mut().unwrap().push(json!({
-            "from": "src/main.ts", "to": "src/ghost.ts", "kind": "static", "verdict": null,
+            "from": "src/main.ts", "to": "src/ghost.ts", "kind": "runtime", "weight": 1.0, "verdict": null,
             "rule": null }))
     });
     assert!(stderr.contains("src/ghost.ts"), "{stderr}");

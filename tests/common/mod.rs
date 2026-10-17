@@ -44,8 +44,12 @@ pub fn scan_recorded(name: &str, extra: &[&str]) -> (Value, String, String) {
 }
 
 pub fn validate(doc: &Value) {
-    let schema: Value =
-        serde_json::from_str(include_str!("../../schema/archgraph.v1.schema.json")).unwrap();
+    let schema: Value = serde_json::from_str(if doc["schema"] == "archgraph/v1.1" {
+        include_str!("../../schema/archgraph.v1.1.schema.json")
+    } else {
+        include_str!("../../schema/archgraph.v1.schema.json")
+    })
+    .unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
     let errors: Vec<String> = validator
         .iter_errors(doc)

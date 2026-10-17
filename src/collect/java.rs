@@ -142,6 +142,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
                 verdict: None,
                 rule: None,
                 reach: None,
+                ..crate::model::Edge::default()
             })
             .collect(),
     })

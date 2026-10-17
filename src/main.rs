@@ -3,7 +3,11 @@ use std::fs;
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+static ALL_KINDS: AtomicBool = AtomicBool::new(false);
+static LEGACY_V1: AtomicBool = AtomicBool::new(false);
 
 use anyhow::{Context, Result, bail};
 use archgraph::collect::{
@@ -33,6 +37,12 @@ mod surface_cli;
 #[derive(Parser)]
 #[command(version, about = "Import-graph evidence for architecture decisions")]
 struct Cli {
+    /// Include every import kind in cycle detection, for comparison
+    #[arg(long, global = true)]
+    all_kinds: bool,
+    /// Export JSON using legacy v1 kind names and schema discriminator
+    #[arg(long, global = true)]
+    legacy_v1: bool,
     #[command(subcommand)]
     command: Cmd,
 }
@@ -265,7 +275,10 @@ struct Simulate {
 }
 
 fn main() -> ExitCode {
-    let result = match Cli::parse().command {
+    let cli = Cli::parse();
+    ALL_KINDS.store(cli.all_kinds, Ordering::Relaxed);
+    LEGACY_V1.store(cli.legacy_v1, Ordering::Relaxed);
+    let result = match cli.command {
         Cmd::Scan(args) => scan(args).map(|()| ExitCode::SUCCESS),
         Cmd::Report(args) => report(args),
         Cmd::Check(args) => check(args),
@@ -376,6 +389,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         .clone()
         .unwrap_or_else(|| args.root.join(".archgraph"));
     let mut key = serde_json::to_vec(&args.opts)?;
+    key.push(u8::from(ALL_KINDS.load(Ordering::Relaxed)));
     key.extend_from_slice(env!("CARGO_PKG_VERSION").as_bytes());
     key.extend_from_slice(include_bytes!("../Cargo.lock"));
     key.extend_from_slice(&sha2::Sha256::digest(fs::read(std::env::current_exe()?)?));
@@ -625,7 +639,7 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
                     depcruise.as_deref(),
                 )?,
             };
-            let mut raw = depcruise::parse(&json)?;
+            let mut raw = depcruise::parse_at(&json, root)?;
             raw.collector.type_marking = type_marking.map(str::to_owned);
             (raw, source_dir.to_owned())
         }
@@ -715,6 +729,7 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         source_root,
         excludes,
         include_tests: args.include_tests || args.no_default_excludes,
+        all_kinds: ALL_KINDS.load(Ordering::Relaxed),
         no_default_excludes: args.no_default_excludes,
         rules: rules.map(rules::load).transpose()?,
         codeowners: codeowners::load(root)?,
@@ -870,6 +885,12 @@ fn report(args: Report) -> Result<ExitCode> {
         }
     }
     out += &format!("\n{}\n", heading("Cycles"));
+    if !doc.type_only_cycles.is_empty() {
+        out += &format!(
+            "  {} type-only/deferred cycles (type, lazy or structural/mixed; excluded from runtime findings)\n",
+            doc.type_only_cycles.len()
+        );
+    }
     let module_cycles: Vec<_> = doc
         .cycles
         .iter()
@@ -1124,9 +1145,9 @@ fn recompute(path: &Path, rules: Option<&Path>) -> Result<Document> {
 
 fn read_scan(path: &Path) -> Result<ScanInput> {
     let text = fs::read(path).with_context(|| format!("reading {}", path.display()))?;
-    let input: ScanInput = serde_json::from_slice(&text)
+    let mut input: ScanInput = serde_json::from_slice(&text)
         .with_context(|| format!("reading scan document {}", path.display()))?;
-    if input.schema != SCHEMA || input.kind != "scan" {
+    if !archgraph::model::supported_schema(&input.schema) || input.kind != "scan" {
         bail!(
             "{} is `{}` `{}`, expected a `{SCHEMA}` scan document",
             path.display(),
@@ -1134,6 +1155,7 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
             input.kind
         );
     }
+    input.config.all_kinds |= ALL_KINDS.load(Ordering::Relaxed);
     archgraph::validate_scan(&input)
         .with_context(|| format!("inconsistent scan document {}", path.display()))?;
     Ok(input)
@@ -1141,7 +1163,11 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
 
 /// Pretty JSON to `output`, or stdout.
 fn write(output: Option<&Path>, value: &impl serde::Serialize) -> Result<()> {
-    let json = serde_json::to_string_pretty(value)? + "\n";
+    let mut value = serde_json::to_value(value)?;
+    if LEGACY_V1.load(Ordering::Relaxed) {
+        archgraph::compat::v1(&mut value);
+    }
+    let json = serde_json::to_string_pretty(&value)? + "\n";
     match output {
         Some(path) => fs::write(path, json).with_context(|| format!("writing {}", path.display())),
         None => {

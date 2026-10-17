@@ -782,7 +782,7 @@ doc.cycles.forEach((c, k) => {
   for (const l of c.break) breaks.add(l.from + "\n" + l.to);
 });
 /* Cycles run over runtime imports only: type-only and dynamic imports close none. */
-const runtime = e => e.kind === "static" || e.kind === "reexport";
+const runtime = e => !!doc.config.all_kinds || e.kind === "runtime" || e.kind === "static" || (doc.schema === "archgraph/v1" && e.kind === "reexport");
 for (const me of medges) me.cycle = modCycle[me.a] >= 0 && modCycle[me.a] === modCycle[me.b] && me.list.some(i => runtime(edges[i]));
 for (const e of edges) {
   e.fileCycle = !e.me && runtime(e) && fileCycle[e.a] >= 0 && fileCycle[e.a] === fileCycle[e.b];
@@ -1253,8 +1253,10 @@ const foundationsOf = mods.map(m => !hasOutgoingTo ? [] : Object.entries(m.outgo
   .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).map(([id]) => modIndex.get(id)));
 const cohesionX = mods.map((m, i) => {
   if (!adjusted) return m.cohesion;
-  const out = m.outgoing_edges - foundationsOf[i].reduce((s, f) => s + m.outgoing_to[mods[f].id], 0);
-  return m.internal_edges + out ? m.internal_edges / (m.internal_edges + out) : null;
+  const outgoing = m.weighted_outgoing_to || m.outgoing_to;
+  const inside = m.weighted_internal_edges ?? m.internal_edges;
+  const out = (m.weighted_outgoing_edges ?? m.outgoing_edges) - foundationsOf[i].reduce((s, f) => s + (outgoing[mods[f].id] || 0), 0);
+  return inside + out ? inside / (inside + out) : null;
 });
 const foundationNames = () => names(foundations, i => ({ m: i }));
 /* Modules with an unstable-dependency finding: a more volatile import by 0.25 or more. */

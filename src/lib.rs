@@ -4,6 +4,7 @@ pub mod bisect;
 pub mod cochange;
 pub mod codeowners;
 pub mod collect;
+pub mod compat;
 pub mod diff;
 pub mod findings;
 pub mod graph;
@@ -12,6 +13,7 @@ pub mod hotspots;
 pub mod impact;
 pub mod model;
 pub mod modules;
+pub mod quality;
 pub mod render;
 pub mod rules;
 pub mod simulate;
@@ -72,7 +74,7 @@ pub fn restore_scan(input: model::ScanInput) -> Result<Document> {
 }
 
 pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
-    if input.schema != SCHEMA || input.kind != "scan" {
+    if !model::supported_schema(&input.schema) || input.kind != "scan" {
         bail!("expected an {SCHEMA} scan document");
     }
     let rules = rules::compile(&input.config)?;
@@ -161,6 +163,20 @@ pub fn analyze(
         rules.as_ref(),
         owners.as_ref(),
     );
+    if doc.modules.iter().any(|m| {
+        ![
+            m.weighted_ca,
+            m.weighted_ce,
+            m.weighted_internal_edges,
+            m.weighted_outgoing_edges,
+            m.weighted_ca + m.weighted_ce,
+            m.weighted_internal_edges + m.weighted_outgoing_edges,
+        ]
+        .into_iter()
+        .all(f64::is_finite)
+    }) {
+        bail!("edge_weights overflow the weighted metrics; use smaller finite weights");
+    }
     findings::place_registrars(&mut doc, rules.as_ref(), owners.as_ref());
     doc.cochange = cochange;
     doc.findings = findings::find(&doc, rules.as_ref(), owners.as_ref());
@@ -177,6 +193,18 @@ pub fn build(
     rules: Option<&Compiled>,
     owners: Option<&codeowners::Compiled>,
 ) -> Document {
+    let weights = config
+        .rules
+        .as_ref()
+        .and_then(|r| r.doc.edge_weights)
+        .unwrap_or_default();
+    for edge in &mut edges {
+        if edge.kind == model::EdgeKind::TypeReexport {
+            edge.is_reexport = true;
+            edge.kind = model::EdgeKind::Type;
+        }
+        edge.weight = Some(weights.weight(edge.kind));
+    }
     package_entries.sort();
     package_entries.dedup();
     edges.sort_by(|a, b| (&a.from, &a.to).cmp(&(&b.from, &b.to)));
@@ -215,6 +243,16 @@ pub fn build(
         .cloned()
         .collect();
     let module_edges = graph::module_edges(&module_of, &edges);
+    let (cycles, type_only_cycles) = quality::cycles(
+        &module_of,
+        &edges,
+        &entries,
+        &barrels,
+        source.language == model::Language::Go,
+        config.all_kinds,
+    );
+    let mut metrics = graph::modules(&module_of, &pairs);
+    quality::metrics(&mut metrics, &module_of, &edges, &barrels);
     let mut doc = Document {
         schema: SCHEMA,
         kind: "scan",
@@ -222,14 +260,9 @@ pub fn build(
             name: "archgraph",
             version: env!("CARGO_PKG_VERSION"),
         },
-        modules: graph::modules(&module_of, &pairs),
-        cycles: graph::cycles(
-            &module_of,
-            &edges,
-            &entries,
-            &barrels,
-            source.language == model::Language::Go,
-        ),
+        modules: metrics,
+        cycles,
+        type_only_cycles,
         files: module_of
             .iter()
             .map(|(path, module)| File {

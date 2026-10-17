@@ -87,6 +87,7 @@ fn graph(commit: &str, cycle: bool, language: &str) -> Document {
         verdict: None,
         rule: None,
         reach: None,
+        ..archgraph::model::Edge::default()
     }];
     if cycle {
         edges.push(Edge {
@@ -96,6 +97,7 @@ fn graph(commit: &str, cycle: bool, language: &str) -> Document {
             verdict: None,
             rule: None,
             reach: None,
+            ..archgraph::model::Edge::default()
         });
     }
     let mut doc = archgraph::analyze(
@@ -677,6 +679,7 @@ fn a_type_only_import_is_never_named_as_the_runtime_cycle_closer() {
                 verdict: None,
                 rule: None,
                 reach: None,
+                ..archgraph::model::Edge::default()
             });
         }
         archgraph::analyze(

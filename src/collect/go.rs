@@ -210,6 +210,7 @@ pub fn parse(json: &[u8], keep_generated: bool, keep_tests: bool) -> Result<Pars
             verdict: None,
             rule: None,
             reach: None,
+            ..crate::model::Edge::default()
         })
         .collect();
     let raw = RawGraph {

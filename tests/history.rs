@@ -409,6 +409,7 @@ fn drift_graph(root: &Path) -> anyhow::Result<archgraph::model::Document> {
         verdict: None,
         rule: None,
         reach: None,
+        ..archgraph::model::Edge::default()
     }];
     if cycle {
         edges.push(Edge {
@@ -418,6 +419,7 @@ fn drift_graph(root: &Path) -> anyhow::Result<archgraph::model::Document> {
             verdict: None,
             rule: None,
             reach: None,
+            ..archgraph::model::Edge::default()
         });
     }
     archgraph::analyze(

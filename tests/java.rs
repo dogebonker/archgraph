@@ -10,7 +10,7 @@ fn edges(doc: &Value) -> Vec<(&str, &str)> {
         .unwrap()
         .iter()
         .map(|e| {
-            assert_eq!(e["kind"], "static");
+            assert_eq!(e["kind"], "runtime");
             (e["from"].as_str().unwrap(), e["to"].as_str().unwrap())
         })
         .collect()

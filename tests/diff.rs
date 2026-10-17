@@ -27,7 +27,7 @@ fn diff_shows_a_resolved_cycle() {
     let (old, new) = before_after("ts-cycles", &[], "src/c/z.ts", "src/a/x.ts");
     let (diff, code) = run_json(&["diff", &old, &new]);
     assert_eq!(code, Some(0));
-    assert_eq!(diff["schema"], "archgraph/v1");
+    assert_eq!(diff["schema"], "archgraph/v1.1");
     assert_eq!(diff["kind"], "diff");
     // The commit of the checkout holding the fixtures, or null outside a git repository.
     let scanned: Value = serde_json::from_str(&std::fs::read_to_string(&old).unwrap()).unwrap();
@@ -46,15 +46,15 @@ fn diff_shows_a_resolved_cycle() {
     // a loses its importer and c its only outgoing import; every module is listed.
     assert_eq!(
         diff["modules"]["a"],
-        json!({ "cohesion": [0.0, 0.0], "ca": [1, 0], "ce": [1, 1], "instability": [0.5, 1.0] })
+        json!({ "cohesion": [0.0, 0.0], "ca": [1, 0], "ce": [1, 1], "weighted_ca": [1.0, 0.0], "weighted_ce": [1.0, 1.0], "instability": [0.5, 1.0] })
     );
     assert_eq!(
         diff["modules"]["c"],
-        json!({ "cohesion": [0.0, null], "ca": [1, 1], "ce": [1, 0], "instability": [0.5, 0.0] })
+        json!({ "cohesion": [0.0, null], "ca": [1, 1], "ce": [1, 0], "weighted_ca": [1.0, 1.0], "weighted_ce": [1.0, 0.0], "instability": [0.5, 0.0] })
     );
     assert_eq!(
         diff["modules"]["f"],
-        json!({ "cohesion": [1.0, 1.0], "ca": [0, 0], "ce": [0, 0], "instability": [null, null] })
+        json!({ "cohesion": [1.0, 1.0], "ca": [0, 0], "ce": [0, 0], "weighted_ca": [0.0, 0.0], "weighted_ce": [0.0, 0.0], "instability": [null, null] })
     );
     assert_eq!(diff["modules"].as_object().unwrap().len(), 6);
 }
@@ -72,8 +72,7 @@ fn diff_shows_a_resolved_forbidden_edge_and_a_removed_module() {
     let (diff, _) = run_json(&["diff", &old, &new]);
     assert_eq!(
         diff["resolved_forbidden"],
-        json!([{ "from": "src/domain/user.ts", "to": "src/adapters/out/pg.ts", "kind": "static",
-                 "verdict": "forbidden", "rule": "layers" }])
+        json!([{ "from": "src/domain/user.ts", "to": "src/adapters/out/pg.ts", "kind": "runtime", "weight": 1.0, "verdict": "forbidden", "rule": "layers" }])
     );
     assert_eq!(diff["new_forbidden"], json!([]));
 
@@ -198,7 +197,7 @@ fn fail_on_new_unplanned_reads_new_unplanned() {
     assert_eq!(
         doc["new_unplanned"],
         json!([{ "from": "src/domains/cart/controller.ts", "to": "src/lib/clock.ts",
-                 "kind": "static", "verdict": "unplanned", "rule": "none" }])
+                 "kind": "runtime", "weight": 1.0, "verdict": "unplanned", "rule": "none" }])
     );
     let (doc, code) = run_json(&["diff", &old, &new, "--fail-on", "new-unplanned"]);
     assert_eq!((doc["new_unplanned"].clone(), code), (json!([]), Some(0)));

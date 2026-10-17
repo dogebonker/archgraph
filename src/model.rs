@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::rules::Rules;
 
-pub const SCHEMA: &str = "archgraph/v1";
+pub const SCHEMA: &str = "archgraph/v1.1";
+pub fn supported_schema(schema: &str) -> bool {
+    matches!(schema, "archgraph/v1" | SCHEMA)
+}
 
 #[derive(Debug, Serialize)]
 pub struct Document {
@@ -23,6 +26,7 @@ pub struct Document {
     pub modules: Vec<Module>,
     pub module_edges: Vec<ModuleEdge>,
     pub cycles: Vec<Cycle>,
+    pub type_only_cycles: Vec<DeferredCycle>,
     /// The counts and module metrics that finding simulations and `simulate` compare.
     pub summary: Summary,
     pub findings: Vec<Finding>,
@@ -128,6 +132,8 @@ pub struct Config {
     pub excludes: Vec<String>,
     pub include_tests: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub all_kinds: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub no_default_excludes: bool,
     pub rules: Option<RulesRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -160,11 +166,15 @@ pub struct File {
     pub owners: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Edge {
     pub from: String,
     pub to: String,
     pub kind: EdgeKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<f64>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_reexport: bool,
     pub verdict: Option<Verdict>,
     pub rule: Option<String>,
     /// For a `reachable` forbid: the import path from `to` to the matching file. Printed by
@@ -175,23 +185,39 @@ pub struct Edge {
 
 /// Declared in ascending precedence: when a pair is reported more than once the greatest wins,
 /// so a pair is `type` only when every report of it is type-only.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EdgeKind {
     Type,
     /// `export type … from`: a re-export for barrels, erased at runtime.
     #[serde(rename = "type-reexport")]
     TypeReexport,
+    #[serde(rename = "lazy", alias = "dynamic")]
     Dynamic,
     Reexport,
+    #[default]
+    #[serde(rename = "runtime", alias = "static")]
     Static,
 }
 
 impl EdgeKind {
-    /// Static imports and value re-exports run when the importer loads; type-only imports and
-    /// re-exports are erased and dynamic ones run later, so none can close a load-time cycle.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Static => "runtime",
+            Self::Dynamic => "lazy",
+            Self::Type | Self::TypeReexport => "type",
+            Self::Reexport => "reexport",
+        }
+    }
+    /// Structural re-exports are accounted separately from runtime dependencies.
     pub fn is_runtime(self) -> bool {
-        matches!(self, EdgeKind::Static | EdgeKind::Reexport)
+        self == EdgeKind::Static
+    }
+}
+
+impl Serialize for EdgeKind {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
@@ -215,6 +241,11 @@ pub struct Module {
     pub cohesion: Option<f64>,
     /// `outgoing_edges` split by target module, counted the same way (barrel-attributed).
     pub outgoing_to: BTreeMap<String, usize>,
+    pub weighted_ca: f64,
+    pub weighted_ce: f64,
+    pub weighted_internal_edges: f64,
+    pub weighted_outgoing_edges: f64,
+    pub weighted_outgoing_to: BTreeMap<String, f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ownership: Option<ModuleOwnership>,
 }
@@ -258,6 +289,14 @@ pub struct Cycle {
     /// Module cycles only: registrars that alone form the other side of several two-way pairs.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub registrar_moves: Vec<RegistrarMove>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DeferredCycle {
+    pub level: CycleLevel,
+    pub members: Vec<String>,
+    pub kinds: Vec<String>,
+    pub contains_runtime_cycle: bool,
 }
 
 /// A registrar (a file wiring many modules) whose imports alone form the other side of `pairs`
@@ -491,6 +530,7 @@ pub struct Changes {
     pub forbidden: usize,
     pub unplanned: usize,
     pub cycles: usize,
+    pub type_only_cycles: usize,
     pub modules: BTreeMap<String, Option<ModuleSummary>>,
 }
 
@@ -499,6 +539,7 @@ pub struct Summary {
     pub forbidden: usize,
     pub unplanned: usize,
     pub cycles: usize,
+    pub type_only_cycles: usize,
     pub modules: BTreeMap<String, ModuleSummary>,
 }
 
@@ -507,6 +548,8 @@ pub struct ModuleSummary {
     pub cohesion: Option<f64>,
     pub ca: usize,
     pub ce: usize,
+    pub weighted_ca: f64,
+    pub weighted_ce: f64,
     pub instability: Option<f64>,
 }
 
@@ -577,6 +620,8 @@ pub struct ModuleDelta {
     pub cohesion: [Option<f64>; 2],
     pub ca: [usize; 2],
     pub ce: [usize; 2],
+    pub weighted_ca: [f64; 2],
+    pub weighted_ce: [f64; 2],
     pub instability: [Option<f64>; 2],
 }
 

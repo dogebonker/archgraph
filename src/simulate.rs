@@ -16,6 +16,7 @@ pub fn summary(doc: &Document) -> Summary {
         forbidden: count(Verdict::Forbidden),
         unplanned: count(Verdict::Unplanned),
         cycles: doc.cycles.len(),
+        type_only_cycles: doc.type_only_cycles.len(),
         modules: doc
             .modules
             .iter()
@@ -24,6 +25,8 @@ pub fn summary(doc: &Document) -> Summary {
                     cohesion: m.cohesion,
                     ca: m.ca,
                     ce: m.ce,
+                    weighted_ca: m.weighted_ca,
+                    weighted_ce: m.weighted_ce,
                     instability: m.instability,
                 };
                 (m.id.clone(), summary)
@@ -108,6 +111,7 @@ pub fn changes(before: &Document, after: &Document) -> FindingSimulation {
             forbidden: after.summary.forbidden,
             unplanned: after.summary.unplanned,
             cycles: after.summary.cycles,
+            type_only_cycles: after.summary.type_only_cycles,
             modules,
         },
     }
@@ -215,6 +219,7 @@ mod tests {
             source_root: ".".into(),
             excludes: Vec::new(),
             include_tests: false,
+            all_kinds: false,
             no_default_excludes: false,
             rules: None,
             codeowners: None,

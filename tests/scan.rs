@@ -17,7 +17,7 @@ fn files(doc: &Value) -> Vec<&str> {
 #[test]
 fn ts_basic_metrics_by_hand() {
     let (doc, _, stderr) = scan_recorded("ts-basic", &[]);
-    assert_eq!(doc["schema"], "archgraph/v1");
+    assert_eq!(doc["schema"], "archgraph/v1.1");
     assert_eq!(doc["kind"], "scan");
     assert_eq!(doc["source"]["language"], "typescript");
     assert_eq!(
@@ -44,30 +44,30 @@ fn ts_basic_metrics_by_hand() {
     assert_eq!(
         doc["edges"],
         json!([
-            { "from": "src/app/shell/run.ts", "to": "src/core/model/store.ts", "kind": "static", "verdict": null, "rule": null },
-            { "from": "src/app/shell/run.ts", "to": "src/core/model/types.ts", "kind": "type", "verdict": null, "rule": null },
-            { "from": "src/app/shell/run.ts", "to": "src/core/util/log.ts", "kind": "static", "verdict": null, "rule": null },
-            { "from": "src/app/shell/view.ts", "to": "src/app/shell/run.ts", "kind": "static", "verdict": null, "rule": null },
-            { "from": "src/app/shell/view.ts", "to": "src/core/util/log.ts", "kind": "dynamic", "verdict": null, "rule": null },
-            { "from": "src/core/model/store.ts", "to": "src/core/model/types.ts", "kind": "static", "verdict": null, "rule": null },
-            { "from": "src/core/model/store.ts", "to": "src/core/util/log.ts", "kind": "static", "verdict": null, "rule": null },
-            { "from": "src/main.ts", "to": "src/app/shell/run.ts", "kind": "static", "verdict": null, "rule": null }
+            { "from": "src/app/shell/run.ts", "to": "src/core/model/store.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "src/app/shell/run.ts", "to": "src/core/model/types.ts", "kind": "type", "weight": 0.1, "verdict": null, "rule": null },
+            { "from": "src/app/shell/run.ts", "to": "src/core/util/log.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "src/app/shell/view.ts", "to": "src/app/shell/run.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "src/app/shell/view.ts", "to": "src/core/util/log.ts", "kind": "lazy", "weight": 0.3, "verdict": null, "rule": null },
+            { "from": "src/core/model/store.ts", "to": "src/core/model/types.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "src/core/model/store.ts", "to": "src/core/util/log.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "src/main.ts", "to": "src/app/shell/run.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null }
         ])
     );
     assert_eq!(
         doc["modules"],
         json!([
             { "id": "app/shell", "files": 2, "ca": 1, "ce": 2, "instability": 0.6667,
-              "internal_edges": 1, "outgoing_edges": 4, "cohesion": 0.2,
-              "outgoing_to": { "core/model": 2, "core/util": 2 } },
+              "internal_edges": 1, "outgoing_edges": 4, "cohesion": 0.2941,
+              "outgoing_to": { "core/model": 2, "core/util": 2 }, "weighted_ca": 1.0, "weighted_ce": 2.0, "weighted_internal_edges": 1.0, "weighted_outgoing_edges": 2.4, "weighted_outgoing_to": { "core/model": 1.1, "core/util": 1.3 } },
             { "id": "core/model", "files": 2, "ca": 1, "ce": 1, "instability": 0.5,
               "internal_edges": 1, "outgoing_edges": 1, "cohesion": 0.5,
-              "outgoing_to": { "core/util": 1 } },
+              "outgoing_to": { "core/util": 1 }, "weighted_ca": 1.0, "weighted_ce": 1.0, "weighted_internal_edges": 1.0, "weighted_outgoing_edges": 1.0, "weighted_outgoing_to": { "core/util": 1.0 } },
             { "id": "core/util", "files": 1, "ca": 2, "ce": 0, "instability": 0.0,
-              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null, "outgoing_to": {} },
+              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null, "outgoing_to": {}, "weighted_ca": 2.0, "weighted_ce": 0.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 0.0, "weighted_outgoing_to": {} },
             { "id": "main.ts", "files": 1, "ca": 0, "ce": 1, "instability": 1.0,
               "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0,
-              "outgoing_to": { "app/shell": 1 } }
+              "outgoing_to": { "app/shell": 1 }, "weighted_ca": 0.0, "weighted_ce": 1.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 1.0, "weighted_outgoing_to": { "app/shell": 1.0 } }
         ])
     );
     assert_eq!(
@@ -88,7 +88,7 @@ fn ts_basic_metrics_by_hand() {
         summary(
             0,
             json!({
-            "app/shell": m(json!(0.2), 1, 2, json!(0.6667)),
+            "app/shell": m(json!(0.2941), 1, 2, json!(0.6667)),
             "core/model": m(json!(0.5), 1, 1, json!(0.5)),
             "core/util": m(Value::Null, 2, 0, json!(0.0)),
             "main.ts": m(json!(0.0), 0, 1, json!(1.0)) })
@@ -108,18 +108,18 @@ fn ts_basic_metrics_by_hand() {
 
 /// `{ cohesion, ca, ce, instability }` of one module in a Summary.
 fn m(cohesion: Value, ca: usize, ce: usize, instability: Value) -> Value {
-    json!({ "cohesion": cohesion, "ca": ca, "ce": ce, "instability": instability })
+    json!({ "cohesion": cohesion, "ca": ca, "ce": ce, "instability": instability, "weighted_ca": ca as f64, "weighted_ce": ce as f64 })
 }
 
 /// A Summary without rules: nothing forbidden or unplanned.
 fn summary(cycles: usize, modules: Value) -> Value {
-    json!({ "forbidden": 0, "unplanned": 0, "cycles": cycles, "modules": modules })
+    json!({ "forbidden": 0, "unplanned": 0, "cycles": cycles, "type_only_cycles": 0, "modules": modules })
 }
 
 #[test]
 fn schema_is_valid_draft_2020_12() {
     let schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../schema/archgraph.v1.1.schema.json")).unwrap();
     assert_eq!(
         schema["$schema"],
         "https://json-schema.org/draft/2020-12/schema"
@@ -277,12 +277,12 @@ fn ts_excludes_and_barrel_attribution() {
     assert_eq!(
         doc["edges"],
         json!([
-            { "from": "src/app/main.ts", "to": "src/feature/index.ts", "kind": "static", "verdict": null, "rule": null },
-            { "from": "src/app/main.ts", "to": "src/shared/util.ts", "kind": "static", "verdict": null, "rule": null },
-            { "from": "src/feature/b.ts", "to": "src/shared/util.ts", "kind": "static", "verdict": null, "rule": null },
-            { "from": "src/feature/index.ts", "to": "src/feature/a.ts", "kind": "reexport", "verdict": null, "rule": null },
-            { "from": "src/feature/index.ts", "to": "src/feature/b.ts", "kind": "reexport", "verdict": null, "rule": null },
-            { "from": "src/feature/index.ts", "to": "src/feature/kinds.ts", "kind": "type-reexport", "verdict": null, "rule": null }
+            { "from": "src/app/main.ts", "to": "src/feature/index.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "src/app/main.ts", "to": "src/shared/util.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "src/feature/b.ts", "to": "src/shared/util.ts", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "src/feature/index.ts", "to": "src/feature/a.ts", "kind": "reexport", "weight": 0.0, "verdict": null, "rule": null },
+            { "from": "src/feature/index.ts", "to": "src/feature/b.ts", "kind": "reexport", "weight": 0.0, "verdict": null, "rule": null },
+            { "from": "src/feature/index.ts", "to": "src/feature/kinds.ts", "kind": "type", "weight": 0.1, "is_reexport": true, "verdict": null, "rule": null }
         ])
     );
     // main -> index counts as main -> a, b and kinds; the barrel's own re-exports are dropped,
@@ -292,12 +292,12 @@ fn ts_excludes_and_barrel_attribution() {
         json!([
             { "id": "app", "files": 1, "ca": 0, "ce": 2, "instability": 1.0,
               "internal_edges": 0, "outgoing_edges": 4, "cohesion": 0.0,
-              "outgoing_to": { "feature": 3, "shared": 1 } },
+              "outgoing_to": { "feature": 3, "shared": 1 }, "weighted_ca": 0.0, "weighted_ce": 2.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 4.0, "weighted_outgoing_to": { "feature": 3.0, "shared": 1.0 } },
             { "id": "feature", "files": 4, "ca": 1, "ce": 1, "instability": 0.5,
               "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0,
-              "outgoing_to": { "shared": 1 } },
+              "outgoing_to": { "shared": 1 }, "weighted_ca": 1.0, "weighted_ce": 1.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 1.0, "weighted_outgoing_to": { "shared": 1.0 } },
             { "id": "shared", "files": 1, "ca": 2, "ce": 0, "instability": 0.0,
-              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null, "outgoing_to": {} }
+              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null, "outgoing_to": {}, "weighted_ca": 2.0, "weighted_ce": 0.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 0.0, "weighted_outgoing_to": {} }
         ])
     );
     // Module edges are raw imports, as cycles and their break sets need.
@@ -656,7 +656,7 @@ fn file_cycle_inside_a_module_is_reported_alongside_a_module_cycle() {
 fn cycles_follow_runtime_imports_only() {
     // a -> b and c/f -> c/g are static; the back edges decide. Type-only imports and re-exports
     // and dynamic imports do not run at load time, so they close no cycle, though module_edges
-    // still count them. A value re-export runs and closes one.
+    // still count them. Pure re-exports are structural and also close no runtime cycle.
     let import: &[&str] = &["local", "import"];
     for (name, back, cyclic) in [
         (
@@ -674,7 +674,7 @@ fn cycles_follow_runtime_imports_only() {
             &["local", "type-only", "export"][..],
             false,
         ),
-        ("runtime-cycle-export", &["local", "export"][..], true),
+        ("runtime-cycle-export", &["local", "export"][..], false),
         ("runtime-cycle-static", import, true),
     ] {
         let (dir, input) = common::synthetic_typed(
@@ -707,6 +707,11 @@ fn cycles_follow_runtime_imports_only() {
         };
         assert_eq!(members, expected.iter().collect::<Vec<_>>(), "{name}");
         assert_eq!(doc["summary"]["cycles"], expected.len(), "{name}");
+        assert_eq!(
+            doc["summary"]["type_only_cycles"],
+            if cyclic { 0 } else { 2 },
+            "{name}"
+        );
         assert_eq!(
             doc["module_edges"],
             json!([
@@ -804,6 +809,7 @@ fn a_cycle_is_never_cut_at_an_entry_re_export() {
     // a's barrel re-exports b/x.ts (1 import), two files of b import a/k.ts. When package.json
     // publishes the barrel, the re-export is public API: the cut goes to b -> a. An internal
     // barrel re-exporting another module's file is itself the cut, though the pair is small.
+    // Explicit comparison mode preserves this cut-selection regression for structural re-exports.
     let import: &[&str] = &["local", "import"];
     for (name, published) in [("entry-cut-published", true), ("entry-cut-internal", false)] {
         let (dir, input) = common::synthetic_typed(
@@ -827,6 +833,7 @@ fn a_cycle_is_never_cut_at_an_entry_re_export() {
             &input,
             "--language",
             "typescript",
+            "--all-kinds",
         ]);
         let expected = if published {
             json!([{ "level": "module", "members": ["a", "b"], "exact": true,
@@ -1229,7 +1236,7 @@ fn an_import_of_types_only_is_type_without_import_type() {
         kinds,
         [
             (&json!("src/use.ts"), &json!("type")),
-            (&json!("src/version.ts"), &json!("static"))
+            (&json!("src/version.ts"), &json!("runtime"))
         ]
     );
 }
@@ -1342,7 +1349,7 @@ fn only_source_files_become_files() {
     assert_eq!(files(&doc), ["src/a/x.ts", "src/b/y.tsx"]);
     assert_eq!(
         doc["edges"],
-        json!([{ "from": "src/a/x.ts", "to": "src/b/y.tsx", "kind": "static", "verdict": null,
+        json!([{ "from": "src/a/x.ts", "to": "src/b/y.tsx", "kind": "runtime", "weight": 1.0, "verdict": null,
                  "rule": null }])
     );
 }
@@ -1386,7 +1393,7 @@ fn git_runs_without_the_repository_fsmonitor_hook() {
 #[test]
 fn schema_accepts_unknown_finding_kinds_and_types_known_ones() {
     let schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../schema/archgraph.v1.1.schema.json")).unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
     let (doc, _, _) = scan_recorded("ts-basic", &[]);
     let with = |finding: Value| {

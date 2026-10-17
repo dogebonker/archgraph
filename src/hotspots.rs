@@ -315,7 +315,11 @@ pub fn collect(root: &Path, graph: &Document, options: &Options) -> Result<Hotsp
     }
     let max_commits = stats.values().map(|s| s.commits.len()).max().unwrap_or(0);
     let max_authors = stats.values().map(|s| s.authors.len()).max().unwrap_or(0);
-    let max_coupling = graph.modules.iter().map(|m| m.ca + m.ce).max().unwrap_or(0);
+    let max_coupling = graph
+        .modules
+        .iter()
+        .map(|m| m.weighted_ca + m.weighted_ce)
+        .fold(0.0_f64, f64::max);
     let mut cycles = BTreeMap::new();
     for cycle in graph
         .cycles
@@ -339,7 +343,7 @@ pub fn collect(root: &Path, graph: &Document, options: &Options) -> Result<Hotsp
     let coupling: HashMap<_, _> = graph
         .modules
         .iter()
-        .map(|m| (m.id.as_str(), m.ca + m.ce))
+        .map(|m| (m.id.as_str(), m.weighted_ca + m.weighted_ce))
         .collect();
     let cuts: HashSet<_> = graph
         .cycles
@@ -369,11 +373,10 @@ pub fn collect(root: &Path, graph: &Document, options: &Options) -> Result<Hotsp
             } else {
                 (commits as f64).ln_1p() / (max_commits as f64).ln_1p()
             };
-            let coupling = if max_coupling == 0 {
+            let coupling = if max_coupling == 0.0 {
                 0.0
             } else {
-                coupling.get(file.module.as_str()).copied().unwrap_or(0) as f64
-                    / max_coupling as f64
+                coupling.get(file.module.as_str()).copied().unwrap_or(0.0) / max_coupling
             };
             let cycle_size = cycles.get(file.module.as_str()).copied().unwrap_or(0);
             let cycle = if cycle_size > 0 {

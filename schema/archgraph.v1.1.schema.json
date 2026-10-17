@@ -1,0 +1,2861 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "archgraph v1.1 document",
+  "type": "object",
+  "required": [
+    "schema",
+    "kind"
+  ],
+  "properties": {
+    "schema": {
+      "const": "archgraph/v1.1"
+    },
+    "kind": {
+      "enum": [
+        "scan",
+        "simulation",
+        "diff",
+        "history",
+        "bisect",
+        "hotspots",
+        "impact",
+        "surface"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "scan"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/scan"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "simulation"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/simulation"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "diff"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/diff"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "history"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/history"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "bisect"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/bisect"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "hotspots"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/hotspots"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "impact"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/impact"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "surface"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/surface"
+      }
+    }
+  ],
+  "$defs": {
+    "symbol-target": {
+      "type": "object",
+      "required": [
+        "file",
+        "name"
+      ],
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/path"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "symbol-export": {
+      "type": "object",
+      "required": [
+        "file",
+        "name",
+        "target"
+      ],
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/path"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "$ref": "#/$defs/symbol-target"
+        }
+      }
+    },
+    "symbol-import": {
+      "type": "object",
+      "required": [
+        "from",
+        "to",
+        "name",
+        "target",
+        "wildcard"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/path"
+        },
+        "to": {
+          "$ref": "#/$defs/path"
+        },
+        "name": {
+          "type": "string"
+        },
+        "target": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/symbol-target"
+            }
+          ]
+        },
+        "wildcard": {
+          "type": "boolean"
+        }
+      }
+    },
+    "symbols": {
+      "type": "object",
+      "required": [
+        "complete",
+        "exports",
+        "imports",
+        "limitations"
+      ],
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "exports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/symbol-export"
+          }
+        },
+        "imports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/symbol-import"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "symbol-use": {
+      "type": "object",
+      "required": [
+        "target",
+        "importers"
+      ],
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/symbol-target"
+        },
+        "importers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        }
+      }
+    },
+    "deep-import": {
+      "type": "object",
+      "required": [
+        "from",
+        "to",
+        "symbols",
+        "suggestion"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/path"
+        },
+        "to": {
+          "$ref": "#/$defs/path"
+        },
+        "symbols": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "suggestion": {
+          "type": "string"
+        }
+      }
+    },
+    "module-surface": {
+      "type": "object",
+      "required": [
+        "module",
+        "entrypoints",
+        "exported",
+        "used_externally",
+        "could_be_internal",
+        "deep_imports",
+        "oversized"
+      ],
+      "properties": {
+        "module": {
+          "type": "string"
+        },
+        "entrypoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "exported": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/symbol-export"
+          }
+        },
+        "used_externally": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/symbol-use"
+          }
+        },
+        "could_be_internal": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/symbol-export"
+          }
+        },
+        "deep_imports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/deep-import"
+          }
+        },
+        "oversized": {
+          "type": "boolean"
+        }
+      }
+    },
+    "surface": {
+      "type": "object",
+      "required": [
+        "max_symbols",
+        "complete",
+        "modules",
+        "limitations"
+      ],
+      "properties": {
+        "max_symbols": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/module-surface"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "impact": {
+      "type": "object",
+      "required": [
+        "changed_files",
+        "unscanned_files",
+        "affected_files",
+        "affected_modules",
+        "selected_tests",
+        "go_test_packages",
+        "reviewers",
+        "risk",
+        "limitations"
+      ],
+      "properties": {
+        "changed_files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "uniqueItems": true
+        },
+        "unscanned_files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "uniqueItems": true
+        },
+        "affected_files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "module",
+              "depth",
+              "weight"
+            ],
+            "properties": {
+              "path": {
+                "$ref": "#/$defs/path"
+              },
+              "module": {
+                "type": "string"
+              },
+              "depth": {
+                "$ref": "#/$defs/count"
+              },
+              "weight": {
+                "$ref": "#/$defs/ratio"
+              }
+            }
+          }
+        },
+        "affected_modules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "depth",
+              "weight",
+              "in_cycle",
+              "hotspot"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "depth": {
+                "$ref": "#/$defs/count"
+              },
+              "weight": {
+                "$ref": "#/$defs/ratio"
+              },
+              "in_cycle": {
+                "type": "boolean"
+              },
+              "hotspot": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "selected_tests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "uniqueItems": true
+        },
+        "go_test_packages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "uniqueItems": true
+        },
+        "reviewers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "identity",
+              "source",
+              "commits",
+              "modules"
+            ],
+            "properties": {
+              "identity": {
+                "type": "string"
+              },
+              "source": {
+                "enum": [
+                  "codeowners",
+                  "git"
+                ]
+              },
+              "commits": {
+                "$ref": "#/$defs/count"
+              },
+              "modules": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              }
+            }
+          }
+        },
+        "risk": {
+          "type": "boolean"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "introduced-commit": {
+      "type": "object",
+      "required": [
+        "commit",
+        "author",
+        "email",
+        "authored_at",
+        "committed_at",
+        "subject",
+        "pull_request",
+        "age_days"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "authored_at": {
+          "type": "string"
+        },
+        "committed_at": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "pull_request": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "age_days": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "status",
+        "method",
+        "from",
+        "to",
+        "previous_commit",
+        "closing_edge",
+        "limitations",
+        "scans"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "previous_commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "closing_edge": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/link"
+            }
+          ]
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scans": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "hotspot-file": {
+      "type": "object",
+      "required": [
+        "path",
+        "module",
+        "commits",
+        "lines_added",
+        "lines_deleted",
+        "authors",
+        "bugfix_commits",
+        "churn",
+        "coupling",
+        "cycle",
+        "author_factor",
+        "score",
+        "cycle_size",
+        "cut_candidate",
+        "finding_indices"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "module": {
+          "type": "string"
+        },
+        "commits": {
+          "$ref": "#/$defs/count"
+        },
+        "lines_added": {
+          "$ref": "#/$defs/count"
+        },
+        "lines_deleted": {
+          "$ref": "#/$defs/count"
+        },
+        "authors": {
+          "$ref": "#/$defs/count"
+        },
+        "bugfix_commits": {
+          "$ref": "#/$defs/count"
+        },
+        "cycle_size": {
+          "$ref": "#/$defs/count"
+        },
+        "churn": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "coupling": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "cycle": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "author_factor": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "cut_candidate": {
+          "type": "boolean"
+        },
+        "finding_indices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/count"
+          }
+        }
+      }
+    },
+    "hotspots": {
+      "type": "object",
+      "required": [
+        "since",
+        "since_timestamp",
+        "as_of",
+        "max_files",
+        "authors_enabled",
+        "shallow",
+        "commits",
+        "skipped",
+        "limitations",
+        "files",
+        "validation"
+      ],
+      "properties": {
+        "since": {
+          "type": "string"
+        },
+        "as_of": {
+          "type": "string"
+        },
+        "since_timestamp": {
+          "type": "integer"
+        },
+        "max_files": {
+          "$ref": "#/$defs/count"
+        },
+        "commits": {
+          "$ref": "#/$defs/count"
+        },
+        "skipped": {
+          "$ref": "#/$defs/count"
+        },
+        "authors_enabled": {
+          "type": "boolean"
+        },
+        "shallow": {
+          "type": "boolean"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/hotspot-file"
+          }
+        },
+        "validation": {
+          "type": "object",
+          "required": [
+            "files",
+            "top_files",
+            "bugfix_commits",
+            "top_bugfix_commits",
+            "share",
+            "lift"
+          ],
+          "properties": {
+            "files": {
+              "$ref": "#/$defs/count"
+            },
+            "top_files": {
+              "$ref": "#/$defs/count"
+            },
+            "bugfix_commits": {
+              "$ref": "#/$defs/count"
+            },
+            "top_bugfix_commits": {
+              "$ref": "#/$defs/count"
+            },
+            "share": {
+              "$ref": "#/$defs/ratio"
+            },
+            "expected_random_share": {
+              "$ref": "#/$defs/ratio"
+            },
+            "lift": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "random_lift": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "bisect": {
+      "type": "object",
+      "required": [
+        "status",
+        "method",
+        "from",
+        "to",
+        "previous_commit",
+        "closing_edge",
+        "limitations",
+        "scans",
+        "target",
+        "introduced_by",
+        "commits"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "previous_commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "closing_edge": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/link"
+            }
+          ]
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scans": {
+          "$ref": "#/$defs/count"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "cycle",
+                "forbidden-edge",
+                "finding"
+              ]
+            },
+            "finding_kind": {
+              "type": "string"
+            },
+            "subject": {
+              "type": "string"
+            },
+            "level": {
+              "enum": [
+                "module",
+                "file"
+              ]
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "from": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            }
+          }
+        },
+        "introduced_by": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/introduced-commit"
+            }
+          ]
+        },
+        "commits": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "history-summary": {
+      "type": "object",
+      "required": [
+        "files",
+        "modules",
+        "edges",
+        "cycles",
+        "largest_cycle",
+        "modules_in_cycles_percent",
+        "cycles_per_100_modules",
+        "mean_instability",
+        "forbidden",
+        "hotspot_concentration"
+      ],
+      "properties": {
+        "files": {
+          "$ref": "#/$defs/count"
+        },
+        "modules": {
+          "$ref": "#/$defs/count"
+        },
+        "edges": {
+          "$ref": "#/$defs/count"
+        },
+        "cycles": {
+          "$ref": "#/$defs/count"
+        },
+        "largest_cycle": {
+          "$ref": "#/$defs/count"
+        },
+        "modules_in_cycles_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "cycles_per_100_modules": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mean_instability": {
+          "$ref": "#/$defs/ratio"
+        },
+        "forbidden": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "hotspot_concentration": {
+          "$ref": "#/$defs/ratio"
+        }
+      }
+    },
+    "codeowners": {
+      "type": "object",
+      "required": [
+        "path",
+        "prefix",
+        "rules",
+        "warnings"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "prefix": {
+          "$ref": "#/$defs/path"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "pattern",
+              "owners",
+              "line"
+            ],
+            "properties": {
+              "pattern": {
+                "type": "string",
+                "minLength": 1
+              },
+              "owners": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "line",
+              "message"
+            ],
+            "properties": {
+              "line": {
+                "$ref": "#/$defs/count"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "required": [
+        "owned_files",
+        "owners",
+        "primary"
+      ],
+      "properties": {
+        "owned_files": {
+          "$ref": "#/$defs/count"
+        },
+        "owners": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "primary": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "placement-ownership": {
+      "type": "object",
+      "required": [
+        "assessment",
+        "file_owners",
+        "current_module_owners",
+        "target_module_owners",
+        "destination_owners"
+      ],
+      "properties": {
+        "assessment": {
+          "enum": [
+            "supports",
+            "conflicts",
+            "shared",
+            "unknown"
+          ]
+        },
+        "file_owners": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "current_module_owners": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "target_module_owners": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "destination_owners": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "required": [
+        "snapshots"
+      ],
+      "properties": {
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "commit",
+              "error"
+            ],
+            "properties": {
+              "commit": {
+                "type": "string"
+              },
+              "error": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "release_markers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "commit",
+              "committed_at",
+              "tags"
+            ],
+            "properties": {
+              "commit": {
+                "type": "string"
+              },
+              "committed_at": {
+                "type": "string"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "snapshots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "commit",
+              "committed_at",
+              "subject",
+              "graph",
+              "diff"
+            ],
+            "properties": {
+              "summary": {
+                "$ref": "#/$defs/history-summary"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "commit": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40,64}$"
+              },
+              "committed_at": {
+                "type": "string"
+              },
+              "subject": {
+                "type": "string"
+              },
+              "graph": {
+                "allOf": [
+                  {
+                    "$ref": "#"
+                  },
+                  {
+                    "properties": {
+                      "kind": {
+                        "const": "scan"
+                      }
+                    }
+                  }
+                ]
+              },
+              "diff": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#"
+                      },
+                      {
+                        "properties": {
+                          "kind": {
+                            "const": "diff"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "^/"
+      }
+    },
+    "ratio": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "scan": {
+      "type": "object",
+      "required": [
+        "tool",
+        "source",
+        "config",
+        "files",
+        "edges",
+        "modules",
+        "module_edges",
+        "cycles",
+        "summary",
+        "findings",
+        "cochange"
+      ],
+      "properties": {
+        "tool": {
+          "type": "object",
+          "required": [
+            "name",
+            "version"
+          ],
+          "properties": {
+            "name": {
+              "const": "archgraph"
+            },
+            "version": {
+              "type": "string"
+            }
+          }
+        },
+        "source": {
+          "type": "object",
+          "required": [
+            "language",
+            "collector",
+            "git",
+            "generated_at"
+          ],
+          "properties": {
+            "language": {
+              "description": "May grow within archgraph/v1 as languages are added.",
+              "enum": [
+                "typescript",
+                "python",
+                "go",
+                "rust",
+                "java"
+              ]
+            },
+            "collector": {
+              "type": "object",
+              "required": [
+                "name",
+                "version",
+                "cruised"
+              ],
+              "properties": {
+                "name": {
+                  "description": "May grow within archgraph/v1 as collectors are added.",
+                  "enum": [
+                    "dependency-cruiser",
+                    "grimp",
+                    "go-types",
+                    "rust-analyzer",
+                    "java-javac"
+                  ]
+                },
+                "version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "cruised": {
+                  "$ref": "#/$defs/count"
+                },
+                "type_marking": {
+                  "description": "Unavailable when dependency-cruiser could not distinguish implicit type-only usage; uncertain imports remain runtime.",
+                  "enum": [
+                    "unavailable"
+                  ]
+                },
+                "unresolved": {
+                  "$ref": "#/$defs/count"
+                },
+                "main_packages": {
+                  "description": "Go: the directories of package main packages (. for the root), sorted. Their files are commands, never public API. Absent otherwise.",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/path"
+                  }
+                },
+                "bound_files": {
+                  "description": "Go: files that cannot leave their package and still compile, sorted: a file declaring a method of a type declared in another file, or using an unexported name another file declares, and that other file, when both are scanned. None of them is proposed for a move. Absent otherwise.",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/path"
+                  }
+                },
+                "go_modules": {
+                  "description": "Go: the directories holding a go.mod (. for the root), sorted. No move is proposed from one Go module into another. Absent otherwise.",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/path"
+                  }
+                }
+              }
+            },
+            "git": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "commit",
+                    "dirty"
+                  ],
+                  "properties": {
+                    "commit": {
+                      "type": "string"
+                    },
+                    "dirty": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              ]
+            },
+            "generated_at": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+            }
+          }
+        },
+        "config": {
+          "type": "object",
+          "required": [
+            "depth",
+            "source_root",
+            "excludes",
+            "include_tests",
+            "rules"
+          ],
+          "properties": {
+            "depth": {
+              "$ref": "#/$defs/count"
+            },
+            "package_modules": {
+              "description": "Go or Java scanned without --depth: every package directory is a module and depth is unused. Absent otherwise.",
+              "type": "boolean"
+            },
+            "source_root": {
+              "$ref": "#/$defs/path"
+            },
+            "excludes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "include_tests": {
+              "type": "boolean"
+            },
+            "no_default_excludes": {
+              "type": "boolean"
+            },
+            "codeowners": {
+              "$ref": "#/$defs/codeowners"
+            },
+            "collection": {
+              "type": "object",
+              "required": [
+                "python_package",
+                "rust_features",
+                "rust_build_scripts"
+              ],
+              "properties": {
+                "python_package": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "rust_features": {
+                  "enum": [
+                    "all",
+                    "default",
+                    null
+                  ]
+                },
+                "rust_build_scripts": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "rules": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256",
+                    "doc"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "doc": {
+                      "$ref": "#/$defs/rules"
+                    }
+                  }
+                }
+              ]
+            },
+            "all_kinds": {
+              "type": "boolean"
+            }
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "module",
+              "barrel"
+            ],
+            "properties": {
+              "path": {
+                "$ref": "#/$defs/path"
+              },
+              "module": {
+                "type": "string",
+                "minLength": 1
+              },
+              "barrel": {
+                "type": "boolean"
+              },
+              "owners": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        },
+        "package_entries": {
+          "description": "TypeScript: files a package.json in the scanned tree publishes (exports, main, module, types), mapped from build output back to their sources. Public entries like barrels. Absent in older documents.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "files",
+              "ca",
+              "ce",
+              "instability",
+              "internal_edges",
+              "outgoing_edges",
+              "cohesion"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "files": {
+                "$ref": "#/$defs/count"
+              },
+              "ca": {
+                "$ref": "#/$defs/count"
+              },
+              "ce": {
+                "$ref": "#/$defs/count"
+              },
+              "instability": {
+                "$ref": "#/$defs/ratio"
+              },
+              "internal_edges": {
+                "$ref": "#/$defs/count"
+              },
+              "outgoing_edges": {
+                "$ref": "#/$defs/count"
+              },
+              "cohesion": {
+                "$ref": "#/$defs/ratio"
+              },
+              "ownership": {
+                "$ref": "#/$defs/ownership"
+              },
+              "outgoing_to": {
+                "description": "outgoing_edges split by target module id, counted the same way (barrel-attributed file pairs); the values sum to outgoing_edges. Optional: absent in documents written before it was added.",
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/$defs/count"
+                }
+              },
+              "weighted_ca": {
+                "type": "number",
+                "minimum": 0
+              },
+              "weighted_ce": {
+                "type": "number",
+                "minimum": 0
+              },
+              "weighted_internal_edges": {
+                "type": "number",
+                "minimum": 0
+              },
+              "weighted_outgoing_edges": {
+                "type": "number",
+                "minimum": 0
+              },
+              "weighted_outgoing_to": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        },
+        "module_edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "from",
+              "to",
+              "imports",
+              "forbidden"
+            ],
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "imports": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "forbidden": {
+                "$ref": "#/$defs/count"
+              }
+            }
+          }
+        },
+        "cycles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cycle"
+          }
+        },
+        "summary": {
+          "$ref": "#/$defs/summary"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "hotspots": {
+          "$ref": "#/$defs/hotspots"
+        },
+        "symbols": {
+          "$ref": "#/$defs/symbols"
+        },
+        "surface": {
+          "$ref": "#/$defs/surface"
+        },
+        "cochange": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/cochange"
+            }
+          ]
+        },
+        "type_only_cycles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "level",
+              "members",
+              "kinds",
+              "contains_runtime_cycle"
+            ],
+            "properties": {
+              "level": {
+                "enum": [
+                  "module",
+                  "file"
+                ]
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "kinds": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "runtime",
+                    "lazy",
+                    "type",
+                    "reexport"
+                  ]
+                }
+              },
+              "contains_runtime_cycle": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "from",
+        "to",
+        "kind",
+        "verdict",
+        "rule",
+        "weight"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/path"
+        },
+        "to": {
+          "$ref": "#/$defs/path"
+        },
+        "kind": {
+          "description": "runtime: load-time dependency; lazy: deferred dependency; type: erased or TYPE_CHECKING dependency; reexport: structural facade wiring. Legacy static/dynamic/type-reexport spellings remain accepted on input.",
+          "enum": [
+            "runtime",
+            "lazy",
+            "type",
+            "reexport"
+          ]
+        },
+        "verdict": {
+          "enum": [
+            "allowed",
+            "forbidden",
+            "unplanned",
+            null
+          ]
+        },
+        "rule": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0
+        },
+        "is_reexport": {
+          "type": "boolean"
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/path"
+        },
+        "to": {
+          "$ref": "#/$defs/path"
+        }
+      }
+    },
+    "cycle": {
+      "description": "Strongly connected runtime dependencies by default; --all-kinds includes every kind. Deferred components are reported separately in type_only_cycles.",
+      "type": "object",
+      "required": [
+        "level",
+        "members",
+        "exact",
+        "break"
+      ],
+      "properties": {
+        "level": {
+          "enum": [
+            "module",
+            "file"
+          ]
+        },
+        "members": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string"
+          }
+        },
+        "exact": {
+          "type": "boolean"
+        },
+        "break": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        },
+        "registrar_moves": {
+          "description": "Module cycles only, absent when empty: registrars (files wiring many modules, imported by at least one file) whose imports alone form the other side of 3 or more two-way pairs, each with a simulated move that adds no new cycle; with lists the other modules of those pairs. A file nobody imports, or an index file, is never listed.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "file",
+              "module",
+              "pairs",
+              "with"
+            ],
+            "properties": {
+              "file": {
+                "$ref": "#/$defs/path"
+              },
+              "module": {
+                "type": "string"
+              },
+              "pairs": {
+                "type": "integer",
+                "minimum": 3
+              },
+              "with": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "to": {
+                "description": "The simulated destination: a new folder named after the file (DriverFactory.ts into driver-factory/), in the file's folder when that is a module of its own at the scan's depth, else beside the module's folder; or the folder of the file's one importer. The move adds no new cycle.",
+                "$ref": "#/$defs/path"
+              },
+              "pairs_removed": {
+                "description": "Two-way pairs over all module cycles before the move minus after.",
+                "type": "integer"
+              },
+              "cycle_before": {
+                "description": "Modules in this cycle before the move.",
+                "$ref": "#/$defs/count"
+              },
+              "cycle_after": {
+                "description": "Modules in the cycle holding module after the move, 0 when it is in none.",
+                "$ref": "#/$defs/count"
+              }
+            }
+          }
+        },
+        "two_way": {
+          "description": "Module cycles only: every pair of members that import each other, as the direction to cut: the lighter one (the names' order on a tie), unless it holds only wiring (registry) or a public entry's re-export (entry) and the other direction does not; an even pair names no lighter side. Sorted ordinary pairs first, then even, registry and entry pairs, each by imports, then from, then to. edges lists at most 20 of its file imports; imports counts them all.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "from",
+              "to",
+              "imports",
+              "reverse_imports",
+              "edges"
+            ],
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "imports": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "reverse_imports": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "even": {
+                "description": "Present and true when both directions have at most 2 imports, within a factor of 2: a mutual dependency with no lighter side to cut. from and to are then in the names' order, and imports counts from -> to.",
+                "const": true
+              },
+              "registry": {
+                "description": "Present and true when the direction holds only imports of composition roots (a file nobody imports that imports 3 or more modules) and registrars (a file with 5 or more imports into the module), and the other direction holds no ordinary imports either: wiring, not a cut to offer.",
+                "const": true
+              },
+              "resolved_by_move": {
+                "description": "Present and true when the other direction is only a registrar this cycle's registrar_moves moves: the move resolves the pair, which is not a cut to offer.",
+                "const": true
+              },
+              "entry": {
+                "description": "Present and true when both directions hold a re-export by a public entry (a barrel or a package.json entry): public API, not a cut to offer.",
+                "const": true
+              },
+              "edges": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "$ref": "#/$defs/link"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rules": {
+      "description": "The parsed layout.yaml. archgraph rejects unknown keys when it loads layout.yaml; readers of a document ignore them.",
+      "type": "object",
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "path"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "entrypoints": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "public": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "module",
+              "entries"
+            ],
+            "properties": {
+              "module": {
+                "type": "string",
+                "minLength": 1
+              },
+              "entries": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "kinds": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "runtime",
+                    "lazy",
+                    "type",
+                    "reexport"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "forbid": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "from": {
+                "type": "string",
+                "minLength": 1
+              },
+              "to": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reachable": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "kinds": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "runtime",
+                    "lazy",
+                    "type",
+                    "reexport"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "allow": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "from": {
+                "type": "string",
+                "minLength": 1
+              },
+              "to": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "kinds": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "runtime",
+                    "lazy",
+                    "type",
+                    "reexport"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "The verdict for an import no other step decides. Absent means unplanned.",
+          "enum": [
+            "unplanned",
+            "forbidden"
+          ]
+        },
+        "edge_weights": {
+          "type": "object",
+          "properties": {
+            "runtime": {
+              "type": "number",
+              "minimum": 0
+            },
+            "lazy": {
+              "type": "number",
+              "minimum": 0
+            },
+            "type": {
+              "type": "number",
+              "minimum": 0
+            },
+            "reexport": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "move": {
+      "type": "object",
+      "required": [
+        "file",
+        "to"
+      ],
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/path"
+        },
+        "to": {
+          "$ref": "#/$defs/path"
+        }
+      }
+    },
+    "module_summary": {
+      "type": "object",
+      "required": [
+        "cohesion",
+        "ca",
+        "ce",
+        "instability"
+      ],
+      "properties": {
+        "cohesion": {
+          "$ref": "#/$defs/ratio"
+        },
+        "ca": {
+          "$ref": "#/$defs/count"
+        },
+        "ce": {
+          "$ref": "#/$defs/count"
+        },
+        "instability": {
+          "$ref": "#/$defs/ratio"
+        },
+        "weighted_ca": {
+          "type": "number",
+          "minimum": 0
+        },
+        "weighted_ce": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "forbidden",
+        "unplanned",
+        "cycles",
+        "modules"
+      ],
+      "properties": {
+        "forbidden": {
+          "$ref": "#/$defs/count"
+        },
+        "unplanned": {
+          "$ref": "#/$defs/count"
+        },
+        "cycles": {
+          "$ref": "#/$defs/count"
+        },
+        "modules": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/module_summary"
+          }
+        },
+        "type_only_cycles": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "changes": {
+      "description": "A summary after a move, compared with the scan's summary: modules whose metrics did not change are left out, a module the move empties is null.",
+      "type": "object",
+      "required": [
+        "forbidden",
+        "unplanned",
+        "cycles",
+        "modules"
+      ],
+      "properties": {
+        "forbidden": {
+          "$ref": "#/$defs/count"
+        },
+        "unplanned": {
+          "$ref": "#/$defs/count"
+        },
+        "cycles": {
+          "$ref": "#/$defs/count"
+        },
+        "modules": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/module_summary"
+              }
+            ]
+          }
+        },
+        "type_only_cycles": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "finding_simulation": {
+      "type": "object",
+      "required": [
+        "after"
+      ],
+      "properties": {
+        "after": {
+          "$ref": "#/$defs/changes"
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": [
+        "kind",
+        "subject",
+        "evidence"
+      ],
+      "properties": {
+        "introduced_by": {
+          "$ref": "#/$defs/introduced-commit"
+        },
+        "age_days": {
+          "$ref": "#/$defs/count"
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        },
+        "hotspot_priority": {
+          "type": "number",
+          "minimum": 0
+        },
+        "kind": {
+          "description": "Open: consumers ignore kinds they do not know. Known kinds type their evidence below.",
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "object"
+        },
+        "suggestion": {
+          "type": "object",
+          "required": [
+            "move"
+          ],
+          "properties": {
+            "move": {
+              "$ref": "#/$defs/move"
+            }
+          }
+        },
+        "simulation": {
+          "$ref": "#/$defs/finding_simulation"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "sink-split"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "$ref": "#/$defs/evidence-sink-split"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "misplaced-file"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "$ref": "#/$defs/evidence-misplaced-file"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "cycle"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "$ref": "#/$defs/evidence-cycle"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "hidden-coupling"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "$ref": "#/$defs/evidence-hidden-coupling"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "internals-reach"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "$ref": "#/$defs/evidence-internals-reach"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "unstable-dependency"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "$ref": "#/$defs/evidence-unstable-dependency"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "seam"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "$ref": "#/$defs/evidence-seam"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "small-repo"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "$ref": "#/$defs/evidence-small-repo"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "evidence-sink-split": {
+      "type": "object",
+      "required": [
+        "ca",
+        "components",
+        "via_barrel"
+      ],
+      "properties": {
+        "ca": {
+          "$ref": "#/$defs/count"
+        },
+        "via_barrel": {
+          "type": "boolean"
+        },
+        "components": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": [
+              "files",
+              "consumers",
+              "moves"
+            ],
+            "properties": {
+              "files": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/path"
+                }
+              },
+              "consumers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "moves": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/move"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "evidence-misplaced-file": {
+      "type": "object",
+      "required": [
+        "own_module_edges",
+        "target_module",
+        "imports_from_target",
+        "via_barrel"
+      ],
+      "properties": {
+        "ownership": {
+          "$ref": "#/$defs/placement-ownership"
+        },
+        "own_module_edges": {
+          "description": "Edges in either direction between the file and the rest of its own module.",
+          "$ref": "#/$defs/count"
+        },
+        "target_module": {
+          "type": "string"
+        },
+        "imports_from_target": {
+          "description": "Files of the target module that import the file.",
+          "$ref": "#/$defs/count"
+        },
+        "via_barrel": {
+          "type": "boolean"
+        }
+      }
+    },
+    "evidence-cycle": {
+      "$ref": "#/$defs/cycle"
+    },
+    "evidence-hidden-coupling": {
+      "type": "object",
+      "required": [
+        "files",
+        "modules",
+        "commits"
+      ],
+      "properties": {
+        "files": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "modules": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "string"
+          }
+        },
+        "commits": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "evidence-internals-reach": {
+      "description": "Imports that bypass public entries, with every bypassing import counted: one finding per module without rules (subject: the module id), per bound public module with rules (subject: its pattern, such as src/domains/cart/**; module: the module of its first import's target).",
+      "type": "object",
+      "required": [
+        "module",
+        "entries",
+        "imports",
+        "importers",
+        "importing_files",
+        "edges"
+      ],
+      "properties": {
+        "module": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "imports": {
+          "description": "Imports that bypass the entries.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "importers": {
+          "description": "Distinct modules those imports come from.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "importing_files": {
+          "description": "Distinct files those imports come from.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "barrel_share": {
+          "description": "Without rules: the share of the cross-module imports into module that go through one of its barrels, at least 0.5 for the finding to be reported. Absent with rules.",
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1
+        },
+        "edges": {
+          "description": "The bypassing imports, at most 20; imports counts them all.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        }
+      }
+    },
+    "evidence-unstable-dependency": {
+      "type": "object",
+      "required": [
+        "from",
+        "to",
+        "from_instability",
+        "to_instability",
+        "imports"
+      ],
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "from_instability": {
+          "$ref": "#/$defs/ratio"
+        },
+        "to_instability": {
+          "$ref": "#/$defs/ratio"
+        },
+        "imports": {
+          "description": "Runtime file imports (static and reexport, not through barrels) from a file of from to a file of to, at least 2.",
+          "type": "integer",
+          "minimum": 2
+        }
+      }
+    },
+    "evidence-seam": {
+      "type": "object",
+      "required": [
+        "modularity",
+        "folder_modularity",
+        "clusters",
+        "hubs",
+        "via_barrel"
+      ],
+      "properties": {
+        "modularity": {
+          "type": "number"
+        },
+        "folder_modularity": {
+          "type": "number"
+        },
+        "hubs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "via_barrel": {
+          "type": "boolean"
+        },
+        "clusters": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": [
+              "files",
+              "modules"
+            ],
+            "properties": {
+              "files": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/path"
+                }
+              },
+              "modules": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "evidence-small-repo": {
+      "type": "object",
+      "required": [
+        "files",
+        "modules"
+      ],
+      "properties": {
+        "files": {
+          "$ref": "#/$defs/count"
+        },
+        "modules": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "cochange": {
+      "type": "object",
+      "required": [
+        "limit",
+        "commits",
+        "skipped",
+        "pairs"
+      ],
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "commits": {
+          "$ref": "#/$defs/count"
+        },
+        "skipped": {
+          "$ref": "#/$defs/count"
+        },
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "files",
+              "commits"
+            ],
+            "properties": {
+              "files": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "$ref": "#/$defs/path"
+                }
+              },
+              "commits": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "required": [
+        "commit",
+        "generated_at"
+      ],
+      "properties": {
+        "commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generated_at": {
+          "type": "string"
+        }
+      }
+    },
+    "ratio_pair": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/ratio"
+      }
+    },
+    "count_pair": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/count"
+      }
+    },
+    "diff": {
+      "type": "object",
+      "required": [
+        "old",
+        "new",
+        "modules",
+        "added_modules",
+        "removed_modules",
+        "new_cycles",
+        "resolved_cycles",
+        "new_forbidden",
+        "resolved_forbidden"
+      ],
+      "properties": {
+        "old": {
+          "$ref": "#/$defs/snapshot"
+        },
+        "new": {
+          "$ref": "#/$defs/snapshot"
+        },
+        "modules": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "cohesion",
+              "ca",
+              "ce",
+              "instability"
+            ],
+            "properties": {
+              "cohesion": {
+                "$ref": "#/$defs/ratio_pair"
+              },
+              "ca": {
+                "$ref": "#/$defs/count_pair"
+              },
+              "ce": {
+                "$ref": "#/$defs/count_pair"
+              },
+              "instability": {
+                "$ref": "#/$defs/ratio_pair"
+              },
+              "weighted_ca": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "weighted_ce": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        },
+        "added_modules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "removed_modules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "new_cycles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cycle"
+          }
+        },
+        "resolved_cycles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cycle"
+          }
+        },
+        "new_forbidden": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        },
+        "resolved_forbidden": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        },
+        "new_unplanned": {
+          "description": "Imports unplanned in new whose pair is missing or has another verdict in old. Optional: added in v1 after the first release.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        }
+      }
+    },
+    "simulation": {
+      "type": "object",
+      "required": [
+        "move",
+        "before",
+        "after",
+        "new_forbidden",
+        "removed_forbidden"
+      ],
+      "properties": {
+        "move": {
+          "type": "object",
+          "required": [
+            "file",
+            "to",
+            "module"
+          ],
+          "properties": {
+            "file": {
+              "$ref": "#/$defs/path"
+            },
+            "to": {
+              "$ref": "#/$defs/path"
+            },
+            "module": {
+              "type": "string"
+            }
+          }
+        },
+        "before": {
+          "$ref": "#/$defs/summary"
+        },
+        "after": {
+          "$ref": "#/$defs/summary"
+        },
+        "new_forbidden": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        },
+        "removed_forbidden": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        }
+      }
+    }
+  }
+}

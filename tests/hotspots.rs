@@ -106,6 +106,7 @@ fn graph(paths: &[&str], edges: &[(&str, &str)], commit: &str) -> Document {
                 verdict: None,
                 rule: None,
                 reach: None,
+                ..archgraph::model::Edge::default()
             })
             .collect(),
         vec![],

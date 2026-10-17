@@ -5,11 +5,11 @@ use serde_json::{Value, json};
 
 /// `{ cohesion, ca, ce, instability }` of one module in a Summary.
 fn m(cohesion: Value, ca: usize, ce: usize, instability: Value) -> Value {
-    json!({ "cohesion": cohesion, "ca": ca, "ce": ce, "instability": instability })
+    json!({ "cohesion": cohesion, "ca": ca, "ce": ce, "instability": instability, "weighted_ca": ca as f64, "weighted_ce": ce as f64 })
 }
 
 fn summary(forbidden: usize, unplanned: usize, cycles: usize, modules: Value) -> Value {
-    json!({ "forbidden": forbidden, "unplanned": unplanned, "cycles": cycles, "modules": modules })
+    json!({ "forbidden": forbidden, "unplanned": unplanned, "cycles": cycles, "type_only_cycles": 0, "modules": modules })
 }
 
 #[test]
@@ -153,7 +153,7 @@ fn simulate_cli_destination_decides_layer() {
     assert_eq!(
         sim,
         json!({
-            "schema": "archgraph/v1",
+            "schema": "archgraph/v1.1",
             "kind": "simulation",
             "move": { "file": "src/adapters/out/queue.ts", "to": "src/adapters/in/queue.ts",
                       "module": "adapters/in" },
@@ -172,7 +172,7 @@ fn simulate_cli_destination_decides_layer() {
             "new_forbidden": [],
             "removed_forbidden": [
                 { "from": "src/adapters/out/queue.ts", "to": "src/adapters/in/cli.ts",
-                  "kind": "static", "verdict": "forbidden", "rule": "forbid[1]" } ]
+                  "kind": "runtime", "weight": 1.0, "verdict": "forbidden", "rule": "forbid[1]" } ]
         })
     );
 
@@ -192,8 +192,7 @@ fn simulate_cli_destination_decides_layer() {
     assert_eq!(sim["after"]["forbidden"], 4);
     assert_eq!(
         sim["new_forbidden"],
-        json!([{ "from": "src/domain/user.ts", "to": "src/adapters/in/rules.ts", "kind": "static",
-                 "verdict": "forbidden", "rule": "layers" }])
+        json!([{ "from": "src/domain/user.ts", "to": "src/adapters/in/rules.ts", "kind": "runtime", "weight": 1.0, "verdict": "forbidden", "rule": "layers" }])
     );
     assert_eq!(sim["removed_forbidden"], json!([]));
     assert_eq!(
@@ -658,7 +657,7 @@ fn unstable_dependency_counts_at_least_two_runtime_imports() {
     );
     assert_eq!(barrel, Vec::<Value>::new());
 
-    // Value re-exports run at load time: they count.
+    // Pure re-exports have no runtime coupling weight.
     let reexports = unstable(
         "sdp-reexport",
         &[
@@ -666,8 +665,7 @@ fn unstable_dependency_counts_at_least_two_runtime_imports() {
             ("core/boot.ts", "plugins/loader.ts", &["local", "export"]),
         ],
     );
-    assert_eq!(reexports.len(), 1, "{reexports:#?}");
-    assert_eq!(reexports[0]["evidence"]["imports"], 2);
+    assert!(reexports.is_empty(), "{reexports:#?}");
 
     let two = unstable(
         "sdp-two",

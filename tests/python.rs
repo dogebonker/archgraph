@@ -34,14 +34,14 @@ fn py_cycles_mapping_barrels_and_cycle() {
     assert_eq!(
         doc["edges"],
         json!([
-            { "from": "mypkg/api/__init__.py", "to": "mypkg/api/handlers.py", "kind": "static", "verdict": null, "rule": null },
-            { "from": "mypkg/api/__init__.py", "to": "mypkg/api/schemas.py", "kind": "static", "verdict": null, "rule": null },
-            { "from": "mypkg/api/handlers.py", "to": "mypkg/core/service.py", "kind": "static", "verdict": null, "rule": null },
-            { "from": "mypkg/cli.py", "to": "mypkg/api/__init__.py", "kind": "static", "verdict": null, "rule": null },
-            { "from": "mypkg/core/__init__.py", "to": "mypkg/db/session.py", "kind": "static", "verdict": null, "rule": null },
-            { "from": "mypkg/core/service.py", "to": "mypkg/db/repo.py", "kind": "static", "verdict": null, "rule": null },
-            { "from": "mypkg/db/repo.py", "to": "mypkg/core/__init__.py", "kind": "static", "verdict": null, "rule": null },
-            { "from": "mypkg/db/repo.py", "to": "mypkg/db/session.py", "kind": "static", "verdict": null, "rule": null }
+            { "from": "mypkg/api/__init__.py", "to": "mypkg/api/handlers.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "mypkg/api/__init__.py", "to": "mypkg/api/schemas.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "mypkg/api/handlers.py", "to": "mypkg/core/service.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "mypkg/cli.py", "to": "mypkg/api/__init__.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "mypkg/core/__init__.py", "to": "mypkg/db/session.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "mypkg/core/service.py", "to": "mypkg/db/repo.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "mypkg/db/repo.py", "to": "mypkg/core/__init__.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null },
+            { "from": "mypkg/db/repo.py", "to": "mypkg/db/session.py", "kind": "runtime", "weight": 1.0, "verdict": null, "rule": null }
         ])
     );
     // cli -> api/__init__ counts as cli -> handlers and cli -> schemas.
@@ -49,19 +49,19 @@ fn py_cycles_mapping_barrels_and_cycle() {
         doc["modules"],
         json!([
             { "id": "__init__.py", "files": 1, "ca": 0, "ce": 0, "instability": null,
-              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null, "outgoing_to": {} },
+              "internal_edges": 0, "outgoing_edges": 0, "cohesion": null, "outgoing_to": {}, "weighted_ca": 0.0, "weighted_ce": 0.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 0.0, "weighted_outgoing_to": {} },
             { "id": "api", "files": 3, "ca": 1, "ce": 1, "instability": 0.5,
               "internal_edges": 0, "outgoing_edges": 1, "cohesion": 0.0,
-              "outgoing_to": { "core": 1 } },
+              "outgoing_to": { "core": 1 }, "weighted_ca": 1.0, "weighted_ce": 1.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 1.0, "weighted_outgoing_to": { "core": 1.0 } },
             { "id": "cli.py", "files": 1, "ca": 0, "ce": 1, "instability": 1.0,
               "internal_edges": 0, "outgoing_edges": 2, "cohesion": 0.0,
-              "outgoing_to": { "api": 2 } },
+              "outgoing_to": { "api": 2 }, "weighted_ca": 0.0, "weighted_ce": 1.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 2.0, "weighted_outgoing_to": { "api": 2.0 } },
             { "id": "core", "files": 2, "ca": 2, "ce": 1, "instability": 0.3333,
               "internal_edges": 0, "outgoing_edges": 2, "cohesion": 0.0,
-              "outgoing_to": { "db": 2 } },
+              "outgoing_to": { "db": 2 }, "weighted_ca": 2.0, "weighted_ce": 1.0, "weighted_internal_edges": 0.0, "weighted_outgoing_edges": 2.0, "weighted_outgoing_to": { "db": 2.0 } },
             { "id": "db", "files": 3, "ca": 1, "ce": 1, "instability": 0.5,
               "internal_edges": 1, "outgoing_edges": 1, "cohesion": 0.5,
-              "outgoing_to": { "core": 1 } }
+              "outgoing_to": { "core": 1 }, "weighted_ca": 1.0, "weighted_ce": 1.0, "weighted_internal_edges": 1.0, "weighted_outgoing_edges": 1.0, "weighted_outgoing_to": { "core": 1.0 } }
         ])
     );
     assert_eq!(
@@ -196,12 +196,12 @@ fn python_deferred_imports_are_type_or_dynamic_and_close_no_cycle() {
     assert_eq!(
         kinds,
         [
-            ("deferred/a/x.py", "deferred/b/y.py", "static"),
+            ("deferred/a/x.py", "deferred/b/y.py", "runtime"),
             ("deferred/b/y.py", "deferred/a/x.py", "type"),
-            ("deferred/b/y.py", "deferred/c/z.py", "dynamic"),
-            ("deferred/c/z.py", "deferred/b/y.py", "static"),
-            ("deferred/c/z.py", "deferred/d/w.py", "dynamic"),
-            ("deferred/d/w.py", "deferred/c/z.py", "static"),
+            ("deferred/b/y.py", "deferred/c/z.py", "lazy"),
+            ("deferred/c/z.py", "deferred/b/y.py", "runtime"),
+            ("deferred/c/z.py", "deferred/d/w.py", "lazy"),
+            ("deferred/d/w.py", "deferred/c/z.py", "runtime"),
         ]
     );
     assert_eq!(doc["cycles"], json!([]));
@@ -213,4 +213,8 @@ fn python_deferred_imports_are_type_or_dynamic_and_close_no_cycle() {
         .find(|m| m["id"] == "b")
         .unwrap();
     assert_eq!(b["ce"], 2);
+    assert_eq!(b["weighted_ce"], 0.4);
+    assert_eq!(b["weighted_ca"], 2.0);
+    assert_eq!(b["instability"], 0.1667);
+    assert_eq!(doc["summary"]["type_only_cycles"], 1);
 }

@@ -14,6 +14,7 @@ fn decision(rules: &Compiled, from: &str, to: &str) -> (Verdict, String) {
         verdict: None,
         rule: None,
         reach: None,
+        ..archgraph::model::Edge::default()
     }];
     // Explicit module glob boundaries must survive coarse file grouping.
     rules.decide(

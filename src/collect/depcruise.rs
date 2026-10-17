@@ -31,6 +31,8 @@ struct Module {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Dependency {
+    #[serde(default)]
+    module: Option<String>,
     resolved: String,
     #[serde(default)]
     core_module: bool,
@@ -185,6 +187,49 @@ fn mark_pre_compilation(full: &[u8], compiled: &[u8]) -> Result<Vec<u8>> {
     Ok(serde_json::to_vec(&doc)?)
 }
 
+/// Refine load timing only for dependencies confirmed by dependency-cruiser.
+pub fn parse_at(json: &[u8], root: &Path) -> Result<RawGraph> {
+    let mut graph = parse(json)?;
+    let out: Output = serde_json::from_slice(json)?;
+    let Ok(root) = root.canonicalize() else {
+        return Ok(graph);
+    };
+    let mut lazy = BTreeMap::new();
+    for module in &out.modules {
+        let Ok(path) = root.join(&module.source).canonicalize() else {
+            continue;
+        };
+        if !path.starts_with(&root) {
+            continue;
+        }
+        let Ok(source) = std::fs::read_to_string(path) else {
+            continue;
+        };
+        let imports = super::imports::typescript(&source);
+        for dependency in &module.dependencies {
+            let all_lazy = dependency.module.as_deref().is_some_and(|specifier| {
+                let mut matches = imports
+                    .iter()
+                    .filter(|i| i.specifier.as_deref() == Some(specifier))
+                    .peekable();
+                matches.peek().is_some() && matches.all(|i| i.kind == EdgeKind::Dynamic)
+            });
+            let slot = lazy
+                .entry((module.source.as_str(), dependency.resolved.as_str()))
+                .or_insert(true);
+            *slot &= all_lazy;
+        }
+    }
+    for edge in &mut graph.edges {
+        if edge.kind == EdgeKind::Static
+            && lazy.get(&(edge.from.as_str(), edge.to.as_str())) == Some(&true)
+        {
+            edge.kind = EdgeKind::Dynamic;
+        }
+    }
+    Ok(graph)
+}
+
 pub fn parse(json: &[u8]) -> Result<RawGraph> {
     let out: Output = serde_json::from_slice(json).context("reading dependency-cruiser JSON")?;
     if out.summary.total_cruised == 0 {
@@ -245,6 +290,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
             verdict: None,
             rule: None,
             reach: None,
+            ..crate::model::Edge::default()
         })
         .collect();
     let collector = Collector {

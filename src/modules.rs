@@ -63,9 +63,10 @@ pub fn barrels(edges: &[Edge]) -> BTreeSet<String> {
                 out.iter().all(|e| e.to.starts_with(&own))
             } else {
                 TS_INDEX.contains(&name)
-                    && out
-                        .iter()
-                        .all(|e| matches!(e.kind, EdgeKind::Reexport | EdgeKind::TypeReexport))
+                    && out.iter().all(|e| {
+                        e.is_reexport
+                            || matches!(e.kind, EdgeKind::Reexport | EdgeKind::TypeReexport)
+                    })
             }
         })
         .map(|(file, _)| file.to_owned())

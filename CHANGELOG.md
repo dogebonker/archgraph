@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Edge quality: kinds and weights
+
+- New `archgraph/v1.1` exports distinguish runtime, lazy, type and structural re-export imports; TS/JS import tokenization supplements collector metadata, including function-local `require`.
+- Default cycles use runtime edges only. `type_only_cycles` records other cyclic components, including lazy/re-export/mixed cycles and whether they contain a runtime cycle; `--all-kinds` enables broad comparison.
+- Configurable `edge_weights` default to runtime 1.0, lazy 0.3, type 0.1 and reexport 0.0. Weighted coupling/cohesion ratios accompany retained integer counts; `forbid`, `allow` and `public` rules accept optional kind filters, including throughout reachable paths.
+- Upgraded commands read v1 and v1.1. `--legacy-v1` writes the v1 compatibility shape and old kind names for frozen consumers; analysis still uses the new methodology. See [migration details](docs/guide.md#edge-quality-and-migration).
+
 ### Added
 
 - Public surface reports for TypeScript/JavaScript, Python and Go: symbol exports and external usage, deep imports, advisory unused exports and oversized surfaces. Optional symbol evidence keeps the `archgraph/v1` document format compatible with earlier scans.

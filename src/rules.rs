@@ -10,11 +10,13 @@ use globset::{GlobBuilder, GlobMatcher};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::model::{Config, Edge, RulesRef, Verdict};
+use crate::model::{Config, Edge, EdgeKind, RulesRef, Verdict};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Rules {
     pub version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub edge_weights: Option<EdgeWeights>,
     #[serde(default)]
     pub modules: Vec<ModuleRule>,
     #[serde(default)]
@@ -30,6 +32,54 @@ pub struct Rules {
     /// The verdict for an import no other step decides; absent means `unplanned`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default: Option<Fallback>,
+}
+
+/// Relative contribution of each import kind to coupling and cohesion.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EdgeWeights {
+    pub runtime: f64,
+    pub lazy: f64,
+    #[serde(rename = "type")]
+    pub type_only: f64,
+    pub reexport: f64,
+}
+
+impl Default for EdgeWeights {
+    fn default() -> Self {
+        Self {
+            runtime: 1.0,
+            lazy: 0.3,
+            type_only: 0.1,
+            reexport: 0.0,
+        }
+    }
+}
+
+impl EdgeWeights {
+    pub fn weight(self, kind: EdgeKind) -> f64 {
+        match kind {
+            EdgeKind::Static => self.runtime,
+            EdgeKind::Dynamic => self.lazy,
+            EdgeKind::Type | EdgeKind::TypeReexport => self.type_only,
+            EdgeKind::Reexport => self.reexport,
+        }
+    }
+}
+
+fn includes_kind(kinds: &Option<Vec<EdgeKind>>, kind: EdgeKind) -> bool {
+    kinds.as_ref().is_none_or(|kinds| {
+        kinds.iter().any(|selected| {
+            *selected == kind
+                || matches!(
+                    (selected, kind),
+                    (
+                        EdgeKind::Type | EdgeKind::TypeReexport,
+                        EdgeKind::Type | EdgeKind::TypeReexport
+                    )
+                )
+        })
+    })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -49,6 +99,8 @@ pub struct ModuleRule {
 pub struct PublicRule {
     pub module: String,
     pub entries: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kinds: Option<Vec<EdgeKind>>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -59,6 +111,8 @@ pub struct Forbid {
     #[serde(default)]
     pub reachable: bool,
     pub reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kinds: Option<Vec<EdgeKind>>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -67,6 +121,8 @@ pub struct Allow {
     pub from: String,
     pub to: String,
     pub reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kinds: Option<Vec<EdgeKind>>,
 }
 
 /// The rules in effect for `config`, compiled.
@@ -111,10 +167,20 @@ pub fn load(path: &Path) -> Result<RulesRef> {
 fn known_keys() -> serde_json::Value {
     serde_json::to_value(Rules {
         modules: vec![ModuleRule::default()],
-        public: vec![PublicRule::default()],
+        public: vec![PublicRule {
+            kinds: Some(vec![EdgeKind::Static]),
+            ..PublicRule::default()
+        }],
         entrypoints: BTreeMap::from([("module".into(), "entry".into())]),
-        forbid: vec![Forbid::default()],
-        allow: vec![Allow::default()],
+        forbid: vec![Forbid {
+            kinds: Some(vec![EdgeKind::Static]),
+            ..Forbid::default()
+        }],
+        allow: vec![Allow {
+            kinds: Some(vec![EdgeKind::Static]),
+            ..Allow::default()
+        }],
+        edge_weights: Some(EdgeWeights::default()),
         default: Some(Fallback::Forbidden),
         ..Rules::default()
     })
@@ -238,14 +304,16 @@ impl Pattern {
 /// A reachable forbid's import path by (rule index, bound capture, start file).
 type Reached<'a> = HashMap<(usize, Option<String>, &'a str), Option<Vec<String>>>;
 
+type CompiledForbid = (String, Pattern, String, bool, Option<Vec<EdgeKind>>);
+
 pub struct Compiled {
     modules: Vec<(Pattern, String)>,
     layers: Vec<GlobMatcher>,
-    public: Vec<(Pattern, Vec<String>)>,
+    public: Vec<(Pattern, Vec<String>, Option<Vec<EdgeKind>>)>,
     entrypoints: Vec<(Pattern, String)>,
     /// (name, from, to, reachable); `to` may use only `from`'s capture, bound to the importer.
-    forbid: Vec<(String, Pattern, String, bool)>,
-    allow: Vec<(String, Pattern, String)>,
+    forbid: Vec<CompiledForbid>,
+    allow: Vec<(String, Pattern, String, Option<Vec<EdgeKind>>)>,
     /// Step 7 gives forbidden (rule `default`) instead of unplanned.
     default_forbidden: bool,
     /// Globs with a capture bound, compiled on first use.
@@ -256,6 +324,18 @@ impl Compiled {
     pub fn new(rules: &Rules) -> Result<Compiled> {
         if rules.version != 1 {
             bail!("unsupported rules version {}; expected 1", rules.version);
+        }
+        if let Some(weights) = rules.edge_weights {
+            for (name, weight) in [
+                ("runtime", weights.runtime),
+                ("lazy", weights.lazy),
+                ("type", weights.type_only),
+                ("reexport", weights.reexport),
+            ] {
+                if !weight.is_finite() || weight < 0.0 {
+                    bail!("edge_weights.{name} must be finite and non-negative");
+                }
+            }
         }
         // Ids, reasons, globs and module ids are printed into terminals, CI logs and job
         // summaries, where a line break could forge a workflow command.
@@ -306,7 +386,7 @@ impl Compiled {
                 module.check_template(entry)?;
                 glob(&module.instance(entry, Some("x")))?;
             }
-            public.push((module, p.entries.clone()));
+            public.push((module, p.entries.clone(), p.kinds.clone()));
         }
         let mut entrypoints = Vec::new();
         for (raw, entry) in &rules.entrypoints {
@@ -352,6 +432,7 @@ impl Compiled {
                         pair(&f.from, &f.to)?,
                         f.to.clone(),
                         f.reachable,
+                        f.kinds.clone(),
                     ))
                 })
                 .collect::<Result<_>>()?,
@@ -359,7 +440,14 @@ impl Compiled {
                 .allow
                 .iter()
                 .enumerate()
-                .map(|(i, a)| Ok((name(&a.id, "allow", i), pair(&a.from, &a.to)?, a.to.clone())))
+                .map(|(i, a)| {
+                    Ok((
+                        name(&a.id, "allow", i),
+                        pair(&a.from, &a.to)?,
+                        a.to.clone(),
+                        a.kinds.clone(),
+                    ))
+                })
                 .collect::<Result<_>>()?,
             default_forbidden: rules.default == Some(Fallback::Forbidden),
             bound: RefCell::default(),
@@ -398,9 +486,9 @@ impl Compiled {
 
     /// Sets `verdict`, `rule` and `reach` on every edge.
     pub fn decide(&self, edges: &mut [Edge], module_of: &BTreeMap<String, String>) {
-        let mut adjacency: HashMap<&str, Vec<&str>> = HashMap::new();
+        let mut adjacency: HashMap<&str, Vec<(&str, EdgeKind)>> = HashMap::new();
         for e in edges.iter() {
-            adjacency.entry(&e.from).or_default().push(&e.to);
+            adjacency.entry(&e.from).or_default().push((&e.to, e.kind));
         }
         let mut reached: Reached = HashMap::new();
         let decisions: Vec<_> = edges
@@ -419,11 +507,14 @@ impl Compiled {
         &self,
         e: &'a Edge,
         module_of: &BTreeMap<String, String>,
-        adjacency: &HashMap<&'a str, Vec<&'a str>>,
+        adjacency: &HashMap<&'a str, Vec<(&'a str, EdgeKind)>>,
         reached: &mut Reached<'a>,
     ) -> (Verdict, String, Option<Vec<String>>) {
         use Verdict::*;
-        for (i, (name, from, to, reachable)) in self.forbid.iter().enumerate() {
+        for (i, (name, from, to, reachable, kinds)) in self.forbid.iter().enumerate() {
+            if !includes_kind(kinds, e.kind) {
+                continue;
+            }
             let Some(value) = self.bind(from, &e.from) else {
                 continue;
             };
@@ -433,7 +524,7 @@ impl Compiled {
             }
             if *reachable {
                 let path = reached.entry((i, value, e.to.as_str())).or_insert_with(|| {
-                    shortest_path(&e.to, adjacency, |f| self.bound_match(&to, f))
+                    shortest_path(&e.to, adjacency, kinds, |f| self.bound_match(&to, f))
                 });
                 if let Some(path) = path {
                     return (Forbidden, name.clone(), Some(path.clone()));
@@ -449,7 +540,10 @@ impl Compiled {
                 }
             }
         }
-        for (name, from, to) in &self.allow {
+        for (name, from, to, kinds) in &self.allow {
+            if !includes_kind(kinds, e.kind) {
+                continue;
+            }
             if let Some(value) = self.bind(from, &e.from)
                 && self.bound_match(&from.bound_glob(to, value.as_deref()), &e.to)
             {
@@ -461,7 +555,10 @@ impl Compiled {
                 .iter()
                 .any(|entry| self.bound_match(&module.bound_glob(entry, value), &e.to))
         };
-        for (module, entries) in &self.public {
+        for (module, entries, kinds) in &self.public {
+            if !includes_kind(kinds, e.kind) {
+                continue;
+            }
             if let Some(value) = self.bind(module, &e.to) {
                 let value = value.as_deref();
                 let inside = self.bound_match(&module.bound_glob(&module.raw, value), &e.from);
@@ -489,7 +586,10 @@ impl Compiled {
                 return (Allowed, "entrypoints".into(), None);
             }
         }
-        for (module, entries) in &self.public {
+        for (module, entries, kinds) in &self.public {
+            if !includes_kind(kinds, e.kind) {
+                continue;
+            }
             if let Some(value) = self.bind(module, &e.to)
                 && entry_of(module, entries, value.as_deref())
             {
@@ -507,7 +607,7 @@ impl Compiled {
     /// import into `to` should use instead. Explicit entrypoints take precedence.
     pub fn public_for(&self, to: &str) -> Option<(String, Vec<String>)> {
         self.entrypoints_for(to).or_else(|| {
-            self.public.iter().find_map(|(module, entries)| {
+            self.public.iter().find_map(|(module, entries, _)| {
                 let value = self.bind(module, to)?;
                 Some((
                     module.instance(&module.raw, value.as_deref()),
@@ -535,7 +635,8 @@ impl Compiled {
 /// Breadth-first from `start` (inclusive) to the nearest file that `hit` accepts.
 fn shortest_path(
     start: &str,
-    adjacency: &HashMap<&str, Vec<&str>>,
+    adjacency: &HashMap<&str, Vec<(&str, EdgeKind)>>,
+    kinds: &Option<Vec<EdgeKind>>,
     hit: impl Fn(&str) -> bool,
 ) -> Option<Vec<String>> {
     let mut parent: HashMap<&str, &str> = HashMap::new();
@@ -552,7 +653,10 @@ fn shortest_path(
             path.reverse();
             return Some(path);
         }
-        for &next in adjacency.get(file).into_iter().flatten() {
+        for &(next, kind) in adjacency.get(file).into_iter().flatten() {
+            if !includes_kind(kinds, kind) {
+                continue;
+            }
             if !parent.contains_key(next) {
                 parent.insert(next, file);
                 queue.push_back(next);

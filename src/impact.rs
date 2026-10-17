@@ -76,7 +76,9 @@ pub fn analyze(
             .get(edge.from.as_str())
             .is_some_and(|file| file.barrel);
         let cost = usize::from(
-            !(barrel && matches!(edge.kind, EdgeKind::Reexport | EdgeKind::TypeReexport)),
+            !(barrel
+                && (edge.is_reexport
+                    || matches!(edge.kind, EdgeKind::Reexport | EdgeKind::TypeReexport))),
         );
         reverse
             .entry(&edge.to)
@@ -321,6 +323,7 @@ mod tests {
                     verdict: None,
                     rule: None,
                     reach: None,
+                    ..crate::model::Edge::default()
                 })
                 .collect(),
             vec![],

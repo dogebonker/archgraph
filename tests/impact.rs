@@ -154,6 +154,7 @@ fn graph(commit: &str, owned: bool, deleted: bool) -> Document {
             verdict: None,
             rule: None,
             reach: None,
+            ..archgraph::model::Edge::default()
         })
         .collect();
     archgraph::analyze(source, config, files, edges, vec![], None).unwrap()

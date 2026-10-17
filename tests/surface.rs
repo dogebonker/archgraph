@@ -28,6 +28,7 @@ fn document(files: &[&str], edges: &[(&str, &str)]) -> Document {
                 verdict: None,
                 rule: None,
                 reach: None,
+                ..archgraph::model::Edge::default()
             })
             .collect(),
         Vec::new(),
@@ -194,6 +195,7 @@ fn deep_imports_list_importers_and_required_symbols_and_surface_threshold_is_str
         verdict: None,
         rule: None,
         reach: None,
+        ..archgraph::model::Edge::default()
     });
     surface::attach(
         &mut doc,

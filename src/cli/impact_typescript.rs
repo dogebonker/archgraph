@@ -127,6 +127,7 @@ mod tests {
             verdict: None,
             rule: None,
             reach: None,
+            ..archgraph::model::Edge::default()
         };
         let mut doc = archgraph::analyze(
             source,

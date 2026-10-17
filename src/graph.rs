@@ -68,6 +68,11 @@ pub fn modules(
             outgoing_edges: a.outgoing,
             cohesion: ratio(a.internal, a.internal + a.outgoing),
             outgoing_to: a.outgoing_to,
+            weighted_ca: a.ca.len() as f64,
+            weighted_ce: a.ce.len() as f64,
+            weighted_internal_edges: a.internal as f64,
+            weighted_outgoing_edges: a.outgoing as f64,
+            weighted_outgoing_to: BTreeMap::new(),
             ownership: None,
         })
         .collect()
@@ -126,7 +131,7 @@ pub fn cycles(
     let edges = edges.as_slice();
     let public = |e: &Edge| {
         entries.contains(&e.from)
-            && (e.kind == EdgeKind::Reexport || {
+            && (e.kind == EdgeKind::Reexport || e.is_reexport || {
                 // Python has no re-export kind: a package `__init__.py` importing its own files.
                 let dir = e.from.strip_suffix("__init__.py");
                 dir.is_some_and(|d| e.to.starts_with(d))
@@ -150,10 +155,9 @@ pub fn cycles(
                 .all(|e| wiring.contains(&(e.from.as_str(), e.to.as_str())))
             {
                 Side::Registry
-            } else if side
-                .iter()
-                .all(|e| e.kind == EdgeKind::Reexport && barrels.contains(&e.from))
-            {
+            } else if side.iter().all(|e| {
+                (e.kind == EdgeKind::Reexport || e.is_reexport) && barrels.contains(&e.from)
+            }) {
                 Side::Reexport
             } else {
                 Side::Cut
@@ -471,7 +475,7 @@ fn cyclic_parts<'a>(edges: &[(&'a str, &'a str, usize)]) -> Vec<(Vec<&'a str>, V
 }
 
 /// Tarjan's algorithm with an explicit call stack, so import chains of any depth fit.
-fn sccs(adjacency: &[Vec<usize>]) -> Vec<Vec<usize>> {
+pub(crate) fn sccs(adjacency: &[Vec<usize>]) -> Vec<Vec<usize>> {
     const UNSEEN: usize = usize::MAX;
     let n = adjacency.len();
     let (mut index, mut low) = (vec![UNSEEN; n], vec![0; n]);
