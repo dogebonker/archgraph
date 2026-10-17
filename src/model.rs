@@ -39,6 +39,8 @@ pub struct Document {
     pub external_nodes: Vec<ExternalNode>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub external_edges: Vec<Edge>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub grabbags: Vec<crate::grabbag::Evidence>,
     /// The counts and module metrics that finding simulations and `simulate` compare.
     pub summary: Summary,
     pub findings: Vec<Finding>,
@@ -138,6 +140,8 @@ pub struct Git {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub depth: usize,
+    #[serde(default, skip_serializing_if = "Granularity::is_folder")]
+    pub granularity: Granularity,
     /// Go/Java without `--depth`: every package directory is a module; `depth` is unused.
     /// Absent otherwise.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -209,6 +213,19 @@ pub struct File {
 #[serde(rename_all = "lowercase")]
 pub enum ModuleClass {
     Tests,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum)]
+#[serde(rename_all = "lowercase")]
+pub enum Granularity {
+    #[default]
+    Folder,
+    File,
+}
+impl Granularity {
+    pub fn is_folder(&self) -> bool {
+        *self == Self::Folder
+    }
 }
 
 /// One explicit import specifier occurrence, independently of its symbol-reference edges.
@@ -499,6 +516,7 @@ pub struct Link {
 #[serde(rename_all = "kebab-case")]
 pub enum FindingKind {
     Cycle,
+    CycleViaGrabbag,
     HiddenCoupling,
     InternalsReach,
     MisplacedFile,
@@ -556,6 +574,7 @@ pub struct FindingContext {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum Evidence {
+    Grabbag(crate::grabbag::Evidence),
     ReexportCycle {
         members: Vec<String>,
         edges: Vec<Link>,

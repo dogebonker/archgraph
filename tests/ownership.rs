@@ -153,17 +153,32 @@ fn registrar_moves_do_not_cross_declared_ownership_boundaries() {
             .unwrap()
             .success()
     );
-    let scan = || {
-        common::scan(&[
-            &root,
-            "--language",
-            "typescript",
-            "--collector-input",
-            &input,
-        ])
+    let scan = |extra: &[&str]| {
+        common::scan(
+            &[
+                &[
+                    root.as_str(),
+                    "--language",
+                    "typescript",
+                    "--collector-input",
+                    input.as_str(),
+                ][..],
+                extra,
+            ]
+            .concat(),
+        )
         .0
     };
-    let before = scan();
+    let default = scan(&[]);
+    assert!(default["cycles"].as_array().unwrap().is_empty());
+    assert_eq!(default["grabbags"].as_array().unwrap().len(), 1);
+    assert_eq!(default["grabbags"][0]["candidates"][0]["module"], "driver");
+    // Keep this ownership test focused on the registrar move path.
+    let rules = common::write_tmp(
+        "ownership-registrar-layout.yaml",
+        "version: 1\ngrabbag: {cohesion_max: 0.0}\n",
+    );
+    let before = scan(&["--rules", &rules]);
     assert!(
         !before["cycles"][0]["registrar_moves"]
             .as_array()
@@ -175,7 +190,11 @@ fn registrar_moves_do_not_cross_declared_ownership_boundaries() {
         "* @other\n/driver/pick.ts @driver\n",
     )
     .unwrap();
-    let after = scan();
+    let after = scan(&["--rules", &rules]);
+    assert_eq!(
+        after["cycles"].as_array().unwrap().len(),
+        before["cycles"].as_array().unwrap().len()
+    );
     for cycle in after["cycles"].as_array().unwrap() {
         assert!(
             cycle

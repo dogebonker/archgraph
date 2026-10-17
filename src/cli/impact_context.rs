@@ -153,14 +153,7 @@ pub(super) fn reviewers(
             .iter()
             .map(|p| {
                 paths.get(p.as_str()).map_or_else(
-                    || {
-                        rules
-                            .as_ref()
-                            .and_then(|r| r.module_of(p))
-                            .unwrap_or_else(|| {
-                                modules::module_of(p, &doc.config, doc.source.language)
-                            })
-                    },
+                    || modules::assigned(p, &doc.config, doc.source.language, rules.as_ref()),
                     |m| (*m).to_owned(),
                 )
             })

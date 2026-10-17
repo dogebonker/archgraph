@@ -1057,12 +1057,31 @@ fn a_registrar_move_out_of_a_cycle_reports_it_gone_for_its_module() {
     edges.push(("driver/pg/b.ts".to_owned(), "driver/my/b.ts".to_owned()));
     edges.push(("driver/my/c.ts".to_owned(), "driver/pg/c.ts".to_owned()));
     let (dir, input) = synthetic("fan-out-leftover", edges.len() + 2, &edges);
+    let (default, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    assert_eq!(
+        default["cycles"][0]["members"],
+        json!(["driver/my", "driver/pg"])
+    );
+    assert_eq!(default["grabbags"].as_array().unwrap().len(), 1);
+    // Exercise registrar ranking independently of the grab-bag classifier.
+    let rules = common::write_tmp(
+        "a_registrar_move_out_of_a_cycle_reports_it_gone_for_its_module-layout.yaml",
+        "version: 1\ngrabbag: {cohesion_max: 0.0}\n",
+    );
     let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
         "--language",
         "typescript",
+        "--rules",
+        &rules,
     ]);
     let moves = &doc["cycles"][0]["registrar_moves"];
     assert_eq!(moves[0]["file"], "driver/pick.ts", "{:#}", doc["cycles"]);
@@ -1083,12 +1102,28 @@ fn a_fan_out_registrar_side_is_not_the_cut() {
         }
     }
     let (dir, input) = synthetic("fan-out", edges.len() + 2, &edges);
+    let (default, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    assert!(default["cycles"].as_array().unwrap().is_empty());
+    assert_eq!(default["grabbags"].as_array().unwrap().len(), 1);
+    // Exercise registrar ranking independently of the grab-bag classifier.
+    let rules = common::write_tmp(
+        "a_fan_out_registrar_side_is_not_the_cut-layout.yaml",
+        "version: 1\ngrabbag: {cohesion_max: 0.0}\n",
+    );
     let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
         "--language",
         "typescript",
+        "--rules",
+        &rules,
     ]);
     let pairs: Vec<(&Value, &Value)> = doc["cycles"][0]["two_way"]
         .as_array()
@@ -1121,6 +1156,8 @@ fn a_fan_out_registrar_side_is_not_the_cut() {
         "typescript",
         "--collector-input",
         &input,
+        "--rules",
+        &rules,
     ]);
     assert!(
         stdout.contains("move driver/pick.ts to driver/pick/pick.ts: removes 5 two-way pairs"),
@@ -1150,6 +1187,8 @@ fn a_fan_out_registrar_side_is_not_the_cut() {
         &input,
         "--language",
         "typescript",
+        "--rules",
+        &rules,
     ]);
     assert!(
         doc["cycles"][0].get("registrar_moves").is_none(),
@@ -1170,6 +1209,8 @@ fn a_fan_out_registrar_side_is_not_the_cut() {
         &input,
         "--language",
         "typescript",
+        "--rules",
+        &rules,
     ]);
     assert!(
         doc["cycles"][0].get("registrar_moves").is_none(),
@@ -1193,6 +1234,8 @@ fn a_fan_out_registrar_side_is_not_the_cut() {
         &input,
         "--language",
         "typescript",
+        "--rules",
+        &rules,
     ]);
     let pair = &doc["cycles"][0]["two_way"][0];
     assert_eq!(

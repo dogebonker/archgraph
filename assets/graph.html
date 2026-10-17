@@ -1016,6 +1016,7 @@ relayoutAll();
 
 /* ---------- findings ---------- */
 const KIND_TEXT = {
+  "cycle-via-grabbag": "A folder cycle shrinks or disappears when loosely related helper files are separated.",
   "reexport-cycle": "A re-export chain loops back to a facade before reaching a definition.",
   "cycle": "Runtime import cycles (type-only and dynamic imports left out), with the fewest imports to remove.",
   "hidden-coupling": "Files in different modules changed together without importing each other.",
@@ -1028,6 +1029,7 @@ const KIND_TEXT = {
 };
 /* Why each kind matters and what to do about it, in the README's and the skill's words. */
 const KIND_ADVICE = {
+  "cycle-via-grabbag": ["Grouping independent helper files into one module creates misleading cycle membership.", "Split the folder along the listed files and consumers; genuine residual cycles still need their own cuts."],
   "reexport-cycle": ["A forwarding loop prevents reliable named-import resolution.", "Point the facade at the defining file and re-scan."],
   "cycle": ["Modules in a cycle cannot be changed, tested or split off alone: a change can come back around.",
     "Remove or invert the lighter side of a two-way pair (or an import of the break), re-scan, repeat while the cycle remains."],
@@ -1108,6 +1110,11 @@ const findings = doc.findings.map((f, i) => {
         if (a !== undefined && b !== undefined) { fs.add(a); fs.add(b); }
         addE(a, b, true);
       }
+      break;
+    case "cycle-via-grabbag":
+      (ev.members || []).forEach(addM);
+      for (const c of ev.candidates || []) (c.files || []).forEach(addF);
+      for (const l of ev.edges || []) addE(addF(l.from), addF(l.to), true);
       break;
     case "reexport-cycle":
       (ev.members || []).forEach(addF);
@@ -4003,6 +4010,12 @@ function findingPanel(j) {
     // A heuristic break set can run to hundreds of imports; the two-way pairs are where to start.
     if (ev.exact) panel.append(breakHead, ul, ...twoWay);
     else panel.append(...twoWay, breakHead, ul);
+  } else if (f.kind === "cycle-via-grabbag") {
+    line(`${ev.members.length} original modules; ${count(ev.remaining_cycles.length, "genuine residual cycle", "genuine residual cycles")} after file splitting.`);
+    for (const c of ev.candidates) {
+      line(`${c.module}: cohesion ${fmt(c.cohesion)}, weighted fan-in ${fmt(c.fan_in)}, internal edges per file ${fmt(c.internal_edges_per_file)}.`);
+      panel.append(fileList(c.files.map(p => fileIndex.get(p)).filter(i => i !== undefined)));
+    }
   } else if (f.kind === "reexport-cycle") {
     line(`Forwarding loop: ${(ev.members || []).join(" → ")}. Resolve the chain before treating its imports as runtime dependencies.`);
   } else if (f.kind === "misplaced-file") {

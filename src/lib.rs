@@ -7,6 +7,7 @@ pub mod collect;
 pub mod compat;
 pub mod diff;
 pub mod findings;
+pub mod grabbag;
 pub mod graph;
 pub mod history;
 pub mod hotspots;
@@ -104,12 +105,16 @@ pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
         if !paths.insert(file.path.as_str()) {
             bail!("{} is listed twice", file.path);
         }
-        let module = rules
-            .as_ref()
-            .and_then(|r| r.module_of(&file.path))
-            .unwrap_or_else(|| {
-                modules::module_of(&file.path, &input.config, input.source.language)
-            });
+        let module = if input.config.granularity == model::Granularity::File {
+            file.path.clone()
+        } else {
+            rules
+                .as_ref()
+                .and_then(|r| r.module_of(&file.path))
+                .unwrap_or_else(|| {
+                    modules::folder_of(&file.path, &input.config, input.source.language)
+                })
+        };
         let module = if file.class == Some(model::ModuleClass::Tests) {
             format!("tests::{module}")
         } else {
@@ -252,9 +257,7 @@ pub fn build(
     let module_of: BTreeMap<String, String> = files
         .into_iter()
         .map(|f| {
-            let mut module = rules
-                .and_then(|r| r.module_of(&f))
-                .unwrap_or_else(|| modules::module_of(&f, &config, source.language));
+            let mut module = modules::assigned(&f, &config, source.language, rules);
             if !config.legacy_module_classes && tests.contains(&f) {
                 module = format!("tests::{module}");
             }
@@ -263,12 +266,22 @@ pub fn build(
         .collect();
     match rules {
         Some(rules) => {
-            let mut policy_modules = module_of.clone();
+            let mut policy_modules: BTreeMap<_, _> = module_of
+                .keys()
+                .map(|path| {
+                    (
+                        path.clone(),
+                        rules
+                            .module_of(path)
+                            .unwrap_or_else(|| modules::folder_of(path, &config, source.language)),
+                    )
+                })
+                .collect();
             for path in edges.iter().filter_map(|e| e.original_to.as_ref()) {
                 policy_modules.entry(path.clone()).or_insert_with(|| {
                     rules
                         .module_of(path)
-                        .unwrap_or_else(|| modules::module_of(path, &config, source.language))
+                        .unwrap_or_else(|| modules::folder_of(path, &config, source.language))
                 });
             }
             rules.decide(&mut edges, &policy_modules);
@@ -364,6 +377,7 @@ pub fn build(
         unresolved: Vec::new(),
         external_nodes: Vec::new(),
         external_edges: Vec::new(),
+        grabbags: Vec::new(),
         files: module_of
             .iter()
             .map(|(path, module)| File {
@@ -409,6 +423,7 @@ pub fn build(
             module.ownership = Some(ownership);
         }
     }
+    grabbag::classify(&mut doc);
     doc.summary = simulate::summary(&doc);
     doc
 }

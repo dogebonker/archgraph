@@ -94,6 +94,9 @@ impl Target {
                         Evidence::HiddenCoupling { files, .. } => {
                             paths.extend(files.iter().cloned())
                         }
+                        Evidence::Grabbag(e) => {
+                            paths.extend(e.candidates.iter().flat_map(|c| c.files.iter().cloned()))
+                        }
                         Evidence::ReexportCycle { members, .. } => {
                             paths.extend(members.iter().cloned())
                         }

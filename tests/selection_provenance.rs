@@ -74,49 +74,87 @@ records = [{'from':edge['importer'].replace('.','/')+'.py','specifier':edge['imp
 print(json.dumps({'grimp_version':'fixture','modules':modules,'imports':imports,'import_records':records}))
 "#).unwrap();
     fs::set_permissions(&python, fs::Permissions::from_mode(0o755)).unwrap();
-    let graph = directory.join("graph.json");
-    let scan = Command::new(env!("CARGO_BIN_EXE_archgraph"))
-        .arg("scan")
-        .arg(&root)
-        .args(["--language", "python", "--package", "pkg", "--python"])
-        .arg(&python)
-        .arg("--rules")
-        .arg(root.join("layout.yaml"))
-        .arg("-o")
-        .arg(&graph)
-        .output()
-        .unwrap();
-    assert!(
-        scan.status.success(),
-        "{}",
-        String::from_utf8_lossy(&scan.stderr)
-    );
-    let doc: serde_json::Value = serde_json::from_slice(&fs::read(&graph).unwrap()).unwrap();
-    assert_eq!(doc["cycles"].as_array().unwrap().len(), 1);
-    assert!(
-        doc["config"]["explicit_excludes"]
-            .as_array()
-            .unwrap()
-            .is_empty()
-    );
-    let investigation = Command::new(env!("CARGO_BIN_EXE_archgraph"))
-        .arg("bisect")
-        .arg(&graph)
-        .arg("--root")
-        .arg(&root)
-        .arg("--from")
-        .arg(&base)
-        .arg("--python")
-        .arg(&python)
-        .output()
-        .unwrap();
-    assert!(
-        investigation.status.success(),
-        "{}",
-        String::from_utf8_lossy(&investigation.stderr)
-    );
-    let result: serde_json::Value = serde_json::from_slice(&investigation.stdout).unwrap();
-    assert_eq!(result["introduced_by"]["commit"], head, "{result}");
-    assert_eq!(result["status"], "verified-transition", "{result}");
+    for granularity in ["folder", "file"] {
+        let graph = directory.join(format!("graph-{granularity}.json"));
+        let scan = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+            .arg("scan")
+            .arg(&root)
+            .args(["--language", "python", "--package", "pkg", "--python"])
+            .arg(&python)
+            .args(["--granularity", granularity])
+            .arg("--rules")
+            .arg(root.join("layout.yaml"))
+            .arg("-o")
+            .arg(&graph)
+            .output()
+            .unwrap();
+        assert!(
+            scan.status.success(),
+            "{}",
+            String::from_utf8_lossy(&scan.stderr)
+        );
+        let doc: serde_json::Value = serde_json::from_slice(&fs::read(&graph).unwrap()).unwrap();
+        assert_eq!(doc["cycles"].as_array().unwrap().len(), 1);
+        assert!(
+            doc["config"]["explicit_excludes"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        let investigation = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+            .arg("bisect")
+            .arg(&graph)
+            .arg("--root")
+            .arg(&root)
+            .arg("--from")
+            .arg(&base)
+            .arg("--python")
+            .arg(&python)
+            .output()
+            .unwrap();
+        assert!(
+            investigation.status.success(),
+            "{}",
+            String::from_utf8_lossy(&investigation.stderr)
+        );
+        let result: serde_json::Value = serde_json::from_slice(&investigation.stdout).unwrap();
+        assert_eq!(result["introduced_by"]["commit"], head, "{result}");
+        assert_eq!(result["status"], "verified-transition", "{result}");
+        let out_dir = directory.join("history");
+        let history = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+            .arg("history")
+            .arg(&root)
+            .args([
+                "--sample",
+                "commits",
+                "--limit",
+                "2",
+                "--language",
+                "python",
+                "--package",
+                "pkg",
+                "--python",
+            ])
+            .arg(&python)
+            .args(["--granularity", granularity, "--append", "--out-dir"])
+            .arg(&out_dir)
+            .output()
+            .unwrap();
+        assert!(
+            history.status.success(),
+            "{}",
+            String::from_utf8_lossy(&history.stderr)
+        );
+        let timeline: serde_json::Value =
+            serde_json::from_slice(&fs::read(out_dir.join("history.json")).unwrap()).unwrap();
+        assert_eq!(timeline["snapshots"].as_array().unwrap().len(), 2);
+        for snapshot in timeline["snapshots"].as_array().unwrap() {
+            assert_eq!(
+                snapshot["graph"]["config"]["granularity"] == "file",
+                granularity == "file",
+                "history cache must separate graph granularity"
+            );
+        }
+    }
     fs::remove_dir_all(directory).unwrap();
 }

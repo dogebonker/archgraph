@@ -21,6 +21,8 @@ pub struct Rules {
     pub include: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub edge_weights: Option<EdgeWeights>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grabbag: Option<crate::grabbag::Thresholds>,
     #[serde(default)]
     pub modules: Vec<ModuleRule>,
     #[serde(default)]
@@ -185,6 +187,7 @@ fn known_keys() -> serde_json::Value {
             ..Allow::default()
         }],
         edge_weights: Some(EdgeWeights::default()),
+        grabbag: Some(crate::grabbag::Thresholds::default()),
         exclude: vec!["excluded/**".into()],
         include: vec!["included/**".into()],
         default: Some(Fallback::Forbidden),
@@ -333,6 +336,9 @@ impl Compiled {
         }
         crate::collect::globset(&rules.exclude).context("exclude patterns")?;
         crate::collect::globset(&rules.include).context("include patterns")?;
+        if let Some(thresholds) = rules.grabbag {
+            thresholds.validate()?;
+        }
         if let Some(weights) = rules.edge_weights {
             for (name, weight) in [
                 ("runtime", weights.runtime),

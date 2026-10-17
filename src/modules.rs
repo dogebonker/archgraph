@@ -20,6 +20,29 @@ pub const TS_INDEX: &[&str] = &[
 /// prefixed `../` (`../lib`, `../tool.ts`), so they never merge with a module inside it.
 /// With `config.package_modules` the directory is not truncated: each package is a module.
 pub fn module_of(path: &str, config: &Config, language: Language) -> String {
+    if !config.legacy_module_classes && config.granularity == crate::model::Granularity::File {
+        return path.to_owned();
+    }
+    folder_of(path, config, language)
+}
+
+pub fn assigned(
+    path: &str,
+    config: &Config,
+    language: Language,
+    rules: Option<&crate::rules::Compiled>,
+) -> String {
+    if !config.legacy_module_classes && config.granularity == crate::model::Granularity::File {
+        path.to_owned()
+    } else {
+        rules
+            .and_then(|r| r.module_of(path))
+            .unwrap_or_else(|| folder_of(path, config, language))
+    }
+}
+
+/// Folder policy boundaries remain independent of graph granularity and test classes.
+pub fn folder_of(path: &str, config: &Config, language: Language) -> String {
     let source_root = config.source_root.as_str();
     let depth = match config.package_modules {
         true => usize::MAX,

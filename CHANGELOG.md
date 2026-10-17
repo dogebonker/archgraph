@@ -27,6 +27,12 @@
 - Common TypeScript aliases/package maps/workspaces and Python relative, `src/`, namespace and repeatable `--python-path` imports gain resolution evidence. Python inspects external module specs without executing package initializers.
 - Known externals use separate `external_nodes`/`external_edges` arrays and stay out of internal cycle/cohesion metrics. Known destinations excluded by scan policy remain resolved in the ledger.
 
+### Edge quality: grab-bags and granularity
+
+- Configurable `grabbag` thresholds identify low-cohesion, high-fan-in folders with sparse internal edges. `cycle-via-grabbag` findings require a verified per-file split and retain involved-file evidence plus surviving real cycles/cuts; overlapping residuals that recreate the original cycle keep that cycle conservatively.
+- Global `--granularity file|folder` selects graph grouping while preserving folder policy boundaries. The choice persists through historical replay and caches; legacy v1 export regroups file views into a compatible folder view.
+- Included test modules stay out of grab-bag candidates and cycle probes; visible weighted fan-in continues to reflect included test consumers.
+
 ### Added
 
 - Public surface reports for TypeScript/JavaScript, Python and Go: symbol exports and external usage, deep imports, advisory unused exports and oversized surfaces. Optional symbol evidence keeps the `archgraph/v1` document format compatible with earlier scans.

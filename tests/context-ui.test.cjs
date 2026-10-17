@@ -163,3 +163,13 @@ test('resolved import panel preserves written path and explains low confidence a
   assert.match(panel.textContent, /Specifier: <unsafe>, line 3/);
   assert.match(panel.textContent, /Low confidence: ambiguous <export>/);
 });
+
+test('grab-bag panel shows measured factors and retains residual cycle count safely', () => {
+  const panel = node();
+  const evidence = {members:['app','<utils>'],remaining_cycles:[['app','core']],candidates:[{module:'<utils>',cohesion:0.1,fan_in:8,internal_edges_per_file:0.2,files:['utils/a.ts']}]};
+  const ctx=context({panel,findings:[{f:{kind:'cycle-via-grabbag',subject:'app, <utils>',evidence},ms:new Set(),fs:new Set(),moves:[]}],KIND_TEXT:{},head(){},subjectText:f=>f.subject,looksLikePath:()=>false,advice:()=>[],provenanceLines:()=>[],btn:()=>node(),fmt:String,fileIndex:new Map([['utils/a.ts',0]]),fileList:()=>node()});
+  vm.runInContext(fragment('function findingPanel(', 'function showPanel('),ctx);
+  vm.runInContext('findingPanel(0)',ctx);
+  assert.match(panel.textContent,/2 original modules; 1 genuine residual cycle/);
+  assert.match(panel.textContent,/<utils>: cohesion 0.10, weighted fan-in 8, internal edges per file 0.20/);
+});

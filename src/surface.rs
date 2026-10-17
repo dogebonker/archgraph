@@ -185,12 +185,12 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
                         crate::collect::join(dir, &format!("__archgraph_surface__.{extension}"))
                             .trim_start_matches('/')
                             .to_owned();
-                    let assigned = rules
-                        .as_ref()
-                        .and_then(|r| r.module_of(&probe))
-                        .unwrap_or_else(|| {
-                            crate::modules::module_of(&probe, &doc.config, doc.source.language)
-                        });
+                    let assigned = crate::modules::assigned(
+                        &probe,
+                        &doc.config,
+                        doc.source.language,
+                        rules.as_ref(),
+                    );
                     if assigned != module.id {
                         break;
                     }

@@ -115,13 +115,7 @@ impl Graph<'_> {
             file.rsplit('/').next().unwrap_or(file),
         );
         let config = &self.doc.config;
-        let lands = self
-            .rules
-            .and_then(|r| r.module_of(&to))
-            .unwrap_or_else(|| {
-                let language = self.doc.source.language;
-                modules::module_of(&to, config, language)
-            });
+        let lands = modules::assigned(&to, config, self.doc.source.language, self.rules);
         (!self.module_of.contains_key(to.as_str())
             && lands == module
             && !self.crosses_module(file, &to))
@@ -347,6 +341,13 @@ pub fn find(
             FindingKind::Cycle,
             c.members.join(", "),
             Evidence::Cycle(c.clone()),
+        ));
+    }
+    for evidence in &doc.grabbags {
+        findings.push(finding(
+            FindingKind::CycleViaGrabbag,
+            evidence.members.join(", "),
+            Evidence::Grabbag(evidence.clone()),
         ));
     }
     internals_reach(&g, &mut findings);
@@ -1177,12 +1178,7 @@ pub fn place_registrars(
     rules: Option<&Compiled>,
     owners: Option<&crate::codeowners::Compiled>,
 ) {
-    let module_of = |path: &str| {
-        rules.and_then(|r| r.module_of(path)).unwrap_or_else(|| {
-            let (config, language) = (&doc.config, doc.source.language);
-            modules::module_of(path, config, language)
-        })
-    };
+    let module_of = |path: &str| modules::assigned(path, &doc.config, doc.source.language, rules);
     let exists: HashSet<&str> = doc.files.iter().map(|f| f.path.as_str()).collect();
     let modules: HashSet<&str> = doc.modules.iter().map(|m| m.id.as_str()).collect();
     let pairs = |d: &Document| -> i64 {

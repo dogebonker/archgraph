@@ -2,13 +2,18 @@
 pub fn v1(value: &mut serde_json::Value) -> anyhow::Result<()> {
     if value["schema"] == crate::model::SCHEMA
         && value["kind"] == "scan"
-        && value["files"]
+        && (value["files"]
             .as_array()
             .is_some_and(|files| files.iter().any(|f| f["class"] == "tests"))
+            || value["config"]["granularity"] == "file")
     {
         let mut input: crate::model::ScanInput = serde_json::from_value(value.clone())?;
         input.config.legacy_module_classes = true;
         *value = serde_json::to_value(crate::restore_scan(input)?)?;
+        value["config"]
+            .as_object_mut()
+            .unwrap()
+            .remove("granularity");
     }
 
     match value {

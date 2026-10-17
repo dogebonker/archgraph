@@ -243,6 +243,7 @@ mod tests {
         };
         let config = Config {
             depth: 1,
+            granularity: Default::default(),
             package_modules: false,
             source_root: ".".into(),
             excludes: Vec::new(),

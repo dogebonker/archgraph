@@ -3,16 +3,17 @@ use std::fs;
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 static ALL_KINDS: AtomicBool = AtomicBool::new(false);
 static LEGACY_V1: AtomicBool = AtomicBool::new(false);
+static GRANULARITY: AtomicU8 = AtomicU8::new(0);
 
 use anyhow::{Context, Result, bail};
 use archgraph::collect::{self, depcruise, go, grimp, java, rust};
 use archgraph::model::{
-    Config, CycleLevel, Document, Git, Language, SCHEMA, ScanInput, Source, Verdict,
+    Config, CycleLevel, Document, Git, Granularity, Language, SCHEMA, ScanInput, Source, Verdict,
 };
 use archgraph::{cochange, codeowners, diff, history, modules, render, rules, simulate};
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -40,6 +41,9 @@ struct Cli {
     /// Export JSON using legacy v1 kind names and schema discriminator
     #[arg(long, global = true)]
     legacy_v1: bool,
+    /// Graph module granularity; file overrides folder/layout grouping
+    #[arg(long, global = true, value_enum)]
+    granularity: Option<Granularity>,
     #[command(subcommand)]
     command: Cmd,
 }
@@ -294,6 +298,14 @@ struct Simulate {
 fn main() -> ExitCode {
     let cli = Cli::parse();
     ALL_KINDS.store(cli.all_kinds, Ordering::Relaxed);
+    GRANULARITY.store(
+        match cli.granularity {
+            None => 0,
+            Some(Granularity::Folder) => 1,
+            Some(Granularity::File) => 2,
+        },
+        Ordering::Relaxed,
+    );
     LEGACY_V1.store(cli.legacy_v1, Ordering::Relaxed);
     let result = match cli.command {
         Cmd::Scan(args) => scan(args).map(|()| ExitCode::SUCCESS),
@@ -409,6 +421,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         .unwrap_or_else(|| args.root.join(".archgraph"));
     let mut key = serde_json::to_vec(&args.opts)?;
     key.push(u8::from(ALL_KINDS.load(Ordering::Relaxed)));
+    key.push(GRANULARITY.load(Ordering::Relaxed));
     key.extend_from_slice(env!("CARGO_PKG_VERSION").as_bytes());
     key.extend_from_slice(include_bytes!("../Cargo.lock"));
     key.extend_from_slice(&sha2::Sha256::digest(fs::read(std::env::current_exe()?)?));
@@ -847,6 +860,11 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
     let package_modules = matches!(language, Language::Go | Language::Java) && args.depth.is_none();
     let config = Config {
         depth: args.depth.unwrap_or(if package_modules { 0 } else { 2 }),
+        granularity: if GRANULARITY.load(Ordering::Relaxed) == 2 {
+            Granularity::File
+        } else {
+            Granularity::Folder
+        },
         package_modules,
         source_root,
         excludes,
@@ -1056,6 +1074,29 @@ fn report(args: Report) -> Result<ExitCode> {
             "  {} type-only/deferred cycles (type, lazy or structural/mixed; excluded from runtime findings)\n",
             doc.type_only_cycles.len()
         );
+    }
+    for grabbag in &doc.grabbags {
+        out += &format!(
+            "  cycle via grab-bag {}: {} ({} genuine residual cycles)\n",
+            grabbag
+                .candidates
+                .iter()
+                .map(|c| c.module.as_str())
+                .collect::<Vec<_>>()
+                .join(", "),
+            grabbag.members.join(", "),
+            grabbag.remaining_cycles.len()
+        );
+        for candidate in &grabbag.candidates {
+            out += &format!(
+                "    {}: cohesion {:.4}, fan-in {:.4}, internal edges/file {:.4}; split folder; involved files: {}\n",
+                candidate.module,
+                candidate.cohesion,
+                candidate.fan_in,
+                candidate.internal_edges_per_file,
+                candidate.files.join(", ")
+            );
+        }
     }
     let module_cycles: Vec<_> = doc
         .cycles
@@ -1301,12 +1342,15 @@ fn recompute(path: &Path, rules: Option<&Path>) -> Result<Document> {
         input.config.rules = Some(rules::load(path)?);
         let compiled = rules::compile(&input.config)?;
         for file in &mut input.files {
-            file.module = compiled
-                .as_ref()
-                .and_then(|r| r.module_of(&file.path))
-                .unwrap_or_else(|| {
-                    modules::module_of(&file.path, &input.config, input.source.language)
-                });
+            file.module = modules::assigned(
+                &file.path,
+                &input.config,
+                input.source.language,
+                compiled.as_ref(),
+            );
+            if file.class == Some(archgraph::model::ModuleClass::Tests) {
+                file.module = format!("tests::{}", file.module);
+            }
         }
         // Scores and introductions were judged under the old module/rule configuration.
         input.findings.clear();
@@ -1344,6 +1388,28 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
         .collect();
     archgraph::validate_scan(&input)
         .with_context(|| format!("inconsistent scan document {}", path.display()))?;
+    if GRANULARITY.load(Ordering::Relaxed) != 0 {
+        input.config.granularity = if GRANULARITY.load(Ordering::Relaxed) == 2 {
+            Granularity::File
+        } else {
+            Granularity::Folder
+        };
+        let compiled = rules::compile(&input.config)?;
+        for file in &mut input.files {
+            file.module = modules::assigned(
+                &file.path,
+                &input.config,
+                input.source.language,
+                compiled.as_ref(),
+            );
+            if file.class == Some(archgraph::model::ModuleClass::Tests) {
+                file.module = format!("tests::{}", file.module);
+            }
+        }
+        input.findings.clear();
+        input.hotspots = None;
+    }
+
     Ok(input)
 }
 
