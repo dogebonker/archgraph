@@ -141,6 +141,107 @@
   }
  ],
  "go_version": "1.27.1",
+ "imports": [
+  {
+   "from": "app/app.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "example.com/lib",
+   "targets": [
+    "lib/lib.go"
+   ]
+  },
+  {
+   "external": "testing",
+   "from": "app/app_test.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "testing"
+  },
+  {
+   "from": "app/apptesting/fake.go",
+   "kind": "runtime",
+   "line": 4,
+   "specifier": "example.com/excludes/app",
+   "targets": [
+    "app/app.go"
+   ]
+  },
+  {
+   "external": "testing",
+   "from": "app/chain/a_linux.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "testing"
+  },
+  {
+   "external": "testing",
+   "from": "app/chain/b_windows.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "testing"
+  },
+  {
+   "external": "testing",
+   "from": "app/check/check.go",
+   "kind": "runtime",
+   "line": 4,
+   "specifier": "testing"
+  },
+  {
+   "from": "app/cmd/cmd.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "example.com/excludes/app",
+   "targets": [
+    "app/app.go"
+   ]
+  },
+  {
+   "external": "testing",
+   "from": "app/ext_test.go",
+   "kind": "runtime",
+   "line": 4,
+   "specifier": "testing"
+  },
+  {
+   "from": "app/ext_test.go",
+   "kind": "runtime",
+   "line": 6,
+   "specifier": "example.com/excludes/app",
+   "targets": [
+    "app/app.go"
+   ]
+  },
+  {
+   "external": "testing",
+   "from": "app/finder.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "testing"
+  },
+  {
+   "external": "testing",
+   "from": "app/flag.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "testing"
+  },
+  {
+   "external": "testing",
+   "from": "app/probe_windows.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "testing"
+  },
+  {
+   "external": "testing",
+   "from": "app/testhelp.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "testing"
+  }
+ ],
  "modules": [
   ".",
   "lib"

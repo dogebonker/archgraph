@@ -214,6 +214,87 @@
   }
  ],
  "go_version": "1.27.1",
+ "imports": [
+  {
+   "from": "dashboard/view.go",
+   "kind": "runtime",
+   "line": 4,
+   "specifier": "example.com/misplaced/internal/report",
+   "targets": [
+    "internal/report/format.go"
+   ]
+  },
+  {
+   "from": "dashboard/view.go",
+   "kind": "runtime",
+   "line": 5,
+   "specifier": "example.com/misplaced/pub",
+   "targets": [
+    "pub/money.go"
+   ]
+  },
+  {
+   "external": "fmt",
+   "from": "internal/report/format.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "fmt"
+  },
+  {
+   "from": "invoice/create.go",
+   "kind": "runtime",
+   "line": 4,
+   "specifier": "example.com/misplaced/internal/report",
+   "targets": [
+    "internal/report/format.go"
+   ]
+  },
+  {
+   "from": "invoice/create.go",
+   "kind": "runtime",
+   "line": 5,
+   "specifier": "example.com/misplaced/pub",
+   "targets": [
+    "pub/money.go"
+   ]
+  },
+  {
+   "from": "invoice/send.go",
+   "kind": "runtime",
+   "line": 4,
+   "specifier": "example.com/misplaced/internal/report",
+   "targets": [
+    "internal/report/format.go"
+   ]
+  },
+  {
+   "from": "invoice/send.go",
+   "kind": "runtime",
+   "line": 5,
+   "specifier": "example.com/misplaced/pub",
+   "targets": [
+    "pub/money.go"
+   ]
+  },
+  {
+   "from": "invoice/total.go",
+   "kind": "runtime",
+   "line": 4,
+   "specifier": "example.com/misplaced/internal/report",
+   "targets": [
+    "internal/report/format.go"
+   ]
+  },
+  {
+   "from": "invoice/total.go",
+   "kind": "runtime",
+   "line": 5,
+   "specifier": "example.com/misplaced/pub",
+   "targets": [
+    "pub/money.go"
+   ]
+  }
+ ],
  "modules": [
   "."
  ],

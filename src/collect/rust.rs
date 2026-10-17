@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use super::RawGraph;
-use crate::model::{Collector, Edge, EdgeKind};
+use crate::model::{Collector, Edge, EdgeKind, ImportReason, ImportRecord};
 
 /// The Cargo features rust-analyzer enables (`cargo.features`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum)]
@@ -121,6 +121,8 @@ struct Dump {
     build_scripts: bool,
     packages: Vec<Package>,
     documents: Vec<Doc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    imports: Option<Vec<ImportRecord>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -524,6 +526,34 @@ fn dump(
         .filter(|o| o.symbol_roles & scip::DEFINITION != 0)
         .map(|o| o.symbol.clone())
         .collect();
+    let mut definitions: HashMap<&str, BTreeSet<&str>> = HashMap::new();
+    for doc in &docs {
+        for occurrence in &doc.occurrences {
+            if occurrence.symbol_roles & scip::DEFINITION != 0 {
+                definitions
+                    .entry(&occurrence.symbol)
+                    .or_default()
+                    .insert(&doc.relative_path);
+            }
+        }
+    }
+    let imports = docs
+        .iter()
+        .map(|doc| {
+            let source = if doc.text.is_empty() {
+                fs::read_to_string(root.join(&doc.relative_path)).ok()?
+            } else {
+                doc.text.clone()
+            };
+            Some(rust_imports(
+                &source,
+                &doc.relative_path,
+                &doc.occurrences,
+                &definitions,
+            ))
+        })
+        .collect::<Option<Vec<_>>>()
+        .map(|parts| parts.into_iter().flatten().collect());
     let kept = |s: &str| !s.starts_with("local ") && defined.contains(s);
     let mut documents: Vec<Doc> = docs
         .into_iter()
@@ -604,7 +634,196 @@ fn dump(
         build_scripts: opts.build_scripts,
         packages,
         documents,
+        imports,
     })
+}
+
+/// Explicit source statements only; references outside import ranges are not imports.
+fn rust_imports(
+    source: &str,
+    from: &str,
+    occurrences: &[scip::Occurrence],
+    definitions: &HashMap<&str, BTreeSet<&str>>,
+) -> Vec<ImportRecord> {
+    let tokens = rust_tokens(source);
+    let mut line_offsets = vec![0];
+    line_offsets.extend(
+        source
+            .bytes()
+            .enumerate()
+            .filter_map(|(i, b)| (b == b'\n').then_some(i + 1)),
+    );
+    let mut references: HashMap<usize, Vec<&scip::Occurrence>> = HashMap::new();
+    for occurrence in occurrences {
+        if occurrence.symbol_roles & scip::DEFINITION != 0 {
+            continue;
+        }
+        let [line, column, ..] = occurrence.range.as_slice() else {
+            continue;
+        };
+        if *line < 0 || *column < 0 {
+            continue;
+        }
+        if let Some(start) = line_offsets.get(*line as usize) {
+            references
+                .entry(start + *column as usize)
+                .or_default()
+                .push(occurrence);
+        }
+    }
+    let mut imports = Vec::new();
+    let mut i = 0;
+    while i < tokens.len() {
+        let (text, start, _) = tokens[i];
+        let extern_crate = text == "extern" && tokens.get(i + 1).is_some_and(|t| t.0 == "crate");
+        if text != "use" && !extern_crate {
+            i += 1;
+            continue;
+        }
+        let Some(end_index) = (i + 1..tokens.len()).find(|&j| tokens[j].0 == ";") else {
+            break;
+        };
+        let end = tokens[end_index].1;
+        let spec_start = tokens
+            .get(i + if extern_crate { 2 } else { 1 })
+            .map_or(end, |t| t.1);
+        let mut targets = BTreeSet::new();
+        let mut external = BTreeSet::new();
+        let mut unproven = false;
+        for j in i + if extern_crate { 2 } else { 1 }..end_index {
+            let (name, position, _) = tokens[j];
+            if !name
+                .as_bytes()
+                .first()
+                .is_some_and(|b| b.is_ascii_alphabetic() || *b == b'_')
+                || name == "as"
+                || j > 0 && tokens[j - 1].0 == "as"
+                || tokens.get(j + 1).is_some_and(|t| t.0 == ":")
+            {
+                continue;
+            }
+            let mut proven = false;
+            for occurrence in references.get(&position).into_iter().flatten() {
+                if let Some(paths) = definitions.get(occurrence.symbol.as_str()) {
+                    targets.extend(paths.iter().map(|p| (*p).to_owned()));
+                    proven = true;
+                } else if let Some(package) = occurrence
+                    .symbol
+                    .strip_prefix("rust-analyzer cargo ")
+                    .and_then(|s| s.split_whitespace().next())
+                {
+                    external.insert(package.to_owned());
+                    proven = true;
+                }
+            }
+            unproven |= !proven;
+        }
+        // shortcut: mixed external grouped uses have no single package field; keep them unresolved until the ledger supports multiple packages.
+        let unresolved =
+            (unproven || external.len() > 1 || targets.is_empty() && external.is_empty())
+                .then_some(ImportReason::Native);
+        imports.push(ImportRecord {
+            from: from.to_owned(),
+            specifier: source[spec_start..end].trim().to_owned(),
+            line: Some(source[..start].bytes().filter(|&b| b == b'\n').count() + 1),
+            kind: EdgeKind::Static,
+            targets: targets.into_iter().collect(),
+            external: (external.len() == 1).then(|| external.into_iter().next().unwrap()),
+            unresolved,
+            ..ImportRecord::default()
+        });
+        i = end_index + 1;
+    }
+    imports
+}
+
+/// Bounded import tokenizer, skipping nested comments and string/character literals.
+fn rust_tokens(source: &str) -> Vec<(&str, usize, usize)> {
+    let b = source.as_bytes();
+    let mut tokens = Vec::new();
+    let mut i = 0;
+    while i < b.len() {
+        if b[i].is_ascii_whitespace() {
+            i += 1;
+            continue;
+        }
+        if b[i..].starts_with(b"//") {
+            while i < b.len() && b[i] != b'\n' {
+                i += 1;
+            }
+            continue;
+        }
+        if b[i..].starts_with(b"/*") {
+            i += 2;
+            let mut depth = 1;
+            while i < b.len() && depth > 0 {
+                if b[i..].starts_with(b"/*") {
+                    depth += 1;
+                    i += 2;
+                } else if b[i..].starts_with(b"*/") {
+                    depth -= 1;
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
+            continue;
+        }
+        let raw_start = if b[i] == b'r' {
+            i + 1
+        } else if b[i..].starts_with(b"br") {
+            i + 2
+        } else {
+            i
+        };
+        let mut quote = raw_start;
+        while quote < b.len() && b[quote] == b'#' {
+            quote += 1;
+        }
+        if raw_start != i && b.get(quote) == Some(&b'"') {
+            let hashes = quote - raw_start;
+            i = quote + 1;
+            while i < b.len() {
+                if b[i] == b'"'
+                    && b.get(i + 1..i + 1 + hashes)
+                        .is_some_and(|s| s.iter().all(|&c| c == b'#'))
+                {
+                    i += 1 + hashes;
+                    break;
+                }
+                i += 1;
+            }
+            continue;
+        }
+        if b[i] == b'"'
+            || b[i] == b'\'' && (b.get(i + 2) == Some(&b'\'') || b.get(i + 1) == Some(&b'\\'))
+        {
+            let delimiter = b[i];
+            i += 1;
+            while i < b.len() {
+                if b[i] == b'\\' {
+                    i = (i + 2).min(b.len());
+                } else if b[i] == delimiter {
+                    i += 1;
+                    break;
+                } else {
+                    i += 1;
+                }
+            }
+            continue;
+        }
+        let start = i;
+        if b[i].is_ascii_alphabetic() || b[i] == b'_' {
+            i += 1;
+            while i < b.len() && (b[i].is_ascii_alphanumeric() || b[i] == b'_') {
+                i += 1;
+            }
+        } else {
+            i += source[i..].chars().next().unwrap().len_utf8();
+        }
+        tokens.push((&source[start..i], start, i));
+    }
+    tokens
 }
 
 /// Cross-file references to workspace symbols, including trait implementations.
@@ -689,6 +908,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
         go_modules: Vec::new(),
     };
     Ok(RawGraph {
+        imports: dump.imports,
         metadata: Default::default(),
         files: dump.documents.into_iter().map(|d| d.path).collect(),
         edges,
@@ -1121,5 +1341,50 @@ impl Toml {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod import_tests {
+    use super::*;
+
+    fn occurrence(source: &str, needle: &str, symbol: &str) -> scip::Occurrence {
+        let position = source.find(needle).unwrap();
+        let prefix = &source[..position];
+        let line = prefix.bytes().filter(|&b| b == b'\n').count();
+        let column = prefix.rsplit('\n').next().unwrap().len();
+        scip::Occurrence {
+            range: vec![line as i32, column as i32, (column + needle.len()) as i32],
+            symbol: symbol.to_owned(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn import_ledger_uses_only_statements_and_proven_leaf_symbols() {
+        let source = "// use missing::Comment;\nconst S: &str = r#\"use fake::Text;\"#;\nuse crate::{Thing, Missing};\nuse std::fmt::Debug as D;\nfn f() { Thing; }";
+        let local = occurrence(source, "Thing,", "local-thing");
+        let external = occurrence(source, "Debug as", "rust-analyzer cargo std 1.0 fmt/Debug#");
+        let definitions = HashMap::from([("local-thing", BTreeSet::from(["src/thing.rs"]))]);
+        let imports = rust_imports(source, "src/lib.rs", &[local, external], &definitions);
+        assert_eq!(imports.len(), 2);
+        assert_eq!(imports[0].line, Some(3));
+        assert_eq!(imports[0].targets, ["src/thing.rs"]);
+        assert!(matches!(imports[0].unresolved, Some(ImportReason::Native)));
+        assert_eq!(imports[1].external.as_deref(), Some("std"));
+        assert!(imports[1].unresolved.is_none());
+    }
+
+    #[test]
+    fn multiple_external_packages_never_masquerade_as_one() {
+        let source = "use {one::A, two::B};";
+        let refs = [
+            occurrence(source, "A,", "rust-analyzer cargo one 1.0 A#"),
+            occurrence(source, "B}", "rust-analyzer cargo two 1.0 B#"),
+        ];
+        let imports = rust_imports(source, "src/lib.rs", &refs, &HashMap::new());
+        assert_eq!(imports.len(), 1);
+        assert!(imports[0].external.is_none());
+        assert!(matches!(imports[0].unresolved, Some(ImportReason::Native)));
     }
 }

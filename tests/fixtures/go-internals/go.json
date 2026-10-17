@@ -29,6 +29,35 @@
   }
  ],
  "go_version": "1.27.1",
+ "imports": [
+  {
+   "from": "billing/billing.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "example.com/internals/billing/ledger",
+   "targets": [
+    "billing/ledger/ledger.go"
+   ]
+  },
+  {
+   "from": "orders/checkout.go",
+   "kind": "runtime",
+   "line": 4,
+   "specifier": "example.com/internals/billing",
+   "targets": [
+    "billing/billing.go"
+   ]
+  },
+  {
+   "from": "orders/checkout.go",
+   "kind": "runtime",
+   "line": 5,
+   "specifier": "example.com/internals/billing/ledger",
+   "targets": [
+    "billing/ledger/ledger.go"
+   ]
+  }
+ ],
  "modules": [
   "."
  ],

@@ -46,6 +46,26 @@
   }
  ],
  "go_version": "1.27.1",
+ "imports": [
+  {
+   "from": "api/handler/handler.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "example.com/cycles/store",
+   "targets": [
+    "store/store.go"
+   ]
+  },
+  {
+   "from": "store/sql/sql.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "example.com/cycles/api/types",
+   "targets": [
+    "api/types/types.go"
+   ]
+  }
+ ],
  "modules": [
   "."
  ],

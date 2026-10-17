@@ -25,6 +25,26 @@
   }
  ],
  "go_version": "1.27.1",
+ "imports": [
+  {
+   "from": "app/service.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "example.com/layers/domain",
+   "targets": [
+    "domain/order.go"
+   ]
+  },
+  {
+   "from": "domain/order.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "example.com/layers/adapters/postgres",
+   "targets": [
+    "adapters/postgres/repo.go"
+   ]
+  }
+ ],
  "modules": [
   "."
  ],

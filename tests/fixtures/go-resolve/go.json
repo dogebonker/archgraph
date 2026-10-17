@@ -215,6 +215,129 @@
   }
  ],
  "go_version": "1.27.1",
+ "imports": [
+  {
+   "external": "testing",
+   "from": "blank/alpha_test.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "testing"
+  },
+  {
+   "external": "fmt",
+   "from": "cmd/tool/main.go",
+   "kind": "runtime",
+   "line": 4,
+   "specifier": "fmt"
+  },
+  {
+   "from": "cmd/tool/main.go",
+   "kind": "runtime",
+   "line": 6,
+   "specifier": "example.com/resolve/server",
+   "targets": [
+    "server/server.go"
+   ]
+  },
+  {
+   "from": "lost/lost.go",
+   "kind": "runtime",
+   "line": 4,
+   "specifier": "example.com/resolve/kinds",
+   "targets": [
+    "kinds/alias.go"
+   ]
+  },
+  {
+   "from": "lost/lost.go",
+   "kind": "runtime",
+   "line": 5,
+   "specifier": "example.com/resolve/wrap",
+   "targets": [
+    "wrap/wrap.go"
+   ]
+  },
+  {
+   "from": "plugin/plugin.go",
+   "kind": "runtime",
+   "line": 5,
+   "specifier": "example.com/resolve/blank",
+   "targets": [
+    "blank/beta.go"
+   ]
+  },
+  {
+   "from": "plugin/plugin.go",
+   "kind": "runtime",
+   "line": 6,
+   "specifier": "example.com/resolve/missing",
+   "unresolved": "missing"
+  },
+  {
+   "from": "plugin/plugin.go",
+   "kind": "runtime",
+   "line": 7,
+   "specifier": "example.com/resolve/store",
+   "targets": [
+    "store/doc.go"
+   ]
+  },
+  {
+   "external": "strings",
+   "from": "server/handle.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "strings"
+  },
+  {
+   "from": "server/server.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "example.com/resolve/store",
+   "targets": [
+    "store/doc.go"
+   ]
+  },
+  {
+   "from": "store/native.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "C",
+   "unresolved": "native"
+  },
+  {
+   "from": "use/use.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "example.com/resolve/kinds",
+   "targets": [
+    "kinds/alias.go"
+   ]
+  },
+  {
+   "external": "testing",
+   "from": "use/use_test.go",
+   "kind": "runtime",
+   "line": 4,
+   "specifier": "testing"
+  },
+  {
+   "from": "use/use_test.go",
+   "kind": "runtime",
+   "line": 6,
+   "specifier": "example.com/resolve/use",
+   "targets": [
+    "use/use.go"
+   ]
+  },
+  {
+   "from": "wrap/wrap.go",
+   "kind": "runtime",
+   "line": 3,
+   "specifier": "github.com/external/missing",
+   "unresolved": "missing"
+  }
+ ],
  "modules": [
   "."
  ],

@@ -70,6 +70,16 @@ enum Cmd {
     Surface(surface_cli::SurfaceArgs),
     /// List default file exclusions and their categories
     ShowExcludes,
+    /// List imports whose file or external package could not be resolved
+    Unresolved(Unresolved),
+}
+
+#[derive(Args)]
+struct Unresolved {
+    #[arg(default_value = ".archgraph/archgraph.json")]
+    graph: PathBuf,
+    #[arg(long)]
+    json: bool,
 }
 
 #[derive(Args)]
@@ -169,6 +179,9 @@ struct ScanOpts {
     /// Python package to scan (default: the single package under the source root)
     #[arg(long)]
     package: Option<String>,
+    /// Additional Python import search root (repeatable)
+    #[arg(long)]
+    python_path: Vec<PathBuf>,
     /// Go toolchain (1.21 or later) that runs the Go helper
     #[arg(long, default_value = "go")]
     go: String,
@@ -295,6 +308,7 @@ fn main() -> ExitCode {
         Cmd::Impact(args) => impact_cli::run(args),
         Cmd::Surface(args) => surface_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::ShowExcludes => show_excludes().map(|()| ExitCode::SUCCESS),
+        Cmd::Unresolved(args) => unresolved(args).map(|()| ExitCode::SUCCESS),
     };
     result.unwrap_or_else(|e| {
         eprintln!("error: {e:#}");
@@ -588,6 +602,29 @@ fn history(mut args: HistoryArgs) -> Result<()> {
     Ok(())
 }
 
+fn unresolved(args: Unresolved) -> Result<()> {
+    let doc = recompute(&args.graph, None)?;
+    if doc.imports.is_none() {
+        bail!("import accounting unavailable in this saved graph; rescan with the live collector");
+    }
+    if args.json {
+        return write(None, &doc.unresolved);
+    }
+    for import in &doc.unresolved {
+        println!(
+            "{}:{} {} — {}",
+            serde_json::to_string(&import.from)?,
+            import.line.unwrap_or(0),
+            serde_json::to_string(&import.specifier)?,
+            serde_json::to_value(import.unresolved)?
+                .as_str()
+                .unwrap_or("missing")
+        );
+    }
+    println!("{} unresolved imports", doc.unresolved.len());
+    Ok(())
+}
+
 fn show_excludes() -> Result<()> {
     for language in [
         Language::Typescript,
@@ -678,7 +715,9 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
                     depcruise.as_deref(),
                 )?,
             };
+            let (json, imports) = collect::typescript_resolution::enrich(root, &json)?;
             let mut raw = depcruise::parse_at(&json, root)?;
+            raw.imports = imports;
             for warning in collect::barrels::typescript(root, &json, &mut raw)? {
                 eprintln!("warning: {warning}");
             }
@@ -696,6 +735,7 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
                     &package,
                     &args.python,
                     args.include_tests || args.no_default_excludes || !includes.is_empty(),
+                    &args.python_path,
                 )?,
             };
             (
@@ -779,12 +819,22 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
     raw.files.retain(|p| kept.contains(p));
     raw.edges
         .retain(|e| kept.contains(&e.from) && kept.contains(&e.to));
+    if let Some(imports) = &mut raw.imports {
+        imports.retain(|i| kept.contains(&i.from));
+    }
     raw.collector.bound_files = go::bound_files(&bound, &raw.files);
     if let Some(n) = raw.collector.unresolved.filter(|&n| n > 0) {
-        eprintln!(
-            "warning: {n} unresolved import(s) reported by {}; their edges are missing",
-            raw.collector.name
-        );
+        if raw.imports.is_some() {
+            eprintln!(
+                "warning: {n} unresolved collector reference(s) reported by {}; explicit import accounting is reported separately",
+                raw.collector.name
+            );
+        } else {
+            eprintln!(
+                "warning: {n} unresolved import(s) reported by {}; their edges are missing",
+                raw.collector.name
+            );
+        }
     }
 
     let source = Source {
@@ -814,12 +864,18 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         collection: matches!(language, Language::Python | Language::Rust).then_some(
             archgraph::model::CollectionOptions {
                 python_package,
+                python_paths: args
+                    .python_path
+                    .iter()
+                    .map(|p| p.to_string_lossy().into_owned())
+                    .collect(),
                 rust_features: (language == Language::Rust).then_some(args.rust_features),
                 rust_build_scripts: language == Language::Rust && args.rust_build_scripts,
             },
         ),
         file_metadata: raw.metadata,
         legacy_module_classes: false,
+        import_records: raw.imports,
     };
     if let Some(owners) = &config.codeowners {
         for warning in &owners.warnings {
@@ -922,6 +978,24 @@ fn report(args: Report) -> Result<ExitCode> {
         count(doc.modules.len(), "module"),
         count(doc.edges.len(), "import")
     );
+    if let Some(resolution) = &doc.import_resolution {
+        let percent = resolution
+            .resolved_percent
+            .map(|p| format!("{p:.1}%"))
+            .unwrap_or_else(|| "n/a".into());
+        out += &format!(
+            "  {} imports, {} resolved ({percent}), {} unresolved — run archgraph unresolved for the list\n",
+            resolution.imports, resolution.resolved, resolution.unresolved
+        );
+    } else {
+        out += "  import resolution accounting unavailable in this recording; rescan with the live collector\n";
+    }
+    if !doc.external_nodes.is_empty() {
+        out += &format!(
+            "  {} known external packages (outside internal metrics)\n",
+            doc.external_nodes.len()
+        );
+    }
     if let Some(coverage) = &doc.test_coverage {
         out += &format!(
             "  tests import {} of {} production modules; {} without importing tests\n",
@@ -1254,6 +1328,7 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
         );
     }
     input.config.all_kinds |= ALL_KINDS.load(Ordering::Relaxed);
+    input.config.import_records = input.imports.clone();
     input.config.file_metadata = input
         .files
         .iter()

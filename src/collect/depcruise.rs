@@ -304,6 +304,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
         go_modules: Vec::new(),
     };
     Ok(RawGraph {
+        imports: None,
         metadata: Default::default(),
         files,
         edges,

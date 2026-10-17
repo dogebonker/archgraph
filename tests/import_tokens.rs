@@ -225,3 +225,51 @@ call(require('ordinary-call'))
         ]
     );
 }
+
+#[test]
+fn mixed_inline_type_flags_and_require_syntax_are_preserved_per_binding() {
+    let statements = typescript(
+        "import {type Shape, Runtime, type Other as Renamed} from './api'; const required=require('./api'); import('./api');",
+    );
+    assert_eq!(
+        statements[0]
+            .names
+            .iter()
+            .map(|name| name.type_only)
+            .collect::<Vec<_>>(),
+        [true, false, true]
+    );
+    assert!(!statements[0].require);
+    assert!(statements[1].require);
+    assert!(!statements[2].require);
+}
+
+#[test]
+fn erased_use_proofs_do_not_accept_object_values_or_parameter_defaults() {
+    use archgraph::collect::imports::type_only_uses;
+    let names = vec!["Guard".into()];
+    assert!(
+        type_only_uses(
+            "import {Guard} from './guard'; function use(...guards: (Guard | Function)[]) {}",
+            &names
+        )
+        .contains("Guard")
+    );
+    for source in [
+        "import {Guard} from './guard'; const value={guard:Guard};",
+        "import {Guard} from './guard'; function use(value = Guard) {}",
+        "import {Guard} from './guard'; const typed: Guard = new Guard();",
+    ] {
+        assert!(type_only_uses(source, &names).is_empty(), "{source}");
+    }
+}
+
+#[test]
+fn a_function_parameter_named_require_is_a_local_call_not_an_import() {
+    let imports = typescript(
+        "function local(require) { require('./not-an-import'); } const object={load(require){require('./also-local')}}; require('./actual');",
+    );
+    assert_eq!(imports.len(), 1);
+    assert_eq!(imports[0].specifier.as_deref(), Some("./actual"));
+    assert_eq!(imports[0].kind, EdgeKind::Static);
+}

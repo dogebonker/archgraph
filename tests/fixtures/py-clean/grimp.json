@@ -313,5 +313,109 @@
     }
    ]
   }
+ ],
+ "files": [
+  "src/app/__init__.py",
+  "src/app/adapters/__init__.py",
+  "src/app/adapters/notify.py",
+  "src/app/adapters/repository.py",
+  "src/app/bootstrap.py",
+  "src/app/domain/__init__.py",
+  "src/app/domain/events.py",
+  "src/app/domain/model.py",
+  "src/app/entrypoints/__init__.py",
+  "src/app/entrypoints/api.py",
+  "src/app/entrypoints/cli.py",
+  "src/app/service_layer/__init__.py",
+  "src/app/service_layer/services.py"
+ ],
+ "module_paths": {
+  "app": "src/app/__init__.py",
+  "app.adapters": "src/app/adapters/__init__.py",
+  "app.adapters.notify": "src/app/adapters/notify.py",
+  "app.adapters.repository": "src/app/adapters/repository.py",
+  "app.bootstrap": "src/app/bootstrap.py",
+  "app.domain": "src/app/domain/__init__.py",
+  "app.domain.events": "src/app/domain/events.py",
+  "app.domain.model": "src/app/domain/model.py",
+  "app.entrypoints": "src/app/entrypoints/__init__.py",
+  "app.entrypoints.api": "src/app/entrypoints/api.py",
+  "app.entrypoints.cli": "src/app/entrypoints/cli.py",
+  "app.service_layer": "src/app/service_layer/__init__.py",
+  "app.service_layer.services": "src/app/service_layer/services.py"
+ },
+ "import_records": [
+  {
+   "from": "src/app/adapters/notify.py",
+   "specifier": "app.entrypoints.cli",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "src/app/entrypoints/cli.py"
+   ]
+  },
+  {
+   "from": "src/app/adapters/repository.py",
+   "specifier": "app.domain.model",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "src/app/domain/model.py"
+   ]
+  },
+  {
+   "from": "src/app/bootstrap.py",
+   "specifier": "app.adapters.repository",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "src/app/adapters/repository.py"
+   ]
+  },
+  {
+   "from": "src/app/bootstrap.py",
+   "specifier": "app.entrypoints.api",
+   "line": 2,
+   "kind": "runtime",
+   "targets": [
+    "src/app/entrypoints/api.py"
+   ]
+  },
+  {
+   "from": "src/app/domain/events.py",
+   "specifier": "app.adapters.repository",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "src/app/adapters/repository.py"
+   ]
+  },
+  {
+   "from": "src/app/entrypoints/api.py",
+   "specifier": "app.adapters.repository",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "src/app/adapters/repository.py"
+   ]
+  },
+  {
+   "from": "src/app/entrypoints/api.py",
+   "specifier": "app.service_layer.services",
+   "line": 2,
+   "kind": "runtime",
+   "targets": [
+    "src/app/service_layer/services.py"
+   ]
+  },
+  {
+   "from": "src/app/service_layer/services.py",
+   "specifier": "app.domain.model",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "src/app/domain/model.py"
+   ]
+  }
  ]
 }

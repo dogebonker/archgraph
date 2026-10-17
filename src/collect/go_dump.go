@@ -223,6 +223,7 @@ func main() {
 		"bound":      sorted(bound),
 		"unresolved": unresolved,
 		"modules":    rels,
+		"imports":    importRecords(all, dirs),
 	}); err != nil {
 		fail(err)
 	}
@@ -708,4 +709,78 @@ func underModule(path string) bool {
 		}
 	}
 	return false
+}
+
+// Explicit specifiers have a different denominator from symbol-reference edges.
+func importRecords(packages []*pkg, dirs []string) []map[string]any {
+	required := map[string]bool{}
+	for _, dir := range dirs {
+		data, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+		if err != nil {
+			continue
+		}
+		block := false
+		for _, line := range strings.Split(string(data), "\n") {
+			line, _, _ = strings.Cut(line, "//")
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "require (") {
+				block = true
+				continue
+			}
+			if block && line == ")" {
+				block = false
+				continue
+			}
+			fields := strings.Fields(line)
+			if !block {
+				if len(fields) < 3 || fields[0] != "require" {
+					continue
+				}
+				fields = fields[1:]
+			}
+			if len(fields) >= 2 {
+				required[strings.Trim(fields[0], `"`)] = true
+			}
+		}
+	}
+	records := []map[string]any{}
+	for _, p := range packages {
+		for _, f := range p.files {
+			for _, spec := range f.Imports {
+				path := strings.Trim(spec.Path.Value, `"`)
+				record := map[string]any{"from": rel(f), "specifier": path, "line": fset.Position(spec.Pos()).Line, "kind": "runtime"}
+				if q := local[path]; q != nil {
+					record["targets"] = []string{anchor(q)}
+				} else if path == "C" {
+					record["unresolved"] = "native"
+				} else if underModule(path) {
+					record["unresolved"] = "missing"
+				} else {
+					known := false
+					first, _, _ := strings.Cut(path, "/")
+					if !strings.Contains(first, ".") {
+						standard, err := build.Default.Import(path, "", build.FindOnly)
+						known = err == nil && standard.Goroot
+					}
+					for dependency := range required {
+						if path == dependency || strings.HasPrefix(path, dependency+"/") {
+							known = true
+							break
+						}
+					}
+					if known {
+						record["external"] = path
+					} else {
+						record["unresolved"] = "missing"
+					}
+				}
+				records = append(records, record)
+			}
+		}
+	}
+	sort.Slice(records, func(i, j int) bool {
+		a, b := records[i], records[j]
+		return a["from"].(string) < b["from"].(string) || a["from"] == b["from"] && a["line"].(int) < b["line"].(int)
+	})
+	return records
 }

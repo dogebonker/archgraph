@@ -55,6 +55,7 @@ fn route(
 }
 fn graph(modules: &[BarrelModule]) -> RawGraph {
     RawGraph {
+        imports: None,
         files: modules.iter().map(|m| m.file.clone()).collect(),
         edges: modules
             .iter()

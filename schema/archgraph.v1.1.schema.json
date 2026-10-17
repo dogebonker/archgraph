@@ -1405,6 +1405,12 @@
                 },
                 "rust_build_scripts": {
                   "type": "boolean"
+                },
+                "python_paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               }
             },
@@ -1712,6 +1718,76 @@
                 "type": "string"
               }
             }
+          }
+        },
+        "imports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/import-record"
+          }
+        },
+        "unresolved": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/import-record"
+          }
+        },
+        "import_resolution": {
+          "type": "object",
+          "required": [
+            "imports",
+            "resolved",
+            "unresolved",
+            "resolved_percent"
+          ],
+          "properties": {
+            "imports": {
+              "$ref": "#/$defs/count"
+            },
+            "resolved": {
+              "$ref": "#/$defs/count"
+            },
+            "unresolved": {
+              "$ref": "#/$defs/count"
+            },
+            "resolved_percent": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "external_nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "external",
+              "package"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "external": {
+                "const": true
+              },
+              "package": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "external_edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
           }
         }
       }
@@ -2982,6 +3058,59 @@
           "items": {
             "$ref": "#/$defs/link"
           }
+        }
+      }
+    },
+    "import-record": {
+      "type": "object",
+      "required": [
+        "from",
+        "specifier",
+        "line",
+        "kind"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/path"
+        },
+        "specifier": {
+          "type": "string"
+        },
+        "line": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "kind": {
+          "enum": [
+            "runtime",
+            "lazy",
+            "type",
+            "reexport"
+          ]
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "external": {
+          "type": "string",
+          "minLength": 1
+        },
+        "namespace": {
+          "$ref": "#/$defs/path"
+        },
+        "reason": {
+          "enum": [
+            "alias",
+            "missing",
+            "dynamic",
+            "native"
+          ]
         }
       }
     }

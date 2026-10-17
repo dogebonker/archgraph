@@ -8,6 +8,7 @@ pub mod grimp;
 pub mod imports;
 pub mod java;
 pub mod rust;
+pub mod typescript_resolution;
 
 use std::collections::HashSet;
 use std::fs;
@@ -23,6 +24,7 @@ pub struct RawGraph {
     pub edges: Vec<Edge>,
     pub collector: Collector,
     pub metadata: std::collections::BTreeMap<String, NodeMetadata>,
+    pub imports: Option<Vec<crate::model::ImportRecord>>,
 }
 
 /// Extensions dependency-cruiser files must have to count as source; imports of anything else

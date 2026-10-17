@@ -200,10 +200,14 @@ impl Checkout {
             .context("scan root is outside the repository")?
             .to_owned();
         let nanos = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
-        let temp = Temp(
-            std::env::temp_dir().join(format!("archgraph-history-{}-{nanos}", std::process::id())),
-        );
-        fs::create_dir(&temp.0).context("creating history temporary directory")?;
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let sequence = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!(
+            "archgraph-history-{}-{nanos}-{sequence}",
+            std::process::id()
+        ));
+        fs::create_dir(&path).context("creating history temporary directory")?;
+        let temp = Temp(path);
         git(
             &temp.0,
             &[

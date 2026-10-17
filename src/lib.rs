@@ -15,6 +15,7 @@ pub mod model;
 pub mod modules;
 pub mod quality;
 pub mod render;
+pub mod resolution;
 pub mod rules;
 pub mod simulate;
 pub mod surface;
@@ -29,6 +30,7 @@ use rules::Compiled;
 /// Rebuild a persisted scan, retaining its optional historical context.
 pub fn restore_scan(mut input: model::ScanInput) -> Result<Document> {
     validate_scan(&input)?;
+    input.config.import_records = input.imports.clone();
     input.config.file_metadata = input
         .files
         .iter()
@@ -145,6 +147,7 @@ pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
             bail!("written import destination must be a relative path inside the scan root");
         }
     }
+    resolution::validate(input.imports.as_deref(), &input.files)?;
     Ok(())
 }
 
@@ -203,9 +206,11 @@ pub fn analyze(
     }) {
         bail!("edge_weights overflow the weighted metrics; use smaller finite weights");
     }
+    resolution::validate(doc.imports.as_deref(), &doc.files)?;
     findings::place_registrars(&mut doc, rules.as_ref(), owners.as_ref());
     doc.cochange = cochange;
     doc.findings = findings::find(&doc, rules.as_ref(), owners.as_ref());
+    resolution::attach(&mut doc);
     Ok(doc)
 }
 
@@ -354,6 +359,11 @@ pub fn build(
         cycles,
         type_only_cycles,
         test_coverage,
+        imports: config.import_records.clone(),
+        import_resolution: None,
+        unresolved: Vec::new(),
+        external_nodes: Vec::new(),
+        external_edges: Vec::new(),
         files: module_of
             .iter()
             .map(|(path, module)| File {

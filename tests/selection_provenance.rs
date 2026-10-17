@@ -50,6 +50,7 @@ fn bisect_retains_layout_included_examples_in_every_probe() {
     git(&root, &["commit", "-qm", "before cycle"]);
     let base = git(&root, &["rev-parse", "HEAD"]);
     fs::write(root.join("pkg/a.py"), "from examples import one\n").unwrap();
+    fs::write(root.join("pkg/new.py"), "from pkg import a\n").unwrap();
     git(&root, &["add", "."]);
     git(
         &root,
@@ -65,7 +66,12 @@ root = pathlib.Path(sys.argv[7])
 imports = [{'importer':'examples.one','imported':'pkg.a','kind':'runtime'}]
 if 'examples' in (root/'pkg/a.py').read_text():
     imports.append({'importer':'pkg.a','imported':'examples.one','kind':'runtime'})
-print(json.dumps({'grimp_version':'fixture','modules':['pkg','pkg.a','examples.one'],'imports':imports}))
+modules = ['pkg','pkg.a','examples.one']
+if (root/'pkg/new.py').exists():
+    modules.append('pkg.new')
+    imports.append({'importer':'pkg.new','imported':'pkg.a','kind':'runtime'})
+records = [{'from':edge['importer'].replace('.','/')+'.py','specifier':edge['imported'],'line':1,'kind':'runtime','targets':[edge['imported'].replace('.','/')+'.py']} for edge in imports]
+print(json.dumps({'grimp_version':'fixture','modules':modules,'imports':imports,'import_records':records}))
 "#).unwrap();
     fs::set_permissions(&python, fs::Permissions::from_mode(0o755)).unwrap();
     let graph = directory.join("graph.json");

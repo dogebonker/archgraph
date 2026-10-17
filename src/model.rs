@@ -29,6 +29,16 @@ pub struct Document {
     pub type_only_cycles: Vec<DeferredCycle>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub test_coverage: Option<TestCoverage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub imports: Option<Vec<ImportRecord>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub import_resolution: Option<ImportResolution>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub unresolved: Vec<ImportRecord>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub external_nodes: Vec<ExternalNode>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub external_edges: Vec<Edge>,
     /// The counts and module metrics that finding simulations and `simulate` compare.
     pub summary: Summary,
     pub findings: Vec<Finding>,
@@ -51,6 +61,8 @@ pub struct ScanInput {
     pub config: Config,
     pub files: Vec<File>,
     pub edges: Vec<Edge>,
+    #[serde(default)]
+    pub imports: Option<Vec<ImportRecord>>,
     #[serde(default)]
     pub package_entries: Vec<String>,
     #[serde(default)]
@@ -155,6 +167,8 @@ pub struct Config {
     pub file_metadata: BTreeMap<String, NodeMetadata>,
     #[serde(skip)]
     pub legacy_module_classes: bool,
+    #[serde(skip)]
+    pub import_records: Option<Vec<ImportRecord>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -166,6 +180,8 @@ pub struct NodeMetadata {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollectionOptions {
     pub python_package: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub python_paths: Vec<String>,
     pub rust_features: Option<crate::collect::rust::Features>,
     pub rust_build_scripts: bool,
 }
@@ -193,6 +209,52 @@ pub struct File {
 #[serde(rename_all = "lowercase")]
 pub enum ModuleClass {
     Tests,
+}
+
+/// One explicit import specifier occurrence, independently of its symbol-reference edges.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ImportRecord {
+    pub from: String,
+    pub specifier: String,
+    pub line: Option<usize>,
+    pub kind: EdgeKind,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub targets: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub external: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub namespace: Option<String>,
+    #[serde(
+        default,
+        rename = "reason",
+        alias = "unresolved",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub unresolved: Option<ImportReason>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ImportReason {
+    Alias,
+    Missing,
+    Dynamic,
+    Native,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ImportResolution {
+    pub imports: usize,
+    pub resolved: usize,
+    pub unresolved: usize,
+    pub resolved_percent: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExternalNode {
+    pub id: String,
+    pub external: bool,
+    pub package: String,
 }
 
 #[derive(Debug, Serialize)]

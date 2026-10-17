@@ -32,6 +32,8 @@ struct Dump {
     edges: Vec<DumpEdge>,
     unresolved: usize,
     #[serde(default)]
+    imports: Option<Vec<crate::model::ImportRecord>>,
+    #[serde(default)]
     modules: Vec<String>,
     /// Pairs of files of one package that cannot be split across packages and still compile.
     #[serde(default)]
@@ -228,6 +230,7 @@ pub fn parse(json: &[u8], keep_generated: bool, keep_tests: bool) -> Result<Pars
         })
         .collect();
     let raw = RawGraph {
+        imports: dump.imports,
         metadata: dump
             .files
             .iter()

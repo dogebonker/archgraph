@@ -5,6 +5,7 @@ use crate::model::EdgeKind;
 pub struct ImportedName {
     pub imported: String,
     pub local: String,
+    pub type_only: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -16,6 +17,7 @@ pub struct ImportStatement {
     pub reexport: bool,
     pub wildcard: bool,
     pub side_effect: bool,
+    pub require: bool,
 }
 
 #[derive(Debug)]
@@ -36,6 +38,7 @@ pub fn typescript(source: &str) -> Vec<ImportStatement> {
     let mut expression_arrows = Vec::new();
     let mut brackets = 0usize;
     let parameter_opens = function_parameters(&tokens);
+    let shadowed_requires = parameter_require_scopes(&tokens, &parameter_opens);
     for (i, token) in tokens.iter().enumerate() {
         let text = token.text.as_str();
         let prev = i.checked_sub(1).map(|j| tokens[j].text.as_str());
@@ -98,6 +101,13 @@ pub fn typescript(source: &str) -> Vec<ImportStatement> {
             || parens.iter().any(|open| parameter_opens.contains(open));
         let next = tokens.get(i + 1).map(|t| t.text.as_str());
         if text == "require" && next == Some("(") || text == "import" && next == Some("(") {
+            if text == "require"
+                && shadowed_requires
+                    .iter()
+                    .any(|&(open, close)| i > open && i < close)
+            {
+                continue;
+            }
             let argument = tokens.get(i + 2);
             let literal = argument.and_then(|t| t.literal.clone()).filter(|_| {
                 tokens
@@ -116,6 +126,7 @@ pub fn typescript(source: &str) -> Vec<ImportStatement> {
                 reexport: false,
                 wildcard: true,
                 side_effect: false,
+                require: text == "require",
             });
             continue;
         }
@@ -133,6 +144,7 @@ pub fn typescript(source: &str) -> Vec<ImportStatement> {
                 reexport: false,
                 wildcard: false,
                 side_effect: true,
+                require: false,
             });
             continue;
         }
@@ -178,6 +190,7 @@ pub fn typescript(source: &str) -> Vec<ImportStatement> {
             names.push(ImportedName {
                 imported: "*".into(),
                 local,
+                type_only: type_prefix,
             });
         } else {
             let mut j = 0;
@@ -224,6 +237,7 @@ pub fn typescript(source: &str) -> Vec<ImportStatement> {
                         imported
                     },
                     local,
+                    type_only: type_prefix || per_type,
                 });
                 has_value |= !per_type && !type_prefix;
             }
@@ -242,6 +256,7 @@ pub fn typescript(source: &str) -> Vec<ImportStatement> {
             reexport,
             wildcard,
             side_effect: false,
+            require: false,
         });
     }
     result
@@ -636,7 +651,11 @@ pub fn module_exports(source: &str) -> ModuleExports {
                                 local = tokens[j + 1].text.clone();
                                 j += 2;
                             }
-                            result.local.push(ImportedName { imported, local });
+                            result.local.push(ImportedName {
+                                imported,
+                                local,
+                                type_only: false,
+                            });
                         }
                         forwarding = true;
                         i = end + 1;
@@ -851,4 +870,230 @@ fn generic_arguments(tokens: &[Token], start: usize) -> bool {
         }
     }
     false
+}
+
+/// Only names with an erased declaration and no same-name value declaration are proven types.
+pub fn type_only_exports(source: &str) -> std::collections::BTreeSet<String> {
+    let tokens = lex(source);
+    let mut erased = std::collections::BTreeSet::new();
+    let mut values = std::collections::BTreeSet::new();
+    for (i, token) in tokens.iter().enumerate() {
+        if i > 0 && tokens[i - 1].text == "." {
+            continue;
+        }
+        if matches!(token.text.as_str(), "type" | "interface")
+            && let Some(name) = tokens.get(i + 1).filter(|name| identifier(name))
+        {
+            let modifiers: Vec<_> = tokens[..i]
+                .iter()
+                .rev()
+                .take_while(|token| matches!(token.text.as_str(), "default" | "declare" | "export"))
+                .collect();
+            if modifiers.iter().any(|token| token.text == "export") {
+                erased.insert(if modifiers.iter().any(|token| token.text == "default") {
+                    "default".into()
+                } else {
+                    name.text.clone()
+                });
+            }
+        }
+        if matches!(
+            token.text.as_str(),
+            "class" | "function" | "enum" | "namespace" | "module"
+        ) && let Some(name) = tokens.get(i + 1).filter(|name| identifier(name))
+        {
+            values.insert(name.text.clone());
+        }
+        if matches!(token.text.as_str(), "const" | "let" | "var") {
+            values.extend(variable_bindings(&tokens, i + 1));
+        }
+    }
+    let forwarded = typescript(source)
+        .into_iter()
+        .filter(|statement| statement.reexport)
+        .flat_map(|statement| statement.names.into_iter().map(|name| name.local))
+        .collect::<std::collections::BTreeSet<_>>();
+    erased.retain(|name| {
+        !values.contains(name) && !forwarded.contains(name) && !forwarded.contains("*")
+    });
+    erased
+}
+
+/// Unknown expression contexts stay runtime; only recognized erased syntax proves a type use.
+pub fn type_only_uses(source: &str, names: &[String]) -> std::collections::BTreeSet<String> {
+    let tokens = lex(source);
+    let mut erased = vec![false; tokens.len()];
+    let mut imported = vec![false; tokens.len()];
+    for (i, token) in tokens.iter().enumerate() {
+        if token.text == "import"
+            && tokens
+                .get(i + 1)
+                .is_some_and(|t| !matches!(t.text.as_str(), "(" | "."))
+        {
+            let mut end = i + 1;
+            while end < tokens.len()
+                && tokens[end].literal.is_none()
+                && !matches!(tokens[end].text.as_str(), ";" | "import" | "export")
+            {
+                end += 1;
+            }
+            imported[i..=end.min(tokens.len().saturating_sub(1))].fill(true);
+        }
+        if matches!(token.text.as_str(), "type" | "interface")
+            && tokens.get(i + 1).is_some_and(identifier)
+        {
+            if token.text == "interface" {
+                if let Some(open) =
+                    (i + 2..tokens.len()).find(|&j| matches!(tokens[j].text.as_str(), "{" | ";"))
+                    && tokens[open].text == "{"
+                    && let Some(close) = closing(&tokens, open, "{", "}")
+                {
+                    erased[i..=close].fill(true);
+                }
+            } else {
+                let mut end = i + 2;
+                skip_initializer(&tokens, &mut end, &[";"], true);
+                erased[i..end].fill(true);
+            }
+        }
+        if matches!(token.text.as_str(), "const" | "let" | "var") {
+            let mut start = i + 1;
+            loop {
+                if !binding_pattern(&tokens, &mut start, &mut Vec::new(), 0) {
+                    break;
+                }
+                if tokens.get(start).is_some_and(|t| t.text == ":") {
+                    let begin = start;
+                    start += 1;
+                    skip_initializer(&tokens, &mut start, &["=", ",", ";"], true);
+                    erased[begin..start].fill(true);
+                }
+                if tokens.get(start).is_some_and(|t| t.text == "=") {
+                    start += 1;
+                    skip_initializer(&tokens, &mut start, &[",", ";"], false);
+                }
+                if tokens.get(start).is_none_or(|t| t.text != ",") {
+                    break;
+                }
+                start += 1;
+            }
+        }
+        if matches!(token.text.as_str(), "as" | "satisfies")
+            && let Some(next) = tokens.get(i + 1).filter(|t| identifier(t))
+        {
+            let _ = next;
+            erased[i + 1] = true;
+        }
+    }
+    for open in function_parameters(&tokens) {
+        let Some(close) = closing(&tokens, open, "(", ")") else {
+            continue;
+        };
+        let mut nesting = Vec::new();
+        let mut annotation = false;
+        for j in open + 1..close {
+            let text = tokens[j].text.as_str();
+            if nesting.is_empty() {
+                match text {
+                    ":" => annotation = true,
+                    "=" | "," => annotation = false,
+                    _ => {}
+                }
+            }
+            if annotation {
+                erased[j] = true;
+            }
+            match text {
+                "(" => nesting.push(")"),
+                "[" => nesting.push("]"),
+                "{" => nesting.push("}"),
+                _ if nesting.last() == Some(&text) => {
+                    nesting.pop();
+                }
+                _ => {}
+            }
+        }
+        if tokens.get(close + 1).is_some_and(|t| t.text == ":") {
+            let mut end = close + 2;
+            while end < tokens.len() && !matches!(tokens[end].text.as_str(), "{" | "=>" | ";" | "=")
+            {
+                erased[end] = true;
+                end += 1;
+            }
+        }
+    }
+    names
+        .iter()
+        .filter(|name| {
+            let occurrences: Vec<_> = tokens
+                .iter()
+                .enumerate()
+                .filter(|(i, token)| token.text == **name && !imported[*i])
+                .map(|(i, _)| i)
+                .collect();
+            !occurrences.is_empty() && occurrences.iter().all(|&i| erased[i])
+        })
+        .cloned()
+        .collect()
+}
+
+fn closing(tokens: &[Token], open: usize, begin: &str, end: &str) -> Option<usize> {
+    let mut depth = 0usize;
+    for (i, token) in tokens.iter().enumerate().skip(open) {
+        if token.text == begin {
+            depth += 1;
+        } else if token.text == end {
+            depth = depth.checked_sub(1)?;
+            if depth == 0 {
+                return Some(i);
+            }
+        }
+    }
+    None
+}
+
+fn parameter_require_scopes(
+    tokens: &[Token],
+    parameters: &std::collections::BTreeSet<usize>,
+) -> Vec<(usize, usize)> {
+    let mut scopes = Vec::new();
+    for &open in parameters {
+        let Some(close) = closing(tokens, open, "(", ")") else {
+            continue;
+        };
+        let mut i = open + 1;
+        let mut shadowed = false;
+        while i < close {
+            let mut names = Vec::new();
+            if !binding_pattern(tokens, &mut i, &mut names, 0) {
+                break;
+            }
+            shadowed |= names.iter().any(|name| name == "require");
+            if tokens.get(i).is_some_and(|token| token.text == ":") {
+                i += 1;
+                skip_initializer(tokens, &mut i, &["=", ",", ")"], true);
+            }
+            if tokens.get(i).is_some_and(|token| token.text == "=") {
+                i += 1;
+                skip_initializer(tokens, &mut i, &[",", ")"], false);
+            }
+            if tokens.get(i).is_none_or(|token| token.text != ",") {
+                break;
+            }
+            i += 1;
+        }
+        if !shadowed {
+            continue;
+        }
+        let mut body = close + 1;
+        if tokens.get(body).is_some_and(|token| token.text == "=>") {
+            body += 1;
+        }
+        if tokens.get(body).is_some_and(|token| token.text == "{")
+            && let Some(end) = closing(tokens, body, "{", "}")
+        {
+            scopes.push((open, end));
+        }
+    }
+    scopes
 }

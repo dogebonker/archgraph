@@ -104,7 +104,7 @@ pub fn resolve(graph: &mut RawGraph, modules: &[BarrelModule]) -> Vec<String> {
                 output.push(updated);
                 continue;
             }
-            let mut targets = BTreeSet::new();
+            let mut targets: BTreeMap<String, Vec<String>> = BTreeMap::new();
             let mut failure = None;
             if route.wildcard || route.names.is_empty() {
                 failure = Some("namespace or star import cannot be narrowed".to_owned());
@@ -112,7 +112,7 @@ pub fn resolve(graph: &mut RawGraph, modules: &[BarrelModule]) -> Vec<String> {
                 for name in &route.names {
                     match target(&modules, &route.to, name, 0, &mut BTreeSet::new()) {
                         Ok(file) => {
-                            targets.insert(file);
+                            targets.entry(file).or_default().push(name.clone());
                         }
                         Err(reason) => {
                             failure = Some(reason);
@@ -131,12 +131,13 @@ pub fn resolve(graph: &mut RawGraph, modules: &[BarrelModule]) -> Vec<String> {
                 ));
                 output.push(updated);
             } else {
-                for file in targets {
+                for (file, names) in targets {
                     let mut resolved = updated.clone();
                     resolved
                         .original_to
                         .get_or_insert_with(|| resolved.to.clone());
                     resolved.to = file;
+                    resolved.names = names;
                     resolved.confidence = Some(Confidence::High);
                     output.push(resolved);
                 }
@@ -283,6 +284,10 @@ struct CruiseDependency {
     resolved: String,
     #[serde(default)]
     could_not_resolve: bool,
+    #[serde(default, rename = "_archgraphLine")]
+    line: Option<usize>,
+    #[serde(default, rename = "_archgraphRequire")]
+    require: Option<bool>,
 }
 
 /// Reads source only inside the scan root and trusts dependency-cruiser for target resolution.
@@ -321,6 +326,10 @@ pub fn typescript(root: &Path, json: &[u8], graph: &mut RawGraph) -> Result<Vec<
             let Some(dependency) = module.dependencies.iter().find(|dependency| {
                 !dependency.could_not_resolve
                     && dependency.module.as_deref() == Some(specifier)
+                    && dependency.line.is_none_or(|line| line == statement.line)
+                    && dependency
+                        .require
+                        .is_none_or(|require| require == statement.require)
                     && files.contains(&dependency.resolved)
             }) else {
                 continue;
@@ -341,19 +350,35 @@ pub fn typescript(root: &Path, json: &[u8], graph: &mut RawGraph) -> Result<Vec<
                     );
                 }
             }
-            metadata.imports.push(ImportRoute {
-                to: dependency.resolved.clone(),
-                names: statement
-                    .names
-                    .iter()
-                    .map(|name| name.imported.clone())
-                    .collect(),
-                wildcard: statement.wildcard,
-                kind: statement.kind,
-                specifier: statement.specifier,
-                line: statement.line,
-                side_effect: statement.side_effect,
-            });
+            let mut groups = BTreeMap::new();
+            for name in &statement.names {
+                groups
+                    .entry(name.type_only)
+                    .or_insert_with(Vec::new)
+                    .push(name.imported.clone());
+            }
+            if groups.is_empty() {
+                groups.insert(false, Vec::new());
+            }
+            for (type_only, names) in groups {
+                metadata.imports.push(ImportRoute {
+                    to: dependency.resolved.clone(),
+                    names,
+                    wildcard: statement.wildcard,
+                    kind: if type_only {
+                        if statement.reexport {
+                            EdgeKind::TypeReexport
+                        } else {
+                            EdgeKind::Type
+                        }
+                    } else {
+                        statement.kind
+                    },
+                    specifier: statement.specifier.clone(),
+                    line: statement.line,
+                    side_effect: statement.side_effect,
+                });
+            }
         }
         for local in syntax.local {
             if let Some((imported, to)) = bindings.get(&local.imported) {
@@ -368,5 +393,87 @@ pub fn typescript(root: &Path, json: &[u8], graph: &mut RawGraph) -> Result<Vec<
         }
         modules.push(metadata);
     }
-    Ok(resolve(graph, &modules))
+    let warnings = resolve(graph, &modules);
+    refine_types(&root, graph);
+    Ok(warnings)
+}
+
+fn refine_types(root: &Path, graph: &mut RawGraph) {
+    let mut sources = BTreeMap::new();
+    for file in &graph.files {
+        let Ok(path) = root.join(file).canonicalize() else {
+            continue;
+        };
+        if !path.starts_with(root) {
+            continue;
+        }
+        if let Ok(source) = std::fs::read_to_string(path) {
+            sources.insert(file.clone(), source);
+        }
+    }
+    let definitions: BTreeMap<_, _> = sources
+        .iter()
+        .map(|(file, source)| (file.as_str(), imports::type_only_exports(source)))
+        .collect();
+    for edge in &mut graph.edges {
+        if !matches!(edge.kind, EdgeKind::Static | EdgeKind::Reexport) || edge.names.is_empty() {
+            continue;
+        }
+        let Some(types) = definitions.get(edge.to.as_str()) else {
+            continue;
+        };
+        if !edge.names.iter().all(|name| types.contains(name)) {
+            continue;
+        }
+        let Some(source) = sources.get(&edge.from) else {
+            continue;
+        };
+        let statement = imports::typescript(source).into_iter().find(|statement| {
+            statement.specifier == edge.specifier && Some(statement.line) == edge.line
+        });
+        let Some(statement) = statement else {
+            continue;
+        };
+        let names: Vec<_> = statement
+            .names
+            .iter()
+            .filter(|name| edge.names.contains(&name.imported))
+            .map(|name| name.local.clone())
+            .collect();
+        if statement.reexport
+            || !names.is_empty() && imports::type_only_uses(source, &names).len() == names.len()
+        {
+            edge.kind = EdgeKind::Type;
+            edge.weight = None;
+        }
+    }
+    if let Some(records) = &mut graph.imports {
+        for record in records {
+            let edges: Vec<_> = graph
+                .edges
+                .iter()
+                .filter(|edge| {
+                    edge.from == record.from
+                        && edge.specifier.as_deref() == Some(record.specifier.as_str())
+                        && edge.line == record.line
+                        && record
+                            .targets
+                            .iter()
+                            .any(|target| target == edge.original_to.as_ref().unwrap_or(&edge.to))
+                })
+                .collect();
+            if edges.is_empty() {
+                continue;
+            }
+            record.targets = edges
+                .iter()
+                .map(|edge| edge.to.clone())
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
+            if let Some(kind) = edges.iter().map(|edge| edge.kind).max() {
+                record.kind = kind;
+            }
+        }
+    }
 }

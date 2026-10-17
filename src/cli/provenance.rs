@@ -86,6 +86,7 @@ pub(super) fn probe(root: &Path, original: &Document, opts: &ScanOpts) -> Result
             );
         }
         opts.package = collection.python_package.clone();
+        opts.python_path = collection.python_paths.iter().map(PathBuf::from).collect();
         if let Some(features) = collection.rust_features {
             opts.rust_features = features;
         }
@@ -98,6 +99,7 @@ pub(super) fn probe(root: &Path, original: &Document, opts: &ScanOpts) -> Result
     let collected = super::scan_doc(root, &opts, None)?;
     let mut config = original.config.clone();
     config.file_metadata = collected.config.file_metadata;
+    config.import_records = collected.imports;
     archgraph::analyze(
         collected.source,
         config,

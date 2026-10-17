@@ -212,5 +212,100 @@
     }
    ]
   }
+ ],
+ "files": [
+  "deferred/__init__.py",
+  "deferred/a/__init__.py",
+  "deferred/a/x.py",
+  "deferred/b/__init__.py",
+  "deferred/b/y.py",
+  "deferred/c/__init__.py",
+  "deferred/c/z.py",
+  "deferred/d/__init__.py",
+  "deferred/d/w.py"
+ ],
+ "module_paths": {
+  "deferred": "deferred/__init__.py",
+  "deferred.a": "deferred/a/__init__.py",
+  "deferred.a.x": "deferred/a/x.py",
+  "deferred.b": "deferred/b/__init__.py",
+  "deferred.b.y": "deferred/b/y.py",
+  "deferred.c": "deferred/c/__init__.py",
+  "deferred.c.z": "deferred/c/z.py",
+  "deferred.d": "deferred/d/__init__.py",
+  "deferred.d.w": "deferred/d/w.py"
+ },
+ "import_records": [
+  {
+   "from": "deferred/a/x.py",
+   "specifier": "deferred.b.y",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "deferred/b/y.py"
+   ]
+  },
+  {
+   "from": "deferred/b/y.py",
+   "specifier": "typing",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [],
+   "external": "typing"
+  },
+  {
+   "from": "deferred/b/y.py",
+   "specifier": "deferred.a.x",
+   "line": 4,
+   "kind": "type",
+   "targets": [
+    "deferred/a/x.py"
+   ]
+  },
+  {
+   "from": "deferred/b/y.py",
+   "specifier": "deferred.c.z",
+   "line": 12,
+   "kind": "lazy",
+   "targets": [
+    "deferred/c/z.py"
+   ]
+  },
+  {
+   "from": "deferred/c/z.py",
+   "specifier": "deferred.b.y",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "deferred/b/y.py"
+   ]
+  },
+  {
+   "from": "deferred/c/z.py",
+   "specifier": "deferred.d.w",
+   "line": 6,
+   "kind": "lazy",
+   "targets": [
+    "deferred/d/w.py"
+   ]
+  },
+  {
+   "from": "deferred/d/w.py",
+   "specifier": "deferred.c.z",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "deferred/c/z.py"
+   ]
+  },
+  {
+   "from": "deferred/d/w.py",
+   "specifier": "deferred.c.z",
+   "line": 6,
+   "kind": "lazy",
+   "targets": [
+    "deferred/c/z.py"
+   ]
+  }
  ]
 }

@@ -320,5 +320,108 @@
     }
    ]
   }
+ ],
+ "files": [
+  "mypkg/__init__.py",
+  "mypkg/api/__init__.py",
+  "mypkg/api/handlers.py",
+  "mypkg/api/schemas.py",
+  "mypkg/cli.py",
+  "mypkg/core/__init__.py",
+  "mypkg/core/service.py",
+  "mypkg/db/__init__.py",
+  "mypkg/db/repo.py",
+  "mypkg/db/session.py",
+  "mypkg/tests/__init__.py",
+  "mypkg/tests/test_service.py"
+ ],
+ "module_paths": {
+  "mypkg": "mypkg/__init__.py",
+  "mypkg.api": "mypkg/api/__init__.py",
+  "mypkg.api.handlers": "mypkg/api/handlers.py",
+  "mypkg.api.schemas": "mypkg/api/schemas.py",
+  "mypkg.cli": "mypkg/cli.py",
+  "mypkg.core": "mypkg/core/__init__.py",
+  "mypkg.core.service": "mypkg/core/service.py",
+  "mypkg.db": "mypkg/db/__init__.py",
+  "mypkg.db.repo": "mypkg/db/repo.py",
+  "mypkg.db.session": "mypkg/db/session.py",
+  "mypkg.tests": "mypkg/tests/__init__.py",
+  "mypkg.tests.test_service": "mypkg/tests/test_service.py"
+ },
+ "import_records": [
+  {
+   "from": "mypkg/api/__init__.py",
+   "specifier": ".",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "mypkg/api/handlers.py",
+    "mypkg/api/schemas.py"
+   ]
+  },
+  {
+   "from": "mypkg/api/handlers.py",
+   "specifier": "mypkg.core.service",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "mypkg/core/service.py"
+   ]
+  },
+  {
+   "from": "mypkg/cli.py",
+   "specifier": "mypkg.api",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "mypkg/api/__init__.py"
+   ]
+  },
+  {
+   "from": "mypkg/core/__init__.py",
+   "specifier": "mypkg.db.session",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "mypkg/db/session.py"
+   ]
+  },
+  {
+   "from": "mypkg/core/service.py",
+   "specifier": "mypkg.db",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "mypkg/db/repo.py"
+   ]
+  },
+  {
+   "from": "mypkg/db/repo.py",
+   "specifier": "mypkg.core",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "mypkg/core/__init__.py"
+   ]
+  },
+  {
+   "from": "mypkg/db/repo.py",
+   "specifier": "mypkg.db.session",
+   "line": 2,
+   "kind": "runtime",
+   "targets": [
+    "mypkg/db/session.py"
+   ]
+  },
+  {
+   "from": "mypkg/tests/test_service.py",
+   "specifier": "mypkg.core.service",
+   "line": 1,
+   "kind": "runtime",
+   "targets": [
+    "mypkg/core/service.py"
+   ]
+  }
  ]
 }

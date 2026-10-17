@@ -10,7 +10,7 @@ use globset::GlobSet;
 use serde::Deserialize;
 
 use super::RawGraph;
-use crate::model::{Collector, Edge, EdgeKind};
+use crate::model::{Collector, Edge, EdgeKind, ImportRecord};
 
 /// JDK 11 or later, using source-file launch from an isolated temporary directory.
 pub fn run(root: &Path, java: &str, excludes: &GlobSet) -> Result<Vec<u8>> {
@@ -95,6 +95,8 @@ struct Dump {
     files: Vec<String>,
     edges: Vec<DumpEdge>,
     unresolved: usize,
+    #[serde(default)]
+    imports: Option<Vec<ImportRecord>>,
 }
 
 #[derive(Deserialize)]
@@ -121,6 +123,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
         );
     }
     Ok(RawGraph {
+        imports: dump.imports,
         metadata: Default::default(),
         collector: Collector {
             name: "java-javac".to_owned(),

@@ -5,6 +5,8 @@ import java.nio.file.*;
 import java.util.*;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeKind;
 import javax.tools.*;
 
 class ArchgraphJava {
@@ -25,6 +27,7 @@ class ArchgraphJava {
         if (compiler == null) throw new IllegalStateException("a full JDK with jdk.compiler is required");
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
         TreeSet<String> edges = new TreeSet<>();
+        List<String> imports = new ArrayList<>();
         Set<String> known = new HashSet<>(files);
         try (StandardJavaFileManager manager = compiler.getStandardFileManager(diagnostics, Locale.ROOT, StandardCharsets.UTF_8)) {
             List<Path> paths = new ArrayList<>();
@@ -39,6 +42,68 @@ class ArchgraphJava {
             Trees trees = Trees.instance(task);
             for (CompilationUnitTree unit : units) {
                 String from = root.relativize(Paths.get(unit.getSourceFile().toUri())).toString().replace('\\', '/');
+                for (ImportTree item : unit.getImports()) {
+                    Tree imported = item.getQualifiedIdentifier();
+                    String specifier = imported.toString();
+                    boolean wildcard = specifier.endsWith(".*");
+                    Tree lookup = wildcard ? ((MemberSelectTree) imported).getExpression() : imported;
+                    Element element = trees.getElement(TreePath.getPath(unit, lookup));
+                    if (element == null && item.isStatic() && !wildcard && imported instanceof MemberSelectTree) {
+                        MemberSelectTree member = (MemberSelectTree) imported;
+                        Element owner = trees.getElement(TreePath.getPath(unit, member.getExpression()));
+                        if (owner instanceof TypeElement) {
+                            for (Element candidate : task.getElements().getAllMembers((TypeElement) owner)) {
+                                if (candidate.getSimpleName().contentEquals(member.getIdentifier())) {
+                                    element = candidate;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    long position = trees.getSourcePositions().getStartPosition(unit, item);
+                    long endPosition = trees.getSourcePositions().getEndPosition(unit, item);
+                    boolean rejected = diagnostics.getDiagnostics().stream().anyMatch(d ->
+                        d.getKind() == Diagnostic.Kind.ERROR && d.getSource() != null
+                        && d.getSource().toUri().equals(unit.getSourceFile().toUri())
+                        && d.getPosition() >= position && d.getPosition() < endPosition);
+                    TreeSet<String> targets = new TreeSet<>();
+                    String external = null;
+                    // javac creates placeholder package elements even for missing wildcard packages.
+                    if (!rejected && element != null && element.asType().getKind() != TypeKind.ERROR) {
+                        if (element instanceof PackageElement) {
+                            for (CompilationUnitTree candidate : units) {
+                                if (candidate.getPackageName() != null
+                                    && candidate.getPackageName().toString().equals(element.toString())) {
+                                    targets.add(root.relativize(Paths.get(candidate.getSourceFile().toUri())).toString().replace('\\', '/'));
+                                }
+                            }
+                        } else {
+                            Element declarationElement = element;
+                            TreePath declaration = trees.getPath(declarationElement);
+                            while (declaration == null && declarationElement.getEnclosingElement() != null
+                                && !(declarationElement.getEnclosingElement() instanceof PackageElement)) {
+                                declarationElement = declarationElement.getEnclosingElement();
+                                declaration = trees.getPath(declarationElement);
+                            }
+                            if (declaration != null) {
+                                String target = root.relativize(Paths.get(declaration.getCompilationUnit().getSourceFile().toUri())).toString().replace('\\', '/');
+                                if (known.contains(target)) targets.add(target);
+                            }
+                        }
+                        if (targets.isEmpty()) {
+                            Element owner = element;
+                            while (owner != null && !(owner instanceof PackageElement)) owner = owner.getEnclosingElement();
+                            if (owner != null) external = owner.toString();
+                        }
+                    }
+                    long line = unit.getLineMap().getLineNumber(position);
+                    List<String> quotedTargets = new ArrayList<>();
+                    for (String target : targets) quotedTargets.add(quote(target));
+                    imports.add("{\"from\":" + quote(from) + ",\"specifier\":" + quote(specifier)
+                        + ",\"line\":" + line + ",\"kind\":\"runtime\",\"targets\":[" + String.join(",", quotedTargets) + "]"
+                        + (external == null ? "" : ",\"external\":" + quote(external))
+                        + (targets.isEmpty() && external == null ? ",\"unresolved\":\"missing\"" : "") + "}");
+                }
                 new TreePathScanner<Void, Void>() {
                     void reference() {
                         Element element = trees.getElement(getCurrentPath());
@@ -70,6 +135,6 @@ class ArchgraphJava {
         for (String file : files) quoted.add(quote(file));
         System.out.println("{\"java_version\":" + quote(System.getProperty("java.version"))
             + ",\"files\":[" + String.join(",", quoted) + "],\"edges\":[" + String.join(",", edges)
-            + "],\"unresolved\":" + errors + "}");
+            + "],\"imports\":[" + String.join(",", imports) + "],\"unresolved\":" + errors + "}");
     }
 }

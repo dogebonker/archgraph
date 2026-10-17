@@ -41,7 +41,7 @@ fn go_references_resolve_to_the_declaring_files() {
                 "go_modules": ["."] })
     );
     assert!(
-        stderr.contains("2 unresolved import(s) reported by go-types"),
+        stderr.contains("2 unresolved collector reference(s) reported by go-types"),
         "{stderr}"
     );
     assert_eq!(doc["config"]["source_root"], ".");

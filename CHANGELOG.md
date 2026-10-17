@@ -21,6 +21,12 @@
 - Explicit excludes take precedence; layout includes can override default and ignore-file exclusions. Included tests occupy separate test modules, stay out of cycle detection and provide a minimal importing-test coverage summary.
 - Python test inclusion discovers files outside the selected package through AST inspection, retaining their import edges without executing tests.
 
+### Edge quality: resolution accounting
+
+- Explicit import ledgers retain specifiers, source lines, kinds and resolution evidence independently of file-reference edges; `report` shows resolution coverage and `unresolved` lists failures with reasons. Legacy recordings keep accounting unavailable until rescanned.
+- Common TypeScript aliases/package maps/workspaces and Python relative, `src/`, namespace and repeatable `--python-path` imports gain resolution evidence. Python inspects external module specs without executing package initializers.
+- Known externals use separate `external_nodes`/`external_edges` arrays and stay out of internal cycle/cohesion metrics. Known destinations excluded by scan policy remain resolved in the ledger.
+
 ### Added
 
 - Public surface reports for TypeScript/JavaScript, Python and Go: symbol exports and external usage, deep imports, advisory unused exports and oversized surfaces. Optional symbol evidence keeps the `archgraph/v1` document format compatible with earlier scans.

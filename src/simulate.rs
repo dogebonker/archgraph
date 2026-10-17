@@ -67,6 +67,17 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         .collect();
     let rename = |path: &str| renamed.get(path).copied().unwrap_or(path).to_owned();
     let mut config = doc.config.clone();
+    config.import_records = doc.imports.as_ref().map(|imports| {
+        imports
+            .iter()
+            .cloned()
+            .map(|mut i| {
+                i.from = rename(&i.from);
+                i.targets = i.targets.iter().map(|p| rename(p)).collect();
+                i
+            })
+            .collect()
+    });
     config.file_metadata = doc
         .files
         .iter()
@@ -98,7 +109,7 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         .as_ref()
         .map(crate::codeowners::compile)
         .transpose()?;
-    Ok(crate::build(
+    let mut moved = crate::build(
         doc.source.clone(),
         config,
         files,
@@ -106,7 +117,9 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         entries,
         rules,
         owners.as_ref(),
-    ))
+    );
+    crate::resolution::attach(&mut moved);
+    Ok(moved)
 }
 
 /// `after` against `before`, as findings carry it: the counts, and the modules whose metrics
@@ -245,6 +258,7 @@ mod tests {
             collection: None,
             file_metadata: Default::default(),
             legacy_module_classes: false,
+            import_records: None,
         };
         let files = ["a/x.ts", "a/y.ts", "b/z.ts"].map(String::from).to_vec();
         crate::build(source, config, files, Vec::new(), Vec::new(), None, None)
