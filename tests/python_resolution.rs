@@ -11,6 +11,16 @@ fn collect(
     paths: &[&str],
     src: &str,
 ) -> (PathBuf, archgraph::collect::RawGraph) {
+    collect_with_probe(name, sources, paths, src, "")
+}
+
+fn collect_with_probe(
+    name: &str,
+    sources: &[(&str, &str)],
+    paths: &[&str],
+    src: &str,
+    probe: &str,
+) -> (PathBuf, archgraph::collect::RawGraph) {
     let directory = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("python-resolution-{name}-{}", std::process::id()));
     let root = directory.join("repo");
@@ -30,7 +40,10 @@ g.__version__ = 'test'
 g.build_graph = lambda *args,**kwargs: Graph()
 sys.modules['grimp'] = g
 "#;
-    let helper = format!("{stub}\n{}", include_str!("../src/collect/grimp_dump.py"));
+    let helper = format!(
+        "{stub}\n{probe}\n{}",
+        include_str!("../src/collect/grimp_dump.py")
+    );
     let mut command = Command::new("python3");
     command
         .args(["-I", "-B", "-c", &helper])
@@ -48,6 +61,80 @@ sys.modules['grimp'] = g
     );
     let graph = grimp::parse(&output.stdout, &root, src).unwrap();
     (root, graph)
+}
+
+#[test]
+fn local_module_probes_require_exact_case_on_every_platform() {
+    let (_, graph) = collect_with_probe(
+        "case-exact",
+        &[
+            ("pkg/__init__.py", "from .context import Context\n"),
+            (
+                "pkg/app.py",
+                "from pkg import Context\nimport pkg.Context\nimport pkg.Space.child\nimport pkg.space.child\nimport pkg.Space\nimport pkg.space\nimport pkg.Native\nimport pkg.native\n",
+            ),
+            ("pkg/context.py", "class Context: pass\n"),
+            ("pkg/space/child.py", "value = 1\n"),
+            ("pkg/native.so", "not loaded"),
+        ],
+        &[],
+        ".",
+        r#"
+import os
+original_isfile, original_isdir = os.path.isfile, os.path.isdir
+def insensitive_path(path):
+    current = os.path.sep
+    for part in os.path.abspath(path).split(os.path.sep)[1:]:
+        try:
+            part = next(name for name in os.listdir(current) if name.lower() == part.lower())
+        except (OSError, StopIteration):
+            return path
+        current = os.path.join(current, part)
+    return current
+os.path.isfile = lambda path: original_isfile(insensitive_path(path))
+os.path.isdir = lambda path: original_isdir(insensitive_path(path))
+"#,
+    );
+    let imports = graph.imports.as_ref().unwrap();
+    for specifier in ["pkg.Context", "pkg.Space.child", "pkg.Space", "pkg.Native"] {
+        let import = imports.iter().find(|i| i.specifier == specifier).unwrap();
+        assert!(import.targets.is_empty(), "{specifier}: {import:?}");
+        assert!(import.namespace.is_none(), "{specifier}: {import:?}");
+        assert!(matches!(import.unresolved, Some(ImportReason::Missing)));
+    }
+    assert!(
+        imports
+            .iter()
+            .any(|i| i.specifier == "pkg" && i.targets == ["pkg/__init__.py"])
+    );
+    assert!(
+        graph
+            .edges
+            .iter()
+            .any(|edge| edge.from == "pkg/app.py" && edge.to == "pkg/context.py")
+    );
+    assert!(
+        imports
+            .iter()
+            .any(|i| i.specifier == "pkg.space.child" && i.targets == ["pkg/space/child.py"])
+    );
+    assert!(
+        imports
+            .iter()
+            .any(|i| i.specifier == "pkg.space" && i.namespace.as_deref() == Some("pkg/space"))
+    );
+    assert!(
+        imports
+            .iter()
+            .any(|i| i.specifier == "pkg.native"
+                && matches!(i.unresolved, Some(ImportReason::Native)))
+    );
+    assert!(
+        graph
+            .files
+            .iter()
+            .all(|file| !file.contains("Context.py") && !file.contains("Space"))
+    );
 }
 
 #[test]

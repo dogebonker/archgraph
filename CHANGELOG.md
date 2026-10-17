@@ -25,6 +25,7 @@
 
 - Explicit import ledgers retain specifiers, source lines, kinds and resolution evidence independently of file-reference edges; `report` shows resolution coverage and `unresolved` lists failures with reasons. Legacy recordings keep accounting unavailable until rescanned.
 - Common TypeScript aliases/package maps/workspaces and Python relative, `src/`, namespace and repeatable `--python-path` imports gain resolution evidence. Python inspects external module specs without executing package initializers.
+- Python local module probes require exact path casing, preventing imported class names from creating duplicate modules on case-insensitive filesystems.
 - Known externals use separate `external_nodes`/`external_edges` arrays and stay out of internal cycle/cohesion metrics. Known destinations excluded by scan policy remain resolved in the ledger.
 
 ### Edge quality: grab-bags and granularity

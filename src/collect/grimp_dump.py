@@ -28,11 +28,29 @@ def inside_root(path):
 
 
 @lru_cache(maxsize=None)
+def directory_entries(directory):
+    try:
+        return frozenset(os.listdir(directory))
+    except OSError:
+        return frozenset()
+
+
+def exact_path(directory, relative):
+    # Import names are case-sensitive even on a case-insensitive filesystem.
+    for part in relative.split(os.sep):
+        if part not in directory_entries(directory):
+            return None
+        directory = os.path.join(directory, part)
+    return directory
+
+
+@lru_cache(maxsize=None)
 def source_path(module):
     for directory in local_roots:
-        base = os.path.join(directory, *module.split("."))
-        for path in [os.path.join(base, "__init__.py"), base + ".py"]:
-            if os.path.isfile(path) and inside_root(path):
+        base = os.path.join(*module.split("."))
+        for relative in [os.path.join(base, "__init__.py"), base + ".py"]:
+            path = exact_path(directory, relative)
+            if path and os.path.isfile(path) and inside_root(path):
                 return path
     return None
 
@@ -40,8 +58,8 @@ def source_path(module):
 @lru_cache(maxsize=None)
 def namespace_path(module):
     for directory in local_roots:
-        path = os.path.join(directory, *module.split("."))
-        if module and os.path.isdir(path) and inside_root(path):
+        path = exact_path(directory, os.path.join(*module.split(".")))
+        if module and path and os.path.isdir(path) and inside_root(path):
             return os.path.relpath(path, scan_root).replace(os.sep, "/")
     return None
 
@@ -76,7 +94,12 @@ def external_package(module):
 
 @lru_cache(maxsize=None)
 def native_module(module):
-    return any(os.path.isfile(os.path.join(directory, *module.split(".")) + suffix) for directory in local_roots for suffix in importlib.machinery.EXTENSION_SUFFIXES)
+    for directory in local_roots:
+        for suffix in importlib.machinery.EXTENSION_SUFFIXES:
+            path = exact_path(directory, os.path.join(*module.split(".")) + suffix)
+            if path and os.path.isfile(path):
+                return True
+    return False
 
 
 if source_path(package) is None and namespace(package):
@@ -86,8 +109,8 @@ if source_path(package) is None and namespace(package):
             return []
     graph = NamespaceGraph()
     for directory in local_roots:
-        base = os.path.join(directory, *package.split("."))
-        if not os.path.isdir(base) or not inside_root(base):
+        base = exact_path(directory, os.path.join(*package.split(".")))
+        if not base or not os.path.isdir(base) or not inside_root(base):
             continue
         for parent, dirs, files in os.walk(base, followlinks=False):
             dirs[:] = sorted(name for name in dirs if not name.startswith(".") and name != "__pycache__")
@@ -109,13 +132,12 @@ def deferred(module):
     """Lines of the module's import statements inside a function body. The file is parsed with
     ast, never run."""
     if module not in deferred_lines:
-        base = os.path.join(src, *module.split("."))
-        path = os.path.join(base, "__init__.py") if os.path.isdir(base) else base + ".py"
+        path = source_path(module)
         lines = set()
         try:
             with open(path, "rb") as f:
                 stack = [(ast.parse(f.read()), False)]
-        except (OSError, SyntaxError, ValueError):
+        except (OSError, SyntaxError, ValueError, TypeError):
             stack = []
         while stack:
             node, inside = stack.pop()
