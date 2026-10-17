@@ -73,8 +73,8 @@ footer { margin-top: 40px; font-size: 12px; color: var(--label2); }
     <p>archgraph reports on well-known open-source repositories, each scanned at a pinned commit.</p>
   </header>
   <section class="intro" aria-label="How these reports were made">
-    <p><a href="https://github.com/dogebonker/archgraph">archgraph</a> turns a repository's import graph into evidence for architecture decisions: per-module coupling and cohesion, module cycles with their smallest break set, and findings that propose file moves backed by a simulation of each move. It collects file-level imports with dependency-cruiser (TypeScript/JavaScript) or grimp (Python); for Python it also parses files with the standard library's <span class="mono">ast</span>, without running them, to tell imports inside functions apart.</p>
-    <p>Each repository was fetched at the commit shown (a shallow fetch of exactly that commit) and one folder of it was scanned with the flags shown, with the default excludes (tests, generated code, and build output at the folder's root or ignored by git). Nothing was installed into the repositories, so imports of npm packages count as unresolved, and imports between workspace packages leave the scanned folder. A module is a folder truncated to the scan depth below the source root.</p>
+    <p><a href="https://github.com/dogebonker/archgraph">archgraph</a> turns a repository's import graph into evidence for architecture decisions: per-module coupling and cohesion, module cycles with their smallest break set, and findings that propose file moves backed by a simulation of each move. It collects dependencies with dependency-cruiser (TypeScript/JavaScript), grimp and the standard-library AST (Python), or go/types (Go), without executing repository code.</p>
+    <p>Each repository was fetched at the pinned commit and scanned with the flags shown. Defaults exclude tests, generated/vendor code, fixtures, stories and examples, and respect ignore files. Known external packages are recorded separately from internal architecture metrics; unresolved specifiers remain visible. Runtime cycles omit deferred, type-only and structural re-export edges, and grab-bag findings require file-split verification. These choices change scope; production APIs in build/test-named folders need particular care. See the <a href="https://github.com/dogebonker/archgraph/blob/main/showcase/edge-quality-report.md">measured methodology and caveats</a>.</p>
     <dl id="method"></dl>
     <p>No co-change analysis: the clones are shallow, so <span class="mono">hidden-coupling</span> never appears here. Imports are not semantics: dependency injection, event buses, string lookups, reflection and dynamic imports without static strings are invisible to the graph. Findings are moves with evidence for a person to judge, not verdicts. The repositories are well-known examples chosen for their size and layout; these reports are reading aids, not endorsements or criticism of the projects.</p>
   </section>
@@ -139,9 +139,16 @@ function repoItem(r) {
   const nums = el("dl", { class: "nums" });
   term(nums, "files", num(s.files));
   term(nums, "modules", num(s.modules));
-  term(nums, "imports", num(s.imports));
-  term(nums, "module cycle", s.largest_module_cycle ? `${s.largest_module_cycle} modules` : "none", s.largest_module_cycle ? "bad" : "");
-  if (s.unresolved) term(nums, "unresolved", num(s.unresolved));
+  term(nums, "import edges", num(s.imports));
+  term(nums, "largest cycle", s.largest_module_cycle ? `${s.largest_module_cycle} modules` : "none", s.largest_module_cycle ? "bad" : "");
+  if (s.import_resolution) {
+    const r = s.import_resolution;
+    term(nums, "source imports", num(r.imports));
+    term(nums, "resolved", r.resolved_percent == null ? "n/a" : `${Number(r.resolved_percent).toFixed(1)}%`);
+    term(nums, "unresolved imports", num(r.unresolved));
+  }
+  if (s.unresolved) term(nums, "collector gaps", num(s.unresolved));
+  if (s.external_packages) term(nums, "external packages", num(s.external_packages));
   term(nums, "scan", `${s.scan_seconds} s`);
   li.append(nums);
 
@@ -158,7 +165,7 @@ function repoItem(r) {
   return li;
 }
 
-for (const [lang, title] of [["typescript", "TypeScript"], ["python", "Python"]]) {
+for (const [lang, title] of [["typescript", "TypeScript"], ["python", "Python"], ["go", "Go"]]) {
   const repos = index.repos.filter(r => r.language === lang);
   if (!repos.length) continue;
   const ul = el("ul", { class: "repos" });
@@ -166,7 +173,7 @@ for (const [lang, title] of [["typescript", "TypeScript"], ["python", "Python"]]
   $("lists").append(el("h2", {}, title), ul);
 }
 const ok = index.repos.filter(r => r.status === "ok").length;
-$("footer").textContent = `${ok} of ${index.repos.length} repositories built. Unresolved counts come from dependency-cruiser: imports it could not resolve, mostly npm packages that were not installed.`;
+$("footer").textContent = `${ok} of ${index.repos.length} repositories built. Resolution counts refer to source specifier occurrences, separately from dependency edges. Collector gaps are separate diagnostics; older scans may lack occurrence accounting.`;
 </script>
 </body>
 </html>

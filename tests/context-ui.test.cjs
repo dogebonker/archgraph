@@ -173,3 +173,27 @@ test('grab-bag panel shows measured factors and retains residual cycle count saf
   assert.match(panel.textContent,/2 original modules; 1 genuine residual cycle/);
   assert.match(panel.textContent,/<utils>: cohesion 0.10, weighted fan-in 8, internal edges per file 0.20/);
 });
+
+test('showcase distinguishes occurrence accounting from legacy collector gaps', () => {
+  const template=fs.readFileSync(path.join(__dirname,'../showcase/index.template.html'),'utf8');
+  const code=template.match(/<script>\n([\s\S]*?)<\/script>/)[1];
+  const elements=new Map();
+  const run=stats=>{
+    elements.clear();
+    const data={archgraph:{version:'test',commit:'a'.repeat(40)},collectors:[],generated_at:'test',repos:[{name:'go-example',repo:'https://github.com/org/repo',commit:'b'.repeat(40),path:'.',language:'go',status:'ok',stats}]};
+    const payload=node();payload.textContent=JSON.stringify(data);elements.set('data',payload);
+    const ctx=vm.createContext({document:{createElement:node,getElementById:id=>{if(!elements.has(id))elements.set(id,node());return elements.get(id);}}});
+    vm.runInContext(code.replace('{{INDEX}}',JSON.stringify(data)),ctx);
+    return elements.get('lists').textContent;
+  };
+  const base={files:3,modules:2,imports:9,unresolved:77,scan_seconds:1};
+  const current=run({...base,import_resolution:{imports:12,resolved:10,unresolved:2,resolved_percent:83.3},external_packages:4});
+  assert.match(current,/Go/);
+  assert.match(current,/import edges9/);
+  assert.match(current,/source imports12/);
+  assert.match(current,/resolved83.3%/);
+  assert.match(current,/unresolved imports2/);
+  assert.doesNotMatch(current,/unresolved imports77/);
+  assert.match(current,/collector gaps77/);
+  assert.match(run(base),/collector gaps77/);
+});

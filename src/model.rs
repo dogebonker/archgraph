@@ -1,4 +1,4 @@
-//! Schema `archgraph/v1`: the contract consumers read. See schema/archgraph.v1.schema.json.
+//! Schema `archgraph/v1.1`; v1 remains readable. See schema/archgraph.v1.1.schema.json.
 
 use std::collections::BTreeMap;
 
@@ -108,7 +108,7 @@ pub struct Collector {
     pub name: String,
     pub version: Option<String>,
     pub cruised: usize,
-    /// Only dependency-cruiser reports unresolved imports.
+    /// Legacy collector diagnostics, independent of the explicit import-resolution ledger.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unresolved: Option<usize>,
     /// `unavailable` when dependency-cruiser could not tell imports of types only (written

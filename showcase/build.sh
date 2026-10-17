@@ -85,12 +85,14 @@ validate_manifest() {
     i=0
     while ((i < ${#flags[@]})); do
       case ${flags[i]} in
-        --include-tests | --no-default-excludes) i=$((i + 1)) ;;
-        --depth | --exclude | --package)
+        --include-tests | --include-generated | --no-default-excludes) i=$((i + 1)) ;;
+        --depth | --exclude | --package | --granularity)
           [[ $((i + 1)) -lt ${#flags[@]} && ${flags[i + 1]} != -* ]] ||
             die "$name: ${flags[i]} needs a value"
           [[ ${flags[i]} != --depth || ${flags[i + 1]} =~ ^[0-9]+$ ]] ||
             die "$name: --depth takes a number"
+          [[ ${flags[i]} != --granularity || ${flags[i + 1]} == file || ${flags[i + 1]} == folder ]] ||
+            die "$name: --granularity takes file or folder"
           i=$((i + 2)) ;;
         *) die "$name: flag ${flags[i]} is not allowed" ;;
       esac
@@ -163,6 +165,8 @@ build_one() {
     imports: (.edges | length),
     cruised: .source.collector.cruised,
     unresolved: .source.collector.unresolved,
+    import_resolution: .import_resolution,
+    external_packages: ((.external_nodes // []) | length),
     collector: { name: .source.collector.name, version: .source.collector.version },
     archgraph: .tool.version,
     depth: .config.depth,
