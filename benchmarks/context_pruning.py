@@ -570,7 +570,7 @@ def results_markdown(result, frozen):
     lines = [
         "## Results",
         "",
-        "One held-out existing production file per PR; signatures count as discovery, not full-body reading.",
+        "One held-out existing production file per PR; export-name summaries count as discovery, not full-body reading or complete function signatures.",
         "",
         "| Token budget | Context discovery | Context full body | Grep + folder | Context only / baseline only | Mean tokens (context / baseline) |",
         "| ---: | ---: | ---: | ---: | ---: | ---: |",
@@ -589,6 +589,13 @@ def results_markdown(result, frozen):
         lines.append(
             f"| {row['budget']:,} | {' | '.join(ratios)} | {row['context_only']} / {row['baseline_only']} | {means[0]:,} / {means[1]:,} |"
         )
+    primary = next(r for r in result["results"] if r["budget"] == 40000)
+    lines += [
+        "",
+        f"At the primary 40k budget, context discovered {primary['context_hits']} held-out files versus {primary['baseline_hits']} for the baseline. Context supplied full bodies for {primary['context_body_hits']}; {primary['context_hits'] - primary['context_body_hits']} discoveries supplied export names only. The paired comparison has {primary['context_only']} context-only hits and {primary['baseline_only']} baseline-only hits. This small convenience sample does not establish general superiority.",
+        "",
+        "Greedy packing can be nonmonotonic: a larger budget admits an earlier large file, which can displace a later held-out file. Report every budget rather than choosing the most favorable one.",
+    ]
     selected = frozen["cases"]
     changed = sum(len(c["changes"]) for c in selected)
     eligible = sum(len(c["eligible"]) for c in selected)
@@ -598,7 +605,7 @@ def results_markdown(result, frozen):
         "",
         f"The 30 selected PRs changed {changed:,} paths: {eligible:,} were eligible existing production files, {added:,} were added, {deleted:,} removed; all remaining paths failed source/root/default-exclusion/barrel eligibility. Full reasons and all considered PRs are in [the frozen inventory](context-prs.json). Base graphs include the surface index, with no hotspot or co-change attachments; historical ranking boosts were not measured.",
         "",
-        "The [machine-readable results](results/context-pruning.json) retain every selected path, token count and raw report hash. Source graphs, API responses and unabridged context reports are archived under the local experiment directory, with immutable commit IDs and commands recorded for reproduction.",
+        f"Measured source and executed harness commit: `{result.get('runner_commit', result.get('engine_commit', 'unspecified'))}`. The executed harness hash belongs to that commit; subsequent report wording changes do not rerun or alter rankings. The [machine-readable results](results/context-pruning.json) retain every selected path, token count and raw report hash. Source graphs, API responses and unabridged context reports are archived under the local experiment directory, with immutable commit IDs and commands recorded for reproduction.",
         "",
         "| Repository / PR | Base | Held-out file | Context at 40k | Grep + folder |",
         "| --- | --- | --- | --- | --- |",
@@ -697,6 +704,7 @@ def main():
             "protocol": PROTOCOL,
             "cases_sha256": digest(args.cases),
             "runner_sha256": digest(Path(__file__)),
+            "runner_commit": run(["git", "-C", REPO, "rev-parse", "HEAD"]).strip(),
             "engine_sha256": digest(args.binary),
             "engine_commit": run(["git", "-C", REPO, "rev-parse", "HEAD"]).strip(),
             "engine_source_dirty": bool(

@@ -1,13 +1,13 @@
 ---
 name: archgraph
-description: Measures a TypeScript/JavaScript, Python or Go repository's import graph with the archgraph CLI and turns it into architecture evidence - module coupling and cohesion, cycles with the fewest imports to break them, layer and boundary rule verdicts, and file moves backed by a before/after simulation. Use when asked to review or improve a codebase's architecture or module boundaries, find import cycles, check imports against layer rules, decide where a file belongs, render a dependency graph, or compare architecture between two commits.
+description: Measures a TypeScript/JavaScript, Python, Go, Rust or Java repository's import graph with the archgraph CLI and turns it into architecture evidence - module coupling and cohesion, cycles with the fewest imports to break them, layer and boundary rule verdicts, and file moves backed by a before/after simulation. Use when asked to review or improve a codebase's architecture or module boundaries, find import cycles, check imports against layer rules, decide where a file belongs, render a dependency graph, or compare architecture between two commits.
 license: MIT OR Apache-2.0
 compatibility: Needs the archgraph binary on PATH (install.sh, npx archgraph-cli, or cargo install). TypeScript/JavaScript scans need dependency-cruiser 18.4.0 and typescript 6.0.3 installed in the scanned repository (run through npx), or installed elsewhere and passed with --depcruise. Python scans need a Python with grimp 3.17. Go scans need Go 1.21 or later (tested with 1.27.1).
 ---
 
 # archgraph
 
-archgraph reads a repository's file imports, groups files into modules (folders, or rules), and reports metrics, cycles, rule verdicts and findings as JSON (`schema: archgraph/v1`). Every claim you make about the architecture must come from its output.
+archgraph reads a repository's file imports, groups files into modules (folders, or rules), and reports metrics, cycles, rule verdicts and findings as JSON (`schema: archgraph/v1.1`; legacy v1 input remains supported). Every claim you make about the architecture must come from its output.
 
 ## Setup
 
@@ -58,8 +58,9 @@ A scan document is input to `check`, `simulate`, `render` and `diff`: do not edi
 
 ## Acting on the evidence
 
-Three skills next to this one take the next step:
+Related skills take the next step:
 
+- [archgraph-context](../archgraph-context/SKILL.md): before editing, prepares a token-budgeted reading plan from a saved scan, with constraints first and export summaries for large or distant files.
 - [archgraph-guard](../archgraph-guard/SKILL.md): before a coding task is reported done, compares the change with its base commit and resolves new forbidden imports and cycles.
 - [archgraph-fix](../archgraph-fix/SKILL.md): fixes one finding end to end (simulate, apply, test, re-scan, keep or revert).
 - [archgraph-rules](../archgraph-rules/SKILL.md): writes and calibrates a `layout.yaml` from an approved architecture and wires the CI gate.
@@ -75,6 +76,6 @@ Tell the user these when they matter:
 - Small repositories have little signal; the `small-repo` finding says so.
 - Findings are moves with evidence. There is no single score to optimize; module colors in `render` are a reading aid.
 - Module boundaries come from folders (`--depth`) or rules `modules:`; wrong boundaries give wrong metrics.
-- Barrel attribution over-approximates: a consumer of an index is counted against every re-exported file.
-- Only TypeScript/JavaScript, Python and Go are supported; Rust and Java are not yet.
+- Named barrel imports resolve to defining files; ambiguous namespace/star imports retain low-confidence barrel evidence.
+- Rust collection needs rust-analyzer; Java needs a JDK 11 or newer. See the guide for their collector flags and limits.
 - Go: a use reached only through the types of a dependency outside the repository is missing, every platform's files are merged, and reflection, `go:linkname` and `go:embed` are invisible. Files that cannot leave their package and still compile (`source.collector.bound_files`: methods of a type in another file, uses of another file's unexported names) are never proposed for a move.

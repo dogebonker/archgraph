@@ -36,7 +36,7 @@
 
 ### Added
 
-- Budgeted `context` reading plans from saved graphs, with required layout constraints, import/importer tiers, barrel deduplication, export summaries and omission reasons; project skill and opt-in Claude Code/Cursor adapters.
+- Budgeted `context` reading plans from saved graphs, with required layout constraints, import/importer tiers, barrel deduplication, export summaries and omission reasons; project skill and opt-in Claude Code/Cursor adapters. Includes a frozen 30-PR retrieval benchmark against grep + folder, reporting discovery and full-body recall separately.
 
 - `package-splits` ranks cohesive, externally used folder subtrees by importing modules × production files, with free/cheap classifications, full cut lists, workspace checks, uncertainty guards and cycle simulations. Optional graph attachments survive replay and power map island highlights; build and packaging compatibility remain unverified.
 - New scans record an optional Git-relative `source.scan_root` to bind workspace metadata to the correct scanned directory. Older scans remain readable and receive conservative workspace-readiness labels.

@@ -106,6 +106,8 @@ Find folders that could become packages with `archgraph package-splits graph.jso
 
 Prepare an agent reading plan with `archgraph context --task "Fix billing tax rounding" --files src/billing/tax.ts --budget 40k`. It packs rules, imports/importers and saved export summaries into an estimated budget, with reasons and omissions. Use `--format markdown` for a pasteable plan; scan with `--symbols` for summaries. Includes an [archgraph-context skill](skills/archgraph-context/SKILL.md) and opt-in Claude Code/Cursor adapters; see [context pruning](docs/guide.md#context-pruning).
 
+A frozen 30-PR study across 20 repositories found the held-out file at 40k tokens in 13/30 cases (43.3%) versus 11/30 (36.7%) for grep + folder. Full-body recall was 10/30 versus 11/30; export-only hits explain the difference. This small sample gives mixed results, not evidence of broad superiority. See [the protocol and per-PR results](benchmarks/CONTEXT.md).
+
 Add a `CODEOWNERS` file and the report shows declared responsibility by file and module. Ownership qualifies misplaced-file findings: conflicting team boundaries keep the dependency evidence and require review before a move. Shared ownership and incomplete coverage stay visible.
 
 ```sh
@@ -196,9 +198,10 @@ The action scans the pull request and its base commit and fails only on what the
 
 ## For coding agents
 
-Four skills in the open Agent Skills format, for Claude Code, Codex, Cursor and anything else that reads them:
+Five skills in the open Agent Skills format, for Claude Code, Codex, Cursor and anything else that reads them:
 
 - **[archgraph](skills/archgraph/SKILL.md)** runs the tool and reads its output correctly.
+- **[archgraph-context](skills/archgraph-context/SKILL.md)** prepares a budgeted reading plan, with architecture rules before source files.
 - **[archgraph-guard](skills/archgraph-guard/SKILL.md)** checks a change against its base commit before the agent says it is done, and fixes the violations it introduced. It can run as a Claude Code Stop hook.
 - **[archgraph-fix](skills/archgraph-fix/SKILL.md)** fixes one finding end to end and keeps the change only when a re-scan and the tests agree.
 - **[archgraph-rules](skills/archgraph-rules/SKILL.md)** writes a `layout.yaml` from the architecture you approve and proves each rule catches a planted violation.
