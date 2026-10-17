@@ -92,6 +92,8 @@ forbidden src/domain/user.ts -> src/adapters/out/pg.ts (layers)
 3 forbidden, 0 unplanned
 ```
 
+Start with an evidence-backed draft of the current architecture using `archgraph infer-layout graph.json`. It prints annotated YAML with inferred layers, unresolved cycles, and sparse-boundary proposals including existing violations. `--apply` creates `layout.yaml` without overwriting an existing file. Review and edit the draft before enforcing it; see [layout inference](docs/guide.md#layout-inference).
+
 <p align="center">
   <img alt="Zooming into the shared/lib module of Next.js until its files appear, dragging the server module across the map while its imports follow, then clicking it for its diagnosis: a hub imported by 48 modules that imports 23 less stable ones, with a red ring for imports to cut to break a cycle" src="docs/assets/demo.webp" width="100%">
 </p>

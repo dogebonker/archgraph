@@ -11,6 +11,8 @@ A rules file is done when it is **calibrated**: every rule has caught a planted 
 
 ## Steps
 
+To start from observed dependencies, run `archgraph infer-layout <tmp>/graph.json` after scanning. It prints a draft with SCC-aware layers, unresolved cycle groups and sparse-boundary proposals with existing violations. Layer evidence is top-down; executable YAML remains foundation-first. All import kinds participate, matching `check`. Use this as evidence for step 1, then review intent and calibrate the approved rules; absence of imports is not proof of an intended boundary. `--apply <new-path>` creates a draft without overwriting an existing file.
+
 1. **Agree on the architecture.** Scan without rules (Setup in [the archgraph skill](../archgraph/SKILL.md)) and read the folders, modules and module imports as they are. Propose the pattern the code is closest to, and one alternative, from [patterns.md](patterns.md); keep an existing convention over a new one. Done when the user has chosen a pattern and confirmed which folders are its layers, modules and public entries.
 2. **Write `layout.yaml`** with the pattern's template, adapted to the real folder names (syntax below). Give every `forbid` an `id` and a `reason` in the team's words. Done when `archgraph scan <root> --rules layout.yaml -o <tmp>/graph.json` runs.
 3. **Read the verdicts.** Run `archgraph check <tmp>/graph.json`. Walk the user through every forbidden and unplanned import, grouped by rule (your `id`s, or a built-in one: `layers`, `public`, `same-module`, `none` for unplanned, `default`): either the rule misstates the layout (fix the rule) or the import is a real violation (keep it on the list). Done when each group is classified and the rules are corrected.

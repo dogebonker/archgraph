@@ -50,7 +50,7 @@ The collector runs inside the scanned repository:
 
 ## Commands
 
-`scan`, `report`, `history` and `impact` run collectors. Other analysis commands read a scan document and recompute modules, metrics, cycles, verdicts and findings from its files, edges and config with the same code, so their output agrees with the rules in effect.
+`scan`, `report`, `history` and `impact` run collectors. `infer-layout` reads a saved graph to draft rules without running collectors. Other analysis commands read a scan document and recompute modules, metrics, cycles, verdicts and findings from its files, edges and config with the same code, so their output agrees with the rules in effect.
 
 **scan** writes the scan document (`kind: scan`).
 
@@ -133,6 +133,32 @@ archgraph diff before.json after.json --fail-on new-forbidden,new-cycles --forma
 - `--format json|markdown` (default `json`): `markdown` prints a compact summary for a pull request or CI job summary instead of the document: a pass or fail headline naming the failed `--fail-on` conditions, new forbidden and unplanned imports (`file → file (rule)`), new and resolved cycles, a table of modules whose cohesion or instability moved by 0.05 or more (largest move first, at most 20 rows, then "and N more"), and the numbers of added and removed modules. Paths and module ids are backslash-escaped (backslash, `|`, backtick, `<`, `>`, `*`, `_`, `[`, `]`) and line breaks become spaces, since they come from the scanned repository.
 
 `check`, `simulate` and `render` take `--rules layout.yaml` to replace the rules embedded in the scan.
+
+## Layout inference
+
+`infer-layout` drafts rules from the architecture observed in a saved v1 or v1.1 graph. **The result is a draft for review, not a statement of architectural intent.** Folder names do not prove intent, and missing imports or excluded files weaken evidence that a dependency is absent.
+
+```sh
+archgraph infer-layout graph.json                       # print annotated YAML
+archgraph infer-layout graph.json --apply               # create ./layout.yaml
+archgraph infer-layout graph.json --apply layout.draft.yaml
+archgraph check graph.json --rules layout.draft.yaml     # after reviewing/editing
+```
+
+Printing is the default and writes no files. `--apply` creates a new file and refuses to overwrite an existing file or symbolic link. Inference does not run collectors, inspect source, or change the graph.
+
+The command condenses module SCCs and assigns each component its longest distance from an entrypoint in the condensation DAG. Evidence comments show the layers top to bottom: layer 0 has no incoming dependencies; deeper layers contain dependencies. Leaves can occur at different depths. The executable `layers` list remains **foundation-first**, as required by the existing rules format. Patterns at the same depth share one layer, and patterns come from actual file membership rather than module names. Cyclic module groups appear in `# unresolved: cycle between ...` comments and receive no layer or forbid proposals.
+
+Inference uses **all import kinds**, because existing layer rules apply to all kinds. Consequently, a type/lazy/re-export cycle can remain unresolved here even when the default runtime cycle report is acyclic. Dependencies use their written boundary (`original_to` for resolved barrel imports), matching `check`. Tests and externals are outside inference; written targets absent from the scanned files are counted as omitted evidence.
+
+Sparse-boundary proposals require at least two files on each side and **100 potential file pairs** by default. Density is distinct observed importing-file/target-file pairs divided by source files × target files, across all kinds. A density at or below **0.01** qualifies. Comments give the evidence and list existing violating dependencies with source lines when available: adopting such a rule means reviewing and fixing those imports. Proposals already implied by layer ordering are omitted. At most **20** forbid proposals are printed, ordered by density, potential pairs and module IDs; comments report omitted proposals.
+
+```sh
+archgraph infer-layout graph.json --min-potential-edges 500 --max-density 0.005
+archgraph infer-layout graph.json --max-rules 0           # layers only
+```
+
+These thresholds limit over-fitting; zero observed imports still do not establish an intended boundary. Review the draft before making it a CI policy. No scan-schema or rules-format migration is required.
 
 ## Exclusions and included tests
 

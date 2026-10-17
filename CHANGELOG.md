@@ -36,6 +36,7 @@
 
 ### Added
 
+- `infer-layout` drafts annotated layout rules from saved graphs: SCC condensation, longest-path layers, unresolved cycle groups, and sparse-boundary proposals with file-pair evidence and existing violations. It prints by default; `--apply` creates a new draft without overwriting existing files.
 - Public surface reports for TypeScript/JavaScript, Python and Go: symbol exports and external usage, deep imports, advisory unused exports and oversized surfaces. Optional symbol evidence keeps the `archgraph/v1` document format compatible with earlier scans.
 - Strict `entrypoints` rules for module boundaries, integrated with `check`, plus surface metrics and ring thickness in the architecture map. Incomplete symbol coverage withholds unused-export suggestions.
 - Java source-reference collection through the JDK and Rust workspace collection through `rust-analyzer`, with build scripts and proc macros disabled by default.

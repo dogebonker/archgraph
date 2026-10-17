@@ -27,6 +27,8 @@ mod impact_cli;
 mod impact_context;
 #[path = "cli/impact_typescript.rs"]
 mod impact_typescript;
+#[path = "cli/infer_layout.rs"]
+mod infer_layout_cli;
 #[path = "cli/provenance.rs"]
 mod provenance_cli;
 #[path = "cli/surface.rs"]
@@ -72,6 +74,8 @@ enum Cmd {
     Impact(impact_cli::ImpactArgs),
     /// Compare exposed symbols with external usage and intended entrypoints
     Surface(surface_cli::SurfaceArgs),
+    /// Draft layout rules from observed module dependencies, for review
+    InferLayout(infer_layout_cli::InferLayoutArgs),
     /// List default file exclusions and their categories
     ShowExcludes,
     /// List imports whose file or external package could not be resolved
@@ -319,6 +323,7 @@ fn main() -> ExitCode {
         Cmd::Hotspots(args) => hotspots_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Impact(args) => impact_cli::run(args),
         Cmd::Surface(args) => surface_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::InferLayout(args) => infer_layout_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::ShowExcludes => show_excludes().map(|()| ExitCode::SUCCESS),
         Cmd::Unresolved(args) => unresolved(args).map(|()| ExitCode::SUCCESS),
     };

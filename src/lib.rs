@@ -12,6 +12,7 @@ pub mod graph;
 pub mod history;
 pub mod hotspots;
 pub mod impact;
+pub mod infer_layout;
 pub mod model;
 pub mod modules;
 pub mod quality;
