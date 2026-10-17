@@ -1437,6 +1437,27 @@
             },
             "all_kinds": {
               "type": "boolean"
+            },
+            "include_generated": {
+              "type": "boolean"
+            },
+            "includes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "excluded_files": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/path"
+              }
+            },
+            "explicit_excludes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           }
         },
@@ -1467,6 +1488,11 @@
                   "minLength": 1
                 },
                 "uniqueItems": true
+              },
+              "class": {
+                "enum": [
+                  "tests"
+                ]
               }
             }
           }
@@ -1556,6 +1582,11 @@
                   "type": "number",
                   "minimum": 0
                 }
+              },
+              "class": {
+                "enum": [
+                  "tests"
+                ]
               }
             }
           }
@@ -1657,6 +1688,28 @@
               },
               "contains_runtime_cycle": {
                 "type": "boolean"
+              }
+            }
+          }
+        },
+        "test_coverage": {
+          "type": "object",
+          "required": [
+            "modules",
+            "covered",
+            "without_importing_tests"
+          ],
+          "properties": {
+            "modules": {
+              "$ref": "#/$defs/count"
+            },
+            "covered": {
+              "$ref": "#/$defs/count"
+            },
+            "without_importing_tests": {
+              "type": "array",
+              "items": {
+                "type": "string"
               }
             }
           }
@@ -2082,6 +2135,18 @@
             }
           },
           "additionalProperties": false
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

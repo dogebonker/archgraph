@@ -32,7 +32,15 @@ pub fn restore_scan(mut input: model::ScanInput) -> Result<Document> {
     input.config.file_metadata = input
         .files
         .iter()
-        .map(|f| (f.path.clone(), model::NodeMetadata { barrel: f.barrel }))
+        .map(|f| {
+            (
+                f.path.clone(),
+                model::NodeMetadata {
+                    barrel: f.barrel,
+                    test: f.class == Some(crate::model::ModuleClass::Tests),
+                },
+            )
+        })
         .collect();
     let mut doc = analyze(
         input.source,
@@ -100,6 +108,11 @@ pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
             .unwrap_or_else(|| {
                 modules::module_of(&file.path, &input.config, input.source.language)
             });
+        let module = if file.class == Some(model::ModuleClass::Tests) {
+            format!("tests::{module}")
+        } else {
+            module
+        };
         if file.module != module {
             bail!(
                 "{} has module `{}`, its config gives `{module}`",
@@ -223,12 +236,23 @@ pub fn build(
     edges.sort_by(|a, b| {
         (&a.from, &a.to, &a.original_to, a.kind).cmp(&(&b.from, &b.to, &b.original_to, b.kind))
     });
+    let tests: BTreeSet<_> = files
+        .iter()
+        .filter(|path| {
+            config.file_metadata.get(*path).is_some_and(|m| m.test)
+                || collect::excludes::is_test(path)
+        })
+        .cloned()
+        .collect();
     let module_of: BTreeMap<String, String> = files
         .into_iter()
         .map(|f| {
-            let module = rules
+            let mut module = rules
                 .and_then(|r| r.module_of(&f))
                 .unwrap_or_else(|| modules::module_of(&f, &config, source.language));
+            if !config.legacy_module_classes && tests.contains(&f) {
+                module = format!("tests::{module}");
+            }
             (f, module)
         })
         .collect();
@@ -278,9 +302,14 @@ pub fn build(
         .cloned()
         .collect();
     let module_edges = graph::module_edges(&module_of, &edges);
+    let production_edges: Vec<_> = edges
+        .iter()
+        .filter(|e| !tests.contains(&e.from) && !tests.contains(&e.to))
+        .cloned()
+        .collect();
     let (cycles, type_only_cycles) = quality::cycles(
         &module_of,
-        &edges,
+        &production_edges,
         &entries,
         &barrels,
         source.language == model::Language::Go,
@@ -288,6 +317,32 @@ pub fn build(
     );
     let mut metrics = graph::modules(&module_of, &pairs);
     quality::metrics(&mut metrics, &module_of, &edges, &barrels);
+    for module in &mut metrics {
+        if !config.legacy_module_classes
+            && module_of
+                .iter()
+                .any(|(path, id)| id == &module.id && tests.contains(path))
+        {
+            module.class = Some(model::ModuleClass::Tests);
+        }
+    }
+    let test_coverage = (config.include_tests || !tests.is_empty()).then(|| {
+        let production: BTreeSet<_> = module_of
+            .iter()
+            .filter(|(path, _)| !tests.contains(*path))
+            .map(|(_, id)| id.clone())
+            .collect();
+        let covered: BTreeSet<_> = edges
+            .iter()
+            .filter(|e| tests.contains(&e.from) && !tests.contains(&e.to))
+            .map(|e| module_of[&e.to].clone())
+            .collect();
+        model::TestCoverage {
+            modules: production.len(),
+            covered: covered.len(),
+            without_importing_tests: production.difference(&covered).cloned().collect(),
+        }
+    });
     let mut doc = Document {
         schema: SCHEMA,
         kind: "scan",
@@ -298,12 +353,15 @@ pub fn build(
         modules: metrics,
         cycles,
         type_only_cycles,
+        test_coverage,
         files: module_of
             .iter()
             .map(|(path, module)| File {
                 path: path.clone(),
                 module: module.clone(),
                 barrel: barrels.contains(path),
+                class: (!config.legacy_module_classes && tests.contains(path))
+                    .then_some(model::ModuleClass::Tests),
                 owners: owners.map(|o| o.owners(path)).unwrap_or_default(),
             })
             .collect(),

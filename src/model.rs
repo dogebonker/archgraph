@@ -27,6 +27,8 @@ pub struct Document {
     pub module_edges: Vec<ModuleEdge>,
     pub cycles: Vec<Cycle>,
     pub type_only_cycles: Vec<DeferredCycle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub test_coverage: Option<TestCoverage>,
     /// The counts and module metrics that finding simulations and `simulate` compare.
     pub summary: Summary,
     pub findings: Vec<Finding>,
@@ -132,6 +134,14 @@ pub struct Config {
     pub excludes: Vec<String>,
     pub include_tests: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub include_generated: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub includes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub excluded_files: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub explicit_excludes: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub all_kinds: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub no_default_excludes: bool,
@@ -143,11 +153,14 @@ pub struct Config {
     /// Runtime carrier for source node attributes; persisted on `files`, not as configuration.
     #[serde(skip)]
     pub file_metadata: BTreeMap<String, NodeMetadata>,
+    #[serde(skip)]
+    pub legacy_module_classes: bool,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct NodeMetadata {
     pub barrel: bool,
+    pub test: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -170,8 +183,23 @@ pub struct File {
     pub path: String,
     pub module: String,
     pub barrel: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub class: Option<ModuleClass>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub owners: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ModuleClass {
+    Tests,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TestCoverage {
+    pub modules: usize,
+    pub covered: usize,
+    pub without_importing_tests: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -260,6 +288,8 @@ pub enum Verdict {
 #[derive(Debug, Serialize)]
 pub struct Module {
     pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub class: Option<ModuleClass>,
     pub files: usize,
     pub ca: usize,
     pub ce: usize,

@@ -10,10 +10,7 @@ static ALL_KINDS: AtomicBool = AtomicBool::new(false);
 static LEGACY_V1: AtomicBool = AtomicBool::new(false);
 
 use anyhow::{Context, Result, bail};
-use archgraph::collect::{
-    self, DEFAULT_EXCLUDES, GO_EXCLUDES, GO_TEST_EXCLUDES, JAVA_EXCLUDES, JAVA_TEST_EXCLUDES,
-    RUST_EXCLUDES, TEST_EXCLUDES, depcruise, go, grimp, java, rust,
-};
+use archgraph::collect::{self, depcruise, go, grimp, java, rust};
 use archgraph::model::{
     Config, CycleLevel, Document, Git, Language, SCHEMA, ScanInput, Source, Verdict,
 };
@@ -71,6 +68,8 @@ enum Cmd {
     Impact(impact_cli::ImpactArgs),
     /// Compare exposed symbols with external usage and intended entrypoints
     Surface(surface_cli::SurfaceArgs),
+    /// List default file exclusions and their categories
+    ShowExcludes,
 }
 
 #[derive(Args)]
@@ -150,6 +149,11 @@ struct ScanOpts {
     /// Keep test files
     #[arg(long)]
     include_tests: bool,
+    /// Keep generated and vendored files excluded by default
+    #[arg(long)]
+    include_generated: bool,
+    #[arg(skip)]
+    collection_includes: Vec<String>,
     /// Override language detection
     #[arg(long, value_enum)]
     language: Option<Language>,
@@ -290,6 +294,7 @@ fn main() -> ExitCode {
         Cmd::Hotspots(args) => hotspots_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Impact(args) => impact_cli::run(args),
         Cmd::Surface(args) => surface_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::ShowExcludes => show_excludes().map(|()| ExitCode::SUCCESS),
     };
     result.unwrap_or_else(|e| {
         eprintln!("error: {e:#}");
@@ -583,6 +588,25 @@ fn history(mut args: HistoryArgs) -> Result<()> {
     Ok(())
 }
 
+fn show_excludes() -> Result<()> {
+    for language in [
+        Language::Typescript,
+        Language::Python,
+        Language::Go,
+        Language::Java,
+        Language::Rust,
+    ] {
+        println!("{language:?}:");
+        for pattern in collect::excludes::defaults(language) {
+            println!("  {pattern}");
+        }
+    }
+    println!(
+        "Also respects .gitignore and .archgraphignore. Layout include overrides defaults/ignore files; explicit exclude wins."
+    );
+    Ok(())
+}
+
 /// Runs the collector under `root` and analyzes its output with `rules`.
 fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Document> {
     // Resolved here: a relative program path is not reliably resolved against the child's
@@ -596,38 +620,45 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         })
         .transpose()?;
     let source_dir = collect::source_dir(root);
+    let loaded_rules = rules.map(rules::load).transpose()?;
+    let layout = loaded_rules.as_ref().map(|r| &r.doc);
+    let includes: Vec<_> = layout
+        .into_iter()
+        .flat_map(|r| r.include.iter().cloned())
+        .chain(args.collection_includes.iter().cloned())
+        .collect();
+    let selection = collect::excludes::Options {
+        no_defaults: args.no_default_excludes,
+        include_tests: args.include_tests,
+        include_generated: args.include_generated,
+        cli_excludes: args.exclude.clone(),
+        excludes: layout.map(|r| r.exclude.clone()).unwrap_or_default(),
+        includes: includes.clone(),
+    };
     let language = match args.language {
         Some(language) => language,
-        None => collect::detect_language(root, source_dir)?,
+        None => collect::detect_language_with_options(root, source_dir, selection.clone())?,
     };
-    let mut excludes: Vec<String> = Vec::new();
-    if !args.no_default_excludes {
-        let (generated, tests): (&[&str], &[&str]) = match language {
-            Language::Go => (GO_EXCLUDES, GO_TEST_EXCLUDES),
-            Language::Rust => (RUST_EXCLUDES, &[]),
-            Language::Java => (JAVA_EXCLUDES, JAVA_TEST_EXCLUDES),
-            _ => (&[], &[]),
-        };
-        excludes.extend(
-            DEFAULT_EXCLUDES
-                .iter()
-                .chain(generated)
-                .map(|g| g.to_string()),
-        );
-        if !args.include_tests {
-            excludes.extend(TEST_EXCLUDES.iter().chain(tests).map(|g| g.to_string()));
-        }
-    }
-    excludes.extend(args.exclude.iter().cloned());
+    let policy = collect::excludes::Policy::new(root, language, selection)?;
+    let excludes = policy.patterns().to_vec();
+    // Discovery must retain candidates that layout includes can restore after collection.
+    let discovery_excludes = args
+        .exclude
+        .iter()
+        .cloned()
+        .chain(layout.into_iter().flat_map(|r| r.exclude.iter().cloned()))
+        .collect::<Vec<_>>();
 
     let input = args
         .collector_input
         .as_ref()
         .map(|p| fs::read(p).with_context(|| format!("reading {}", p.display())))
         .transpose()?;
-    let excludes_set = collect::globset(&excludes)?;
+    let excludes_set = collect::globset(&discovery_excludes)?;
     // Go: files that cannot be split across packages, in pairs.
     let mut bound = Vec::new();
+    let mut generated = Vec::new();
+    let mut test_support = Vec::new();
     let mut python_package = None;
     let (raw, source_root) = match language {
         Language::Typescript => {
@@ -635,7 +666,15 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
                 Some(json) => (json, None),
                 None => depcruise::run(
                     root,
-                    if args.include_tests { "." } else { source_dir },
+                    if args.include_tests
+                        || args.include_generated
+                        || args.no_default_excludes
+                        || !includes.is_empty()
+                    {
+                        "."
+                    } else {
+                        source_dir
+                    },
                     depcruise.as_deref(),
                 )?,
             };
@@ -651,7 +690,13 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
             python_package = Some(package.clone());
             let json = match input {
                 Some(json) => json,
-                None => grimp::run(root, source_dir, &package, &args.python)?,
+                None => grimp::run(
+                    root,
+                    source_dir,
+                    &package,
+                    &args.python,
+                    args.include_tests || args.no_default_excludes || !includes.is_empty(),
+                )?,
             };
             (
                 grimp::parse(&json, root, source_dir)?,
@@ -673,14 +718,18 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
                     go::run(root, &args.go, &dirs)?
                 }
             };
-            let keep_tests = args.include_tests || args.no_default_excludes;
-            let parsed = go::parse(&json, args.no_default_excludes, keep_tests)?;
-            if !parsed.left_out.is_empty() {
-                eprintln!(
-                    "warning: left out as test support (--include-tests keeps them): {}",
-                    parsed.left_out.join(", ")
-                );
+            if !args.include_tests && !args.no_default_excludes && includes.is_empty() {
+                let omitted = go::parse(&json, true, false)?.left_out;
+                if !omitted.is_empty() {
+                    eprintln!(
+                        "warning: left out as test support (--include-tests keeps them): {}",
+                        omitted.join(", ")
+                    );
+                }
             }
+            let parsed = go::parse(&json, true, true)?;
+            generated = parsed.generated;
+            test_support = parsed.test_support;
             bound = parsed.bound;
             (parsed.raw, ".".to_owned())
         }
@@ -706,10 +755,30 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
             (java::parse(&json)?, ".".to_owned())
         }
     };
-    let mut raw = raw.exclude(&excludes_set);
-    if !args.no_default_excludes {
-        raw = raw.exclude_ignored_output(root)?;
-    }
+    let mut raw = raw;
+    let kept: std::collections::HashSet<_> = policy
+        .select(&raw.files)?
+        .into_iter()
+        .filter(|path| {
+            (args.no_default_excludes
+                || args.include_generated
+                || !generated.contains(path)
+                || policy.included(path))
+                && (args.no_default_excludes
+                    || args.include_tests
+                    || !test_support.contains(path)
+                    || policy.included(path))
+        })
+        .collect();
+    let excluded_files = raw
+        .files
+        .iter()
+        .filter(|p| !kept.contains(*p))
+        .cloned()
+        .collect();
+    raw.files.retain(|p| kept.contains(p));
+    raw.edges
+        .retain(|e| kept.contains(&e.from) && kept.contains(&e.to));
     raw.collector.bound_files = go::bound_files(&bound, &raw.files);
     if let Some(n) = raw.collector.unresolved.filter(|&n| n > 0) {
         eprintln!(
@@ -731,10 +800,16 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         package_modules,
         source_root,
         excludes,
-        include_tests: args.include_tests || args.no_default_excludes,
+        include_tests: args.include_tests
+            || args.no_default_excludes
+            || raw.files.iter().any(|p| collect::excludes::is_test(p)),
+        include_generated: args.include_generated || args.no_default_excludes,
+        includes,
+        excluded_files,
+        explicit_excludes: Some(args.exclude.clone()),
         all_kinds: ALL_KINDS.load(Ordering::Relaxed),
         no_default_excludes: args.no_default_excludes,
-        rules: rules.map(rules::load).transpose()?,
+        rules: loaded_rules,
         codeowners: codeowners::load(root)?,
         collection: matches!(language, Language::Python | Language::Rust).then_some(
             archgraph::model::CollectionOptions {
@@ -744,6 +819,7 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
             },
         ),
         file_metadata: raw.metadata,
+        legacy_module_classes: false,
     };
     if let Some(owners) = &config.codeowners {
         for warning in &owners.warnings {
@@ -846,6 +922,18 @@ fn report(args: Report) -> Result<ExitCode> {
         count(doc.modules.len(), "module"),
         count(doc.edges.len(), "import")
     );
+    if let Some(coverage) = &doc.test_coverage {
+        out += &format!(
+            "  tests import {} of {} production modules; {} without importing tests\n",
+            coverage.covered,
+            coverage.modules,
+            coverage.without_importing_tests.len()
+        );
+        for module in &coverage.without_importing_tests {
+            out += &format!("    {module}\n");
+        }
+    }
+    out += &format!("  {} excluded files\n", doc.config.excluded_files.len());
     if let Some(owners) = &doc.config.codeowners {
         let owned = doc.files.iter().filter(|f| !f.owners.is_empty()).count();
         let mut counts = BTreeMap::new();
@@ -1172,7 +1260,10 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
         .map(|f| {
             (
                 f.path.clone(),
-                archgraph::model::NodeMetadata { barrel: f.barrel },
+                archgraph::model::NodeMetadata {
+                    barrel: f.barrel,
+                    test: f.class == Some(archgraph::model::ModuleClass::Tests),
+                },
             )
         })
         .collect();
@@ -1185,7 +1276,7 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
 fn write(output: Option<&Path>, value: &impl serde::Serialize) -> Result<()> {
     let mut value = serde_json::to_value(value)?;
     if LEGACY_V1.load(Ordering::Relaxed) {
-        archgraph::compat::v1(&mut value);
+        archgraph::compat::v1(&mut value)?;
     }
     let json = serde_json::to_string_pretty(&value)? + "\n";
     match output {

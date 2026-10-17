@@ -7,9 +7,13 @@ use serde_json::json;
 fn document(include_entry: bool) -> archgraph::model::Document {
     let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"dependency-cruiser","version":null,"cruised":4},"git":null,"generated_at":"test"})).unwrap();
     let mut config: Config = serde_json::from_value(json!({"depth":1,"source_root":".","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"0".repeat(64),"doc":{"version":1,"entrypoints":{"api/**":"api/index.ts"}}}})).unwrap();
-    config
-        .file_metadata
-        .insert("api/index.ts".into(), NodeMetadata { barrel: true });
+    config.file_metadata.insert(
+        "api/index.ts".into(),
+        NodeMetadata {
+            barrel: true,
+            ..Default::default()
+        },
+    );
     let mut files = vec![
         "api/impl.ts".into(),
         "app/via.ts".into(),
@@ -114,12 +118,14 @@ fn boundary_finding_names_the_written_facade_when_definition_is_elsewhere() {
         owners: vec![],
         module: "api".into(),
         barrel: true,
+        class: None,
     });
     doc.files.push(archgraph::model::File {
         path: "leaf/impl.ts".into(),
         owners: vec![],
         module: "leaf".into(),
         barrel: false,
+        class: None,
     });
     let edge = doc
         .edges

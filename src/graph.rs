@@ -60,6 +60,7 @@ pub fn modules(
     acc.into_iter()
         .map(|(id, a)| Module {
             id: id.to_owned(),
+            class: None,
             files: a.files,
             ca: a.ca.len(),
             ce: a.ce.len(),

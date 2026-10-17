@@ -150,6 +150,8 @@ pub fn run(root: &Path, go: &str, dirs: &[String]) -> Result<Vec<u8>> {
 /// What `parse` reads besides the graph.
 pub struct Parsed {
     pub raw: RawGraph,
+    pub generated: Vec<String>,
+    pub test_support: Vec<String>,
     /// Pairs of files that cannot be split across packages, for `bound_files` once excludes ran.
     pub bound: Vec<(String, String)>,
     /// The test support left out, sorted: `dir/` for a package left out whole, else each file.
@@ -162,6 +164,18 @@ pub struct Parsed {
 /// statements.
 pub fn parse(json: &[u8], keep_generated: bool, keep_tests: bool) -> Result<Parsed> {
     let dump: Dump = serde_json::from_slice(json).context("reading Go helper JSON")?;
+    let generated = dump
+        .files
+        .iter()
+        .filter(|f| f.generated)
+        .map(|f| f.path.clone())
+        .collect();
+    let test_support = dump
+        .files
+        .iter()
+        .filter(|f| f.test_support)
+        .map(|f| f.path.clone())
+        .collect();
     // Per directory: its non-test files, and those that are test support.
     let mut by_dir: std::collections::BTreeMap<&str, (usize, Vec<&str>)> = Default::default();
     for f in dump.files.iter().filter(|f| !f.path.ends_with("_test.go")) {
@@ -214,7 +228,19 @@ pub fn parse(json: &[u8], keep_generated: bool, keep_tests: bool) -> Result<Pars
         })
         .collect();
     let raw = RawGraph {
-        metadata: Default::default(),
+        metadata: dump
+            .files
+            .iter()
+            .map(|f| {
+                (
+                    f.path.clone(),
+                    crate::model::NodeMetadata {
+                        test: f.test_support,
+                        ..Default::default()
+                    },
+                )
+            })
+            .collect(),
         files: dump
             .files
             .into_iter()
@@ -227,6 +253,8 @@ pub fn parse(json: &[u8], keep_generated: bool, keep_tests: bool) -> Result<Pars
     let bound = dump.bound.into_iter().map(|e| (e.from, e.to)).collect();
     Ok(Parsed {
         raw,
+        generated,
+        test_support,
         bound,
         left_out,
     })

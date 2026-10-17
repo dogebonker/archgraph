@@ -17,6 +17,8 @@ const DUMP: &str = include_str!("grimp_dump.py");
 struct Dump {
     grimp_version: String,
     modules: Vec<String>,
+    #[serde(default)]
+    files: Vec<String>,
     imports: Vec<Import>,
     #[serde(default)]
     barrel_modules: Vec<super::barrels::BarrelModule>,
@@ -83,13 +85,20 @@ pub fn package(
 
 /// `-I` keeps the environment, the working directory and user site-packages off `sys.path`; the
 /// helper appends the source root itself after importing what it needs. `-B` writes no bytecode.
-pub fn run(root: &Path, source_dir: &str, package: &str, python: &str) -> Result<Vec<u8>> {
+pub fn run(
+    root: &Path,
+    source_dir: &str,
+    package: &str,
+    python: &str,
+    include_tests: bool,
+) -> Result<Vec<u8>> {
     let src = fs::canonicalize(root.join(source_dir))?;
     let out = Command::new(python)
         .args(["-I", "-B", "-c", DUMP])
         .arg(src)
         .arg(package)
         .arg(fs::canonicalize(root)?)
+        .args(include_tests.then_some("--include-tests"))
         .output()
         .with_context(|| format!("running {python}"))?;
     if !out.status.success() {
@@ -151,7 +160,14 @@ pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
             }
         }
     }
-    let files: Vec<String> = dump.modules.iter().filter_map(|m| path(m)).collect();
+    let mut files: Vec<String> = dump
+        .modules
+        .iter()
+        .filter_map(|m| path(m))
+        .chain(dump.files)
+        .collect();
+    files.sort();
+    files.dedup();
     let collector = Collector {
         name: "grimp".to_owned(),
         version: Some(dump.grimp_version),

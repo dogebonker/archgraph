@@ -19,8 +19,10 @@ pub fn collect(root: &Path, doc: &Document, go: &str) -> Result<Symbols> {
     let nonce = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
         .as_nanos();
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let sequence = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let dir = std::env::temp_dir().join(format!(
-        "archgraph-go-symbols-{}-{nonce}",
+        "archgraph-go-symbols-{}-{nonce}-{sequence}",
         std::process::id()
     ));
     fs::create_dir(&dir)?;

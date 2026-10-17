@@ -6,6 +6,14 @@ use archgraph::collect::grimp;
 use archgraph::model::EdgeKind;
 
 fn fixture(name: &str, sources: &[(&str, &str)]) -> (PathBuf, Vec<u8>) {
+    fixture_options(name, sources, false)
+}
+
+fn fixture_options(
+    name: &str,
+    sources: &[(&str, &str)],
+    include_tests: bool,
+) -> (PathBuf, Vec<u8>) {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("python-barrels-{name}"));
     fs::create_dir_all(&root).unwrap();
     let mut modules = Vec::new();
@@ -25,6 +33,7 @@ fn fixture(name: &str, sources: &[(&str, &str)]) -> (PathBuf, Vec<u8>) {
             });
         modules.push(module.replace('/', "."));
     }
+    modules.retain(|module| module == "pkg" || module.starts_with("pkg."));
     // Stub only grimp's graph transport, so the production AST pass runs without a Python
     // dependency or importing the fixture's source code.
     let stub = format!(
@@ -41,7 +50,7 @@ sys.modules['grimp'] = g
         modules = serde_json::to_string(&modules).unwrap()
     );
     let helper = format!("{stub}\n{}", include_str!("../src/collect/grimp_dump.py"));
-    let source_dir = if sources.iter().all(|(path, _)| path.starts_with("src/")) {
+    let source_dir = if sources.iter().any(|(path, _)| path.starts_with("src/pkg/")) {
         "src"
     } else {
         "."
@@ -51,6 +60,7 @@ sys.modules['grimp'] = g
         .arg(root.join(source_dir))
         .arg("pkg")
         .arg(&root)
+        .args(include_tests.then_some("--include-tests"))
         .output()
         .unwrap();
     assert!(
@@ -273,4 +283,92 @@ fn package_relative_submodule_import_does_not_bind_itself() {
             .as_deref()
             .is_some_and(|reason| reason.contains("cycle"))
     }));
+}
+
+#[test]
+fn included_tests_outside_a_src_package_are_discovered_without_execution() {
+    let sources = [
+        ("src/pkg/__init__.py", "from .impl import Thing\n"),
+        ("src/pkg/impl.py", "class Thing: pass\n"),
+        (
+            "tests/test_feature.py",
+            "from pkg import Thing\nraise RuntimeError('must not execute tests')\n",
+        ),
+        ("tests/support.py", "from pkg.impl import Thing\n"),
+    ];
+    let (root, dump) = fixture_options("external-tests", &sources, true);
+    let graph = grimp::parse(&dump, &root, "src").unwrap();
+    assert!(
+        graph
+            .files
+            .iter()
+            .any(|file| file == "tests/test_feature.py")
+    );
+    assert!(graph.files.iter().any(|file| file == "tests/support.py"));
+    assert!(
+        graph
+            .edges
+            .iter()
+            .any(|edge| edge.from == "tests/test_feature.py" && edge.to == "src/pkg/impl.py")
+    );
+    let (root, dump) = fixture_options("external-tests-disabled", &sources, false);
+    let graph = grimp::parse(&dump, &root, "src").unwrap();
+    assert!(!graph.files.iter().any(|file| file.starts_with("tests/")));
+}
+
+#[test]
+fn included_external_tests_cover_modules_without_creating_cycles() {
+    let (root, dump) = fixture_options(
+        "test-coverage",
+        &[
+            ("src/pkg/__init__.py", ""),
+            (
+                "src/pkg/impl.py",
+                "class Thing: pass\nfrom tests.test_feature import test_feature\n",
+            ),
+            (
+                "tests/test_feature.py",
+                "from pkg.impl import Thing\ndef test_feature(): pass\n",
+            ),
+        ],
+        true,
+    );
+    let recording = root.join("grimp.json");
+    fs::write(&recording, dump).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        .arg("scan")
+        .arg(&root)
+        .args([
+            "--language",
+            "python",
+            "--package",
+            "pkg",
+            "--include-tests",
+            "--collector-input",
+        ])
+        .arg(&recording)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let doc: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let test = doc["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|file| file["path"] == "tests/test_feature.py")
+        .unwrap();
+    assert_eq!(test["class"], "tests");
+    assert!(doc["cycles"].as_array().unwrap().is_empty());
+    assert!(doc["test_coverage"]["covered"].as_u64().unwrap() > 0);
+    assert!(
+        !doc["test_coverage"]["without_importing_tests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|module| module == "impl.py")
+    );
 }

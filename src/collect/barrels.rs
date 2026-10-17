@@ -45,6 +45,7 @@ pub fn resolve(graph: &mut RawGraph, modules: &[BarrelModule]) -> Vec<String> {
             module.file.clone(),
             NodeMetadata {
                 barrel: module.pure,
+                ..Default::default()
             },
         );
     }

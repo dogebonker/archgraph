@@ -46,6 +46,25 @@ class EdgeQualityTests(unittest.TestCase):
         self.assertEqual(changes['changed_kinds'], [])
         self.assertEqual(changes['runtime_edges_removed'], [before['edges'][1]])
 
+    def test_report_rejects_incomplete_cohort(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            MODULE.write_json(root / 'baseline' / 'index.json', [])
+            with self.assertRaisesRegex(RuntimeError, 'every manifest repository'):
+                MODULE.report(root, [{'name': 'missing'}], root / 'report.md')
+            self.assertFalse((root / 'report.md').exists())
+
+    def test_report_rejects_modified_graph_artifacts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            row = {'status': 'ok', 'fingerprint': {'entry': {'name': 'one'}},
+                   'graph_sha256': 'not-the-original-hash'}
+            MODULE.write_json(root / 'baseline' / 'index.json', [row])
+            MODULE.write_json(root / 'baseline' / 'one' / 'graph.json', {})
+            with self.assertRaisesRegex(RuntimeError, 'archived graph hash changed'):
+                MODULE.report(root, [{'name': 'one'}], root / 'report.md')
+            self.assertFalse((root / 'report.md').exists())
+
     def test_atomic_json_and_hash(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'stage' / 'metadata.json'

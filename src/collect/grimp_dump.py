@@ -9,6 +9,7 @@ import grimp
 # and grimp load, and is appended last, so a file in the repository cannot shadow them.
 src, package = sys.argv[1], sys.argv[2]
 scan_root = sys.argv[3] if len(sys.argv) > 3 else src
+include_tests = "--include-tests" in sys.argv[4:]
 sys.path.append(src)
 # cache_dir=None: grimp writes nothing into the scanned repository.
 graph = grimp.build_graph(package, cache_dir=None)
@@ -53,7 +54,31 @@ def kind(importer, imported):
     return "static"
 
 
+extra_paths = {}
+if include_tests:
+    known_paths = {os.path.realpath(os.path.join(src, *module.split(".")) + ".py") for module in graph.modules}
+    for directory, dirs, files in os.walk(scan_root, followlinks=False):
+        dirs[:] = sorted(name for name in dirs if not name.startswith(".") and name not in {"node_modules", "vendor", "venv", "target", "__pycache__"})
+        relative = os.path.relpath(directory, scan_root)
+        test_directory = any(part in {"tests", "test", "__tests__"} for part in relative.split(os.sep))
+        for name in sorted(files):
+            if not name.endswith(".py") or not (test_directory or name == "conftest.py" or name.startswith("test_") or name.endswith("_test.py")):
+                continue
+            path = os.path.join(directory, name)
+            if os.path.islink(path) or os.path.realpath(path) in known_paths:
+                continue
+            relative_source = os.path.relpath(path, src)
+            relative_module = relative_source if not relative_source.startswith(".." + os.sep) else os.path.relpath(path, scan_root)
+            module = relative_module[:-3].replace(os.sep, ".")
+            if module.endswith(".__init__"):
+                module = module[:-9]
+            if module not in graph.modules:
+                extra_paths[module] = path
+
+
 def module_path(module):
+    if module in extra_paths:
+        return extra_paths[module]
     base = os.path.join(src, *module.split("."))
     init = os.path.join(base, "__init__.py")
     path = init if os.path.isfile(init) else base + ".py"
@@ -100,7 +125,7 @@ def type_guard(node, aliases):
 parsed = {}
 static_all = {}
 attributes = {}
-for module in sorted(graph.modules):
+for module in sorted(set(graph.modules) | extra_paths.keys()):
     path = module_path(module)
     if path is None:
         continue
@@ -242,7 +267,7 @@ for importer in sorted(graph.modules):
             {"importer": importer, "imported": imported, "kind": kind(importer, imported)}
         )
 json.dump(
-    {"grimp_version": grimp.__version__, "modules": sorted(graph.modules), "imports": imports, "barrel_modules": barrel_modules},
+    {"grimp_version": grimp.__version__, "modules": sorted(graph.modules), "imports": imports, "barrel_modules": barrel_modules, "files": sorted(os.path.relpath(path, scan_root).replace(os.sep, "/") for path in extra_paths.values())},
     sys.stdout,
     indent=1,
 )

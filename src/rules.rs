@@ -15,6 +15,10 @@ use crate::model::{Config, Edge, EdgeKind, RulesRef, Verdict};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Rules {
     pub version: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exclude: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub include: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub edge_weights: Option<EdgeWeights>,
     #[serde(default)]
@@ -181,6 +185,8 @@ fn known_keys() -> serde_json::Value {
             ..Allow::default()
         }],
         edge_weights: Some(EdgeWeights::default()),
+        exclude: vec!["excluded/**".into()],
+        include: vec!["included/**".into()],
         default: Some(Fallback::Forbidden),
         ..Rules::default()
     })
@@ -325,6 +331,8 @@ impl Compiled {
         if rules.version != 1 {
             bail!("unsupported rules version {}; expected 1", rules.version);
         }
+        crate::collect::globset(&rules.exclude).context("exclude patterns")?;
+        crate::collect::globset(&rules.include).context("include patterns")?;
         if let Some(weights) = rules.edge_weights {
             for (name, weight) in [
                 ("runtime", weights.runtime),
@@ -344,6 +352,8 @@ impl Compiled {
             .iter()
             .flat_map(|m| [&m.id, &m.path])
             .chain(&rules.layers)
+            .chain(&rules.exclude)
+            .chain(&rules.include)
             .chain(
                 rules
                     .entrypoints

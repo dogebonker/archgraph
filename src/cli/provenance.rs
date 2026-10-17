@@ -67,9 +67,18 @@ pub(super) fn probe(root: &Path, original: &Document, opts: &ScanOpts) -> Result
     let mut opts = opts.clone();
     opts.language = Some(original.source.language);
     opts.depth = (!original.config.package_modules).then_some(original.config.depth);
-    opts.exclude = original.config.excludes.clone();
+    opts.exclude = original
+        .config
+        .explicit_excludes
+        .clone()
+        .unwrap_or_else(|| original.config.excludes.clone());
+    if let Some(rules) = &original.config.rules {
+        opts.exclude.extend(rules.doc.exclude.iter().cloned());
+    }
+    opts.collection_includes = original.config.includes.clone();
     opts.no_default_excludes = original.config.no_default_excludes;
     opts.include_tests = original.config.include_tests;
+    opts.include_generated = original.config.include_generated;
     if let Some(collection) = &original.config.collection {
         if collection.rust_build_scripts && !opts.rust_build_scripts {
             bail!(

@@ -73,7 +73,10 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         .map(|f| {
             (
                 rename(&f.path),
-                crate::model::NodeMetadata { barrel: f.barrel },
+                crate::model::NodeMetadata {
+                    barrel: f.barrel,
+                    test: f.class == Some(crate::model::ModuleClass::Tests),
+                },
             )
         })
         .collect();
@@ -231,12 +234,17 @@ mod tests {
             source_root: ".".into(),
             excludes: Vec::new(),
             include_tests: false,
+            include_generated: false,
+            includes: Vec::new(),
+            excluded_files: Vec::new(),
+            explicit_excludes: None,
             all_kinds: false,
             no_default_excludes: false,
             rules: None,
             codeowners: None,
             collection: None,
             file_metadata: Default::default(),
+            legacy_module_classes: false,
         };
         let files = ["a/x.ts", "a/y.ts", "b/z.ts"].map(String::from).to_vec();
         crate::build(source, config, files, Vec::new(), Vec::new(), None, None)

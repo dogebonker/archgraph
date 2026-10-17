@@ -15,6 +15,12 @@
 - Pure forwarding nodes carry `barrel: true`; initializers containing executable statements retain runtime load edges. Resolved edges retain `original_to` so layout rules enforce the written boundary.
 - Ambiguous namespace/star imports and chains exceeding ten hops retain their barrel target with low confidence and a diagnostic reason. Forwarding loops produce `reexport-cycle` findings; old collector recordings remain readable.
 
+### Edge quality: exclusions and tests
+
+- Shared defaults exclude test, generated/build, fixture/story/example and dependency/vendor content. `show-excludes` lists the policy; `--include-tests`, `--include-generated`, layout `exclude`/`include`, `.gitignore` and `.archgraphignore` control selection.
+- Explicit excludes take precedence; layout includes can override default and ignore-file exclusions. Included tests occupy separate test modules, stay out of cycle detection and provide a minimal importing-test coverage summary.
+- Python test inclusion discovers files outside the selected package through AST inspection, retaining their import edges without executing tests.
+
 ### Added
 
 - Public surface reports for TypeScript/JavaScript, Python and Go: symbol exports and external usage, deep imports, advisory unused exports and oversized surfaces. Optional symbol evidence keeps the `archgraph/v1` document format compatible with earlier scans.

@@ -981,9 +981,7 @@ fn a_registrar_side_of_a_two_way_pair_is_not_the_cut() {
 }
 
 #[test]
-fn build_output_is_excluded_only_at_the_root_or_when_git_ignores_it() {
-    // src/build/x.ts is source (a bundler's build step), dist/y.ts at the root is output, and
-    // src/gen/build/z.ts is output the repository's .gitignore names.
+fn build_output_is_excluded_at_every_depth_and_can_be_included_except_when_ignored() {
     let (dir, input) = synthetic(
         "build-output",
         4,
@@ -1006,7 +1004,16 @@ fn build_output_is_excluded_only_at_the_root_or_when_git_ignores_it() {
         "--language",
         "typescript",
     ]);
-    assert_eq!(files(&doc), ["src/a.ts", "src/build/x.ts"]);
+    assert_eq!(files(&doc), ["src/a.ts"]);
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+        "--include-generated",
+    ]);
+    assert_eq!(files(&doc), ["dist/y.ts", "src/a.ts", "src/build/x.ts"]);
 }
 
 #[test]
