@@ -209,8 +209,7 @@ impl Toolchain {
         let rustc = PathBuf::from(rustup(&["which", "--toolchain", &name, "rustc"])?);
         let bin = rustc.parent().context("rustc has no directory")?.to_owned();
         let rust_analyzer = match rust_analyzer {
-            Some(p) => fs::canonicalize(p)
-                .with_context(|| format!("--rust-analyzer {}: no such executable", p.display()))?,
+            Some(p) => super::resolve_executable("rust-analyzer", p)?,
             None => PathBuf::from(
                 rustup(&["which", "--toolchain", &name, "rust-analyzer"]).with_context(|| {
                     format!("run `rustup component add rust-analyzer --toolchain {name}`")

@@ -222,3 +222,17 @@ fn native_go_live_list_never_runs_poisoned_initializers() {
             .any(|i| i.external.as_deref() == Some("fmt"))
     );
 }
+
+#[test]
+fn native_go_names_a_missing_go_executable() {
+    let fixture = Fixture::new(&[("go.mod", "module example.test/app\n")]);
+    let policy = Policy::new(fixture.path(), Language::Go, Options::default()).unwrap();
+    let missing = fixture.path().join("missing/go");
+    let Err(error) = go::collect(fixture.path(), missing.to_str().unwrap(), &policy) else {
+        panic!("collected with a missing go");
+    };
+    assert!(
+        format!("{error:#}").contains(&format!("--go {}: no such executable", missing.display())),
+        "{error:#}"
+    );
+}

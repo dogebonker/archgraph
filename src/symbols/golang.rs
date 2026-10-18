@@ -6,11 +6,7 @@ use anyhow::{Context, Result, bail};
 
 pub fn collect(root: &Path, doc: &Document, go: &str) -> Result<Symbols> {
     let root = fs::canonicalize(root)?;
-    let go = if go.contains('/') {
-        fs::canonicalize(go)?.to_string_lossy().into_owned()
-    } else {
-        go.to_owned()
-    };
+    let go = crate::collect::resolve_executable("go", go)?;
     let temp = crate::collect::TempDir::new("go-symbols")?;
     let dir = temp.path();
     fs::write(dir.join("go_dump.go"), include_str!("go_dump.go"))?;
@@ -31,7 +27,7 @@ pub fn collect(root: &Path, doc: &Document, go: &str) -> Result<Symbols> {
             .env("GOCACHEPROG", ""),
         serde_json::to_vec(&files)?,
     )
-    .with_context(|| format!("running {go} for Go surface symbols"))?;
+    .with_context(|| format!("running {} for Go surface symbols", go.display()))?;
     if !output.status.success() {
         bail!(
             "Go symbol helper failed: {}",

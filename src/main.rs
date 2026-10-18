@@ -416,37 +416,12 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         None => collect::detect_language(&args.root, collect::source_dir(&args.root))?,
     };
     args.opts.language = Some(language);
-    let program = match language {
-        Language::Python => Some(&mut args.collector.python),
-        Language::Go => Some(&mut args.collector.go),
-        Language::Java => Some(&mut args.collector.java),
-        Language::Elixir => Some(&mut args.collector.elixir),
-        _ => None,
-    };
-    if let Some(program) = program
-        && (args.opts.engine != collect::Engine::Native || language == Language::Go)
-        && program.contains(['/', '\\'])
-    {
-        *program = fs::canonicalize(&*program)?.to_string_lossy().into_owned();
-    }
-    // Ignored node_modules are absent from snapshots; reuse the installed collector.
-    if args.opts.engine != collect::Engine::Native
-        && language == Language::Typescript
-        && args.collector.depcruise.is_none()
-    {
-        args.collector.depcruise = fs::canonicalize(&args.root)?
-            .ancestors()
-            .map(|dir| dir.join("node_modules/.bin/depcruise"))
-            .find(|path| path.is_file());
-    }
-    if args.opts.engine != collect::Engine::Native && language == Language::Typescript {
-        args.collector.depcruise = args
-            .collector
-            .depcruise
-            .as_ref()
-            .map(fs::canonicalize)
-            .transpose()?;
-    }
+    args.collector = provenance_cli::collector_opts(
+        &args.root,
+        &args.collector,
+        args.opts.engine,
+        Some(language),
+    )?;
     // Explicit rules stay fixed across the timeline; otherwise each commit supplies its own.
     let rules = args
         .opts
@@ -751,10 +726,7 @@ fn scan_doc(
     let depcruise = (args.engine != collect::Engine::Native)
         .then_some(collector.depcruise.as_ref())
         .flatten()
-        .map(|p| {
-            fs::canonicalize(p)
-                .with_context(|| format!("--depcruise {}: no such executable", p.display()))
-        })
+        .map(|p| collect::resolve_executable("depcruise", p))
         .transpose()?;
     let source_dir = collect::source_dir(root);
     let loaded_rules = rules.map(rules::load).transpose()?;

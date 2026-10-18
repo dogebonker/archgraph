@@ -38,8 +38,12 @@ pub fn collect(root: &Path, doc: &Document, options: Options<'_>) -> Result<Symb
         return golang::collect(root, doc, options.go);
     }
     let (program, flag, script) = match doc.source.language {
-        Language::Typescript => ("node", "-e", include_str!("typescript.cjs")),
-        Language::Python => (options.python, "-c", include_str!("python.py")),
+        Language::Typescript => ("node".into(), "-e", include_str!("typescript.cjs")),
+        Language::Python => (
+            crate::collect::resolve_executable("python", options.python)?,
+            "-c",
+            include_str!("python.py"),
+        ),
         language => {
             return Ok(Symbols {
                 complete: false,
@@ -54,13 +58,13 @@ pub fn collect(root: &Path, doc: &Document, options: Options<'_>) -> Result<Symb
         "files": doc.files.iter().map(|file| &file.path).collect::<Vec<_>>(),
         "depcruise": options.depcruise,
     }))?;
-    let mut command = Command::new(program);
+    let mut command = Command::new(&program);
     if doc.source.language == Language::Python {
         command.args(["-I", "-B"]);
     }
     let output =
         crate::collect::run_with_input(command.args([flag, script]).current_dir(root), input)
-            .with_context(|| format!("run {program} symbol collector"))?;
+            .with_context(|| format!("run {} symbol collector", program.display()))?;
     if !output.status.success() {
         bail!(
             "symbol collector failed: {}",

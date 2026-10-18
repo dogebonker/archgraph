@@ -164,35 +164,15 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
         .as_deref()
         .map(fs::canonicalize)
         .transpose()?;
-    if args.opts.engine != collect::Engine::Native {
-        args.collector.depcruise = args
-            .collector
-            .depcruise
-            .as_deref()
-            .map(fs::canonicalize)
-            .transpose()?;
-        args.collector.rust_analyzer = args
-            .collector
-            .rust_analyzer
-            .as_deref()
-            .map(fs::canonicalize)
-            .transpose()?;
-        for program in [
-            &mut args.collector.python,
-            &mut args.collector.go,
-            &mut args.collector.java,
-        ] {
-            if program.contains(['/', '\\']) {
-                *program = fs::canonicalize(&*program)?.to_string_lossy().into_owned();
-            }
-        }
-        if args.collector.depcruise.is_none() {
-            args.collector.depcruise = root
-                .ancestors()
-                .map(|p| p.join("node_modules/.bin/depcruise"))
-                .find(|p| p.is_file());
-        }
-    }
+    args.collector = provenance_cli::collector_opts(
+        &root,
+        &args.collector,
+        args.opts.engine,
+        saved
+            .as_ref()
+            .map(|doc| doc.source.language)
+            .or(args.opts.language),
+    )?;
     let checkout = history::Checkout::new(&root)?;
     let head_root = checkout.at(&head)?;
     let mut doc = match saved {
@@ -213,11 +193,6 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
         }
     };
     check_graph(&doc, &head)?;
-    if doc.source.language == Language::Go && args.collector.go.contains(['/', '\\']) {
-        args.collector.go = fs::canonicalize(&args.collector.go)?
-            .to_string_lossy()
-            .into_owned();
-    }
     let context_limitations = enrich(&head_root, &mut doc, &args, &changed);
     let mut result = impact::analyze(&doc, changed.clone(), args.max_depth, &args.tests)?;
     if !doc.config.include_tests {

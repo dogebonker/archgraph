@@ -43,37 +43,58 @@ fn engine(doc: &Document) -> collect::Engine {
         .map_or(collect::Engine::Reference, |collection| collection.engine)
 }
 
-fn collector_opts(
+/// `options` with the executables `engine` runs for `language` (every language when `None`)
+/// made absolute, so the cache-key probes and scans of historical checkouts run the same tools.
+/// Ignored node_modules are absent from checkouts: without --depcruise, the one installed in
+/// `root` or above is used.
+pub(super) fn collector_opts(
     root: &Path,
     options: &CollectorOpts,
     engine: collect::Engine,
-    language: Language,
+    language: Option<Language>,
 ) -> Result<CollectorOpts> {
     let mut options = options.clone();
+    let wanted = |candidate| language.is_none_or(|language| language == candidate);
+    let resolve = |flag, value: &str| -> Result<String> {
+        Ok(collect::resolve_executable(flag, value)?
+            .to_string_lossy()
+            .into_owned())
+    };
+    if wanted(Language::Go) {
+        options.go = resolve("go", &options.go)?;
+    }
     if engine == collect::Engine::Native {
-        if language == Language::Go && options.go.contains(['/', '\\']) {
-            options.go = fs::canonicalize(&options.go)?
-                .to_string_lossy()
-                .into_owned();
-        }
         return Ok(options);
     }
-    options.depcruise = options
-        .depcruise
-        .as_ref()
-        .map(fs::canonicalize)
-        .transpose()?;
-    if options.depcruise.is_none() {
-        options.depcruise = fs::canonicalize(root)?
-            .ancestors()
-            .map(|dir| dir.join("node_modules/.bin/depcruise"))
-            .find(|path| path.is_file());
+    if wanted(Language::Typescript) {
+        if options.depcruise.is_none() {
+            options.depcruise = fs::canonicalize(root)?
+                .ancestors()
+                .map(|dir| dir.join("node_modules/.bin/depcruise"))
+                .find(|path| path.is_file());
+        }
+        options.depcruise = options
+            .depcruise
+            .as_ref()
+            .map(|path| collect::resolve_executable("depcruise", path))
+            .transpose()?;
     }
-    options.rust_analyzer = options
-        .rust_analyzer
-        .as_ref()
-        .map(fs::canonicalize)
-        .transpose()?;
+    if wanted(Language::Rust) {
+        options.rust_analyzer = options
+            .rust_analyzer
+            .as_ref()
+            .map(|path| collect::resolve_executable("rust-analyzer", path))
+            .transpose()?;
+    }
+    if wanted(Language::Python) {
+        options.python = resolve("python", &options.python)?;
+    }
+    if wanted(Language::Java) {
+        options.java = resolve("java", &options.java)?;
+    }
+    if wanted(Language::Elixir) {
+        options.elixir = resolve("elixir", &options.elixir)?;
+    }
     Ok(options)
 }
 
@@ -166,7 +187,7 @@ pub(super) fn run(args: BisectArgs) -> Result<()> {
         &args.root,
         &args.collector,
         engine(&doc),
-        doc.source.language,
+        Some(doc.source.language),
     )?;
     let checkout = history::Checkout::new(&args.root)?;
     let mut result = bisect::investigate(
@@ -254,7 +275,7 @@ pub(super) fn enrich_from(
     let mut scans = 0;
     for index in 0..doc.findings.len() {
         let result = match setup.get_or_init(|| {
-            collector_opts(root, opts, engine(doc), doc.source.language)
+            collector_opts(root, opts, engine(doc), Some(doc.source.language))
                 .and_then(|options| Ok((options, history::Checkout::new(root)?)))
         }) {
             Err(error) => Err(anyhow::anyhow!(
@@ -441,7 +462,7 @@ mod tests {
             std::path::Path::new("/nonexistent/historical-root"),
             &args.collector,
             args.opts.engine,
-            archgraph::model::Language::Go,
+            Some(archgraph::model::Language::Go),
         )
         .unwrap();
         assert_eq!(
@@ -452,7 +473,7 @@ mod tests {
             std::path::Path::new("/nonexistent/historical-root"),
             &args.collector,
             args.opts.engine,
-            archgraph::model::Language::Typescript,
+            Some(archgraph::model::Language::Typescript),
         )
         .unwrap();
         assert_eq!(options.go, "./Cargo.toml");

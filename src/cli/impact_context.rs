@@ -274,14 +274,7 @@ pub(super) fn go_tests(
     let patterns = collect::globset(tests)?;
     let (modules, warnings) = collect::go::module_dirs(&root, &excludes)?;
     report.limitations.extend(warnings);
-    let go_program = if go_program.contains('/') {
-        Path::new(go_program)
-            .canonicalize()?
-            .to_string_lossy()
-            .into_owned()
-    } else {
-        go_program.to_owned()
-    };
+    let go_program = collect::resolve_executable("go", go_program)?;
     let mut packages = Vec::new();
     for module in modules {
         let out = collect::run(

@@ -14,14 +14,7 @@ use crate::model::{Collector, Edge, EdgeKind, ImportRecord};
 /// JDK 11 or later, using source-file launch from an isolated temporary directory.
 pub fn run(root: &Path, java: &str, excludes: &GlobSet) -> Result<Vec<u8>> {
     let root = fs::canonicalize(root)?;
-    let java = if java.contains(['/', '\\']) {
-        fs::canonicalize(java)
-            .with_context(|| format!("--java {java}: no such executable"))?
-            .to_string_lossy()
-            .into_owned()
-    } else {
-        java.to_owned()
-    };
+    let java = super::resolve_executable("java", java)?;
     let mut files = super::native::source_files(&root, &["java"])?;
     files.retain(|file| {
         !excludes.is_match(file)
@@ -48,7 +41,12 @@ pub fn run(root: &Path, java: &str, excludes: &GlobSet) -> Result<Vec<u8>> {
             .env_remove("CLASSPATH"),
         files.join("\0").into_bytes(),
     )
-    .with_context(|| format!("running {java}: install JDK 11 or later, or pass --java"))?;
+    .with_context(|| {
+        format!(
+            "running {}: install JDK 11 or later, or pass --java",
+            java.display()
+        )
+    })?;
     if !out.status.success() {
         bail!(
             "Java helper failed (requires JDK 11 or later): {}",

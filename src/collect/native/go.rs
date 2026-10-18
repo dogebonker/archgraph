@@ -60,11 +60,7 @@ pub fn collect(root: &Path, go: &str, policy: &Policy) -> Result<super::Output> 
     if dirs.is_empty() {
         bail!("native Go collection needs a go.mod with a module declaration");
     }
-    let go = if go.contains(['/', '\\']) {
-        fs::canonicalize(go)?.to_string_lossy().into_owned()
-    } else {
-        go.to_owned()
-    };
+    let go = crate::collect::resolve_executable("go", go)?;
     let mut packages = BTreeMap::new();
     for dir in &dirs {
         let output = crate::collect::run(
@@ -74,7 +70,12 @@ pub fn collect(root: &Path, go: &str, policy: &Policy) -> Result<super::Output> 
                 .envs(crate::collect::go::ENV.iter().copied())
                 .env("GOSUMDB", "off"),
         )
-        .with_context(|| format!("running {go} list for native Go package metadata"))?;
+        .with_context(|| {
+            format!(
+                "running {} list for native Go package metadata",
+                go.display()
+            )
+        })?;
         if !output.status.success() {
             bail!(
                 "native Go metadata failed: {}",

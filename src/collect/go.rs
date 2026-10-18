@@ -100,15 +100,7 @@ pub fn module_dirs(root: &Path, excludes: &GlobSet) -> Result<(Vec<String>, Vec<
 /// or run. The helper's warnings (a module read with go/build) are printed.
 pub fn run(root: &Path, go: &str, dirs: &[String]) -> Result<Vec<u8>> {
     let root = fs::canonicalize(root)?;
-    // A path with a separator is resolved here, not against the helper's working directory.
-    let go = if go.contains(std::path::MAIN_SEPARATOR) || go.contains('/') {
-        fs::canonicalize(go)
-            .with_context(|| format!("--go {go}: no such executable"))?
-            .to_string_lossy()
-            .into_owned()
-    } else {
-        go.to_owned()
-    };
+    let go = super::resolve_executable("go", go)?;
     let dir = super::TempDir::new("go")?;
     fs::write(dir.path().join("go_dump.go"), DUMP)?;
     let out = super::run(
@@ -121,7 +113,12 @@ pub fn run(root: &Path, go: &str, dirs: &[String]) -> Result<Vec<u8>> {
             .env("PWD", dir.path())
             .envs(ENV.iter().copied()),
     )
-    .with_context(|| format!("running {go} (install Go from https://go.dev/dl, or pass --go)"))?;
+    .with_context(|| {
+        format!(
+            "running {} (install Go from https://go.dev/dl, or pass --go)",
+            go.display()
+        )
+    })?;
     let stderr = String::from_utf8_lossy(&out.stderr);
     if !out.status.success() {
         // The helper compiles with Go 1.21 or later; a compile error names its own file.

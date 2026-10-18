@@ -14,14 +14,7 @@ use crate::model::{Collector, Edge, ImportRecord};
 /// Parse `.ex` and `.exs` with a trusted helper in an isolated working directory.
 pub fn run(root: &Path, elixir: &str, policy: &Policy) -> Result<Vec<u8>> {
     let root = fs::canonicalize(root)?;
-    let elixir = if elixir.contains(['/', '\\']) {
-        fs::canonicalize(elixir)
-            .with_context(|| format!("--elixir {elixir}: no such executable"))?
-            .to_string_lossy()
-            .into_owned()
-    } else {
-        elixir.to_owned()
-    };
+    let elixir = super::resolve_executable("elixir", elixir)?;
     let mut files = super::native::source_files(&root, &["ex", "exs"])?;
     let selected = policy.select(&files)?;
     let kept: HashSet<_> = selected.iter().collect();
@@ -40,7 +33,10 @@ pub fn run(root: &Path, elixir: &str, policy: &Policy) -> Result<Vec<u8>> {
     sanitize(&mut command);
     let out =
         super::run_with_input(&mut command, files.join("\0").into_bytes()).with_context(|| {
-            format!("running {elixir}: install Elixir 1.14 or later, or pass --elixir")
+            format!(
+                "running {}: install Elixir 1.14 or later, or pass --elixir",
+                elixir.display()
+            )
         })?;
     if !out.status.success() {
         bail!(

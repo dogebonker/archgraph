@@ -197,6 +197,20 @@ pub fn run_with_input(command: &mut Command, input: Vec<u8>) -> Result<Output> {
     Ok(output)
 }
 
+/// The program `--<flag> <value>` names: a path made absolute, so it does not depend on the
+/// working directory a child runs in, else a name the spawn looks up on PATH.
+pub fn resolve_executable(flag: &str, value: impl AsRef<Path>) -> Result<PathBuf> {
+    let value = value.as_ref();
+    if !value
+        .to_string_lossy()
+        .contains(['/', std::path::MAIN_SEPARATOR])
+    {
+        return Ok(value.to_owned());
+    }
+    fs::canonicalize(value)
+        .with_context(|| format!("--{flag} {}: no such executable", value.display()))
+}
+
 /// `src` when the root has one, else the root itself.
 pub fn source_dir(root: &Path) -> &'static str {
     if root.join("src").is_dir() {
