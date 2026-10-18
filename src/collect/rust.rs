@@ -184,12 +184,13 @@ impl Toolchain {
     /// rust-toolchain.toml does not apply), never installing anything.
     fn find(rust_analyzer: Option<&Path>, tmp: &Path) -> Result<Toolchain> {
         let rustup = |args: &[&str]| -> Result<String> {
-            let out = Command::new("rustup")
-                .args(args)
-                .current_dir(tmp)
-                .env("RUSTUP_AUTO_INSTALL", "0")
-                .output()
-                .context("running rustup (install it from https://rustup.rs)")?;
+            let out = super::run(
+                Command::new("rustup")
+                    .args(args)
+                    .current_dir(tmp)
+                    .env("RUSTUP_AUTO_INSTALL", "0"),
+            )
+            .context("running rustup (install it from https://rustup.rs)")?;
             if !out.status.success() {
                 bail!(
                     "rustup {} failed: {}",
@@ -230,10 +231,7 @@ impl Toolchain {
                 toolchain.name
             );
         }
-        let out = Command::new(&rustc)
-            .arg("-vV")
-            .current_dir(tmp)
-            .output()
+        let out = super::run(Command::new(&rustc).arg("-vV").current_dir(tmp))
             .with_context(|| format!("running {}", rustc.display()))?;
         let host = String::from_utf8_lossy(&out.stdout)
             .lines()
@@ -354,14 +352,14 @@ fn run_in(
     // cargo reads .cargo/config.toml from its working directory up, as when rust-analyzer runs
     // it in the workspace: the files `refuse` checked.
     let cargo = |args: &[&str]| -> Result<Vec<u8>, String> {
-        let out = tc
-            .command(&tc.bin.join("cargo"), &target)
-            .args(args)
-            .arg("--manifest-path")
-            .arg(root.join("Cargo.toml"))
-            .current_dir(root)
-            .output()
-            .map_err(|e| format!("running cargo: {e}"))?;
+        let out = super::run(
+            tc.command(&tc.bin.join("cargo"), &target)
+                .args(args)
+                .arg("--manifest-path")
+                .arg(root.join("Cargo.toml"))
+                .current_dir(root),
+        )
+        .map_err(|e| format!("running cargo: {e:#}"))?;
         if out.status.success() {
             Ok(out.stdout)
         } else {
@@ -408,19 +406,19 @@ fn run_in(
         config(tru.as_deref(), &target, opts.features).to_string(),
     )?;
     let index_path = tmp.join("index.scip");
-    let out = tc
-        .command(&tc.rust_analyzer, &target)
-        .arg("scip")
-        .arg(root)
-        .arg("--output")
-        .arg(&index_path)
-        .arg("--config-path")
-        .arg(&config_path)
-        .arg("--exclude-vendored-libraries")
-        .current_dir(tmp)
-        .env("PWD", tmp)
-        .output()
-        .with_context(|| format!("running {}", tc.rust_analyzer.display()))?;
+    let out = super::run(
+        tc.command(&tc.rust_analyzer, &target)
+            .arg("scip")
+            .arg(root)
+            .arg("--output")
+            .arg(&index_path)
+            .arg("--config-path")
+            .arg(&config_path)
+            .arg("--exclude-vendored-libraries")
+            .current_dir(tmp)
+            .env("PWD", tmp),
+    )
+    .with_context(|| format!("running {}", tc.rust_analyzer.display()))?;
     let stderr = String::from_utf8_lossy(&out.stderr);
     if !out.status.success() {
         bail!("rust-analyzer scip failed: {}", stderr.trim());

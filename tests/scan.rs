@@ -1013,6 +1013,44 @@ fn a_failed_type_marking_run_is_recorded() {
 }
 
 #[test]
+fn a_tool_running_past_the_tool_timeout_is_killed_and_reported() {
+    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("tool-timeout");
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(dir.join("src")).unwrap();
+    fs::write(dir.join("src/a.ts"), "export const a = 1;\n").unwrap();
+    let pid = dir.join("pid");
+    let script = dir.join("depcruise");
+    fs::write(
+        &script,
+        format!("#!/bin/sh\necho $$ > '{}'\nexec sleep 30\n", pid.display()),
+    )
+    .unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+    let started = std::time::Instant::now();
+    let out = archgraph(&[
+        "--tool-timeout",
+        "1",
+        "scan",
+        dir.to_str().unwrap(),
+        "--language",
+        "typescript",
+        "--depcruise",
+        script.to_str().unwrap(),
+    ]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(!out.status.success(), "{stderr}");
+    assert!(stderr.contains("timed out after 1 s"), "{stderr}");
+    assert!(started.elapsed() < std::time::Duration::from_secs(20));
+    let pid = fs::read_to_string(&pid).unwrap();
+    let alive = std::process::Command::new("kill")
+        .args(["-0", pid.trim()])
+        .status()
+        .unwrap();
+    assert!(!alive.success(), "the timed-out tool is still running");
+}
+
+#[test]
 fn a_registrar_side_of_a_two_way_pair_is_not_the_cut() {
     // a/drivers.ts imports five drivers of b (5 imports), each driver imports a/base.ts and
     // b/x.ts does too (6). The lighter side only registers drivers: the pair is cut b -> a.

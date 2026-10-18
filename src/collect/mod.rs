@@ -14,9 +14,12 @@ pub mod typescript_resolution;
 
 use std::collections::HashSet;
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Command, Output, Stdio};
+use std::sync::OnceLock;
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, anyhow, bail};
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
@@ -91,18 +94,68 @@ pub fn globset(globs: &[String]) -> Result<GlobSet> {
     Ok(set.build()?)
 }
 
-/// Runs `command` with `input` on its stdin and its stdout and stderr captured. The input is
-/// written from another thread, so a tool that exits before reading all of it reports its own
-/// error output; a write error surfaces only when the tool succeeded.
+/// How long `run_with_input` lets a tool run (`--tool-timeout`), set once by the CLI. Unset or
+/// `None` waits forever.
+pub static TOOL_TIMEOUT: OnceLock<Option<Duration>> = OnceLock::new();
+
+/// `run_with_input` with no input.
+pub fn run(command: &mut Command) -> Result<Output> {
+    run_with_input(command, Vec::new())
+}
+
+/// Runs `command` with `input` on its stdin and its stdout and stderr captured, killing it at
+/// `TOOL_TIMEOUT`. The input is written from another thread, so a tool that exits before reading
+/// all of it reports its own error output; a write error surfaces only when the tool succeeded.
 pub fn run_with_input(command: &mut Command, input: Vec<u8>) -> Result<Output> {
+    fn read_all(mut pipe: impl Read + Send + 'static) -> JoinHandle<std::io::Result<Vec<u8>>> {
+        thread::spawn(move || {
+            let mut bytes = Vec::new();
+            pipe.read_to_end(&mut bytes).map(|_| bytes)
+        })
+    }
     let mut child = command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
     let mut stdin = child.stdin.take().expect("piped stdin");
-    let writer = std::thread::spawn(move || stdin.write_all(&input));
-    let output = child.wait_with_output()?;
+    let writer = thread::spawn(move || stdin.write_all(&input));
+    let stdout = read_all(child.stdout.take().expect("piped stdout"));
+    let stderr = read_all(child.stderr.take().expect("piped stderr"));
+    let status = match TOOL_TIMEOUT.get().copied().flatten() {
+        None => child.wait()?,
+        Some(timeout) => {
+            let deadline = Instant::now() + timeout;
+            loop {
+                if let Some(status) = child.try_wait()? {
+                    break status;
+                }
+                if Instant::now() >= deadline {
+                    // Only the direct child is killed; a process it started may keep the pipes
+                    // open, so the readers are left running rather than joined.
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    bail!(
+                        "{} timed out after {} s",
+                        command.get_program().to_string_lossy(),
+                        timeout.as_secs()
+                    );
+                }
+                thread::sleep(Duration::from_millis(10));
+            }
+        }
+    };
+    let collect = |reader: JoinHandle<std::io::Result<Vec<u8>>>| -> Result<Vec<u8>> {
+        reader
+            .join()
+            .map_err(|_| anyhow!("tool output reader panicked"))?
+            .context("reading tool output")
+    };
+    let output = Output {
+        status,
+        stdout: collect(stdout)?,
+        stderr: collect(stderr)?,
+    };
     let written = writer
         .join()
         .map_err(|_| anyhow!("tool input writer panicked"))?;

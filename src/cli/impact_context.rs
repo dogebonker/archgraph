@@ -284,14 +284,15 @@ pub(super) fn go_tests(
     };
     let mut packages = Vec::new();
     for module in modules {
-        let out = Command::new(&go_program)
-            .args(["list", "-deps", "-test", "-json", "./..."])
-            .current_dir(root.join(module))
-            .envs(collect::go::ENV.iter().copied())
-            .env("GOENV", "off")
-            .env("GOCACHEPROG", "")
-            .output()
-            .context("running go list for impact tests")?;
+        let out = collect::run(
+            Command::new(&go_program)
+                .args(["list", "-deps", "-test", "-json", "./..."])
+                .current_dir(root.join(module))
+                .envs(collect::go::ENV.iter().copied())
+                .env("GOENV", "off")
+                .env("GOCACHEPROG", ""),
+        )
+        .context("running go list for impact tests")?;
         if !out.status.success() {
             bail!(
                 "Go test dependency selection failed: {}",

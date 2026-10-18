@@ -331,15 +331,17 @@ fn github_pr(root: &Path, commit: &str) -> Result<Option<u64>> {
         .context("no origin remote")?;
     let repository =
         repository(&origin).context("origin is not a supported github.com repository URL")?;
-    let output = Command::new("gh")
-        .args([
-            "api",
-            &format!("repos/{repository}/commits/{commit}/pulls"),
-            "--jq",
-            ".[0].number // empty",
-        ])
-        .output()
-        .context("running gh api")?;
+    let output = collect::run(
+        Command::new("gh")
+            .args([
+                "api",
+                &format!("repos/{repository}/commits/{commit}/pulls"),
+                "--jq",
+                ".[0].number // empty",
+            ])
+            .env("GH_PROMPT_DISABLED", "1"),
+    )
+    .context("running gh api")?;
     if !output.status.success() {
         bail!("{}", String::from_utf8_lossy(&output.stderr).trim());
     }

@@ -64,6 +64,10 @@ struct Cli {
     /// Graph module granularity; file overrides folder/layout grouping
     #[arg(long, global = true, value_enum)]
     granularity: Option<Granularity>,
+    /// Seconds an external tool (collector, rust-analyzer, gh) may run before it is killed; 0
+    /// waits forever
+    #[arg(long, global = true, value_name = "SECONDS", default_value_t = 600)]
+    tool_timeout: u64,
     #[command(subcommand)]
     command: Cmd,
 }
@@ -360,6 +364,8 @@ fn main() -> ExitCode {
         legacy_v1: cli.legacy_v1,
         granularity: cli.granularity,
     });
+    let _ = collect::TOOL_TIMEOUT
+        .set((cli.tool_timeout > 0).then(|| std::time::Duration::from_secs(cli.tool_timeout)));
     let result = match cli.command {
         Cmd::Scan(args) => scan(args).map(|()| ExitCode::SUCCESS),
         Cmd::Report(args) => report(args),
@@ -486,11 +492,12 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         key.extend_from_slice(&fs::read(path)?);
     }
     if args.opts.engine == collect::Engine::Native && language == Language::Go {
-        let output = Command::new(&args.collector.go)
-            .arg("version")
-            .current_dir(std::env::temp_dir())
-            .env("GOTOOLCHAIN", "local")
-            .output()?;
+        let output = collect::run(
+            Command::new(&args.collector.go)
+                .arg("version")
+                .current_dir(std::env::temp_dir())
+                .env("GOTOOLCHAIN", "local"),
+        )?;
         key.extend_from_slice(&output.stdout);
     }
     if args.opts.engine != collect::Engine::Native {
@@ -521,7 +528,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
             if language == Language::Elixir {
                 elixir::sanitize(&mut command);
             }
-            if let Ok(output) = command.output() {
+            if let Ok(output) = collect::run(&mut command) {
                 key.extend_from_slice(&output.stdout);
                 key.extend_from_slice(&output.stderr);
             }
@@ -560,10 +567,8 @@ fn history(mut args: HistoryArgs) -> Result<()> {
             if language != query_language {
                 continue;
             }
-            if let Ok(output) = Command::new(program)
-                .args(version_args)
-                .current_dir(cwd)
-                .output()
+            if let Ok(output) =
+                collect::run(Command::new(program).args(version_args).current_dir(cwd))
                 && output.status.success()
             {
                 key.extend_from_slice(&output.stdout);
@@ -572,12 +577,13 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         let analyzer = (language == Language::Rust)
             .then(|| {
                 args.collector.rust_analyzer.clone().or_else(|| {
-                    let output = Command::new("rustup")
-                        .args(["which", "rust-analyzer"])
-                        .current_dir(std::env::temp_dir())
-                        .env("RUSTUP_AUTO_INSTALL", "0")
-                        .output()
-                        .ok()?;
+                    let output = collect::run(
+                        Command::new("rustup")
+                            .args(["which", "rust-analyzer"])
+                            .current_dir(std::env::temp_dir())
+                            .env("RUSTUP_AUTO_INSTALL", "0"),
+                    )
+                    .ok()?;
                     output
                         .status
                         .success()
@@ -586,10 +592,11 @@ fn history(mut args: HistoryArgs) -> Result<()> {
             })
             .flatten();
         if let Some(analyzer) = analyzer
-            && let Ok(output) = Command::new(analyzer)
-                .arg("--version")
-                .current_dir(std::env::temp_dir())
-                .output()
+            && let Ok(output) = collect::run(
+                Command::new(analyzer)
+                    .arg("--version")
+                    .current_dir(std::env::temp_dir()),
+            )
             && output.status.success()
         {
             key.extend_from_slice(&output.stdout);

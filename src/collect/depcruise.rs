@@ -103,7 +103,7 @@ fn cruise(
     let running = program.map_or("npx (is Node.js installed?)".into(), |p| {
         p.display().to_string()
     });
-    let out = cmd.arg(source_dir).output();
+    let out = super::run(cmd.arg(source_dir));
     let _ = std::fs::remove_file(&config);
     let out = out.with_context(|| format!("running {running}"))?;
     Ok(if out.status.success() {

@@ -341,11 +341,13 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
                 .create_new(true)
                 .open(&body)?;
             file.write_all(markdown.as_bytes())?;
-            let output = Command::new("gh")
-                .current_dir(&root)
-                .args(["pr", "comment", &number.to_string(), "--body-file"])
-                .arg(&body)
-                .output();
+            let output = collect::run(
+                Command::new("gh")
+                    .current_dir(&root)
+                    .args(["pr", "comment", &number.to_string(), "--body-file"])
+                    .arg(&body)
+                    .env("GH_PROMPT_DISABLED", "1"),
+            );
             if let Err(error) = fs::remove_file(&body) {
                 eprintln!("note: PR comment body cleanup failed: {error}");
             }

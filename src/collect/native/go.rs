@@ -67,13 +67,14 @@ pub fn collect(root: &Path, go: &str, policy: &Policy) -> Result<super::Output> 
     };
     let mut packages = BTreeMap::new();
     for dir in &dirs {
-        let output = Command::new(&go)
-            .args(["list", "-e", "-deps", "-json", "./..."])
-            .current_dir(root.join(dir))
-            .envs(crate::collect::go::ENV.iter().copied())
-            .env("GOSUMDB", "off")
-            .output()
-            .with_context(|| format!("running {go} list for native Go package metadata"))?;
+        let output = crate::collect::run(
+            Command::new(&go)
+                .args(["list", "-e", "-deps", "-json", "./..."])
+                .current_dir(root.join(dir))
+                .envs(crate::collect::go::ENV.iter().copied())
+                .env("GOSUMDB", "off"),
+        )
+        .with_context(|| format!("running {go} list for native Go package metadata"))?;
         if !output.status.success() {
             bail!(
                 "native Go metadata failed: {}",

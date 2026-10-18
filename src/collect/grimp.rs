@@ -129,19 +129,20 @@ pub fn run(
             fs::canonicalize(&path).with_context(|| format!("--python-path {}", path.display()))
         })
         .collect::<Result<Vec<_>>>()?;
-    let out = Command::new(python)
-        .args(["-I", "-B", "-c", DUMP])
-        .arg(src)
-        .arg(package)
-        .arg(fs::canonicalize(root)?)
-        .args(include_tests.then_some("--include-tests"))
-        .args(
-            python_paths
-                .iter()
-                .flat_map(|path| [std::ffi::OsStr::new("--python-path"), path.as_os_str()]),
-        )
-        .output()
-        .with_context(|| format!("running {python}"))?;
+    let out = super::run(
+        Command::new(python)
+            .args(["-I", "-B", "-c", DUMP])
+            .arg(src)
+            .arg(package)
+            .arg(fs::canonicalize(root)?)
+            .args(include_tests.then_some("--include-tests"))
+            .args(
+                python_paths
+                    .iter()
+                    .flat_map(|path| [std::ffi::OsStr::new("--python-path"), path.as_os_str()]),
+            ),
+    )
+    .with_context(|| format!("running {python}"))?;
     if !out.status.success() {
         bail!(
             "grimp helper failed: {}\ngrimp 3.17 is required: pip install grimp==3.17, \
