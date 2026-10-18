@@ -68,7 +68,7 @@ pub fn module_dirs(root: &Path, excludes: &GlobSet) -> Result<(Vec<String>, Vec<
         for entry in fs::read_dir(&dir).with_context(|| format!("reading {}", dir.display()))? {
             let entry = entry?;
             let name = entry.file_name().to_string_lossy().into_owned();
-            let path = super::join(&rel, &name);
+            let path = crate::modules::join(&rel, &name);
             if entry.file_type()?.is_dir() {
                 if !name.starts_with(['.', '_'])
                     && !["vendor", "testdata", "node_modules"].contains(&name.as_str())

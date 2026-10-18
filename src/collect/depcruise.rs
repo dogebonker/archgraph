@@ -332,7 +332,7 @@ pub fn package_entries(root: &Path, files: &[String]) -> Vec<String> {
                 continue;
             };
             if kind.is_dir() && name != "node_modules" && !name.starts_with('.') {
-                dirs.push(super::join(&dir, &name));
+                dirs.push(crate::modules::join(&dir, &name));
             } else if kind.is_file() && name == "package.json" {
                 let Some(json) = std::fs::read(entry.path())
                     .ok()
@@ -386,8 +386,8 @@ fn source_of<'a>(
         stem = rest;
     }
     for base in [
-        super::join(dir, stem),
-        super::join(dir, &format!("src/{stem}")),
+        crate::modules::join(dir, stem),
+        crate::modules::join(dir, &format!("src/{stem}")),
     ] {
         for ext in TS_EXTENSIONS {
             if let Some(file) = scanned.get(format!("{base}.{ext}").as_str()) {

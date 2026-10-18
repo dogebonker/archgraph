@@ -902,7 +902,7 @@ fn scan_doc(
                 };
                 (
                     grimp::parse(&json, root, source_dir)?,
-                    collect::join(source_dir, &package),
+                    modules::join(source_dir, &package),
                 )
             }
             // Package paths are what the go command reports, from the scan root, `src/` or not.

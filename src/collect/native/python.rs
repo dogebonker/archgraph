@@ -413,7 +413,7 @@ pub fn collect(
     Ok(super::Output {
         raw: graph,
         symbols,
-        source_root: crate::collect::join(source_dir, &prefix),
+        source_root: crate::modules::join(source_dir, &prefix),
     })
 }
 

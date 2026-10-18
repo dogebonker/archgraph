@@ -98,14 +98,6 @@ pub fn source_dir(root: &Path) -> &'static str {
     }
 }
 
-pub fn join(dir: &str, rest: &str) -> String {
-    if dir == "." {
-        rest.to_owned()
-    } else {
-        format!("{dir}/{rest}")
-    }
-}
-
 /// The language with the most source files after the default excludes: TypeScript and Python
 /// under `source_dir`, Java/Rust/Go/Elixir under the root. Rust and Go require root manifests.
 /// A tie keeps TypeScript, then Python, Go, Rust, Java and Elixir.

@@ -8,8 +8,9 @@ use anyhow::{Context, Result, bail};
 use globset::GlobSet;
 use serde::Deserialize;
 
-use super::{RawGraph, join};
+use super::RawGraph;
 use crate::model::{Collector, Edge, EdgeKind};
+use crate::modules::join;
 
 const DUMP: &str = include_str!("grimp_dump.py");
 
