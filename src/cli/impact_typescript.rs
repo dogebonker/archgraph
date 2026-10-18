@@ -1,8 +1,7 @@
 //! Refine barrel consumers with TypeScript's symbol resolver without executing source code.
 use std::collections::BTreeSet;
-use std::io::Write;
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use anyhow::{Context, Result, bail};
 use archgraph::model::{Document, EdgeKind};
@@ -36,19 +35,9 @@ pub(super) fn resolve_barrels(
         "depcruise": depcruise,
         "files": doc.files.iter().map(|file| serde_json::json!({"path":file.path,"barrel":file.barrel})).collect::<Vec<_>>()
     }))?;
-    let mut child = Command::new("node")
-        .args(["-e", HELPER])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .context("running TypeScript impact symbol resolver")?;
-    child
-        .stdin
-        .take()
-        .context("opening TypeScript resolver input")?
-        .write_all(&input)?;
-    let output = child.wait_with_output()?;
+    let output =
+        archgraph::collect::run_with_input(Command::new("node").args(["-e", HELPER]), input)
+            .context("running TypeScript impact symbol resolver")?;
     if !output.status.success() {
         bail!(
             "TypeScript barrel resolution failed: {}",

@@ -1,9 +1,8 @@
 //! Source-only symbol collection. Repository code is never imported or executed.
 pub mod golang;
 
-use std::io::Write;
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use anyhow::{Context, Result, bail};
 use serde_json::json;
@@ -59,22 +58,9 @@ pub fn collect(root: &Path, doc: &Document, options: Options<'_>) -> Result<Symb
     if doc.source.language == Language::Python {
         command.args(["-I", "-B"]);
     }
-    let mut child = command
-        .args([flag, script])
-        .current_dir(root)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .with_context(|| format!("start {program} symbol collector"))?;
-    child
-        .stdin
-        .take()
-        .context("symbol collector stdin")?
-        .write_all(&input)?;
-    let output = child
-        .wait_with_output()
-        .context("wait for symbol collector")?;
+    let output =
+        crate::collect::run_with_input(command.args([flag, script]).current_dir(root), input)
+            .with_context(|| format!("run {program} symbol collector"))?;
     if !output.status.success() {
         bail!(
             "symbol collector failed: {}",

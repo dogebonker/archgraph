@@ -1,8 +1,7 @@
 //! Shared source-selection policy. Explicit excludes win; includes restore defaults/ignore matches.
 use std::collections::BTreeSet;
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use anyhow::{Context, Result, bail};
 use globset::GlobSet;
@@ -280,27 +279,11 @@ fn check_ignore(
     paths: &[String],
     allow_nonrepo: bool,
 ) -> Result<Option<BTreeSet<String>>> {
+    let mut input = paths.join("\0").into_bytes();
+    input.push(0);
     // Untranslated messages keep the "not a git repository" check below locale-independent.
-    let mut child = command
-        .env("LC_ALL", "C")
-        .env_remove("LANGUAGE")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+    let output = super::run_with_input(command.env("LC_ALL", "C").env_remove("LANGUAGE"), input)
         .context("running Git ignore matcher")?;
-    let mut stdin = child.stdin.take().expect("piped stdin");
-    let bytes = paths.join("\0").into_bytes();
-    let writer = std::thread::spawn(move || -> std::io::Result<()> {
-        stdin.write_all(&bytes)?;
-        stdin.write_all(b"\0")
-    });
-    let output = child
-        .wait_with_output()
-        .context("reading Git ignore matches")?;
-    let written = writer
-        .join()
-        .map_err(|_| anyhow::anyhow!("Git ignore input writer panicked"))?;
     if output.status.code() == Some(128)
         && allow_nonrepo
         && String::from_utf8_lossy(&output.stderr).contains("not a git repository")
@@ -313,7 +296,6 @@ fn check_ignore(
             String::from_utf8_lossy(&output.stderr).trim()
         );
     }
-    written.context("writing Git ignore paths")?;
     Ok(Some(
         output
             .stdout

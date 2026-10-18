@@ -2,9 +2,8 @@
 
 use std::collections::HashSet;
 use std::fs;
-use std::io::Write;
 use std::path::{Component, Path};
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use anyhow::{Context, Result, bail, ensure};
@@ -49,20 +48,9 @@ pub fn run(root: &Path, elixir: &str, policy: &Policy) -> Result<Vec<u8>> {
         let mut command = Command::new(&elixir);
         command.args(["elixir.exs"]).arg(&root).current_dir(&dir);
         sanitize(&mut command);
-        let mut child = command
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .with_context(|| {
-                format!("running {elixir}: install Elixir 1.14 or later, or pass --elixir")
-            })?;
-        child
-            .stdin
-            .take()
-            .unwrap()
-            .write_all(files.join("\0").as_bytes())?;
-        let out = child.wait_with_output()?;
+        let out = super::run_with_input(&mut command, files.join("\0").into_bytes()).with_context(
+            || format!("running {elixir}: install Elixir 1.14 or later, or pass --elixir"),
+        )?;
         if !out.status.success() {
             bail!(
                 "Elixir helper failed: {}",

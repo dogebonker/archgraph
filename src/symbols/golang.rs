@@ -1,10 +1,5 @@
 //! Source-only Go public symbols and cross-package references.
-use std::{
-    fs,
-    io::Write,
-    path::Path,
-    process::{Command, Stdio},
-};
+use std::{fs, path::Path, process::Command};
 
 use crate::{model::Document, surface::Symbols};
 use anyhow::{Context, Result, bail};
@@ -28,31 +23,24 @@ pub fn collect(root: &Path, doc: &Document, go: &str) -> Result<Symbols> {
     fs::create_dir(&dir)?;
     let result = (|| -> Result<Symbols> {
         fs::write(dir.join("go_dump.go"), include_str!("go_dump.go"))?;
-        let mut child = Command::new(&go)
-            .args(["run", "go_dump.go"])
-            .arg(&root)
-            .current_dir(&dir)
-            .env("PWD", &dir)
-            .envs(crate::collect::go::ENV.iter().copied())
-            .env("GOENV", "off")
-            .env("GOCACHEPROG", "")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .with_context(|| format!("running {go} for Go surface symbols"))?;
         let files: Vec<&str> = doc
             .files
             .iter()
             .filter(|f| f.path.ends_with(".go"))
             .map(|f| f.path.as_str())
             .collect();
-        child
-            .stdin
-            .take()
-            .context("opening Go helper input")?
-            .write_all(&serde_json::to_vec(&files)?)?;
-        let output = child.wait_with_output()?;
+        let output = crate::collect::run_with_input(
+            Command::new(&go)
+                .args(["run", "go_dump.go"])
+                .arg(&root)
+                .current_dir(&dir)
+                .env("PWD", &dir)
+                .envs(crate::collect::go::ENV.iter().copied())
+                .env("GOENV", "off")
+                .env("GOCACHEPROG", ""),
+            serde_json::to_vec(&files)?,
+        )
+        .with_context(|| format!("running {go} for Go surface symbols"))?;
         if !output.status.success() {
             bail!(
                 "Go symbol helper failed: {}",

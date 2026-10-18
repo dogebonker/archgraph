@@ -14,9 +14,11 @@ pub mod typescript_resolution;
 
 use std::collections::HashSet;
 use std::fs;
+use std::io::Write;
 use std::path::Path;
+use std::process::{Command, Output, Stdio};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 
 use crate::model::{Collector, Edge, Language, NodeMetadata};
@@ -87,6 +89,27 @@ pub fn globset(globs: &[String]) -> Result<GlobSet> {
         );
     }
     Ok(set.build()?)
+}
+
+/// Runs `command` with `input` on its stdin and its stdout and stderr captured. The input is
+/// written from another thread, so a tool that exits before reading all of it reports its own
+/// error output; a write error surfaces only when the tool succeeded.
+pub fn run_with_input(command: &mut Command, input: Vec<u8>) -> Result<Output> {
+    let mut child = command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    let mut stdin = child.stdin.take().expect("piped stdin");
+    let writer = std::thread::spawn(move || stdin.write_all(&input));
+    let output = child.wait_with_output()?;
+    let written = writer
+        .join()
+        .map_err(|_| anyhow!("tool input writer panicked"))?;
+    if output.status.success() {
+        written.context("writing tool input")?;
+    }
+    Ok(output)
 }
 
 /// `src` when the root has one, else the root itself.
@@ -200,5 +223,27 @@ pub fn detect_language_with_options(
         _ if go > ts && go > py => Ok(Language::Go),
         _ if py > ts => Ok(Language::Python),
         _ => Ok(Language::Typescript),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_tool_exiting_before_reading_its_input_reports_its_own_error() {
+        let input = vec![b'x'; 1 << 20];
+        let output = run_with_input(
+            Command::new("sh").args(["-c", "echo 'helper failed early' >&2; exit 3"]),
+            input.clone(),
+        )
+        .unwrap();
+        assert_eq!(output.status.code(), Some(3));
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr).trim(),
+            "helper failed early"
+        );
+        let echoed = run_with_input(&mut Command::new("cat"), input.clone()).unwrap();
+        assert_eq!(echoed.stdout, input);
     }
 }

@@ -1,9 +1,8 @@
 //! Java source references through the JDK compiler tree API; no project build is run.
 
 use std::fs;
-use std::io::Write;
 use std::path::{Component, Path};
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use anyhow::{Context, Result, bail, ensure};
 use globset::GlobSet;
@@ -43,25 +42,18 @@ pub fn run(root: &Path, java: &str, excludes: &GlobSet) -> Result<Vec<u8>> {
             dir.join("ArchgraphJava.java"),
             include_str!("ArchgraphJava.java"),
         )?;
-        let mut child = Command::new(&java)
-            .args(["--class-path", ".", "ArchgraphJava.java"])
-            .arg(&root)
-            .current_dir(&dir)
-            .env_remove("JDK_JAVA_OPTIONS")
-            .env_remove("JAVA_TOOL_OPTIONS")
-            .env_remove("_JAVA_OPTIONS")
-            .env_remove("CLASSPATH")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .with_context(|| format!("running {java}: install JDK 11 or later, or pass --java"))?;
-        child
-            .stdin
-            .take()
-            .unwrap()
-            .write_all(files.join("\0").as_bytes())?;
-        let out = child.wait_with_output()?;
+        let out = super::run_with_input(
+            Command::new(&java)
+                .args(["--class-path", ".", "ArchgraphJava.java"])
+                .arg(&root)
+                .current_dir(&dir)
+                .env_remove("JDK_JAVA_OPTIONS")
+                .env_remove("JAVA_TOOL_OPTIONS")
+                .env_remove("_JAVA_OPTIONS")
+                .env_remove("CLASSPATH"),
+            files.join("\0").into_bytes(),
+        )
+        .with_context(|| format!("running {java}: install JDK 11 or later, or pass --java"))?;
         if !out.status.success() {
             bail!(
                 "Java helper failed (requires JDK 11 or later): {}",
