@@ -307,7 +307,7 @@ fn strings(values: &[Value], source: &str) -> Result<Vec<String>> {
 
 fn safe_relative(path: &str) -> Result<()> {
     if path.is_empty()
-        || path.contains('\\')
+        || path.contains(['\\', ':'])
         || Path::new(path)
             .components()
             .any(|part| !matches!(part, Component::Normal(_) | Component::CurDir))

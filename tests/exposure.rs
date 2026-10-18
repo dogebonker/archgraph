@@ -427,21 +427,6 @@ fn external_ids_cannot_spoof_ordinary_file_policy_targets_or_move_destinations()
         )
         .unwrap_err()
         .to_string()
-        .contains("collides")
-    );
-    let moved = archgraph::simulate::apply(
-        &doc,
-        compiled.as_ref(),
-        &[Move {
-            file: "src/domain/a.ts".into(),
-            to: "other:ordinary.ts".into(),
-        }],
-    )
-    .unwrap();
-    assert!(
-        moved
-            .files
-            .iter()
-            .any(|file| file.path == "other:ordinary.ts")
+        .contains("must be a relative path inside the root")
     );
 }

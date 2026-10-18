@@ -59,11 +59,7 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         if !destinations.insert(m.to.as_str()) {
             bail!("two files are moved to {}", m.to);
         }
-        if m.to.starts_with('/')
-            || m.to
-                .split('/')
-                .any(|s| s.is_empty() || s == "." || s == "..")
-        {
+        if !crate::collect::is_relative_path(&m.to, false) {
             bail!("{} must be a relative path inside the root", m.to);
         }
     }
@@ -304,6 +300,9 @@ mod tests {
             &[mv("a/x.ts", "c/n.ts"), mv("a/y.ts", "c/n.ts")],
         );
         assert!(same.unwrap_err().to_string().contains("c/n.ts"));
+        for to in ["../x.ts", "/x.ts", "a\\..\\x.ts", "C:/x.ts"] {
+            assert!(apply(&doc, None, &[mv("a/x.ts", to)]).is_err(), "{to}");
+        }
         assert!(
             apply(
                 &doc,
