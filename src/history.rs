@@ -485,8 +485,7 @@ pub fn collect_with_options(
     let latest = commits.first().context("no commits selected for history")?;
     let tags = tags(root)?;
     let since = match &options.since {
-        Some(since) => crate::hotspots::utc_midnight(since)
-            .context("history --since must be a YYYY-MM-DD date")?,
+        Some(since) => crate::hotspots::since_timestamp(since, latest.timestamp)?,
         None => latest.timestamp.saturating_sub(2 * 365 * 86400),
     };
     let mut seen_months = BTreeSet::new();

@@ -162,12 +162,10 @@ pub(crate) fn utc_midnight(date: &str) -> Result<i64> {
 
 /// Relative windows end at the graph's commit, so historical snapshots remain reproducible.
 /// Months use 365/12 days and years use 365 days; explicit dates start at 00:00 UTC.
-fn since_timestamp(since: &str, end: i64) -> Result<i64> {
+pub(crate) fn since_timestamp(since: &str, end: i64) -> Result<i64> {
     let words: Vec<_> = since.split_whitespace().collect();
     if let [count, unit, "ago"] = words.as_slice() {
-        let count: i64 = count
-            .parse()
-            .context("hotspot window count must be an integer")?;
+        let count: i64 = count.parse().context("--since count must be an integer")?;
         let seconds = match unit.trim_end_matches('s') {
             "second" => 1,
             "minute" => 60,
@@ -176,22 +174,21 @@ fn since_timestamp(since: &str, end: i64) -> Result<i64> {
             "week" => 7 * 86400,
             "month" => 365 * 86400 / 12,
             "year" => 365 * 86400,
-            _ => bail!("unsupported hotspot window unit: {unit}"),
+            _ => bail!("unsupported --since unit: {unit}"),
         };
         if count < 0 {
-            bail!("hotspot window must not be negative");
+            bail!("--since window must not be negative");
         }
         return end
             .checked_sub(
                 count
                     .checked_mul(seconds)
-                    .context("hotspot window is too large")?,
+                    .context("--since window is too large")?,
             )
-            .context("hotspot window is too large");
+            .context("--since window is too large");
     }
     // Reject ambiguous relative strings instead of silently anchoring them to today's date.
-    utc_midnight(since)
-        .context("hotspot --since must be YYYY-MM-DD or '<N> days/weeks/months/years ago'")
+    utc_midnight(since).context("--since must be YYYY-MM-DD or '<N> days/weeks/months/years ago'")
 }
 
 /// One NUL-delimited numstat pass; rename records carry separate old/new path tokens.

@@ -536,7 +536,17 @@ fn drift_sampling_selects_first_monthly_commits_intervals_and_releases() {
             .collect::<Vec<_>>(),
         vec![&commits[1], &commits[2], &commits[3]]
     );
-    for invalid in ["2020-02-30", "2020-01-20xyzzy", "1 year ago"] {
+    // Relative windows end at the selected endpoint (2020-03-01 12:00), not today's date.
+    assert_eq!(
+        since("41 days ago")
+            .unwrap()
+            .snapshots
+            .iter()
+            .map(|s| &s.commit)
+            .collect::<Vec<_>>(),
+        vec![&commits[1], &commits[2], &commits[3]]
+    );
+    for invalid in ["2020-02-30", "2020-01-20xyzzy", "yesterday"] {
         assert!(since(invalid).is_err(), "{invalid}");
     }
 }
