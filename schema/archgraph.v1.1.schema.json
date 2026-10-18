@@ -3589,20 +3589,12 @@
               "simulation": {
                 "type": "object",
                 "required": [
-                  "verified",
-                  "no_new_cycles",
                   "cycles_before",
                   "cycles_after",
                   "boundary_cycle",
                   "scope"
                 ],
                 "properties": {
-                  "verified": {
-                    "type": "boolean"
-                  },
-                  "no_new_cycles": {
-                    "type": "boolean"
-                  },
                   "cycles_before": {
                     "$ref": "#/$defs/count"
                   },

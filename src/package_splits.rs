@@ -112,8 +112,6 @@ pub struct PackageDependency {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Simulation {
-    pub verified: bool,
-    pub no_new_cycles: bool,
     pub cycles_before: usize,
     pub cycles_after: usize,
     pub boundary_cycle: Vec<String>,
@@ -494,10 +492,7 @@ pub fn analyze(
     candidates.truncate(options.limit);
     for candidate in &mut candidates {
         candidate.simulation = simulate(doc, &dependencies, candidate);
-        if !candidate.simulation.verified
-            || !candidate.simulation.no_new_cycles
-            || !candidate.simulation.boundary_cycle.is_empty()
-        {
+        if !candidate.simulation.boundary_cycle.is_empty() {
             candidate.readiness = Readiness::NeedsVerification;
             candidate
                 .uncertainties
@@ -568,9 +563,6 @@ fn simulate(doc: &Document, dependencies: &[Dependency], candidate: &Candidate) 
         })
         .collect();
     let after = components(&after_links);
-    let no_new_cycles = after
-        .iter()
-        .all(|cycle| before.iter().any(|old| cycle.is_subset(old)));
     let mut package_id = "\0extracted-package".to_owned();
     while nodes.contains(&package_id) {
         package_id.push('\0');
@@ -606,8 +598,6 @@ fn simulate(doc: &Document, dependencies: &[Dependency], candidate: &Candidate) 
         })
         .unwrap_or_default();
     Simulation {
-        verified: true,
-        no_new_cycles,
         cycles_before: before.len(),
         cycles_after: after.len(),
         boundary_cycle,
@@ -681,7 +671,7 @@ mod tests {
     }
 
     #[test]
-    fn free_candidates_use_physical_subtrees_and_have_verified_simulation() {
+    fn free_candidates_use_physical_subtrees() {
         let doc = base();
         let report = report(&doc);
         let core = candidate(&report, "lib/core");
@@ -689,7 +679,6 @@ mod tests {
         assert_eq!(core.readiness, Readiness::ImportLevelReady);
         assert_eq!((core.fan_in, core.size, core.score), (1, 2, 2));
         assert_eq!(core.cohesion, 1.0);
-        assert!(core.simulation.verified && core.simulation.no_new_cycles);
         assert_eq!(core.modules, ["lib"]);
         assert!(report.candidates.iter().any(|c| c.path == "lib"));
     }
@@ -968,7 +957,6 @@ mod tests {
                 .iter()
                 .any(|m| m == "other/o.ts")
         );
-        assert!(lib.simulation.no_new_cycles);
     }
 
     #[test]
@@ -995,7 +983,6 @@ mod tests {
         .unwrap();
         let simulation = &candidate(&result, "lib").simulation;
         assert_eq!((simulation.cycles_before, simulation.cycles_after), (1, 2));
-        assert!(simulation.no_new_cycles);
     }
 
     #[test]

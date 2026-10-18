@@ -111,12 +111,8 @@ pub(super) fn run(args: PackageSplitsArgs) -> Result<()> {
                 }
                 let simulation = &candidate.simulation;
                 println!(
-                    "  {} cycle simulation: {} -> {} remainder SCCs; verified {}; no new cycles {}",
-                    simulation.scope,
-                    simulation.cycles_before,
-                    simulation.cycles_after,
-                    simulation.verified,
-                    simulation.no_new_cycles
+                    "  {} cycle simulation: {} -> {} remainder SCCs",
+                    simulation.scope, simulation.cycles_before, simulation.cycles_after
                 );
                 if !simulation.boundary_cycle.is_empty() {
                     println!(

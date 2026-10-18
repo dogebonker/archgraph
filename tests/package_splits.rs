@@ -167,7 +167,7 @@ fn report_enrichment_restores_recomputes_and_renders_without_collectors() {
     assert_eq!(report["workspace"]["checked"], true);
     assert_eq!(core(&report)["readiness"], "import-level-ready");
     assert_eq!(core(&report)["score"], 2);
-    assert_eq!(core(&report)["simulation"]["no_new_cycles"], true);
+    assert!(core(&report)["simulation"].get("no_new_cycles").is_none());
     let mut saved: Value = serde_json::from_slice(&fs::read(&enriched).unwrap()).unwrap();
     common::validate(&saved);
     saved["package_splits"]["candidates"][0]["score"] = json!(9999);

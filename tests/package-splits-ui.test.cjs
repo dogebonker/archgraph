@@ -32,7 +32,7 @@ function candidate(patch = {}) {
   return { path: 'src/shared', modules: ['shared'], files: ['src/shared/date.ts'], classification: 'free',
     readiness: 'import-level-ready', fan_in: 4, size: 1, score: 4, cohesion: 0.8, internal_edges: 2,
     cut_list: [], package_dependencies: [], external_packages: [], uncertainties: [],
-    simulation: { verified: true, no_new_cycles: true, cycles_before: 2, cycles_after: 1, boundary_cycle: [], scope: 'remaining graph' }, ...patch };
+    simulation: { cycles_before: 2, cycles_after: 1, boundary_cycle: [], scope: 'remaining graph' }, ...patch };
 }
 function open(detail) { detail.open = true; detail.listeners.toggle(); }
 function descendants(root) { return [root, ...(root.children || []).flatMap(descendants)]; }
@@ -59,9 +59,8 @@ test('marker states distinguish verified free candidates, cheap cuts and uncerta
     [candidate(), 'ready'],
     [candidate({ classification: 'cheap', readiness: 'cuts-required' }), 'cheap'],
     [candidate({ readiness: 'needs-verification' }), 'uncertain'],
-    [candidate({ simulation: { verified: true, no_new_cycles: true, boundary_cycle: ['shared'] } }), 'uncertain'],
-    [candidate({ simulation: { verified: false, no_new_cycles: true } }), 'uncertain'],
-    [candidate({ simulation: { verified: true, no_new_cycles: false } }), 'uncertain'],
+    [candidate({ simulation: { boundary_cycle: ['shared'] } }), 'uncertain'],
+    [candidate({ simulation: undefined }), 'uncertain'],
   ]) {
     ctx.row = row;
     assert.equal(vm.runInContext('packageSplitMarker([row]).state', ctx), expected);
@@ -74,7 +73,7 @@ test('marker states distinguish verified free candidates, cheap cuts and uncerta
 test('candidate evidence uses safe text, lazy cut lists, actual file navigation and partial coverage', () => {
   const evil = '<img src=x onerror=alert(1)>', row = candidate({ path: evil, cut_list: [
     { from: 'src/shared/date.ts', to: evil, kind: 'runtime', line: 9, reason: evil }
-  ], uncertainties: [evil], simulation: { verified: false, no_new_cycles: false, cycles_before: 2, cycles_after: 1, boundary_cycle: [evil, 'other'], scope: evil } });
+  ], uncertainties: [evil], simulation: { cycles_before: 2, cycles_after: 1, boundary_cycle: [evil, 'other'], scope: evil } });
   const { ctx, panel, targets } = setup({ files: [{ path: 'src/shared/date.ts', module: 'shared' }, { path: 'src/shared/other.ts', module: 'shared' }],
     package_splits: { candidates: [row], workspace: { checked: true }, limitations: [evil] } });
   vm.runInContext('packageSplitContext("shared")', ctx);
@@ -83,7 +82,7 @@ test('candidate evidence uses safe text, lazy cut lists, actual file navigation 
   open(detail);
   assert.match(panel.textContent, /Partial module coverage: 1 of 2 files/);
   assert.match(panel.textContent, /Score = 4 inbound modules × 1 files = 4; cohesion 0.80; 2 internal imports/);
-  assert.match(panel.textContent, /Simulation unverified.*cycles 2 → 1/);
+  assert.match(panel.textContent, /Simulation: cycles 2 → 1/);
   assert.ok(panel.textContent.includes('Boundary cycle: ' + evil));
   const inner = detail.children[1], cuts = inner.children.find(n => n.children[0]?.textContent === '1 import to cut');
   assert.equal(cuts.children.length, 1);
