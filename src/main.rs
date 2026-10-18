@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 use std::fs;
-use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 use std::sync::OnceLock;
@@ -20,14 +19,10 @@ fn globals() -> &'static Globals {
 }
 
 use anyhow::{Context, Result, bail};
-use archgraph::collect::{self, depcruise, elixir, go, grimp, java, rust};
-use archgraph::diff::count;
-use archgraph::model::{
-    Config, CycleLevel, Document, Git, Granularity, Language, SCHEMA, ScanInput, Source, Verdict,
-};
-use archgraph::{cochange, codeowners, diff, history, modules, render, rules, simulate};
+use archgraph::collect::{self, rust};
+use archgraph::model::{Document, Git, Granularity, Language, SCHEMA, ScanInput, Source, Verdict};
+use archgraph::{codeowners, diff, history, modules, render, rules, simulate};
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use sha2::Digest;
 
 #[path = "cli/check.rs"]
 mod check_cli;

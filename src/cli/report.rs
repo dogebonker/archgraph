@@ -1,4 +1,7 @@
 use super::*;
+use archgraph::diff::count;
+use archgraph::model::CycleLevel;
+use std::io::IsTerminal;
 
 #[derive(Args)]
 pub(super) struct Report {
