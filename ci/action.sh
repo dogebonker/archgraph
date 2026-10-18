@@ -6,6 +6,7 @@
 #   INPUT_PATH INPUT_RULES INPUT_DEPTH INPUT_LANGUAGE INPUT_PACKAGE INPUT_EXCLUDE INPUT_FAIL_ON
 #   INPUT_FAIL_ON_RULES_CHANGE INPUT_VERSION INPUT_BINARY INPUT_BASE_REF   as in action.yml
 #   ARCHGRAPH_DEPCRUISE, ARCHGRAPH_PYTHON, ARCHGRAPH_GO   a collector to use instead of installing one
+#   ARCHGRAPH_ELIXIR   a preinstalled Elixir executable (default elixir)
 #
 # Without a base ref: `report` on INPUT_PATH, its summary in the job summary, exit 1 when any
 # import is forbidden. With one: `report` on HEAD, a scan of the base commit (in a worktree) with
@@ -167,6 +168,15 @@ if [[ $lang == go ]] || { [[ -z $lang ]] && has go.mod go.work; }; then
   opts+=(--go "$go")
 fi
 
+if [[ $lang == elixir ]] || { [[ -z $lang ]] && has mix.exs; }; then
+  elixir=${ARCHGRAPH_ELIXIR:-elixir}
+  if [[ $lang == elixir ]]; then
+    command -v "$elixir" >/dev/null ||
+      die "Elixir scans need Elixir 1.14+ / OTP 25+ on PATH: install Elixir or set ARCHGRAPH_ELIXIR"
+  fi
+  opts+=(--elixir "$elixir")
+fi
+
 head=$work/head
 status=0
 "$archgraph" report "$path" ${opts[@]+"${opts[@]}"} --out-dir "$head" >"$work/report.txt" || status=$?
@@ -181,7 +191,13 @@ cat "$work/report.txt"
 if [[ -z $base_ref ]]; then
   # A fence longer than any backtick run in the text, which the repository controls.
   fence='```'
-  longest=$(grep -o '``*' "$work/report.txt" | awk '{ if (length($0) > m) m = length($0) } END { print m + 0 }')
+  longest=$(awk '{
+    line = $0
+    while (match(line, /`+/)) {
+      if (RLENGTH > m) m = RLENGTH
+      line = substr(line, RSTART + RLENGTH)
+    }
+  } END { print m + 0 }' "$work/report.txt")
   while ((${#fence} <= longest)); do fence+='`'; done
   {
     echo '### archgraph report'

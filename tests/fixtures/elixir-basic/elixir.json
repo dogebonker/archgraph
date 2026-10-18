@@ -1,0 +1,119 @@
+{
+  "edges": [
+    {
+      "from": "apps/worker/lib/demo_worker.ex",
+      "kind": "runtime",
+      "line": 3,
+      "specifier": "Demo.A",
+      "to": "lib/demo/a.ex"
+    },
+    {
+      "from": "lib/demo/a.ex",
+      "kind": "runtime",
+      "line": 3,
+      "specifier": "Demo.B",
+      "to": "lib/demo/b.ex"
+    },
+    {
+      "from": "lib/demo/b.ex",
+      "kind": "runtime",
+      "line": 2,
+      "specifier": "Demo.A",
+      "to": "lib/demo/a.ex"
+    },
+    {
+      "from": "lib/types/left.ex",
+      "kind": "type",
+      "line": 2,
+      "specifier": "Demo.Types.Right",
+      "to": "lib/types/right.ex"
+    },
+    {
+      "from": "lib/types/right.ex",
+      "kind": "type",
+      "line": 2,
+      "specifier": "Demo.Types.Left",
+      "to": "lib/types/left.ex"
+    },
+    {
+      "from": "test/demo_test.exs",
+      "kind": "runtime",
+      "line": 2,
+      "specifier": "Demo.A",
+      "to": "lib/demo/a.ex"
+    }
+  ],
+  "elixir_version": "1.20.1",
+  "files": [
+    "apps/worker/lib/demo_worker.ex",
+    "lib/demo/a.ex",
+    "lib/demo/b.ex",
+    "lib/types/left.ex",
+    "lib/types/right.ex",
+    "mix.exs",
+    "test/demo_test.exs"
+  ],
+  "imports": [
+    {
+      "from": "apps/worker/lib/demo_worker.ex",
+      "kind": "runtime",
+      "line": 3,
+      "specifier": "Demo.A",
+      "targets": [
+        "lib/demo/a.ex"
+      ]
+    },
+    {
+      "from": "lib/demo/a.ex",
+      "kind": "runtime",
+      "line": 3,
+      "specifier": "Demo.B",
+      "targets": [
+        "lib/demo/b.ex"
+      ]
+    },
+    {
+      "from": "lib/demo/b.ex",
+      "kind": "runtime",
+      "line": 2,
+      "specifier": "Demo.A",
+      "targets": [
+        "lib/demo/a.ex"
+      ]
+    },
+    {
+      "from": "lib/types/left.ex",
+      "kind": "type",
+      "line": 2,
+      "specifier": "Demo.Types.Right",
+      "targets": [
+        "lib/types/right.ex"
+      ]
+    },
+    {
+      "from": "lib/types/right.ex",
+      "kind": "type",
+      "line": 2,
+      "specifier": "Demo.Types.Left",
+      "targets": [
+        "lib/types/left.ex"
+      ]
+    },
+    {
+      "external": "elixir",
+      "from": "mix.exs",
+      "kind": "runtime",
+      "line": 1,
+      "specifier": "File"
+    },
+    {
+      "from": "test/demo_test.exs",
+      "kind": "runtime",
+      "line": 2,
+      "specifier": "Demo.A",
+      "targets": [
+        "lib/demo/a.ex"
+      ]
+    }
+  ]
+}

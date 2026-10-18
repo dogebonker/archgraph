@@ -40,6 +40,8 @@ jobs:
         with:
           go-version: 1.27.1
           cache: false
+      - name: Install Elixir for AST collector tests
+        run: sudo apt-get update && sudo apt-get install --yes elixir
       - name: Install the pinned collectors
         run: |
           rustup component add rust-analyzer rust-src
@@ -55,7 +57,7 @@ jobs:
         env:
           ARCHGRAPH_DEPCRUISE: ${{ runner.temp }}/tools/node_modules/.bin/depcruise
           ARCHGRAPH_PYTHON: ${{ runner.temp }}/venv/bin/python
-      - run: cargo test --locked --test symbols --test surface_go --test go_resolution -- --include-ignored
+      - run: cargo test --locked --test symbols --test surface_go --test go_resolution --test elixir --test elixir_collector -- --include-ignored
 
   binary:
     runs-on: ubuntu-latest
@@ -83,7 +85,8 @@ jobs:
           name: archgraph-binary
           path: ${{ runner.temp }}/bin
       - run: chmod +x "$RUNNER_TEMP/bin/archgraph"
-      - run: shellcheck install.sh ci/action.sh ci/test-install.sh
+      - run: shellcheck install.sh ci/action.sh ci/test-install.sh ci/test-elixir-action.sh
+      - run: bash ci/test-elixir-action.sh
       - name: npm/package.json version is Cargo.toml's
         run: |
           cargo=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)

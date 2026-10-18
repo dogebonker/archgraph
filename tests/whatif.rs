@@ -307,6 +307,18 @@ fn fixtures() -> Value {
         ),
     ];
     cases.push(case(
+        "elixir-test-back-edge-is-not-cycle",
+        &[
+            ("lib/a.ex", "service/b.ex", V),
+            ("service/b_test.exs", "lib/a.ex", V),
+        ],
+        "lib/a.ex",
+        "service/a.ex",
+        json!({"include_tests":true}),
+        None,
+        Language::Elixir,
+    ));
+    cases.push(case(
         "glob-braces-and-question-mark",
         &[
             ("src/app/a.ts", "lib/core.ts", V),

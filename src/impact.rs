@@ -281,6 +281,8 @@ fn is_test(path: &str) -> bool {
     path.split('/')
         .any(|part| matches!(part, "tests" | "test" | "__tests__"))
         || name.ends_with("_test.go")
+        || name.ends_with("_test.exs")
+        || name == "test_helper.exs"
         || name.starts_with("test_") && name.ends_with(".py")
         || name.ends_with("_test.py")
         || name.contains(".spec.")
@@ -292,6 +294,13 @@ fn is_test(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn detects_elixir_test_conventions() {
+        assert!(is_test("lib/service_test.exs"));
+        assert!(is_test("test_helper.exs"));
+        assert!(!is_test("lib/service.ex"));
+    }
     use crate::model::{Config, Edge, Source};
 
     fn doc(pairs: &[(&str, &str, EdgeKind)]) -> Document {

@@ -282,7 +282,7 @@ pub fn find(
             .map(|f| f.path.as_str())
             .filter(|p| go_public(p, &doc.source.collector.main_packages))
             .collect(),
-        Language::Rust | Language::Java => Default::default(),
+        Language::Rust | Language::Java | Language::Elixir => Default::default(),
     };
     let wiring = graph::wiring(|p| module_of[p], &doc.edges);
     let consumed: Vec<Edge> = doc

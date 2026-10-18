@@ -4530,6 +4530,286 @@
   {
     "after": {
       "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "service": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": 1.0,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "tests::service": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "service/a.ex",
+          "rule": null,
+          "to": "service/b.ex",
+          "verdict": null
+        },
+        {
+          "from": "service/b_test.exs",
+          "rule": null,
+          "to": "service/a.ex",
+          "verdict": null
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
+        "lib": {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 0.5,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0
+        },
+        "service": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "tests::service": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "lib/a.ex",
+          "rule": null,
+          "to": "service/b.ex",
+          "verdict": null
+        },
+        {
+          "from": "service/b_test.exs",
+          "rule": null,
+          "to": "lib/a.ex",
+          "verdict": null
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": true,
+        "rules": null,
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "lib/a.ex",
+          "kind": "runtime",
+          "rule": null,
+          "to": "service/b.ex",
+          "verdict": null,
+          "weight": 1.0
+        },
+        {
+          "from": "service/b_test.exs",
+          "kind": "runtime",
+          "rule": null,
+          "to": "lib/a.ex",
+          "verdict": null,
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "lib",
+          "path": "lib/a.ex"
+        },
+        {
+          "barrel": false,
+          "module": "service",
+          "path": "service/b.ex"
+        },
+        {
+          "barrel": false,
+          "class": "tests",
+          "module": "tests::service",
+          "path": "service/b_test.exs"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 3,
+            "modules": 3
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 0,
+          "from": "lib",
+          "imports": 1,
+          "to": "service"
+        },
+        {
+          "forbidden": 0,
+          "from": "tests::service",
+          "imports": 1,
+          "to": "lib"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "lib",
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "service": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "service": 1.0
+          }
+        },
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "service",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "class": "tests",
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "tests::service",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "lib": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "lib": 1.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "elixir"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 0,
+        "modules": {
+          "lib": {
+            "ca": 1,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 0.5,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0
+          },
+          "service": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          },
+          "tests::service": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "test_coverage": {
+        "covered": 1,
+        "modules": 2,
+        "without_importing_tests": [
+          "service"
+        ]
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "lib/a.ex",
+      "to": "service/a.ex"
+    },
+    "name": "elixir-test-back-edge-is-not-cycle"
+  },
+  {
+    "after": {
+      "cycles": [],
       "forbidden": 1,
       "largest_cycle": 0,
       "modules": {

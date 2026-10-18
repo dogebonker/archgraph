@@ -2,6 +2,7 @@
 
 pub mod barrels;
 pub mod depcruise;
+pub mod elixir;
 pub mod excludes;
 pub mod go;
 pub mod grimp;
@@ -80,8 +81,8 @@ pub fn join(dir: &str, rest: &str) -> String {
 }
 
 /// The language with the most source files after the default excludes: TypeScript and Python
-/// under `source_dir`, Java/Rust/Go under the root. Rust and Go require their root manifests.
-/// A tie keeps TypeScript, then Python, Go, Rust and Java.
+/// under `source_dir`, Java/Rust/Go/Elixir under the root. Rust and Go require root manifests.
+/// A tie keeps TypeScript, then Python, Go, Rust, Java and Elixir.
 pub fn detect_language(root: &Path, source_dir: &str) -> Result<Language> {
     detect_language_with_options(root, source_dir, excludes::Options::default())
 }
@@ -95,10 +96,13 @@ pub fn detect_language_with_options(
     let has_includes = !options.includes.is_empty();
     let java_output = globset(&["**/target/**".into(), "**/out/**".into()])?;
     let rust_output = globset(&["**/target/**".into()])?;
+    let elixir_output = globset(&["**/_build/**".into(), "**/deps/**".into()])?;
     let policy = excludes::Policy::new(root, Language::Typescript, options)?;
     let discovery_excludes = globset(policy.patterns())?;
     let cargo = root.join("Cargo.toml").is_file();
+    let mix = root.join("mix.exs").is_file();
     let (mut ts, mut py, mut rust, mut java, mut go) = (0, 0, 0, 0, 0);
+    let mut elixir = 0;
     let mut paths = Vec::new();
     let mut dirs = vec![root.to_path_buf()];
     while let Some(dir) = dirs.pop() {
@@ -130,8 +134,16 @@ pub fn detect_language_with_options(
     }
     let has_go = GO_MARKERS.iter().any(|m| root.join(m).is_file());
     for rel in policy.select(&paths)? {
+        if mix && !generated && !policy.included(&rel) && elixir_output.is_match(&rel) {
+            continue;
+        }
         let path = root.join(&rel);
         match rel.rsplit_once('.').map(|(_, ext)| ext) {
+            Some("ex" | "exs")
+                if generated || policy.included(&rel) || !elixir_output.is_match(&rel) =>
+            {
+                elixir += 1
+            }
             Some("py") if path.starts_with(root.join(source_dir)) => py += 1,
             Some("rs")
                 if cargo && (generated || policy.included(&rel) || !rust_output.is_match(&rel)) =>
@@ -157,11 +169,14 @@ pub fn detect_language_with_options(
             _ => {}
         }
     }
-    match (ts, py, go, rust, java) {
-        (0, 0, 0, 0, 0) => bail!(
-            "no .ts/.js, .py, .java, .rs (with Cargo.toml) or .go (with go.mod) files under {}; pass --language",
+    match (ts, py, go, rust, java, elixir) {
+        (0, 0, 0, 0, 0, 0) => bail!(
+            "no .ts/.js, .py, .java, .ex/.exs, .rs (with Cargo.toml) or .go (with go.mod) files under {}; pass --language",
             root.join(source_dir).display()
         ),
+        _ if elixir > ts && elixir > py && elixir > go && elixir > rust && elixir > java => {
+            Ok(Language::Elixir)
+        }
         _ if java > ts && java > py && java > go && java > rust => Ok(Language::Java),
         _ if rust > ts && rust > py && rust > go => Ok(Language::Rust),
         _ if go > ts && go > py => Ok(Language::Go),

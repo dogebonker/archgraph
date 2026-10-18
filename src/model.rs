@@ -110,6 +110,7 @@ pub enum Language {
     Go,
     Rust,
     Java,
+    Elixir,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

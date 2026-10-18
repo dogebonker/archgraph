@@ -11,7 +11,7 @@
   const round = n => Math.round(n * 10000) / 10000;
   const ratio = (a, b) => b > 0 ? round(a / b) : null;
   const kind = e => ({static:'runtime', dynamic:'lazy', 'type-reexport':'type'}[e.kind] || e.kind || 'runtime');
-  const tests = p => /(?:^|\/)(?:tests|test|__tests__)\//.test(p) || /(?:_test\.go|\.(?:test|spec)\.[^/]+|(?:^|\/)(?:test_[^/]*\.py|conftest\.py)|_test\.py|Tests?\.java)$/.test(p);
+  const tests = p => /(?:^|\/)(?:tests|test|__tests__)\//.test(p) || /(?:_test\.go|_test\.exs|(?:^|\/)test_helper\.exs|\.(?:test|spec)\.[^/]+|(?:^|\/)(?:test_[^/]*\.py|conftest\.py)|_test\.py|Tests?\.java)$/.test(p);
   function glob(raw) {
     if (typeof raw !== 'string' || /[\\\x00-\x1f\x7f]/.test(raw)) throw Error('unsupported glob: ' + raw);
     let out = '', braces = 0;

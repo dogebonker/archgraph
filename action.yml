@@ -16,7 +16,7 @@ inputs:
     description: Directory segments below the source root that form a module (default 2; Go, each package)
     default: ""
   language:
-    description: typescript, python or go (default detected)
+    description: typescript, python, go, rust, java or elixir (default detected; Elixir needs a preinstalled runtime)
     default: ""
   package:
     description: Python package to scan (default the single package under the source root)

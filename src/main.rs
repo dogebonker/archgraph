@@ -11,7 +11,7 @@ static LEGACY_V1: AtomicBool = AtomicBool::new(false);
 static GRANULARITY: AtomicU8 = AtomicU8::new(0);
 
 use anyhow::{Context, Result, bail};
-use archgraph::collect::{self, depcruise, go, grimp, java, rust};
+use archgraph::collect::{self, depcruise, elixir, go, grimp, java, rust};
 use archgraph::model::{
     Config, CycleLevel, Document, Git, Granularity, Language, SCHEMA, ScanInput, Source, Verdict,
 };
@@ -212,6 +212,9 @@ struct ScanOpts {
     /// Java launcher from a JDK 11 or later
     #[arg(long, default_value = "java")]
     java: String,
+    /// Elixir 1.14 or later, used only to parse source
+    #[arg(long, default_value = "elixir")]
+    elixir: String,
     /// rust-analyzer to run instead of the active rustup toolchain's
     #[arg(long)]
     rust_analyzer: Option<PathBuf>,
@@ -373,6 +376,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         Language::Python => Some(&mut args.opts.python),
         Language::Go => Some(&mut args.opts.go),
         Language::Java => Some(&mut args.opts.java),
+        Language::Elixir => Some(&mut args.opts.elixir),
         _ => None,
     };
     if let Some(program) = program
@@ -467,16 +471,20 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         Language::Python => (args.opts.python.as_str(), vec!["--version"]),
         Language::Go => (args.opts.go.as_str(), vec!["version"]),
         Language::Java => (args.opts.java.as_str(), vec!["-version"]),
+        Language::Elixir => (args.opts.elixir.as_str(), vec!["--version"]),
         Language::Rust => ("rustup", vec!["show", "active-toolchain"]),
     };
     {
         let (program, version_args) = runtime;
-        if let Ok(output) = Command::new(program)
+        let mut command = Command::new(program);
+        command
             .args(version_args)
             .current_dir(std::env::temp_dir())
-            .env("RUSTUP_AUTO_INSTALL", "0")
-            .output()
-        {
+            .env("RUSTUP_AUTO_INSTALL", "0");
+        if language == Language::Elixir {
+            elixir::sanitize(&mut command);
+        }
+        if let Ok(output) = command.output() {
             key.extend_from_slice(&output.stdout);
             key.extend_from_slice(&output.stderr);
         }
@@ -670,6 +678,7 @@ fn show_excludes() -> Result<()> {
         Language::Go,
         Language::Java,
         Language::Rust,
+        Language::Elixir,
     ] {
         println!("{language:?}:");
         for pattern in collect::excludes::defaults(language) {
@@ -825,6 +834,13 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
             };
             (rust::parse(&json)?, ".".to_owned())
         }
+        Language::Elixir => {
+            let json = match input {
+                Some(json) => json,
+                None => elixir::run(root, &args.elixir, &policy)?,
+            };
+            (elixir::parse(&json)?, ".".to_owned())
+        }
         Language::Java => {
             let json = match input {
                 Some(json) => json,
@@ -935,7 +951,9 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         .transpose()?;
     let entries = match language {
         Language::Typescript => depcruise::package_entries(root, &raw.files),
-        Language::Python | Language::Go | Language::Rust | Language::Java => Vec::new(),
+        Language::Python | Language::Go | Language::Rust | Language::Java | Language::Elixir => {
+            Vec::new()
+        }
     };
     let mut doc = archgraph::analyze(source, config, raw.files, raw.edges, entries, cochange)?;
     if args.symbols {

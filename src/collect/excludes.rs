@@ -12,6 +12,8 @@ use crate::model::Language;
 
 pub const TEST_EXCLUDES: &[&str] = &[
     "**/*_test.go",
+    "**/*_test.exs",
+    "**/test_helper.exs",
     "**/*.test.*",
     "**/*.spec.*",
     "**/tests/**",
@@ -92,6 +94,9 @@ fn active_defaults(
         }
         if language == Language::Java {
             patterns.push("**/out/**".into());
+        }
+        if language == Language::Elixir {
+            patterns.extend(["**/_build/**".into(), "**/deps/**".into()]);
         }
     }
     patterns

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Elixir source-reference collection through `Code.string_to_quoted`, including umbrella apps, aliases, static module calls and type references. Scans do not load Mix projects, evaluate source, compile or expand macros; unresolved dynamic and unavailable dependency references remain visible. Adds runtime selection, shared exclusions and live collector CI coverage.
+
 ### Edge quality: kinds and weights
 
 - New `archgraph/v1.1` exports distinguish runtime, lazy, type and structural re-export imports; TS/JS import tokenization supplements collector metadata, including function-local `require`.

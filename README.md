@@ -9,7 +9,7 @@
   An architecture linter for your codebase.<br>
   It finds the folders that import each other, names the import that breaks each loop,<br>
   and simulates a suggested file move before you make it.<br>
-  <sub>Reads TypeScript, JavaScript, Python, Go, Rust and Java.</sub>
+  <sub>Reads TypeScript, JavaScript, Python, Go, Rust, Java and Elixir.</sub>
 </p>
 
 <p align="center">
@@ -47,6 +47,7 @@ That prints a summary and writes `.archgraph/archgraph.html`: open it in a brows
 - Go: Go 1.21+ on `PATH` (`--go <path>`). It compiles and runs nothing from the repository.
 - Rust: rustup with `rust-analyzer` and `rust-src`, a Cargo workspace with a lockfile and cached dependencies. Build scripts and proc macros are disabled unless `--rust-build-scripts` is given.
 - Java: JDK 11+ (`--java <path>`). Uses compiler references without running a project build.
+- Elixir: Elixir 1.14+ / OTP 25+ (`--elixir <path>`). Reads `.ex`/`.exs` with Elixir's AST parser; never loads or builds the Mix project. See [collection limits](docs/guide.md#commands).
 
 </details>
 
@@ -223,7 +224,7 @@ Five skills in the open Agent Skills format, for Claude Code, Codex, Cursor and 
 
 ## How it works
 
-archgraph has no parser of its own. It asks [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) (TypeScript, JavaScript) or [grimp](https://github.com/python-grimp/grimp) (Python) for every file-level import, uses the standard `go/types` package for Go, `rust-analyzer` for Rust, or the JDK compiler for Java, groups files into modules by folder or by your rules, and computes coupling, cohesion, cycles over runtime imports, rule verdicts and findings. For Python it also reads each importing file with the standard `ast` module, without running it, to tell imports inside functions and `TYPE_CHECKING` blocks apart from load-time ones. Everything lands in one JSON document with a versioned schema ([`archgraph/v1`](schema/archgraph.v1.schema.json)) that `check`, `simulate`, `render` and `diff` read. The [guide](docs/guide.md) has every command, flag and rule.
+archgraph has no parser of its own. It asks [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) (TypeScript, JavaScript) or [grimp](https://github.com/python-grimp/grimp) (Python) for every file-level import, uses the standard `go/types` package for Go, `rust-analyzer` for Rust, the JDK compiler for Java, or Elixir’s `Code.string_to_quoted` for Elixir, groups files into modules by folder or by your rules, and computes coupling, cohesion, cycles over runtime imports, rule verdicts and findings. For Python it also reads each importing file with the standard `ast` module, without running it, to tell imports inside functions and `TYPE_CHECKING` blocks apart from load-time ones. Everything lands in one JSON document with a versioned schema ([`archgraph/v1`](schema/archgraph.v1.schema.json)) that `check`, `simulate`, `render` and `diff` read. The [guide](docs/guide.md) has every command, flag and rule.
 
 ## Limits
 
@@ -231,7 +232,7 @@ archgraph has no parser of its own. It asks [dependency-cruiser](https://github.
 - Findings are suggestions with evidence, not a score to optimise. Read the evidence, then decide.
 - Module boundaries come from folders or your rules. Wrong boundaries give wrong numbers.
 - Small repositories have little signal, and the report says so.
-- TypeScript, JavaScript, Python, Go, Rust and Java. In Go each package is a module, so findings there are fewer and mostly about which package depends on which.
+- TypeScript, JavaScript, Python, Go, Rust, Java and Elixir. In Go each package is a module, so findings there are fewer and mostly about which package depends on which.
 
 ## Free, all of it
 

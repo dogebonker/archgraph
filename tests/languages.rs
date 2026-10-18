@@ -34,3 +34,31 @@ fn detection_finds_rust_workspace_members_and_ignores_language_build_output() {
         Language::Rust
     );
 }
+
+#[test]
+fn detection_finds_elixir_umbrella_sources_and_ignores_dependencies() {
+    let manifest = common::write_tmp("detect-elixir/mix.exs", "");
+    let root = Path::new(&manifest).parent().unwrap();
+    common::write_tmp("detect-elixir/apps/core/lib/core.ex", "");
+    common::write_tmp("detect-elixir/assets/app.js", "");
+    for n in 0..5 {
+        common::write_tmp(&format!("detect-elixir/_build/{n}.java"), "");
+        common::write_tmp(&format!("detect-elixir/deps/{n}.java"), "");
+    }
+    // Other languages' output conventions must not count these as Java sources either.
+    assert_eq!(
+        detect_language(root, source_dir(root)).unwrap(),
+        Language::Elixir
+    );
+
+    let main = common::write_tmp("detect-ts-elixir-deps/src/main.ts", "");
+    let root = Path::new(&main).ancestors().nth(2).unwrap();
+    for n in 0..5 {
+        common::write_tmp(&format!("detect-ts-elixir-deps/deps/{n}.ex"), "");
+        common::write_tmp(&format!("detect-ts-elixir-deps/_build/{n}.ex"), "");
+    }
+    assert_eq!(
+        detect_language(root, source_dir(root)).unwrap(),
+        Language::Typescript
+    );
+}

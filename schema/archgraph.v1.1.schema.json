@@ -1296,7 +1296,8 @@
                 "python",
                 "go",
                 "rust",
-                "java"
+                "java",
+                "elixir"
               ]
             },
             "collector": {
@@ -1314,7 +1315,8 @@
                     "grimp",
                     "go-types",
                     "rust-analyzer",
-                    "java-javac"
+                    "java-javac",
+                    "elixir-ast"
                   ]
                 },
                 "version": {

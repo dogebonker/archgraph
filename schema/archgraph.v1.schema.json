@@ -99,12 +99,12 @@
           "type": "object",
           "required": ["language", "collector", "git", "generated_at"],
           "properties": {
-            "language": { "description": "May grow within archgraph/v1 as languages are added.", "enum": ["typescript", "python", "go", "rust", "java"] },
+            "language": { "description": "May grow within archgraph/v1 as languages are added.", "enum": ["typescript", "python", "go", "rust", "java", "elixir"] },
             "collector": {
               "type": "object",
               "required": ["name", "version", "cruised"],
               "properties": {
-                "name": { "description": "May grow within archgraph/v1 as collectors are added.", "enum": ["dependency-cruiser", "grimp", "go-types", "rust-analyzer", "java-javac"] },
+                "name": { "description": "May grow within archgraph/v1 as collectors are added.", "enum": ["dependency-cruiser", "grimp", "go-types", "rust-analyzer", "java-javac", "elixir-ast"] },
                 "version": { "type": ["string", "null"] },
                 "cruised": { "$ref": "#/$defs/count" },
                 "type_marking": { "description": "unavailable when dependency-cruiser could not tell imports of types only (written without import type) from value imports; they are then static. Absent otherwise.", "enum": ["unavailable"] },

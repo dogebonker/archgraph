@@ -112,6 +112,50 @@ fn defaults_cover_tests_generated_support_and_nested_build_directories() {
         paths(&candidates)
     );
     assert!(defaults(Language::Rust).contains(&"**/target/**".into()));
+    assert!(defaults(Language::Elixir).contains(&"**/_build/**".into()));
+    assert!(defaults(Language::Elixir).contains(&"**/deps/**".into()));
+}
+
+#[test]
+fn elixir_tests_and_build_outputs_share_selection_overrides() {
+    let root = root("elixir-defaults");
+    let candidates = paths(&[
+        "lib/app.ex",
+        "lib/app_test.exs",
+        "test_helper.exs",
+        "deps/dep/lib/dep.ex",
+        "_build/dev/app.ex",
+    ]);
+    let policy = Policy::new(&root, Language::Elixir, Options::default()).unwrap();
+    assert_eq!(policy.select(&candidates).unwrap(), paths(&["lib/app.ex"]));
+    assert!(archgraph::collect::excludes::is_test("lib/app_test.exs"));
+    assert!(archgraph::collect::excludes::is_test("test_helper.exs"));
+    let policy = Policy::new(
+        &root,
+        Language::Elixir,
+        Options {
+            include_tests: true,
+            ..Options::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        policy.select(&candidates).unwrap(),
+        paths(&["lib/app.ex", "lib/app_test.exs", "test_helper.exs"])
+    );
+    let policy = Policy::new(
+        &root,
+        Language::Elixir,
+        Options {
+            include_generated: true,
+            ..Options::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        policy.select(&candidates).unwrap(),
+        paths(&["lib/app.ex", "deps/dep/lib/dep.ex", "_build/dev/app.ex"])
+    );
 }
 
 #[test]
