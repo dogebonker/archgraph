@@ -501,10 +501,7 @@ fn dump(
     let docs: Vec<scip::Document> = index
         .documents
         .into_iter()
-        .filter(|d| {
-            let p = &d.relative_path;
-            !p.is_empty() && !p.starts_with('/') && !p.split('/').any(|s| s == "..")
-        })
+        .filter(|d| super::is_relative_path(&d.relative_path, false))
         .collect();
     if docs.is_empty() {
         bail!("rust-analyzer indexed no files under {}", root.display());

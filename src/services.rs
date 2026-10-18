@@ -166,16 +166,6 @@ pub fn parse(text: &str) -> Result<Manifest> {
     Ok(manifest)
 }
 
-fn relative_path(value: &str) -> bool {
-    !value.is_empty()
-        && !value.starts_with('/')
-        && !value.contains(['\\', ':'])
-        && !value.chars().any(char::is_control)
-        && value
-            .split('/')
-            .all(|part| !matches!(part, "" | "." | ".."))
-}
-
 fn validate(manifest: &Manifest) -> Result<()> {
     if manifest.version != 1 {
         bail!(
@@ -185,7 +175,7 @@ fn validate(manifest: &Manifest) -> Result<()> {
     }
     let mut services = BTreeSet::new();
     for id in &manifest.services {
-        if !relative_path(id)
+        if !crate::collect::is_relative_path(id, false)
             || id.chars().any(char::is_whitespace)
             || id.contains(['*', '?', '[', ']', '{', '}', '<', '>'])
         {
@@ -206,7 +196,7 @@ fn validate(manifest: &Manifest) -> Result<()> {
                 edge.to
             );
         }
-        if !relative_path(&edge.source.file) || edge.source.line == 0 {
+        if !crate::collect::is_relative_path(&edge.source.file, false) || edge.source.line == 0 {
             bail!("call {index} requires a relative source file and a positive source line");
         }
         if edge

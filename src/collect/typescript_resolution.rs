@@ -58,7 +58,7 @@ pub fn enrich(
         .filter(|file| {
             code_file(file)
                 && !file.split('/').any(|part| part == "node_modules")
-                && safe_relative(file)
+                && super::is_relative_path(file, false)
         })
         .cloned()
         .collect();
@@ -195,9 +195,6 @@ fn dependency_types(kind: EdgeKind) -> Value {
 fn code_file(file: &str) -> bool {
     file.rsplit_once('.')
         .is_some_and(|(_, extension)| TS_EXTENSIONS.contains(&extension))
-}
-fn safe_relative(file: &str) -> bool {
-    !Path::new(file).is_absolute() && !file.split('/').any(|part| matches!(part, "" | "." | ".."))
 }
 fn normalized(path: &Path) -> Option<PathBuf> {
     let mut result = PathBuf::new();
@@ -449,7 +446,7 @@ impl Resolver {
                 {
                     return Resolution::External(name);
                 }
-                if safe_relative(resolved) && code_file(resolved) {
+                if super::is_relative_path(resolved, false) && code_file(resolved) {
                     let path = self.root.join(resolved);
                     return if path.exists() {
                         self.classify(&path, specifier)

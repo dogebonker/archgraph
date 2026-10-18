@@ -1,7 +1,7 @@
 //! Java source references through the JDK compiler tree API; no project build is run.
 
 use std::fs;
-use std::path::{Component, Path};
+use std::path::Path;
 use std::process::Command;
 
 use anyhow::{Context, Result, bail, ensure};
@@ -81,11 +81,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
         .chain(dump.edges.iter().flat_map(|e| [&e.from, &e.to]))
     {
         ensure!(
-            !path.is_empty()
-                && !path.contains(['\\', '\0', ':'])
-                && Path::new(path)
-                    .components()
-                    .all(|c| matches!(c, Component::Normal(_))),
+            super::is_relative_path(path, false),
             "Java helper path must be root-relative: {path:?}"
         );
     }

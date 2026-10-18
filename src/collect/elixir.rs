@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 use std::fs;
-use std::path::{Component, Path};
+use std::path::Path;
 use std::process::Command;
 
 use anyhow::{Context, Result, bail, ensure};
@@ -91,23 +91,12 @@ struct Dump {
     excluded_files: Vec<String>,
 }
 
-fn relative(path: &str) -> bool {
-    !path.is_empty()
-        && !path.contains(['\\', '\0', ':'])
-        && Path::new(path)
-            .components()
-            .all(|c| matches!(c, Component::Normal(_)))
-        && !path
-            .split('/')
-            .any(|part| part.is_empty() || part == "." || part == "..")
-}
-
 pub fn parse(bytes: &[u8]) -> Result<RawGraph> {
     let dump: Dump = serde_json::from_slice(bytes).context("reading Elixir helper JSON")?;
     let mut files = HashSet::new();
     for file in &dump.files {
         ensure!(
-            relative(file),
+            super::is_relative_path(file, false),
             "Elixir helper path must be root-relative: {file:?}"
         );
         ensure!(
@@ -117,7 +106,7 @@ pub fn parse(bytes: &[u8]) -> Result<RawGraph> {
     }
     for edge in &dump.edges {
         ensure!(
-            relative(&edge.from) && relative(&edge.to),
+            super::is_relative_path(&edge.from, false) && super::is_relative_path(&edge.to, false),
             "Elixir helper edge paths must be root-relative"
         );
         ensure!(
@@ -131,7 +120,7 @@ pub fn parse(bytes: &[u8]) -> Result<RawGraph> {
     }
     for import in &dump.imports {
         ensure!(
-            relative(&import.from) && files.contains(import.from.as_str()),
+            super::is_relative_path(&import.from, false) && files.contains(import.from.as_str()),
             "Elixir helper import references an unknown file"
         );
         ensure!(
@@ -144,7 +133,7 @@ pub fn parse(bytes: &[u8]) -> Result<RawGraph> {
         );
         for target in &import.targets {
             ensure!(
-                relative(target) && files.contains(target.as_str()),
+                super::is_relative_path(target, false) && files.contains(target.as_str()),
                 "Elixir helper import target must reference a root-relative known file"
             );
         }
@@ -165,7 +154,7 @@ pub fn parse(bytes: &[u8]) -> Result<RawGraph> {
     }
     for excluded in &dump.excluded_files {
         ensure!(
-            relative(excluded),
+            super::is_relative_path(excluded, false),
             "Elixir helper excluded path must be root-relative"
         );
         ensure!(

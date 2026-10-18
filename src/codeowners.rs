@@ -153,16 +153,7 @@ fn parse_line(line: &str) -> Result<Option<(String, Vec<String>)>> {
 }
 
 fn relative(path: &str, dot: bool) -> Result<()> {
-    if dot && path == "." {
-        return Ok(());
-    }
-    if path.is_empty()
-        || path.contains(['\\', ':'])
-        || path.chars().any(char::is_control)
-        || path
-            .split('/')
-            .any(|p| p.is_empty() || p == "." || p == "..")
-    {
+    if !crate::collect::is_relative_path(path, dot) {
         bail!("expected a repository-relative path without traversal: {path:?}");
     }
     Ok(())

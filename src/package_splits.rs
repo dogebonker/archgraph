@@ -131,14 +131,6 @@ fn ancestors(path: &str) -> impl Iterator<Item = &str> {
         .chain([path])
 }
 
-fn valid_path(path: &str, allow_root: bool) -> bool {
-    (allow_root && path == ".")
-        || (!path.is_empty()
-            && !path.contains(['\\', ':'])
-            && !path.chars().any(char::is_control)
-            && path.split('/').all(|part| !matches!(part, "" | "." | "..")))
-}
-
 fn owner<'a>(path: &str, workspace: &'a WorkspaceInventory) -> Option<&'a ExistingPackage> {
     workspace
         .packages
@@ -246,19 +238,21 @@ pub fn analyze(
         .map(|p| &p.root)
         .chain(workspace.projects.iter().map(|p| &p.root))
     {
-        if !valid_path(root, true) {
+        if !crate::collect::is_relative_path(root, true) {
             bail!("workspace root must be relative to the scan root: {root:?}");
         }
     }
     let files: BTreeMap<_, _> = doc.files.iter().map(|f| (f.path.as_str(), f)).collect();
     for path in files.keys() {
-        if !valid_path(path, false) {
+        if !crate::collect::is_relative_path(path, false) {
             bail!("package splits require relative source paths: {path:?}");
         }
     }
     let dependencies = dependencies(doc);
     for dependency in &dependencies {
-        if !valid_path(&dependency.cut.from, false) || !valid_path(&dependency.cut.to, false) {
+        if !crate::collect::is_relative_path(&dependency.cut.from, false)
+            || !crate::collect::is_relative_path(&dependency.cut.to, false)
+        {
             bail!("package splits require relative import destinations");
         }
     }

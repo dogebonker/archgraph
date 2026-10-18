@@ -197,6 +197,16 @@ pub fn run_with_input(command: &mut Command, input: Vec<u8>) -> Result<Output> {
     Ok(output)
 }
 
+/// Whether `path` is a `/`-separated path inside a root: not empty or absolute, without a `.`,
+/// `..` or empty segment, a backslash, a colon or a control character. `allow_root` admits `.`.
+pub fn is_relative_path(path: &str, allow_root: bool) -> bool {
+    (allow_root && path == ".")
+        || (!path.is_empty()
+            && !path.contains(['\\', ':'])
+            && !path.chars().any(char::is_control)
+            && path.split('/').all(|part| !matches!(part, "" | "." | "..")))
+}
+
 /// The program `--<flag> <value>` names: a path made absolute, so it does not depend on the
 /// working directory a child runs in, else a name the spawn looks up on PATH.
 pub fn resolve_executable(flag: &str, value: impl AsRef<Path>) -> Result<PathBuf> {
@@ -344,6 +354,21 @@ mod tests {
         );
         let echoed = run_with_input(&mut Command::new("cat"), input.clone()).unwrap();
         assert_eq!(echoed.stdout, input);
+    }
+
+    #[test]
+    fn relative_paths_stay_inside_the_root() {
+        for path in ["a", "a/b.ts", "a/.hidden/b", "a..b"] {
+            assert!(is_relative_path(path, false), "{path:?}");
+        }
+        for path in [
+            "", ".", "..", "../a", "a/..", "a/./b", "a//b", "a/", "/a", "a\\b", "C:/a", "a:b",
+            "a\u{1}b", "a\0b", "a\nb",
+        ] {
+            assert!(!is_relative_path(path, false), "{path:?}");
+        }
+        assert!(is_relative_path(".", true));
+        assert!(!is_relative_path("./a", true));
     }
 
     #[test]
