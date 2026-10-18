@@ -57,6 +57,12 @@ For Claude Code, install the MCP server with `claude mcp add --transport stdio a
 
 </details>
 
+## Recipes an agent can verify
+
+Actionable findings include a stable ID, ordered fix steps, expected graph deltas and structured verification predicates. Run `archgraph propose <finding_id> --engine native --symbols`, then `archgraph apply <finding_id> --engine native --symbols --dry-run` to inspect exact source edits. `--yes` applies fully mechanical plans and rescans; semantic steps stay explicit agent instructions. Run `archgraph verify <finding_id> --engine native --symbols` after application, plus the project’s build and tests. Use the same collection options for every command.
+
+Default finding order uses hotspot evidence × recipe confidence × pairs removed; `--rank legacy` restores the previous ordering. Evidence without a concrete fix remains advisory diagnostics. See [recipes and verification](docs/guide.md#fix-recipes-and-verification) and the [pinned showcase recipes](showcase/recipes.md), including actual dry-run outcomes.
+
 ## What it tells you
 
 ### Which import to cut
@@ -230,7 +236,7 @@ Five skills in the open Agent Skills format, for Claude Code, Codex, Cursor and 
 
 ## How it works
 
-The default reference engine asks [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) (TypeScript, JavaScript) or [grimp](https://github.com/python-grimp/grimp) (Python) for file-level imports, uses the standard `go/types` package for Go, `rust-analyzer` for Rust, the JDK compiler for Java, or Elixir’s `Code.string_to_quoted` for Elixir. The experimental native engine extracts imports and symbols with tree-sitter queries in Rust for every supported language; TypeScript resolution uses oxc_resolver. Both paths share module grouping, coupling, cohesion, runtime-cycle analysis, rule verdicts and findings. Everything lands in one JSON document with a versioned schema ([`archgraph/v1.1`](schema/archgraph.v1.1.schema.json)) that `check`, `simulate`, `render` and `diff` read. The [guide](docs/guide.md) has every command, flag and rule.
+The default reference engine asks [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) (TypeScript, JavaScript) or [grimp](https://github.com/python-grimp/grimp) (Python) for file-level imports, uses the standard `go/types` package for Go, `rust-analyzer` for Rust, the JDK compiler for Java, or Elixir’s `Code.string_to_quoted` for Elixir. The experimental native engine extracts imports and symbols with tree-sitter queries in Rust for every supported language; TypeScript resolution uses oxc_resolver. Both paths share module grouping, coupling, cohesion, runtime-cycle analysis, rule verdicts and findings. Everything lands in one JSON document with a versioned schema ([`archgraph/v1.2`](schema/archgraph.v1.2.schema.json), with v1/v1.1 input support) that `check`, `simulate`, `render` and `diff` read. The [guide](docs/guide.md) has every command, flag and rule.
 
 ## Limits
 

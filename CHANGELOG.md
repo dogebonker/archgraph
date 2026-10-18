@@ -2,9 +2,13 @@
 
 ## [Unreleased]
 
+- `archgraph/v1.2` adds stable finding IDs, typed fix recipes with structured verification and expected graph deltas, explicit forbidden-edge/deep-import findings, and advisory diagnostics for evidence without concrete edits. Existing v1/v1.1 inputs remain readable; compatibility exports retain the legacy finding shape.
+- `propose`, `apply --dry-run|--yes` and `verify` share recipes with MCP. Conservative mechanical plans use exact AST byte ranges, checked Git moves, local proposal/apply baselines, post-edit rescans and rollback on verification failure. Interface extraction and splits remain agent instructions; unavailable predictions are explicit rather than fabricated.
+- Finding ranking defaults to hotspot × confidence × pair reduction; `--rank legacy` retains the previous hotspot-first ordering. Guide and agent skills explain planning, staged moves versus worktree rewrites, verification predicates and language limits. Pinned showcase recipe outcomes are recorded separately.
+
 - Git dirty-state proofs now compare text content before claiming a tracked edit; stat-only, binary and metadata-only cases defer to full status, avoiding false dirty provenance after rapid edit/revert.
 
-- `mcp` exposes context, diff checks, proposals, move simulation, verification, explanations and relevant rules over stdio through the official Rust MCP SDK. Typed tool schemas, stable semantic finding IDs and bounded default answers support agent clients; a matching local daemon can supply live scans. Includes Claude Code, Cursor and Codex configs and MCP-first skill guidance. Existing v1/v1.1 graph formats are unchanged.
+- `mcp` exposes context, diff checks, proposals, move simulation, verification, explanations and relevant rules over stdio through the official Rust MCP SDK. Typed tool schemas, stable semantic finding IDs and bounded default answers support agent clients; a matching local daemon can supply live scans. Includes Claude Code, Cursor and Codex configs and MCP-first skill guidance. The MCP transport does not require graph-format changes; recipe support is described separately above.
 
 - `serve` keeps a watched graph available over a local authenticated Unix socket or loopback TCP endpoint. CLI commands discover it automatically, `--no-daemon` bypasses it and `--once` warms/answers one request without a watcher. Native TS/JS, Python and Go reuse parsed source; conservative dirty-region analysis and logged full-refresh fallbacks preserve correctness. Retains two graph generations plus indexes; latency benchmarks are recorded separately from parser timings.
 - Global `--brief` provides bounded agent output with explicit omissions; structured check/report/context/impact/surface outputs share their standalone and daemon execution paths. Adds graph-evidence `explain` and daemon `status` commands while preserving policy exit codes and complete output artifacts.

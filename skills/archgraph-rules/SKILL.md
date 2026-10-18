@@ -71,3 +71,5 @@ default: forbidden            # optional: every import no rule names is forbidde
 - Verdict order, first match wins: forbid, allow, public (an internal file imported from outside its module), layers, same module, public entry, otherwise unplanned (rule `none`), or forbidden (rule `default`) with `default: forbidden`.
 - Strings are single plain lines; unknown keys are an error. An older archgraph ignores `default`, so pin the version wherever it gates CI.
 - Type-only imports count in verdicts. With a `src/` directory only `src/` is scanned, so rules about root folders such as `app/**` see only the files `src/` imports.
+
+For a forbidden-edge or deep-import finding, obtain the current recipe with MCP `propose` (CLI `archgraph propose <finding_id>` otherwise) before editing. Interface locations and reexports are suggestions under the current rules, not permission to rewrite policy. Preserve the structured verification baseline, treat null deltas as unknown and use [archgraph-fix](../archgraph-fix/SKILL.md) for dry-run/apply/verify. Findings lacking a concrete edit remain advisory diagnostics; changing ranking with `--rank legacy` does not change rule enforcement.

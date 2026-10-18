@@ -11,7 +11,7 @@ compatibility: Needs the archgraph binary on PATH (install.sh, npx archgraph-cli
 
 When the client's archgraph MCP tools are available, prefer them to spawning CLI commands: `context` before reading, `check_diff` for regressions, `propose` for a stable finding ID, `simulate` before moving, `verify` after editing, and `explain`/`rules` for local evidence. Tool names may carry a client/server prefix. All accept `brief` (default true); inspect truncation markers, narrow requests when needed, and use the CLI for complete evidence. `brief: false` retains the MCP hard cap. MCP does not change code or replace project tests. Follow the CLI workflows below when the tools are unavailable. See [MCP setup and semantics](../../docs/guide.md#mcp-server).
 
-archgraph reads a repository's file imports, groups files into modules (folders, or rules), and reports metrics, cycles, rule verdicts and findings as JSON (`schema: archgraph/v1.1`; legacy v1 input remains supported). Every claim you make about the architecture must come from its output. The experimental `--engine native` supports all listed languages without external parsers; native Go still requires read-only `go list` metadata. Reference collectors remain the default.
+archgraph reads a repository's file imports, groups files into modules (folders, or rules), and reports metrics, cycles, rule verdicts and findings as JSON (`schema: archgraph/v1.2`; v1/v1.1 inputs remain supported). Every claim you make about the architecture must come from its output. The experimental `--engine native` supports all listed languages without external parsers; native Go still requires read-only `go list` metadata. Reference collectors remain the default.
 
 ## Repeated agent calls
 
@@ -27,7 +27,7 @@ archgraph explain src/billing/invoice.ts --graph <root>/.archgraph/daemon-graph.
 
 Native TS/JS, Python and Go incrementally reparse changed files; global resolution and connected analysis regions may still require repository-wide work. Other engines/languages log full-refresh fallbacks. No sub-100 ms latency guarantee is established by the feature itself. A refresh error requires fixing the source/configuration and retrying; do not cite the last saved daemon graph as current evidence after an error. Stop a daemon you launched when the task no longer needs it. `serve --once` warms and answers one request without watching, then exits.
 
-Scan timestamps identify source time (`SOURCE_DATE_EPOCH`, Git HEAD time, then epoch), not the current clock. Check graph provenance and current source rather than deciding freshness from `generated_at` alone. Keep v1/v1.1 full scan evidence for comparisons.
+Scan timestamps identify source time (`SOURCE_DATE_EPOCH`, Git HEAD time, then epoch), not the current clock. Check graph provenance and current source rather than deciding freshness from `generated_at` alone. Keep full v1/v1.1/v1.2 scan evidence for comparisons.
 
 ## Setup
 
@@ -46,11 +46,17 @@ Write archgraph output to a temporary directory outside the repository unless th
 For a quick overview a person reads, `archgraph report <root> --out-dir <tmp>` runs steps 1, 3 and 5 at once: it scans (same options as `scan`), applies `--rules` or `<root>/layout.yaml` and says which, writes `archgraph.json` and `archgraph.html`, and prints counts, forbidden imports by rule, module cycles and findings by kind. Exit 1 means forbidden imports exist. For evidence you quote, read the JSON it wrote, as below.
 
 1. **Scan.** `archgraph scan <root> -o <tmp>/graph.json`. Add `--rules layout.yaml` when the repository has one, `--cochange` to read the last 300 commits for files that change together, `--depth N` when modules sit deeper than two folders below `src/`, `--package <pkg>` only when a Python root holds several packages (a single package is found on its own). A warning about unresolved imports means some edges are missing: report it. When the root has `src/`, only `src/` is cruised: say so if the user expects other folders covered. Type-only imports and re-exports (`type`, `type-reexport`) and dynamic imports count as edges in metrics and verdicts, not in cycles or `unstable-dependency`. In Python, an import only under `if TYPE_CHECKING:` is `type`, one only inside function bodies `dynamic`; in TypeScript an import of types or interfaces only, even without `import type`, is `type`. `build/` and `dist/` below the root are scanned unless git ignores them. Each file directly in the source root is a module of its own, named with its extension (`main.ts`, `errors.py`). Go: each package is a module unless `--depth` is passed (do not pass it for Go unless the user asks: merging packages invents cycles Go forbids), the root's own files form the module `.`, every `go.mod` below the root is scanned, edges join files that use what another file declares (same-package ones included), test support counts as tests (packages named `*testing` or `*testutil`, and non-test files using `testing`; the warning names them), and a warning that `go list` failed in a module means it was read with `go/build`.
-2. **Read the summary.** Look at `findings` first. If a `small-repo` finding exists, say the signal is weak before anything else. Then read `summary` (forbidden, unplanned and cycle counts, per-module metrics), `cycles`, `modules` and `module_edges`.
+2. **Read the summary.** Look at `findings` and advisory `diagnostics` first. If a `small-repo` diagnostic exists, say the signal is weak before anything else. Then read `summary` (forbidden, unplanned and cycle counts, per-module metrics), `cycles`, `modules` and `module_edges`.
 3. **Check rules.** With rules: `archgraph check <tmp>/graph.json [--rules layout.yaml]` (exit 2 when the scan has no rules and none are passed). Exit 1 means forbidden imports exist; each line names the deciding rule. `unplanned` imports are ones no rule covers: either the rules are incomplete or the import is unexpected. Ask which.
 4. **Simulate before proposing.** For every move you want to propose, run `archgraph simulate <tmp>/graph.json --move <file> <dest-path>` and read `before`, `after`, `new_forbidden` and `removed_forbidden`. Findings that suggest a move already carry a `simulation`: `simulation.after` holds the counts after the move and only the modules whose metrics change (`null` for a module the move empties); the numbers before are the scan's `summary`.
 5. **Render for the user.** `archgraph render <tmp>/graph.json -o <tmp>/graph.html` writes one self-contained page. Give the user its path. Colors are a reading aid, not a score.
 6. **Compare over time.** After changes, scan again and run `archgraph diff old.json new.json` to show resolved and new cycles, new and resolved forbidden imports, new unplanned imports and metric pairs `[old, new]`. In CI, `--fail-on new-forbidden,new-cycles,new-unplanned` (any subset) exits 1 when the diff has one, and `--format markdown` prints a pull-request summary instead of JSON. A cycle is new when no cycle of the old scan has its member set, so a cycle that grew counts as new.
+
+## Executable recipes
+
+Use a current `findings[].finding_id` with MCP `propose` or `archgraph propose <finding_id> --root <repo> <matching scan flags>`. Every actionable finding has ordered recipe steps, explicit confidence/risk notes and `verify.structured`; observations without a concrete edit live in `diagnostics[]` with their reasons. IDs exclude ranking, timestamps and deltas. Rank defaults to hotspot × confidence weight × nonnegative pairs removed (high/medium/low: 1.0/0.6/0.3; absent hotspot: 1; unknown reduction: 0); `--rank legacy` restores hotspot-first ordering.
+
+Call `propose` before editing to save a baseline. Inspect `archgraph apply <finding_id> <matching flags> --dry-run`; only fully mechanical plans can use `--yes`. Otherwise follow agent instructions and pass the saved `recipe.verify.structured` to MCP `verify({expect: ...})` or CLI `verify <finding_id> --expect '<JSON>'`. Mechanical application can be checked with CLI `verify <finding_id>` using its receipt. Unknown predictions are unavailable, not zero. Successful `git mv` changes are staged while rewritten import contents remain worktree edits; inspect both diffs. Builds/tests and a base comparison remain required. See [fix workflow](../archgraph-fix/SKILL.md) and [language limits](../../docs/guide.md#fix-recipes-and-verification).
 
 ## Reading findings
 
@@ -66,7 +72,7 @@ Each finding has `kind`, `subject`, `evidence`, and optionally `suggestion.move`
 - `small-repo`: too few files or modules for the other findings to mean much.
 - `via_barrel: true` in evidence means an index/`__init__` re-export was counted against every re-exported file: the real coupling may be smaller.
 
-Ignore finding kinds you do not recognize.
+The list above describes evidence kinds retained from earlier schemas; observations without a concrete recipe are now advisory `diagnostics`, rather than actionable `findings`. Ignore kinds you do not recognize, while retaining their evidence in full exports.
 
 A scan document is input to `check`, `simulate`, `render` and `diff`: do not edit its `files` or `edges` by hand. One whose edges name files it does not list, or whose modules disagree with its config, is rejected with exit 2.
 
@@ -98,7 +104,7 @@ Tell the user these when they matter:
 - With a `src/` directory only `src/` is cruised.
 - Type-only imports and re-exports and dynamic imports count in metrics and verdicts, so layouts that forbid type imports across boundaries still catch them; they do not count in cycles.
 - Imports are not semantics: DI containers, event buses, string-based lookups, reflection and dynamic imports without static strings are invisible. `--cochange` partly covers this.
-- Small repositories have little signal; the `small-repo` finding says so.
+- Small repositories have little signal; the `small-repo` diagnostic says so.
 - Findings are moves with evidence. There is no single score to optimize; module colors in `render` are a reading aid.
 - Module boundaries come from folders (`--depth`) or rules `modules:`; wrong boundaries give wrong metrics.
 - Named barrel imports resolve to defining files; ambiguous namespace/star imports retain low-confidence barrel evidence.
