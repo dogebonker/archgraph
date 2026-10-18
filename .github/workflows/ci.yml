@@ -45,9 +45,11 @@ jobs:
       - name: Install the pinned collectors
         run: |
           rustup component add rust-analyzer rust-src
-          npm install --prefix "$RUNNER_TEMP/tools" dependency-cruiser@18.4.0 typescript@6.0.3
+          mkdir "$RUNNER_TEMP/tools"
+          cp ci/tools/package.json ci/tools/package-lock.json "$RUNNER_TEMP/tools/"
+          npm ci --prefix "$RUNNER_TEMP/tools" --ignore-scripts --no-audit --no-fund
           python -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install grimp==3.17
+          "$RUNNER_TEMP/venv/bin/pip" install --only-binary :all: --require-hashes -r ci/tools/requirements.txt
           echo "$RUNNER_TEMP/tools/node_modules/.bin" >> "$GITHUB_PATH"
       - name: Verify symbol collectors
         run: node --test tests/impact-typescript.test.cjs tests/surface-symbols.test.cjs
@@ -85,7 +87,7 @@ jobs:
           name: archgraph-binary
           path: ${{ runner.temp }}/bin
       - run: chmod +x "$RUNNER_TEMP/bin/archgraph"
-      - run: shellcheck install.sh ci/action.sh ci/test-install.sh ci/test-elixir-action.sh ci/test-native-action.sh
+      - run: shellcheck install.sh ci/action.sh skills/archgraph-guard/scripts/guard.sh ci/test-install.sh ci/test-elixir-action.sh ci/test-native-action.sh
       - run: bash ci/test-elixir-action.sh
       - run: bash ci/test-native-action.sh
       - name: npm/package.json version is Cargo.toml's
