@@ -21,6 +21,7 @@ fn globals() -> &'static Globals {
 
 use anyhow::{Context, Result, bail};
 use archgraph::collect::{self, depcruise, elixir, go, grimp, java, rust};
+use archgraph::diff::count;
 use archgraph::model::{
     Config, CycleLevel, Document, Git, Granularity, Language, SCHEMA, ScanInput, Source, Verdict,
 };
@@ -1444,11 +1445,6 @@ fn report(args: Report) -> Result<ExitCode> {
     } else {
         ExitCode::SUCCESS
     })
-}
-
-/// `1 file`, `2 files`.
-fn count(n: usize, noun: &str) -> String {
-    format!("{n} {noun}{}", if n == 1 { "" } else { "s" })
 }
 
 fn policy_target(doc: &archgraph::model::Document, path: &str) -> String {

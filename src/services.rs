@@ -371,7 +371,7 @@ pub fn analyze(manifest: Manifest, path: &str) -> Result<Report> {
                 fan_in,
                 fan_out,
                 instability: (total > 0)
-                    .then(|| (fan_out as f64 / total as f64 * 10_000.0).round() / 10_000.0),
+                    .then(|| crate::quality::round4(fan_out as f64 / total as f64)),
             }
         })
         .collect();

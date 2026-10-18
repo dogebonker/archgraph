@@ -524,27 +524,14 @@ pub fn analyze(
     })
 }
 
-fn components(
-    nodes: &BTreeSet<String>,
-    links: &BTreeSet<(String, String)>,
-) -> Vec<BTreeSet<String>> {
-    let names: Vec<_> = nodes.iter().cloned().collect();
-    let ids: BTreeMap<_, _> = names
+/// Module cycles among `links`, self-imports aside.
+fn components(links: &BTreeSet<(String, String)>) -> Vec<BTreeSet<&str>> {
+    let pairs: Vec<_> = links
         .iter()
-        .enumerate()
-        .map(|(i, name)| (name.as_str(), i))
+        .filter(|(from, to)| from != to)
+        .map(|(from, to)| (from.as_str(), to.as_str()))
         .collect();
-    let mut adjacency = vec![Vec::new(); names.len()];
-    for (from, to) in links {
-        if from != to {
-            adjacency[ids[from.as_str()]].push(ids[to.as_str()]);
-        }
-    }
-    crate::graph::sccs(&adjacency)
-        .into_iter()
-        .filter(|s| s.len() > 1)
-        .map(|s| s.into_iter().map(|i| names[i].clone()).collect())
-        .collect()
+    crate::graph::components(&pairs)
 }
 
 fn simulate(doc: &Document, dependencies: &[Dependency], candidate: &Candidate) -> Simulation {
@@ -554,7 +541,6 @@ fn simulate(doc: &Document, dependencies: &[Dependency], candidate: &Candidate) 
         .filter(|f| f.class != Some(ModuleClass::Tests))
         .map(|f| (f.path.as_str(), f.module.as_str()))
         .collect();
-    let mut nodes: BTreeSet<String> = module_of.values().map(|m| (*m).to_owned()).collect();
     let runtime: Vec<_> = dependencies
         .iter()
         .filter(|d| doc.config.all_kinds || d.cut.kind.is_runtime())
@@ -571,8 +557,8 @@ fn simulate(doc: &Document, dependencies: &[Dependency], candidate: &Candidate) 
             )
         })
         .collect();
-    let before = components(&nodes, &before_links);
-    nodes = module_of
+    let before = components(&before_links);
+    let mut nodes: BTreeSet<String> = module_of
         .iter()
         .filter(|(file, _)| !inside(file, &candidate.path))
         .map(|(_, module)| (*module).to_owned())
@@ -587,7 +573,7 @@ fn simulate(doc: &Document, dependencies: &[Dependency], candidate: &Candidate) 
             )
         })
         .collect();
-    let after = components(&nodes, &after_links);
+    let after = components(&after_links);
     let no_new_cycles = after
         .iter()
         .all(|cycle| before.iter().any(|old| cycle.is_subset(old)));
@@ -615,10 +601,15 @@ fn simulate(doc: &Document, dependencies: &[Dependency], candidate: &Candidate) 
             (node(&d.cut.from), node(&d.cut.to))
         })
         .collect();
-    let boundary_cycle = components(&nodes, &package_links)
+    let boundary_cycle = components(&package_links)
         .into_iter()
-        .find(|s| s.contains(&package_id))
-        .map(|s| s.into_iter().filter(|m| m != &package_id).collect())
+        .find(|s| s.contains(package_id.as_str()))
+        .map(|s| {
+            s.into_iter()
+                .filter(|m| *m != package_id)
+                .map(str::to_owned)
+                .collect()
+        })
         .unwrap_or_default();
     Simulation {
         verified: true,
