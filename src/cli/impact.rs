@@ -234,6 +234,7 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
                     .rules
                     .as_deref()
                     .or_else(|| local_rules.is_file().then_some(local_rules.as_path())),
+                &[],
             )?
         }
     };

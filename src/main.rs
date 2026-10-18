@@ -360,7 +360,8 @@ fn main() -> ExitCode {
 }
 
 fn scan(args: Scan) -> Result<()> {
-    let doc = scan_doc(&args.root, &args.opts, args.opts.rules.as_deref())?;
+    let outputs: Vec<&Path> = args.output.as_deref().into_iter().collect();
+    let doc = scan_doc(&args.root, &args.opts, args.opts.rules.as_deref(), &outputs)?;
     write(args.output.as_deref(), &doc)
 }
 
@@ -421,6 +422,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
             rules
                 .as_deref()
                 .or_else(|| local.is_file().then_some(local.as_path())),
+            &[],
         )
     };
     if let [old, new] = args.diff.as_slice() {
@@ -709,8 +711,14 @@ fn show_excludes() -> Result<()> {
     Ok(())
 }
 
-/// Runs the collector under `root` and analyzes its output with `rules`.
-fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Document> {
+/// Runs the collector under `root` and analyzes its output with `rules`. `outputs` are the
+/// files this run writes, which do not make the checkout dirty.
+fn scan_doc(
+    root: &Path,
+    args: &ScanOpts,
+    rules: Option<&Path>,
+    outputs: &[&Path],
+) -> Result<Document> {
     // Resolved here: a relative program path is not reliably resolved against the child's
     // working directory.
     let depcruise = (args.engine != collect::Engine::Native)
@@ -980,7 +988,7 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
     let source = Source {
         language,
         collector: raw.collector,
-        git: git(root),
+        git: git(root, outputs),
         generated_at: now_utc(),
         scan_root: git_scan_root(root),
     };
@@ -1096,11 +1104,11 @@ fn report(args: Report) -> Result<ExitCode> {
         let found = root.join("layout.yaml");
         found.is_file().then_some(found)
     });
-    let mut doc = scan_doc(root, &args.opts, rules.as_deref())?;
+    let out_dir = args.out_dir.unwrap_or_else(|| root.join(".archgraph"));
+    let mut doc = scan_doc(root, &args.opts, rules.as_deref(), &[&out_dir])?;
     if !args.no_provenance && args.opts.collector_input.is_none() && doc.source.git.is_some() {
         provenance_cli::enrich(root, &args.opts, &mut doc)?;
     }
-    let out_dir = args.out_dir.unwrap_or_else(|| root.join(".archgraph"));
     let (json, html) = (
         out_dir.join("archgraph.json"),
         out_dir.join("archgraph.html"),
@@ -1665,7 +1673,25 @@ fn git_scan_root(root: &Path) -> Option<String> {
     Some(if prefix.is_empty() { "." } else { prefix }.to_owned())
 }
 
-fn git(root: &Path) -> Option<Git> {
+/// The checkout's commit, and whether anything other than archgraph's own outputs changed:
+/// `.archgraph/` and those of `outputs` inside `root`.
+fn git(root: &Path, outputs: &[&Path]) -> Option<Git> {
+    let canonical_root = fs::canonicalize(root).ok()?;
+    let mut status = vec![
+        "status".to_owned(),
+        "--porcelain".into(),
+        "--".into(),
+        ":(exclude,literal).archgraph".into(),
+    ];
+    status.extend(outputs.iter().filter_map(|output| {
+        let parent = output
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        let path = fs::canonicalize(parent).ok()?.join(output.file_name()?);
+        let relative = path.strip_prefix(&canonical_root).ok()?.to_str()?;
+        Some(format!(":(exclude,literal){relative}"))
+    }));
     let run = |args: &[&str]| {
         // A repository's core.fsmonitor names a program `git status` would run.
         let out = Command::new("git")
@@ -1681,7 +1707,7 @@ fn git(root: &Path) -> Option<Git> {
     };
     Some(Git {
         commit: run(&["rev-parse", "HEAD"])?,
-        dirty: !run(&["status", "--porcelain"])?.is_empty(),
+        dirty: !run(&status.iter().map(String::as_str).collect::<Vec<_>>())?.is_empty(),
     })
 }
 

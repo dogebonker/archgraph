@@ -32,7 +32,11 @@ pub(super) fn run(args: PackageSplitsArgs) -> Result<()> {
     let workspace = if let Some(root) = &args.root {
         let mut verified_root = false;
         if let Some(expected) = &doc.source.git {
-            let actual = git(root).context("cannot verify the workspace root's Git revision")?;
+            let outputs: Vec<&Path> = std::iter::once(args.graph.as_path())
+                .chain(args.output.as_deref())
+                .collect();
+            let actual =
+                git(root, &outputs).context("cannot verify the workspace root's Git revision")?;
             if actual.commit != expected.commit {
                 bail!(
                     "workspace root does not match the graph's Git revision; use its scanned checkout or rescan"

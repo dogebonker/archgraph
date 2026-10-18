@@ -534,6 +534,28 @@ fn cochange_finds_hidden_coupling_and_records_git() {
         ]
     );
 
+    // Archgraph's own outputs in the repository do not make it dirty on the next scan.
+    fs::create_dir_all(repo.join(".archgraph")).unwrap();
+    fs::write(repo.join(".archgraph/archgraph.json"), "{}").unwrap();
+    let output = repo.join("graph.json");
+    for _ in 0..2 {
+        let out = archgraph(&[
+            "scan",
+            root,
+            "--collector-input",
+            &input,
+            "-o",
+            output.to_str().unwrap(),
+        ]);
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let doc: Value = serde_json::from_slice(&fs::read(&output).unwrap()).unwrap();
+        assert_eq!(doc["source"]["git"]["dirty"], false);
+    }
+
     // --cochange=N reads only the last N commits; an untracked file makes the tree dirty.
     fs::write(repo.join("untracked.txt"), "").unwrap();
     let (doc, _, _) = scan(&[root, "--collector-input", &input, "--cochange=3"]);
