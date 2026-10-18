@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
-use crate::model::{Confidence, Document, EdgeKind, ModuleClass, SCHEMA};
+use crate::model::{Confidence, Document, Edge, EdgeKind, File, ImportRecord, ModuleClass, SCHEMA};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct WorkspaceInventory {
@@ -124,6 +124,13 @@ fn inside(path: &str, root: &str) -> bool {
     root == "." || path == root || path.strip_prefix(root).is_some_and(|p| p.starts_with('/'))
 }
 
+/// Every folder that `inside` places `path` in, other than ".".
+fn ancestors(path: &str) -> impl Iterator<Item = &str> {
+    path.match_indices('/')
+        .map(|(i, _)| &path[..i])
+        .chain([path])
+}
+
 fn valid_path(path: &str, allow_root: bool) -> bool {
     (allow_root && path == ".")
         || (!path.is_empty()
@@ -144,6 +151,16 @@ fn owner<'a>(path: &str, workspace: &'a WorkspaceInventory) -> Option<&'a Existi
 struct Dependency {
     cut: Cut,
     weight: f64,
+}
+
+/// The evidence one candidate folder reads, gathered once for all folders.
+#[derive(Default)]
+struct Within<'a> {
+    files: Vec<&'a File>,
+    internal_weights: Vec<f64>,
+    dependencies: Vec<&'a Dependency>,
+    imports: Vec<&'a ImportRecord>,
+    low_confidence: Vec<&'a Edge>,
 }
 
 fn dependencies(doc: &Document) -> Vec<Dependency> {
@@ -274,6 +291,46 @@ pub fn analyze(
         let pair = metric_pairs.entry((&edge.from, &edge.to)).or_default();
         *pair = pair.max(weight);
     }
+    let mut within: BTreeMap<&str, Within> = BTreeMap::new();
+    for file in &doc.files {
+        for folder in ancestors(&file.path) {
+            within.entry(folder).or_default().files.push(file);
+        }
+    }
+    for ((from, to), weight) in &metric_pairs {
+        for folder in ancestors(from).filter(|folder| inside(to, folder)) {
+            within
+                .entry(folder)
+                .or_default()
+                .internal_weights
+                .push(*weight);
+        }
+    }
+    for dependency in &dependencies {
+        let cut = &dependency.cut;
+        let to_only = ancestors(&cut.to).filter(|folder| !inside(&cut.from, folder));
+        for folder in ancestors(&cut.from).chain(to_only) {
+            within
+                .entry(folder)
+                .or_default()
+                .dependencies
+                .push(dependency);
+        }
+    }
+    for import in doc.imports.iter().flatten() {
+        for folder in ancestors(&import.from) {
+            within.entry(folder).or_default().imports.push(import);
+        }
+    }
+    for edge in doc
+        .edges
+        .iter()
+        .filter(|e| e.confidence == Some(Confidence::Low))
+    {
+        for folder in ancestors(&edge.from) {
+            within.entry(folder).or_default().low_confidence.push(edge);
+        }
+    }
     let mut candidates = Vec::new();
     for path in directories {
         if workspace
@@ -285,11 +342,8 @@ pub fn analyze(
         {
             continue;
         }
-        let selected: Vec<_> = doc
-            .files
-            .iter()
-            .filter(|f| inside(&f.path, &path))
-            .collect();
+        let within = within.remove(path.as_str()).unwrap_or_default();
+        let selected = within.files;
         let size = selected.iter().filter(|f| production(&f.path)).count();
         if size < 2
             || selected
@@ -299,18 +353,14 @@ pub fn analyze(
         {
             continue;
         }
-        let (internal, internal_weight) = metric_pairs
-            .iter()
-            .filter(|((from, to), _)| inside(from, &path) && inside(to, &path))
-            .fold((0, 0.0), |(count, weight), (_, value)| {
-                (count + 1, weight + value)
-            });
+        let internal = within.internal_weights.len();
+        let internal_weight: f64 = within.internal_weights.iter().sum();
         let mut outgoing_weight = 0.0;
         let mut cut_list = Vec::new();
         let mut package_dependencies = Vec::new();
         let mut consumers = BTreeSet::new();
         let mut uncertainties = BTreeSet::new();
-        for dependency in &dependencies {
+        for dependency in within.dependencies {
             let cut = &dependency.cut;
             let from_inside = inside(&cut.from, &path);
             let to_inside = inside(&cut.to, &path);
@@ -362,8 +412,8 @@ pub fn analyze(
                     "explicit import ledger unavailable; omitted imports cannot be checked".into(),
                 );
             }
-            Some(imports) => {
-                for import in imports.iter().filter(|i| inside(&i.from, &path)) {
+            Some(_) => {
+                for import in within.imports {
                     if let Some(package) = &import.external {
                         external_packages.insert(package.clone());
                         let own_package = workspace.enclosing_package.as_ref() == Some(package)
@@ -394,11 +444,7 @@ pub fn analyze(
                 }
             }
         }
-        for edge in doc
-            .edges
-            .iter()
-            .filter(|e| inside(&e.from, &path) && e.confidence == Some(Confidence::Low))
-        {
+        for edge in within.low_confidence {
             uncertainties.insert(format!(
                 "low-confidence import: {} → {}",
                 edge.from, edge.to
