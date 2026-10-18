@@ -528,7 +528,8 @@ impl Compiled {
         })
     }
 
-    fn bound_match(&self, glob_text: &str, path: &str) -> bool {
+    /// Whether `path` matches `glob_text`, compiled once per text.
+    pub(crate) fn bound_match(&self, glob_text: &str, path: &str) -> bool {
         let mut bound = self.bound.borrow_mut();
         bound
             .entry(glob_text.to_owned())
@@ -721,17 +722,37 @@ impl Compiled {
     /// The entrypoint or `public` module covering `to`, with captures bound, and the entries an
     /// import into `to` should use instead. Explicit entrypoints take precedence.
     pub fn public_for(&self, to: &str) -> Option<(String, Vec<String>)> {
-        self.entrypoints_for(to).or_else(|| {
-            self.public.iter().find_map(|(module, entries, _)| {
-                let value = self.bind(module, to)?;
-                Some((
-                    module.instance(&module.raw, value.as_deref()),
-                    entries
-                        .iter()
-                        .map(|entry| module.instance(entry, value.as_deref()))
-                        .collect(),
-                ))
-            })
+        self.boundary(to, Pattern::instance)
+    }
+
+    /// `public_for` as globs for `bound_match`: the bound capture matches literally.
+    pub(crate) fn public_globs(&self, to: &str) -> Option<(String, Vec<String>)> {
+        self.boundary(to, Pattern::bound_glob)
+    }
+
+    fn boundary(
+        &self,
+        to: &str,
+        bound: fn(&Pattern, &str, Option<&str>) -> String,
+    ) -> Option<(String, Vec<String>)> {
+        let entrypoints = self
+            .entrypoints
+            .iter()
+            .map(|(module, entry)| (module, std::slice::from_ref(entry)));
+        let public = self
+            .public
+            .iter()
+            .map(|(module, entries, _)| (module, entries.as_slice()));
+        entrypoints.chain(public).find_map(|(module, entries)| {
+            let value = self.bind(module, to)?;
+            let value = value.as_deref();
+            Some((
+                bound(module, &module.raw, value),
+                entries
+                    .iter()
+                    .map(|entry| bound(module, entry, value))
+                    .collect(),
+            ))
         })
     }
 

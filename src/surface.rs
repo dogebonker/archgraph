@@ -154,14 +154,16 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
         let mut entries = BTreeSet::new();
         let mut explicit = false;
         for file in &members {
-            if let Some((_, declared)) = rules.as_ref().and_then(|r| r.public_for(&file.path)) {
+            let Some(rules) = &rules else { break };
+            if let (Some((_, declared)), Some((_, globs))) =
+                (rules.public_for(&file.path), rules.public_globs(&file.path))
+            {
                 explicit = true;
-                for entry in declared {
-                    let matcher = crate::collect::globset(std::slice::from_ref(&entry))?;
+                for (entry, glob) in declared.into_iter().zip(globs) {
                     let matches: Vec<_> = doc
                         .files
                         .iter()
-                        .filter(|f| matcher.is_match(&f.path))
+                        .filter(|f| rules.bound_match(&glob, &f.path))
                         .collect();
                     if matches.is_empty() {
                         limitations.push(format!(
@@ -275,18 +277,21 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
                 continue;
             }
             let written = edge.original_to.as_deref().unwrap_or(&edge.to);
-            let boundary = rules.as_ref().and_then(|r| r.public_for(written));
-            let (outside, bypass, expected) = if let Some((pattern, entries)) = boundary {
-                let inside = crate::collect::globset(&[pattern])?.is_match(&edge.from);
-                let entry_match = crate::collect::globset(&entries)?.is_match(written);
-                (!inside, !entry_match, entries)
-            } else {
-                (
-                    files.get(edge.from.as_str()) != Some(&module.id.as_str()),
-                    !entries.is_empty() && !entries.contains(written),
-                    entries.iter().cloned().collect(),
-                )
-            };
+            let boundary = rules
+                .as_ref()
+                .and_then(|r| Some((r, r.public_for(written)?, r.public_globs(written)?)));
+            let (outside, bypass, expected) =
+                if let Some((rules, (_, entries), (pattern, globs))) = boundary {
+                    let inside = rules.bound_match(&pattern, &edge.from);
+                    let entry_match = globs.iter().any(|glob| rules.bound_match(glob, written));
+                    (!inside, !entry_match, entries)
+                } else {
+                    (
+                        files.get(edge.from.as_str()) != Some(&module.id.as_str()),
+                        !entries.is_empty() && !entries.contains(written),
+                        entries.iter().cloned().collect(),
+                    )
+                };
             if outside && bypass {
                 let names = symbols
                     .into_iter()

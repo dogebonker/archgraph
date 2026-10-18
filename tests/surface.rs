@@ -376,6 +376,41 @@ fn declared_entrypoints_enforce_boundaries_even_without_symbol_data() {
 }
 
 #[test]
+fn bound_folder_names_match_literally_in_public_boundaries() {
+    // `[slug]` is a glob class and a lone `[` an invalid glob unless the bound folder is escaped.
+    for folder in ["[slug]", "[x"] {
+        let page = format!("src/app/{folder}/page.tsx");
+        let helper = format!("src/app/{folder}/x.ts");
+        let mut doc = document(
+            &[&page, &helper, "src/main.ts"],
+            &[(&page, &helper), ("src/main.ts", &helper)],
+        );
+        doc.config.rules = Some(serde_json::from_value(json!({
+            "path": "layout.yaml", "sha256": "fixture", "doc": {"version": 1, "public": [{"module": "src/app/<r>/**", "entries": ["src/app/<r>/page.tsx"]}]}
+        })).unwrap());
+        let report = surface::analyze(&doc, 50).unwrap();
+        let app = module(&report, "app");
+        assert_eq!(app.entrypoints, std::slice::from_ref(&page), "{folder}");
+        let deep: Vec<_> = app.deep_imports.iter().map(|d| d.from.as_str()).collect();
+        assert_eq!(deep, ["src/main.ts"], "{folder}");
+        assert_eq!(
+            app.deep_imports[0].suggestion,
+            format!(
+                "Import through {page}; re-export the required symbols there or declare a boundary rule."
+            )
+        );
+        assert!(
+            !report
+                .limitations
+                .iter()
+                .any(|l| l.contains("declares entrypoint")),
+            "{:?}",
+            report.limitations
+        );
+    }
+}
+
+#[test]
 fn restoring_a_scan_retains_symbol_evidence_and_surface_threshold() {
     let mut doc = api();
     surface::attach(&mut doc, symbols(api_exports(), Vec::new()), 3).unwrap();
