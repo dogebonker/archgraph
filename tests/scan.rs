@@ -1082,6 +1082,10 @@ fn a_registrar_move_that_empties_its_module_reports_the_cycle_it_leaves() {
         (&moves[0]["cycle_before"], &moves[0]["cycle_after"]),
         (&json!(6), &json!(6))
     );
+    // A move that removes no pair resolves none: each stays a cut candidate.
+    let pairs = doc["cycles"][0]["two_way"].as_array().unwrap();
+    assert_eq!(pairs.len(), 5);
+    assert!(pairs.iter().all(|p| p.get("resolved_by_move").is_none()));
 }
 
 #[test]

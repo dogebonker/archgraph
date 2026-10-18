@@ -1304,12 +1304,15 @@ pub fn place_registrars(
         placed.push(kept);
     }
     for (c, moves) in doc.cycles.iter_mut().zip(placed) {
-        // A pair whose other side is only a moved registrar is resolved by the move.
+        // A pair whose other side is only a moved registrar is resolved by the move, when the
+        // move removes pairs at all.
         if let Some(pairs) = &mut c.two_way {
             for p in pairs.iter_mut() {
-                p.resolved_by_move = moves
-                    .iter()
-                    .any(|m| m.module == p.to && m.with.contains(&p.from));
+                p.resolved_by_move = moves.iter().any(|m| {
+                    m.pairs_removed.is_some_and(|n| n > 0)
+                        && m.module == p.to
+                        && m.with.contains(&p.from)
+                });
             }
             pairs.sort_by_key(|p| p.resolved_by_move);
         }
