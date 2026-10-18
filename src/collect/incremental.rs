@@ -79,12 +79,13 @@ impl Session {
         })
     }
 
-    /// TS resolver configuration reads, including missing paths that can later become valid.
+    /// Resolver configuration and installed metadata reads, including missing paths.
     /// Paths are absolute, sorted, and reset alongside the collector's configuration cache.
     pub fn metadata_files(&self) -> Vec<PathBuf> {
         match &self.cache {
             Cache::Typescript(cache) => cache.metadata_files(),
-            Cache::Python(_) | Cache::Go(_) => Vec::new(),
+            Cache::Python(cache) => cache.metadata_files(),
+            Cache::Go(_) => Vec::new(),
         }
     }
 

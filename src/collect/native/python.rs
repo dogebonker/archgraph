@@ -55,10 +55,14 @@ pub fn collect(
 pub(crate) struct Cache {
     parsed: super::ParseCache<Parsed>,
     external_roots: Option<BTreeSet<String>>,
+    metadata_files: BTreeSet<PathBuf>,
 }
 impl Cache {
     pub(crate) fn invalidate(&mut self, files: &[String]) {
         self.parsed.invalidate(files);
+    }
+    pub(crate) fn metadata_files(&self) -> Vec<PathBuf> {
+        self.metadata_files.iter().cloned().collect()
     }
     pub(crate) fn counts(&self) -> (usize, usize) {
         (self.parsed.parsed, self.parsed.reused)
@@ -94,7 +98,7 @@ pub(crate) fn collect_cached(
         }
     }
     if cache.external_roots.is_none() {
-        cache.external_roots = Some(installed_roots(&root, &search)?);
+        cache.external_roots = Some(installed_roots(&root, &search, &mut cache.metadata_files)?);
     }
     let external_roots = cache.external_roots.as_ref().unwrap();
     let all_files = super::source_files(&root, &["py"])?;
@@ -927,10 +931,15 @@ fn defining(
 }
 
 /// Installed metadata is evidence of import roots; distribution names alone are not.
-fn installed_roots(root: &Path, search: &[PathBuf]) -> Result<BTreeSet<String>> {
+fn installed_roots(
+    root: &Path,
+    search: &[PathBuf],
+    metadata: &mut BTreeSet<PathBuf>,
+) -> Result<BTreeSet<String>> {
     let mut paths = search.to_vec();
     for environment in [root.join(".venv"), root.join("venv")] {
         let lib = environment.join("lib");
+        metadata.extend([environment, lib.clone()]);
         if !lib.is_dir() {
             continue;
         }
@@ -947,6 +956,7 @@ fn installed_roots(root: &Path, search: &[PathBuf]) -> Result<BTreeSet<String>> 
     }
     let mut found = BTreeSet::new();
     for path in paths {
+        metadata.insert(path.clone());
         if !path.is_dir() {
             continue;
         }
@@ -954,25 +964,146 @@ fn installed_roots(root: &Path, search: &[PathBuf]) -> Result<BTreeSet<String>> 
         if !path.starts_with(root) {
             continue;
         }
-        for entry in fs::read_dir(path)? {
+        for entry in fs::read_dir(&path)? {
             let entry = entry?;
             if !entry.file_type()?.is_dir()
                 || !entry.file_name().to_string_lossy().ends_with(".dist-info")
             {
                 continue;
             }
-            let top = entry.path().join("top_level.txt");
-            if !top.is_file() || fs::symlink_metadata(&top)?.file_type().is_symlink() {
-                continue;
-            }
-            for name in fs::read_to_string(top)?.lines() {
-                if !name.is_empty() && name.chars().all(|c| c == '_' || c.is_ascii_alphanumeric()) {
-                    found.insert(name.to_owned());
+            metadata.insert(entry.path());
+            for filename in ["top_level.txt", "RECORD"] {
+                let file = entry.path().join(filename);
+                metadata.insert(file.clone());
+                if !file.is_file() || fs::symlink_metadata(&file)?.file_type().is_symlink() {
+                    continue;
+                }
+                let contents = fs::read_to_string(&file).with_context(|| {
+                    format!("reading installed Python metadata {}", file.display())
+                })?;
+                if filename == "top_level.txt" {
+                    found.extend(
+                        contents
+                            .lines()
+                            .filter(|name| import_identifier(name))
+                            .map(str::to_owned),
+                    );
+                } else if let Some(rows) = record_rows(&contents) {
+                    for row in rows {
+                        if row.len() == 3
+                            && let Some(name) = installed_record_root(&path, &row[0], metadata)?
+                        {
+                            found.insert(name);
+                        }
+                    }
                 }
             }
         }
     }
     Ok(found)
+}
+
+fn import_identifier(name: &str) -> bool {
+    let mut chars = name.chars();
+    chars
+        .next()
+        .is_some_and(|c| c == '_' || c.is_ascii_alphabetic())
+        && chars.all(|c| c == '_' || c.is_ascii_alphanumeric())
+}
+
+fn installed_record_root(
+    site: &Path,
+    written: &str,
+    metadata: &mut BTreeSet<PathBuf>,
+) -> Result<Option<String>> {
+    // RECORD paths are slash-separated; installation scripts and .data payloads are not imports.
+    let parts: Vec<_> = written.split('/').collect();
+    if parts
+        .iter()
+        .any(|part| part.is_empty() || *part == "." || *part == ".." || part.contains('\\'))
+    {
+        return Ok(None);
+    }
+    let leaf = parts.last().copied().unwrap_or_default();
+    let Some(stem) = leaf.strip_suffix(".py").or_else(|| {
+        leaf.strip_suffix(".so")
+            .or_else(|| leaf.strip_suffix(".pyd"))
+            .map(|stem| stem.split('.').next().unwrap_or(stem))
+    }) else {
+        return Ok(None);
+    };
+    if !import_identifier(stem)
+        || parts[..parts.len() - 1]
+            .iter()
+            .any(|part| !import_identifier(part))
+    {
+        return Ok(None);
+    }
+    let file = site.join(written);
+    metadata.insert(file.clone());
+    if !file.is_file() {
+        return Ok(None);
+    }
+    let actual = file.canonicalize()?;
+    if !actual.starts_with(site) {
+        return Ok(None);
+    }
+    metadata.insert(actual);
+    Ok(Some(
+        if parts.len() == 1 { stem } else { parts[0] }.to_owned(),
+    ))
+}
+
+/// Strict CSV, including escaped quotes and quoted newlines; malformed metadata proves nothing.
+fn record_rows(source: &str) -> Option<Vec<Vec<String>>> {
+    let mut chars = source.chars().peekable();
+    let mut rows = Vec::new();
+    let mut row = Vec::new();
+    let mut field = String::new();
+    let mut quoted = false;
+    let mut closed = false;
+    while let Some(c) = chars.next() {
+        if quoted {
+            if c == '"' {
+                if chars.peek() == Some(&'"') {
+                    chars.next();
+                    field.push('"');
+                } else {
+                    quoted = false;
+                    closed = true;
+                }
+            } else {
+                field.push(c);
+            }
+        } else {
+            match c {
+                '"' if field.is_empty() && !closed => quoted = true,
+                ',' => {
+                    row.push(std::mem::take(&mut field));
+                    closed = false;
+                }
+                '\n' | '\r' => {
+                    if c == '\r' && chars.peek() == Some(&'\n') {
+                        chars.next();
+                    }
+                    row.push(std::mem::take(&mut field));
+                    rows.push(std::mem::take(&mut row));
+                    closed = false;
+                }
+                '"' => return None,
+                _ if closed => return None,
+                _ => field.push(c),
+            }
+        }
+    }
+    if quoted {
+        return None;
+    }
+    if closed || !field.is_empty() || !row.is_empty() {
+        row.push(field);
+        rows.push(row);
+    }
+    Some(rows)
 }
 
 fn stdlib(module: &str) -> bool {
@@ -981,4 +1112,24 @@ fn stdlib(module: &str) -> bool {
     include_str!("python_stdlib.txt")
         .lines()
         .any(|name| name == root)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::record_rows;
+
+    #[test]
+    fn wheel_csv_quotes_crlf_newlines_and_invalid_rows() {
+        assert_eq!(
+            record_rows("\"a,b.py\",\"sha256=a\"\"b\",1\r\n\"pkg/module.py\",\"line\none\",2"),
+            Some(vec![
+                vec!["a,b.py".into(), "sha256=a\"b".into(), "1".into()],
+                vec!["pkg/module.py".into(), "line\none".into(), "2".into()]
+            ])
+        );
+        for invalid in ["\"unterminated,,", "\"closed\"x,,", "un\"quoted,,"] {
+            assert!(record_rows(invalid).is_none(), "{invalid}");
+        }
+        assert_eq!(record_rows(""), Some(Vec::new()));
+    }
 }

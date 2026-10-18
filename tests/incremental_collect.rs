@@ -439,3 +439,78 @@ fn typescript_session_exposes_enclosing_custom_config_and_missing_extends() {
         "old configuration footprint must reset"
     );
 }
+
+#[test]
+fn python_session_refreshes_wheel_metadata_and_exposes_environment_inventory() {
+    let fixture = Fixture::new(&[
+        ("pkg/__init__.py", ""),
+        ("pkg/a.py", "import installed\n"),
+        (
+            ".venv/lib/python3.14/site-packages/distribution-1.dist-info/RECORD",
+            "",
+        ),
+        (
+            ".venv/lib/python3.14/site-packages/installed/__init__.py",
+            "",
+        ),
+    ]);
+    let policy = fixture.policy(Language::Python);
+    let mut session = fixture.session(Language::Python);
+    let first = session.collect(&policy).unwrap();
+    assert!(
+        first
+            .output
+            .raw
+            .imports
+            .unwrap()
+            .iter()
+            .any(|record| record.specifier == "installed" && record.unresolved.is_some())
+    );
+    let record = ".venv/lib/python3.14/site-packages/distribution-1.dist-info/RECORD";
+    let metadata = session.metadata_files();
+    for path in [
+        ".venv",
+        ".venv/lib",
+        ".venv/lib/python3.14/site-packages",
+        record,
+        "venv/lib",
+    ] {
+        assert!(
+            metadata.contains(&fixture.path().join(path)),
+            "{path}: {metadata:?}"
+        );
+    }
+    fixture.write(record, "installed/__init__.py,,\n");
+    let update = session.update(&[record.into()], &policy).unwrap();
+    assert!(update.fallback_reason.is_some());
+    assert!(
+        update
+            .output
+            .raw
+            .imports
+            .unwrap()
+            .iter()
+            .any(|record| record.external.as_deref() == Some("installed"))
+    );
+    fs::remove_file(
+        fixture
+            .path()
+            .join(".venv/lib/python3.14/site-packages/installed/__init__.py"),
+    )
+    .unwrap();
+    let update = session
+        .update(
+            &[".venv/lib/python3.14/site-packages/installed/__init__.py".into()],
+            &policy,
+        )
+        .unwrap();
+    assert!(
+        update
+            .output
+            .raw
+            .imports
+            .unwrap()
+            .iter()
+            .any(|record| record.specifier == "installed" && record.unresolved.is_some())
+    );
+}

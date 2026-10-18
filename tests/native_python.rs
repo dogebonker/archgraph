@@ -462,3 +462,168 @@ fn native_python_distinct_wildcard_providers_remain_ambiguous() {
             .contains("ambiguous star export")
     );
 }
+
+#[test]
+fn native_python_wheel_record_proves_installed_import_roots() {
+    let dir = fixture(&[
+        (
+            "src/pkg/a.py",
+            "import fastapi\nimport uvicorn\nimport custom_module\nimport google.cloud\nimport speed\nimport invented_distribution\n",
+        ),
+        (
+            ".venv/lib/python3.14/site-packages/invented_distribution-1.dist-info/RECORD",
+            "fastapi/__init__.py,,\nuvicorn/main.py,,\ncustom_module.py,,\ngoogle/cloud/client.py,,\nspeed.cpython-314-darwin.so,,\n",
+        ),
+        (
+            ".venv/lib/python3.14/site-packages/fastapi/__init__.py",
+            "raise RuntimeError('must not execute')\n",
+        ),
+        (".venv/lib/python3.14/site-packages/uvicorn/main.py", ""),
+        (".venv/lib/python3.14/site-packages/custom_module.py", ""),
+        (
+            ".venv/lib/python3.14/site-packages/google/cloud/client.py",
+            "",
+        ),
+        (
+            ".venv/lib/python3.14/site-packages/speed.cpython-314-darwin.so",
+            "not executable",
+        ),
+    ]);
+    let records = collect(&dir, None, &[]).raw.imports.unwrap();
+    for name in [
+        "fastapi",
+        "uvicorn",
+        "custom_module",
+        "google.cloud",
+        "speed",
+    ] {
+        let record = records.iter().find(|i| i.specifier == name).unwrap();
+        assert_eq!(
+            record.external.as_deref(),
+            Some(name.split('.').next().unwrap()),
+            "{name}"
+        );
+        assert!(record.unresolved.is_none(), "{name}");
+    }
+    assert!(
+        records
+            .iter()
+            .any(|i| i.specifier == "invented_distribution"
+                && matches!(i.unresolved, Some(ImportReason::Missing)))
+    );
+}
+
+#[test]
+fn native_python_wheel_records_reject_nonimports_and_missing_files() {
+    let dir = fixture(&[
+        (
+            "src/pkg/a.py",
+            "import missing\nimport traversal\nimport payload\nimport stubs\nimport unknown\nimport legitimate\nimport native_mod\n",
+        ),
+        ("outside.py", ""),
+        (
+            ".venv/lib/python3.14/site-packages/unrelated-1.dist-info/RECORD",
+            "missing/__init__.py,,\n../traversal.py,,\ntraversal/../actual.py,,\n/absolute.py,,\npayload.data/scripts/payload.py,,\nstubs/__init__.pyi,,\nunknown/assets.json,,\n\"legitimate/__init__.py\",\"sha256=a,b\",0\r\nnative_mod.abi3.pyd,,\n",
+        ),
+        (".venv/lib/python3.14/site-packages/traversal.py", ""),
+        (".venv/lib/python3.14/site-packages/actual.py", ""),
+        (
+            ".venv/lib/python3.14/site-packages/payload.data/scripts/payload.py",
+            "",
+        ),
+        (".venv/lib/python3.14/site-packages/stubs/__init__.pyi", ""),
+        (".venv/lib/python3.14/site-packages/unknown/assets.json", ""),
+        (
+            ".venv/lib/python3.14/site-packages/legitimate/__init__.py",
+            "",
+        ),
+        (".venv/lib/python3.14/site-packages/native_mod.abi3.pyd", ""),
+    ]);
+    let records = collect(&dir, None, &[]).raw.imports.unwrap();
+    for name in ["missing", "traversal", "payload", "stubs", "unknown"] {
+        let record = records.iter().find(|i| i.specifier == name).unwrap();
+        assert!(
+            matches!(record.unresolved, Some(ImportReason::Missing)),
+            "{name}"
+        );
+    }
+    for name in ["legitimate", "native_mod"] {
+        assert!(
+            records
+                .iter()
+                .any(|i| i.specifier == name && i.external.as_deref() == Some(name))
+        );
+    }
+}
+
+#[test]
+fn native_python_wheel_record_works_in_contained_python_path() {
+    let dir = fixture(&[
+        ("src/pkg/a.py", "import installed\n"),
+        (
+            "deps/distribution-1.dist-info/RECORD",
+            "installed/__init__.py,,\n",
+        ),
+        (
+            "deps/installed/__init__.py",
+            "raise RuntimeError('must not execute')\n",
+        ),
+    ]);
+    let records = collect(&dir, None, &["deps".into()]).raw.imports.unwrap();
+    // Explicit source paths keep their existing internal-file resolution priority.
+    assert!(
+        records
+            .iter()
+            .any(|i| i.specifier == "installed" && i.unresolved.is_none())
+    );
+    assert!(
+        collect(&dir, None, &[])
+            .raw
+            .imports
+            .unwrap()
+            .iter()
+            .any(|i| i.specifier == "installed"
+                && matches!(i.unresolved, Some(ImportReason::Missing)))
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn native_python_wheel_records_do_not_follow_escaping_symlinks() {
+    use std::os::unix::fs::symlink;
+    let outside = fixture(&[
+        ("escaped.py", ""),
+        ("stolen/__init__.py", ""),
+        ("metadata/RECORD", "forged.py,,\n"),
+    ]);
+    let dir = fixture(&[
+        (
+            "src/pkg/a.py",
+            "import escaped\nimport stolen\nimport forged\n",
+        ),
+        (
+            ".venv/lib/python3.14/site-packages/safe-1.dist-info/RECORD",
+            "escaped.py,,\nstolen/__init__.py,,\n",
+        ),
+        (".venv/lib/python3.14/site-packages/forged.py", ""),
+        (
+            ".venv/lib/python3.14/site-packages/forged-1.dist-info/marker",
+            "",
+        ),
+    ]);
+    let site = dir.path().join(".venv/lib/python3.14/site-packages");
+    symlink(outside.path().join("escaped.py"), site.join("escaped.py")).unwrap();
+    symlink(outside.path().join("stolen"), site.join("stolen")).unwrap();
+    symlink(
+        outside.path().join("metadata/RECORD"),
+        site.join("forged-1.dist-info/RECORD"),
+    )
+    .unwrap();
+    for record in collect(&dir, None, &[]).raw.imports.unwrap() {
+        assert!(
+            matches!(record.unresolved, Some(ImportReason::Missing)),
+            "{}",
+            record.specifier
+        );
+    }
+}
