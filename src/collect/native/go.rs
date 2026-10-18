@@ -12,7 +12,9 @@ use crate::collect::{RawGraph, excludes::Policy};
 use crate::model::{
     Collector, Confidence, Edge, EdgeKind, ImportReason, ImportRecord, NodeMetadata,
 };
-use crate::surface::{SymbolExport, SymbolImport, SymbolTarget, Symbols};
+use crate::surface::{SymbolImport, SymbolTarget, Symbols};
+
+use super::{named_children, self_export, text, unresolved_count};
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -120,7 +122,7 @@ pub fn collect(root: &Path, go: &str, policy: &Policy) -> Result<super::Output> 
     let language = tree_sitter_go::LANGUAGE.into();
     let mut parser = Parser::new();
     parser.set_language(&language)?;
-    let query = Query::new(&language, include_str!("../../../queries/native/go.scm"))?;
+    let query = Query::new(&language, include_str!("queries/go.scm"))?;
     let mut parsed = BTreeMap::new();
     for file in &all_files {
         let source = fs::read_to_string(root.join(file))?;
@@ -167,14 +169,7 @@ pub fn collect(root: &Path, go: &str, policy: &Policy) -> Result<super::Output> 
         let identity = &file_packages[file];
         for name in &data.declarations {
             if name.chars().next().is_some_and(char::is_uppercase) {
-                symbols.exports.push(SymbolExport {
-                    file: file.clone(),
-                    name: name.clone(),
-                    target: SymbolTarget {
-                        file: file.clone(),
-                        name: name.clone(),
-                    },
-                });
+                symbols.exports.push(self_export(file, name));
             }
         }
         for import in &data.imports {
@@ -293,7 +288,7 @@ pub fn collect(root: &Path, go: &str, policy: &Policy) -> Result<super::Output> 
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect();
-    let unresolved = imports.iter().filter(|i| i.unresolved.is_some()).count();
+    let unresolved = unresolved_count(&imports);
     Ok(super::Output {
         source_root: ".".into(),
         symbols,
@@ -328,9 +323,6 @@ pub fn collect(root: &Path, go: &str, policy: &Policy) -> Result<super::Output> 
     })
 }
 
-fn text<'a>(node: Node<'_>, source: &'a str) -> &'a str {
-    &source[node.byte_range()]
-}
 fn top_level(mut node: Node<'_>) -> bool {
     while let Some(parent) = node.parent() {
         if matches!(
@@ -356,9 +348,8 @@ fn parse(source: &str, parser: &mut Parser, query: &Query) -> Result<Parsed> {
             let node = capture.node;
             match query.capture_names()[capture.index as usize] {
                 "package" => {
-                    let mut walk = node.walk();
-                    if let Some(name) = node.named_children(&mut walk).next() {
-                        result.package_name = text(name, source).into();
+                    if let Some(name) = named_children(node).first() {
+                        result.package_name = text(*name, source).into();
                     }
                 }
                 "import" => {
@@ -388,9 +379,8 @@ fn parse(source: &str, parser: &mut Parser, query: &Query) -> Result<Parsed> {
                     }
                 }
                 "variable" => {
-                    let mut walk = node.walk();
-                    let names: Vec<_> = node
-                        .named_children(&mut walk)
+                    let names: Vec<_> = named_children(node)
+                        .into_iter()
                         .filter(|n| n.kind() == "identifier")
                         .map(|n| text(n, source).to_owned())
                         .collect();
@@ -418,10 +408,9 @@ fn parse(source: &str, parser: &mut Parser, query: &Query) -> Result<Parsed> {
                 }
                 "binding" => {
                     let target = node.child_by_field_name("left").unwrap_or(node);
-                    let mut walk = target.walk();
                     result.shadowed.extend(
-                        target
-                            .named_children(&mut walk)
+                        named_children(target)
+                            .into_iter()
                             .filter(|n| n.kind() == "identifier")
                             .map(|n| text(n, source).to_owned()),
                     );

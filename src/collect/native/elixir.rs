@@ -11,6 +11,8 @@ use crate::collect::{RawGraph, excludes::Policy};
 use crate::model::{Collector, Edge, EdgeKind, ImportReason, ImportRecord};
 use crate::surface::{SymbolExport, SymbolImport, SymbolTarget, Symbols};
 
+use super::{named_children, self_export, text, unresolved_count};
+
 // Generated from the installed Elixir 1.20.1 / OTP 29 application manifests, without loading apps.
 static APPLICATIONS: LazyLock<BTreeMap<String, String>> = LazyLock::new(|| {
     let apps: BTreeMap<String, Vec<String>> =
@@ -32,23 +34,16 @@ struct Scope {
     kind: EdgeKind,
 }
 
-fn text<'a>(node: Node<'_>, source: &'a str) -> &'a str {
-    &source[node.byte_range()]
-}
-fn children(node: Node<'_>) -> Vec<Node<'_>> {
-    let mut cursor = node.walk();
-    node.named_children(&mut cursor).collect()
-}
 fn arguments(node: Node<'_>) -> Vec<Node<'_>> {
-    children(node)
+    named_children(node)
         .into_iter()
         .find(|n| n.kind() == "arguments")
-        .map(children)
+        .map(named_children)
         .unwrap_or_default()
 }
 fn renamed<'tree>(args: &[Node<'tree>], source: &str) -> Option<Node<'tree>> {
     args.iter().find(|n| n.kind() == "keywords").and_then(|n| {
-        children(*n).into_iter().find_map(|pair| {
+        named_children(*n).into_iter().find_map(|pair| {
             let key = pair.child_by_field_name("key")?;
             (text(key, source).trim().trim_end_matches(':') == "as")
                 .then(|| pair.child_by_field_name("value"))
@@ -122,16 +117,9 @@ impl Walker<'_> {
         }
         self.records.push(record);
     }
-    fn export(&mut self, name: String) {
+    fn export(&mut self, name: &str) {
         if !self.indexing {
-            self.exports.push(SymbolExport {
-                file: self.file.to_owned(),
-                name: name.clone(),
-                target: SymbolTarget {
-                    file: self.file.to_owned(),
-                    name,
-                },
-            });
+            self.exports.push(self_export(self.file, name));
         }
     }
     fn bind(&self, node: Node<'_>, alias: Option<Node<'_>>, scope: &mut Scope) {
@@ -190,9 +178,9 @@ impl Walker<'_> {
                             files.push(self.file.to_owned());
                         }
                     }
-                    self.export(name.clone());
+                    self.export(&name);
                     inner.module = Some(name);
-                    for child in children(node)
+                    for child in named_children(node)
                         .into_iter()
                         .filter(|n| n.kind() == "do_block")
                     {
@@ -211,7 +199,7 @@ impl Walker<'_> {
                             && tuple.kind() == "tuple"
                         {
                             if let Some(prefix) = module(prefix, self.source, scope) {
-                                for suffix in children(tuple) {
+                                for suffix in named_children(tuple) {
                                     if suffix.kind() == "alias" {
                                         let suffix = text(suffix, self.source);
                                         scope.aliases.insert(
@@ -255,11 +243,11 @@ impl Walker<'_> {
                             None
                         };
                         if let Some(function) = function {
-                            self.export(format!("{module}.{function}"));
+                            self.export(&format!("{module}.{function}"));
                         }
                     }
                     let mut inner = scope.clone();
-                    for child in children(node)
+                    for child in named_children(node)
                         .into_iter()
                         .filter(|n| n.kind() != "identifier")
                     {
@@ -315,7 +303,7 @@ impl Walker<'_> {
             }
         }
         if node.kind() == "struct" {
-            if let Some(first) = children(node).first() {
+            if let Some(first) = named_children(node).first() {
                 self.record(*first, scope);
             }
             return;
@@ -335,7 +323,7 @@ impl Walker<'_> {
             "source" | "do_block" | "arguments" | "keywords" | "pair"
         );
         let mut inner = scope.clone();
-        for child in children(node) {
+        for child in named_children(node) {
             self.walk(child, if scoped { &mut inner } else { scope });
         }
     }
@@ -347,7 +335,7 @@ impl Walker<'_> {
             return;
         }
         if matches!(node.kind(), "list" | "tuple") {
-            for child in children(node) {
+            for child in named_children(node) {
                 self.concat_argument(child, scope);
             }
         } else {
@@ -448,7 +436,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
     }
     symbols.exports.sort();
     symbols.exports.dedup();
-    let unresolved = records.iter().filter(|r| r.unresolved.is_some()).count();
+    let unresolved = unresolved_count(&records);
     Ok(super::Output {
         source_root: ".".into(),
         symbols,

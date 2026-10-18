@@ -11,17 +11,16 @@ use crate::collect::{
     excludes::Policy,
 };
 use crate::model::{Collector, Edge, EdgeKind, ImportReason, ImportRecord};
-use crate::surface::{SymbolExport, SymbolImport, SymbolTarget, Symbols};
+use crate::surface::{SymbolImport, SymbolTarget, Symbols};
 
-fn text<'a>(node: Node<'_>, source: &'a str) -> &'a str {
-    &source[node.byte_range()]
+use super::{named_children, self_export, text, unresolved_count};
+
+fn squash(raw: &str) -> String {
+    raw.split_whitespace().collect::<Vec<_>>().join(" ")
 }
-fn children(node: Node<'_>) -> Vec<Node<'_>> {
-    let mut cursor = node.walk();
-    node.named_children(&mut cursor).collect()
-}
+
 fn visible(node: Node<'_>, source: &str) -> bool {
-    children(node)
+    named_children(node)
         .iter()
         .any(|n| n.kind() == "visibility_modifier" && text(*n, source) == "pub")
 }
@@ -61,7 +60,7 @@ fn use_paths(
 ) {
     match node.kind() {
         "use_list" => {
-            for child in children(node) {
+            for child in named_children(node) {
                 use_paths(child, source, prefix, out);
             }
         }
@@ -86,7 +85,7 @@ fn use_paths(
         }
         "use_wildcard" => {
             let mut p = prefix.to_vec();
-            if let Some(path) = children(node).first() {
+            if let Some(path) = named_children(node).first() {
                 p.extend(parts(*path, source));
             }
             out.push((p, "*".into(), true));
@@ -171,10 +170,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                             line: node.start_position().row + 1,
                             context: context(node, source),
                             public: visible(node, source),
-                            written: text(argument, source)
-                                .split_whitespace()
-                                .collect::<Vec<_>>()
-                                .join(" "),
+                            written: squash(text(argument, source)),
                         });
                     }
                 }
@@ -202,7 +198,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                                     .map(str::to_owned);
                                 break;
                             }
-                            stack.extend(children(n));
+                            stack.extend(named_children(n));
                         }
                         break;
                     }
@@ -229,10 +225,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                         line: node.start_position().row + 1,
                         context: context(node, source),
                         public: visible(node, source),
-                        written: text(node, source)
-                            .split_whitespace()
-                            .collect::<Vec<_>>()
-                            .join(" "),
+                        written: squash(text(node, source)),
                     });
                 }
             }
@@ -273,10 +266,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                             line: node.start_position().row + 1,
                             context: context(node, source),
                             public: false,
-                            written: text(node, source)
-                                .split_whitespace()
-                                .collect::<Vec<_>>()
-                                .join(" "),
+                            written: squash(text(node, source)),
                         });
                     }
                 }
@@ -287,10 +277,9 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                     || raw.starts_with("include_str!")
                     || raw.starts_with("include_bytes!")
                 {
-                    result.includes.push((
-                        node.start_position().row + 1,
-                        raw.split_whitespace().collect::<Vec<_>>().join(" "),
-                    ));
+                    result
+                        .includes
+                        .push((node.start_position().row + 1, squash(raw)));
                 }
                 result.pure = false;
                 result.limitations.push(format!(
@@ -662,14 +651,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
             imports: Vec::new(),
         };
         for name in &syntax.public {
-            symbols.exports.push(SymbolExport {
-                file: file.clone(),
-                name: name.clone(),
-                target: SymbolTarget {
-                    file: file.clone(),
-                    name: name.clone(),
-                },
-            });
+            symbols.exports.push(self_export(file, name));
         }
         for request in &syntax.requests {
             let mut current = base.clone();
@@ -777,69 +759,13 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
     symbols
         .limitations
         .extend(barrels::resolve(&mut graph, &barrels));
-    for _ in 0..10 {
-        let previous = symbols.exports.clone();
-        for module in &barrels {
-            for route in &module.exports {
-                for export in previous.iter().filter(|e| {
-                    e.file == route.to && (e.name == route.imported || route.imported == "*")
-                }) {
-                    symbols.exports.push(SymbolExport {
-                        file: module.file.clone(),
-                        name: if route.exported == "*" {
-                            export.name.clone()
-                        } else {
-                            route.exported.clone()
-                        },
-                        target: export.target.clone(),
-                    });
-                }
-            }
-        }
-        symbols.exports.sort();
-        symbols.exports.dedup();
-        if symbols.exports == previous {
-            break;
-        }
-    }
-    for import in &mut symbols.imports {
-        let targets: Vec<_> = symbols
-            .exports
-            .iter()
-            .filter(|e| e.file == import.to && e.name == import.name)
-            .map(|e| e.target.clone())
-            .collect();
-        if targets.len() == 1 {
-            import.target = targets.into_iter().next();
-        }
-    }
-    for record in graph.imports.as_mut().unwrap() {
-        let targets: BTreeSet<_> = graph
-            .edges
-            .iter()
-            .filter(|e| {
-                e.from == record.from
-                    && e.line == record.line
-                    && e.specifier.as_deref() == Some(&record.specifier)
-            })
-            .map(|e| e.to.clone())
-            .collect();
-        if !targets.is_empty() {
-            record.targets = targets.into_iter().collect();
-        }
-    }
+    barrels::forward_exports(&mut symbols.exports, &barrels, false);
+    barrels::import_targets(&mut symbols.imports, &symbols.exports);
+    barrels::retarget_records(&mut graph, false);
     symbols.limitations.push("Rust syntax only: cfg branches are combined; macros, include!, generated code, trait resolution and visibility semantics are not evaluated. Runtime graph kinds retain Rust imports conservatively.".into());
     symbols.limitations.sort();
     symbols.limitations.dedup();
-    graph.collector.unresolved = Some(
-        graph
-            .imports
-            .as_ref()
-            .unwrap()
-            .iter()
-            .filter(|r| r.unresolved.is_some())
-            .count(),
-    );
+    graph.collector.unresolved = Some(unresolved_count(graph.imports.as_ref().unwrap()));
     Ok(super::Output {
         raw: graph,
         symbols,

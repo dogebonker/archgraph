@@ -215,7 +215,7 @@ fn normalized(path: &Path) -> Option<PathBuf> {
     }
     Some(result)
 }
-fn package_name(specifier: &str) -> Option<String> {
+pub(crate) fn package_name(specifier: &str) -> Option<String> {
     if specifier.starts_with(['.', '/', '#', '~']) || specifier.is_empty() {
         return None;
     }

@@ -10,17 +10,13 @@ use crate::collect::{
     barrels::{self, BarrelModule, ExportRoute, ImportRoute},
     excludes::Policy,
     imports::{ImportStatement, ImportedName},
+    typescript_resolution::package_name,
 };
 use crate::model::{Collector, Edge, EdgeKind, ImportReason, ImportRecord};
-use crate::surface::{SymbolExport, SymbolImport, SymbolTarget, Symbols};
+use crate::surface::{SymbolImport, Symbols};
 
-fn text<'a>(node: Node<'_>, source: &'a str) -> &'a str {
-    &source[node.byte_range()]
-}
-fn children(node: Node<'_>) -> Vec<Node<'_>> {
-    let mut c = node.walk();
-    node.named_children(&mut c).collect()
-}
+use super::{named_children, self_export, text, unresolved_count};
+
 fn literal(node: Node<'_>, source: &str) -> Option<String> {
     if node.kind() != "string" {
         return None;
@@ -39,7 +35,7 @@ fn name(node: Node<'_>, source: &str) -> String {
 }
 fn names(node: Node<'_>, source: &str, type_only: bool, exports: bool) -> Vec<ImportedName> {
     let mut out = Vec::new();
-    for child in children(node) {
+    for child in named_children(node) {
         match child.kind() {
             "import_specifier" | "export_specifier" => {
                 if let Some(original) = child.child_by_field_name("name") {
@@ -56,7 +52,7 @@ fn names(node: Node<'_>, source: &str, type_only: bool, exports: bool) -> Vec<Im
                 }
             }
             "namespace_import" | "namespace_export" => {
-                let local = children(child)
+                let local = named_children(child)
                     .last()
                     .map(|n| name(*n, source))
                     .unwrap_or_else(|| "*".into());
@@ -113,7 +109,7 @@ fn binds_require(node: Node<'_>, source: &str) -> bool {
         return true;
     }
     if node.kind() == "import_clause"
-        && children(node)
+        && named_children(node)
             .iter()
             .any(|n| n.kind() == "identifier" && text(*n, source) == "require")
     {
@@ -122,11 +118,15 @@ fn binds_require(node: Node<'_>, source: &str) -> bool {
     if matches!(
         node.kind(),
         "formal_parameters" | "object_pattern" | "array_pattern"
-    ) && children(node).iter().any(|n| text(*n, source) == "require")
+    ) && named_children(node)
+        .iter()
+        .any(|n| text(*n, source) == "require")
     {
         return true;
     }
-    children(node).into_iter().any(|n| binds_require(n, source))
+    named_children(node)
+        .into_iter()
+        .any(|n| binds_require(n, source))
 }
 
 struct Parsed {
@@ -200,7 +200,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
         match query.capture_names()[m.captures()[*i].index as usize] {
             "import" | "export" => {
                 let export = node.kind() == "export_statement";
-                let require_clause = children(node)
+                let require_clause = named_children(node)
                     .into_iter()
                     .find(|n| n.kind() == "import_require_clause");
                 let require = require_clause.is_some();
@@ -211,7 +211,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                 let type_only = has_token(node, "type")
                     || export
                         && has_token(node, "*")
-                        && children(node).iter().any(|child| {
+                        && named_children(node).iter().any(|child| {
                             child.kind() == "ERROR"
                                 && child.child_count() == 1
                                 && child.child(0).is_some_and(|token| token.kind() == "type")
@@ -226,7 +226,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                         } else if let Some(n) = declaration.child_by_field_name("name") {
                             parsed.declared.push(name(n, source));
                         } else {
-                            for child in children(declaration) {
+                            for child in named_children(declaration) {
                                 if let Some(n) = child.child_by_field_name("name") {
                                     if n.kind() == "identifier" {
                                         parsed.declared.push(name(n, source));
@@ -333,7 +333,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                 }
                 let arg = node
                     .child_by_field_name("arguments")
-                    .and_then(|n| children(n).first().copied());
+                    .and_then(|n| named_children(n).first().copied());
                 parsed.statements.push(ImportStatement {
                     specifier: arg.and_then(|n| literal(n, source)),
                     line: node.start_position().row + 1,
@@ -352,7 +352,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
             _ => {}
         }
     }
-    for child in children(root) {
+    for child in named_children(root) {
         if !matches!(
             child.kind(),
             "import_statement" | "export_statement" | "comment" | "empty_statement"
@@ -360,7 +360,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
             parsed.pure = false;
         }
         if child.kind() == "expression_statement"
-            && let Some(assignment) = children(child)
+            && let Some(assignment) = named_children(child)
                 .into_iter()
                 .find(|n| n.kind() == "assignment_expression")
             && let Some(left) = assignment.child_by_field_name("left")
@@ -488,19 +488,6 @@ fn resolver(
         options,
     )
 }
-fn package(specifier: &str) -> Option<String> {
-    if specifier.starts_with('.') || specifier.starts_with('/') || specifier.starts_with('#') {
-        return None;
-    }
-    let mut parts = specifier.split('/');
-    let first = parts.next()?;
-    if first.starts_with('@') {
-        Some(format!("{first}/{}", parts.next()?))
-    } else {
-        Some(first.into())
-    }
-}
-
 fn package_manifests(root: &Path) -> Result<BTreeMap<PathBuf, serde_json::Value>> {
     let mut manifests = BTreeMap::new();
     for file in super::source_files(root, &["json"])? {
@@ -635,9 +622,8 @@ pub fn collect(
     // Read excluded forwarders only if a selected file actually imports them.
     let mut queue: Vec<_> = selected.into_iter().collect();
     let mut parsed_files = BTreeSet::new();
-    let mut symbol_imports = Vec::new();
     let mut type_declarations = BTreeMap::new();
-    let mut implicit_types = Vec::new();
+    let mut implicit_types = BTreeSet::new();
     while let Some(file) = queue.pop() {
         if !parsed_files.insert(file.clone()) {
             continue;
@@ -689,7 +675,7 @@ pub fn collect(
                     // Relative requests do not depend on paths/baseUrl; never guess aliases from a broken config.
                     if specifier.starts_with('.')
                         || specifier.starts_with("node:")
-                        || package(&specifier).is_some()
+                        || package_name(&specifier).is_some()
                     {
                         let fallback = if statement.require {
                             &direct_requires
@@ -712,7 +698,7 @@ pub fn collect(
                                 .package_json()
                                 .and_then(|p| p.name())
                                 .map(str::to_owned)
-                                .or_else(|| package(&specifier));
+                                .or_else(|| package_name(&specifier));
                         } else if let Ok(relative) = path.strip_prefix(&root) {
                             let target = relative.to_string_lossy().replace('\\', "/");
                             if known.contains(&target) {
@@ -725,12 +711,11 @@ pub fn collect(
                                             || parsed.type_uses.contains(&named.local)
                                                 && !parsed.value_uses.contains(&named.local))
                                     {
-                                        implicit_types.push((
+                                        implicit_types.insert((
                                             file.clone(),
                                             target.clone(),
                                             statement.line,
                                             named.imported.clone(),
-                                            statement.reexport,
                                         ));
                                     }
                                 }
@@ -786,15 +771,16 @@ pub fn collect(
                                             (named.imported.clone(), target.clone()),
                                         );
                                     }
-                                    symbol_imports.push((
-                                        file.clone(),
-                                        target.clone(),
-                                        named.imported.clone(),
-                                        statement.wildcard,
-                                    ));
+                                    symbols.imports.push(SymbolImport {
+                                        from: file.clone(),
+                                        to: target.clone(),
+                                        name: named.imported.clone(),
+                                        target: None,
+                                        wildcard: statement.wildcard,
+                                    });
                                 }
                             } else if path.components().any(|c| c.as_os_str() == "node_modules") {
-                                record.external = package(&specifier);
+                                record.external = package_name(&specifier);
                             } else {
                                 // Resolved assets belong in accounting, not in the source import graph.
                                 record.targets.push(target);
@@ -805,7 +791,7 @@ pub fn collect(
                                 manifests.get(dir).and_then(|p| p["name"].as_str())
                             });
                             if let Some(identity) = identity.filter(|identity| {
-                                package(&specifier).as_deref() == Some(*identity)
+                                package_name(&specifier).as_deref() == Some(*identity)
                             }) {
                                 record.external = Some(identity.to_owned());
                             } else {
@@ -840,7 +826,7 @@ pub fn collect(
                         record.unresolved = Some(ImportReason::Missing);
                     }
                     Err(_) => {
-                        let declared = package(&specifier).filter(|pkg| {
+                        let declared = package_name(&specifier).filter(|pkg| {
                             !workspaces.iter().any(|(name, _)| name == pkg)
                                 && declared_package(&root.join(&file), pkg, &manifests)
                         });
@@ -875,6 +861,16 @@ pub fn collect(
         }
         modules.push(module);
     }
+    let implicit = |from: &str, to: &str, line: Option<usize>, name: &str| {
+        line.is_some_and(|line| {
+            implicit_types.contains(&(from.to_owned(), to.to_owned(), line, name.to_owned()))
+        })
+    };
+    let positions: BTreeMap<_, _> = modules
+        .iter()
+        .enumerate()
+        .map(|(index, module)| (module.file.clone(), index))
+        .collect();
     // Require both a declaration erased by TypeScript and exclusively type-context AST uses.
     for edge in &mut graph.edges {
         if matches!(edge.kind, EdgeKind::Static | EdgeKind::Reexport)
@@ -883,12 +879,7 @@ pub fn collect(
                 type_declarations
                     .get(&edge.to)
                     .is_some_and(|types| types.contains(name))
-                    && implicit_types.iter().any(|(from, to, line, n, _)| {
-                        from == &edge.from
-                            && to == &edge.to
-                            && Some(*line) == edge.line
-                            && n == name
-                    })
+                    && implicit(&edge.from, &edge.to, edge.line, name)
             })
         {
             edge.kind = if edge.kind == EdgeKind::Reexport {
@@ -896,8 +887,8 @@ pub fn collect(
             } else {
                 EdgeKind::Type
             };
-            if let Some(module) = modules.iter_mut().find(|m| m.file == edge.from) {
-                for route in &mut module.imports {
+            if let Some(&index) = positions.get(&edge.from) {
+                for route in &mut modules[index].imports {
                     if route.to == edge.to
                         && Some(route.line) == edge.line
                         && route.names == edge.names
@@ -914,60 +905,25 @@ pub fn collect(
         .extend(barrels::resolve(&mut graph, &modules));
     for module in &modules {
         for declared in &module.declared {
-            symbols.exports.push(SymbolExport {
-                file: module.file.clone(),
-                name: declared.clone(),
-                target: SymbolTarget {
-                    file: module.file.clone(),
-                    name: declared.clone(),
-                },
-            });
+            symbols.exports.push(self_export(&module.file, declared));
         }
     }
     // Resolve exports using the same route graph, including renamed and star forwarding.
-    for _ in 0..10 {
-        let before = symbols.exports.len();
-        let prior = symbols.exports.clone();
-        for module in &modules {
-            for route in &module.exports {
-                for exported in prior.iter().filter(|e| {
-                    e.file == route.to
-                        && (route.imported == e.name
-                            || route.imported == "*" && e.name != "default")
-                }) {
-                    symbols.exports.push(SymbolExport {
-                        file: module.file.clone(),
-                        name: if route.exported == "*" {
-                            exported.name.clone()
-                        } else {
-                            route.exported.clone()
-                        },
-                        target: exported.target.clone(),
-                    });
-                }
-            }
-        }
-        symbols.exports.sort();
-        symbols.exports.dedup();
-        if symbols.exports.len() == before {
-            break;
-        }
-    }
+    barrels::forward_exports(&mut symbols.exports, &modules, true);
     for edge in &mut graph.edges {
         let written = edge.original_to.as_ref().unwrap_or(&edge.to);
         if matches!(edge.kind, EdgeKind::Static | EdgeKind::Reexport)
             && !edge.names.is_empty()
             && edge.names.iter().all(|name| {
-                implicit_types.iter().any(|(from, to, line, n, _)| {
-                    from == &edge.from && to == written && Some(*line) == edge.line && n == name
-                }) && symbols.exports.iter().any(|export| {
-                    export.file == *written
-                        && export.name == *name
-                        && export.target.file == edge.to
-                        && type_declarations
-                            .get(&export.target.file)
-                            .is_some_and(|types| types.contains(&export.target.name))
-                })
+                implicit(&edge.from, written, edge.line, name)
+                    && symbols.exports.iter().any(|export| {
+                        export.file == *written
+                            && export.name == *name
+                            && export.target.file == edge.to
+                            && type_declarations
+                                .get(&export.target.file)
+                                .is_some_and(|types| types.contains(&export.target.name))
+                    })
             })
         {
             edge.kind = if edge.kind == EdgeKind::Reexport {
@@ -977,45 +933,8 @@ pub fn collect(
             };
         }
     }
-    for (from, to, name, wildcard) in symbol_imports {
-        let targets: Vec<_> = symbols
-            .exports
-            .iter()
-            .filter(|e| e.file == to && e.name == name)
-            .map(|e| e.target.clone())
-            .collect();
-        symbols.imports.push(SymbolImport {
-            from,
-            to,
-            name,
-            target: if targets.len() == 1 {
-                targets.into_iter().next()
-            } else {
-                None
-            },
-            wildcard,
-        });
-    }
-    for record in graph.imports.as_mut().unwrap() {
-        let edges: Vec<_> = graph
-            .edges
-            .iter()
-            .filter(|e| {
-                e.from == record.from
-                    && e.line == record.line
-                    && e.specifier.as_deref() == Some(&record.specifier)
-            })
-            .collect();
-        if !edges.is_empty() {
-            record.kind = edges.iter().map(|e| e.kind).max().unwrap_or(record.kind);
-            record.targets = edges
-                .iter()
-                .map(|e| e.to.clone())
-                .collect::<BTreeSet<_>>()
-                .into_iter()
-                .collect();
-        }
-    }
+    barrels::import_targets(&mut symbols.imports, &symbols.exports);
+    barrels::retarget_records(&mut graph, true);
     graph.files.retain(|file| {
         scan_all
             || source_dir == "."
@@ -1023,15 +942,7 @@ pub fn collect(
             || parsed_files.contains(file)
     });
     graph.collector.cruised = parsed_files.len();
-    graph.collector.unresolved = Some(
-        graph
-            .imports
-            .as_ref()
-            .unwrap()
-            .iter()
-            .filter(|r| r.unresolved.is_some())
-            .count(),
-    );
+    graph.collector.unresolved = Some(unresolved_count(graph.imports.as_ref().unwrap()));
     symbols.limitations.push("Implicit types require interface/type-alias declarations and exclusively type-context uses; uncertain usage remains runtime. CommonJS export surfaces are not indexed.".into());
     symbols.complete = false;
     Ok(super::Output {

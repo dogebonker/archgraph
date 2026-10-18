@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{RawGraph, imports};
 use crate::model::{Confidence, Edge, EdgeKind, NodeMetadata};
+use crate::surface::{SymbolExport, SymbolImport, SymbolTarget};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BarrelModule {
@@ -169,6 +170,96 @@ pub fn resolve(graph: &mut RawGraph, modules: &[BarrelModule]) -> Vec<String> {
     }
     graph.edges = unique.into_values().collect();
     warnings.into_iter().collect()
+}
+
+/// Forward symbol exports through re-export routes until no route adds an export.
+pub fn forward_exports(
+    exports: &mut Vec<SymbolExport>,
+    modules: &[BarrelModule],
+    star_skips_default: bool,
+) {
+    for _ in 0..10 {
+        let before = exports.len();
+        let mut by_file: BTreeMap<&str, Vec<&SymbolExport>> = BTreeMap::new();
+        for export in exports.iter() {
+            by_file.entry(&export.file).or_default().push(export);
+        }
+        let mut forwarded = Vec::new();
+        for module in modules {
+            for route in &module.exports {
+                for export in by_file.get(route.to.as_str()).into_iter().flatten() {
+                    if route.imported == export.name
+                        || route.imported == "*"
+                            && !(star_skips_default && export.name == "default")
+                    {
+                        forwarded.push(SymbolExport {
+                            file: module.file.clone(),
+                            name: if route.exported == "*" {
+                                export.name.clone()
+                            } else {
+                                route.exported.clone()
+                            },
+                            target: export.target.clone(),
+                        });
+                    }
+                }
+            }
+        }
+        exports.extend(forwarded);
+        exports.sort();
+        exports.dedup();
+        if exports.len() == before {
+            break;
+        }
+    }
+}
+
+/// Point each symbol import at the definition behind its export when that export is unique.
+pub fn import_targets(imports: &mut [SymbolImport], exports: &[SymbolExport]) {
+    let mut targets: BTreeMap<(&str, &str), Vec<&SymbolTarget>> = BTreeMap::new();
+    for export in exports {
+        targets
+            .entry((&export.file, &export.name))
+            .or_default()
+            .push(&export.target);
+    }
+    for import in imports {
+        if let Some([target]) = targets
+            .get(&(import.to.as_str(), import.name.as_str()))
+            .map(Vec::as_slice)
+        {
+            import.target = Some((*target).clone());
+        }
+    }
+}
+
+/// Point import records at the files their edges reach after forwarding resolution.
+pub fn retarget_records(graph: &mut RawGraph, with_kind: bool) {
+    let mut reached: BTreeMap<(&str, Option<usize>, &str), Vec<&Edge>> = BTreeMap::new();
+    for edge in &graph.edges {
+        if let Some(specifier) = &edge.specifier {
+            reached
+                .entry((&edge.from, edge.line, specifier))
+                .or_default()
+                .push(edge);
+        }
+    }
+    for record in graph.imports.iter_mut().flatten() {
+        let Some(edges) =
+            reached.get(&(record.from.as_str(), record.line, record.specifier.as_str()))
+        else {
+            continue;
+        };
+        if with_kind {
+            record.kind = edges.iter().map(|e| e.kind).max().unwrap_or(record.kind);
+        }
+        record.targets = edges
+            .iter()
+            .map(|e| e.to.clone())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
+    }
 }
 
 fn target<'a>(

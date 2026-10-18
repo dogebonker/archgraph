@@ -11,6 +11,8 @@ use crate::collect::{RawGraph, excludes::Policy};
 use crate::model::{Collector, Edge, EdgeKind, ImportReason, ImportRecord};
 use crate::surface::{SymbolExport, SymbolImport, SymbolTarget, Symbols};
 
+use super::{named_children, self_export, text, unresolved_count};
+
 #[derive(Clone)]
 struct Import {
     module: String,
@@ -116,10 +118,7 @@ pub fn collect(
     let language = tree_sitter_python::LANGUAGE.into();
     let mut parser = Parser::new();
     parser.set_language(&language)?;
-    let query = Query::new(
-        &language,
-        include_str!("../../../queries/native/python.scm"),
-    )?;
+    let query = Query::new(&language, include_str!("queries/python.scm"))?;
     let mut parsed = BTreeMap::new();
     let mut discovery_limits = Vec::new();
     let mut module_of: BTreeMap<String, String> = BTreeMap::new();
@@ -242,14 +241,7 @@ pub fn collect(
         };
         for name in &info.declarations {
             if exported(info, name) {
-                symbols.exports.push(SymbolExport {
-                    file: file.clone(),
-                    name: name.clone(),
-                    target: SymbolTarget {
-                        file: file.clone(),
-                        name: name.clone(),
-                    },
-                });
+                symbols.exports.push(self_export(file, name));
             }
         }
         for import in &info.imports {
@@ -417,15 +409,7 @@ pub fn collect(
     symbols.complete = symbols.limitations.is_empty();
     symbols.exports.sort();
     symbols.exports.dedup();
-    graph.collector.unresolved = Some(
-        graph
-            .imports
-            .as_ref()
-            .unwrap()
-            .iter()
-            .filter(|i| i.unresolved.is_some())
-            .count(),
-    );
+    graph.collector.unresolved = Some(unresolved_count(graph.imports.as_ref().unwrap()));
     Ok(super::Output {
         raw: graph,
         symbols,
@@ -474,13 +458,6 @@ fn contained_directory(root: &Path, path: &Path) -> Result<PathBuf> {
     }
     Ok(path)
 }
-fn text<'a>(node: Node<'_>, source: &'a str) -> &'a str {
-    &source[node.byte_range()]
-}
-fn named(node: Node<'_>) -> Vec<Node<'_>> {
-    let mut c = node.walk();
-    node.named_children(&mut c).collect()
-}
 fn import_name(node: Node<'_>, source: &str) -> (String, String) {
     if node.kind() == "aliased_import" {
         let name = node
@@ -507,12 +484,12 @@ fn parse(source: &str, root: Node<'_>, query: &Query) -> Parsed {
             .limitations
             .push("syntax errors: valid tree-sitter captures retained".into());
     }
-    for node in named(root) {
+    for node in named_children(root) {
         let pure = matches!(
             node.kind(),
             "import_statement" | "import_from_statement" | "future_import_statement" | "comment"
         ) || node.kind() == "expression_statement"
-            && named(node).iter().all(|n| {
+            && named_children(node).iter().all(|n| {
                 n.kind() == "string"
                     || n.kind() == "assignment"
                         && n.child_by_field_name("left")
@@ -529,7 +506,7 @@ fn parse(source: &str, root: Node<'_>, query: &Query) -> Parsed {
             "import" | "from" | "future" => {
                 let from = node.kind() != "import_statement";
                 let module_node = node.child_by_field_name("module_name");
-                let names: Vec<_> = named(node)
+                let names: Vec<_> = named_children(node)
                     .into_iter()
                     .filter(|n| {
                         Some(*n) != module_node
@@ -537,7 +514,9 @@ fn parse(source: &str, root: Node<'_>, query: &Query) -> Parsed {
                     })
                     .map(|n| import_name(n, source))
                     .collect();
-                let wildcard = named(node).iter().any(|n| n.kind() == "wildcard_import");
+                let wildcard = named_children(node)
+                    .iter()
+                    .any(|n| n.kind() == "wildcard_import");
                 let kind = import_kind(node, source, &result.imports);
                 if wildcard {
                     result.limitations.push(
@@ -632,7 +611,7 @@ fn parse(source: &str, root: Node<'_>, query: &Query) -> Parsed {
                 }
                 let args = node
                     .child_by_field_name("arguments")
-                    .map(named)
+                    .map(named_children)
                     .unwrap_or_default();
                 let module = args.first().and_then(|n| literal(*n, source));
                 result.imports.push(Import {
@@ -703,7 +682,7 @@ fn import_call(call: Node<'_>, root: Node<'_>, source: &str, imports: &[Import])
 }
 fn has_identifier(node: Node<'_>, source: &str, name: &str) -> bool {
     node.kind() == "identifier" && text(node, source) == name
-        || named(node)
+        || named_children(node)
             .into_iter()
             .any(|n| has_identifier(n, source, name))
 }
@@ -752,11 +731,14 @@ fn binding_conflict(
         return true;
     }
     if matches!(node.kind(), "import_statement" | "import_from_statement") {
-        if named(node).iter().any(|n| n.kind() == "wildcard_import") {
+        if named_children(node)
+            .iter()
+            .any(|n| n.kind() == "wildcard_import")
+        {
             return true;
         }
         let module = node.child_by_field_name("module_name");
-        for imported in named(node)
+        for imported in named_children(node)
             .into_iter()
             .filter(|n| Some(*n) != module && matches!(n.kind(), "dotted_name" | "aliased_import"))
         {
@@ -780,7 +762,7 @@ fn binding_conflict(
             }
         }
     }
-    named(node)
+    named_children(node)
         .into_iter()
         .any(|child| binding_conflict(child, source, name, module_call, scopes))
 }
@@ -834,7 +816,7 @@ fn literal(node: Node<'_>, source: &str) -> Option<String> {
     if node.kind() != "string" {
         return None;
     }
-    let children = named(node);
+    let children = named_children(node);
     if children
         .iter()
         .any(|n| n.kind() == "interpolation" || n.kind() == "escape_sequence")
@@ -851,7 +833,7 @@ fn string_list(node: Node<'_>, source: &str) -> Option<BTreeSet<String>> {
     if !matches!(node.kind(), "list" | "tuple" | "set") {
         return None;
     }
-    named(node)
+    named_children(node)
         .into_iter()
         .map(|n| literal(n, source))
         .collect()

@@ -8,7 +8,9 @@ use tree_sitter::{Node, Parser, Query, QueryCursor, StreamingIterator};
 
 use crate::collect::{RawGraph, excludes::Policy};
 use crate::model::{Collector, Edge, ImportReason, ImportRecord};
-use crate::surface::{SymbolExport, SymbolImport, SymbolTarget, Symbols};
+use crate::surface::{SymbolImport, SymbolTarget, Symbols};
+
+use super::{named_children, self_export, text, unresolved_count};
 
 #[derive(Clone)]
 struct Import {
@@ -92,25 +94,11 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
             .extend(info.limitations.iter().map(|s| format!("{file}: {s}")));
         for (_, name, public) in &info.declarations {
             if *public {
-                symbols.exports.push(SymbolExport {
-                    file: file.clone(),
-                    name: name.clone(),
-                    target: SymbolTarget {
-                        file: file.clone(),
-                        name: name.clone(),
-                    },
-                });
+                symbols.exports.push(self_export(file, name));
             }
         }
         for name in &info.public_heads {
-            symbols.exports.push(SymbolExport {
-                file: file.clone(),
-                name: name.clone(),
-                target: SymbolTarget {
-                    file: file.clone(),
-                    name: name.clone(),
-                },
-            });
+            symbols.exports.push(self_export(file, name));
         }
         for import in &info.imports {
             let mut record = ImportRecord {
@@ -199,14 +187,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
     symbols.exports.dedup();
     symbols.limitations.sort();
     symbols.limitations.dedup();
-    raw.collector.unresolved = Some(
-        raw.imports
-            .as_ref()
-            .unwrap()
-            .iter()
-            .filter(|i| i.unresolved.is_some())
-            .count(),
-    );
+    raw.collector.unresolved = Some(unresolved_count(raw.imports.as_ref().unwrap()));
     Ok(super::Output {
         raw,
         symbols,
@@ -301,13 +282,6 @@ fn add_edge(
         });
     }
 }
-fn text<'a>(node: Node<'_>, source: &'a str) -> &'a str {
-    &source[node.byte_range()]
-}
-fn named(node: Node<'_>) -> Vec<Node<'_>> {
-    let mut c = node.walk();
-    node.named_children(&mut c).collect()
-}
 fn is_type(node: Node<'_>) -> bool {
     matches!(
         node.kind(),
@@ -365,7 +339,7 @@ fn is_public(node: Node<'_>) -> bool {
     has_modifier(node, "public")
 }
 fn has_modifier(node: Node<'_>, modifier: &str) -> bool {
-    named(node)
+    named_children(node)
         .into_iter()
         .find(|n| n.kind() == "modifiers")
         .is_some_and(|n| {
@@ -380,11 +354,11 @@ fn parse(source: &str, root: Node<'_>, query: &Query) -> Parsed {
             .limitations
             .push("syntax errors: valid tree-sitter captures retained".into());
     }
-    if let Some(package) = named(root)
+    if let Some(package) = named_children(root)
         .into_iter()
         .find(|n| n.kind() == "package_declaration")
     {
-        parsed.package = named(package)
+        parsed.package = named_children(package)
             .into_iter()
             .find(|n| matches!(n.kind(), "identifier" | "scoped_identifier"))
             .map(|n| text(n, source).into())
@@ -397,12 +371,12 @@ fn parse(source: &str, root: Node<'_>, query: &Query) -> Parsed {
         let node = capture.node;
         match query.capture_names()[capture.index as usize] {
             "import" => {
-                let name = named(node)
+                let name = named_children(node)
                     .into_iter()
                     .find(|n| matches!(n.kind(), "identifier" | "scoped_identifier"))
                     .map(|n| text(n, source))
                     .unwrap_or("");
-                let wildcard = named(node).iter().any(|n| n.kind() == "asterisk");
+                let wildcard = named_children(node).iter().any(|n| n.kind() == "asterisk");
                 let mut walk = node.walk();
                 let static_member = node.children(&mut walk).any(|n| n.kind() == "static");
                 parsed.imports.push(Import {
@@ -484,7 +458,7 @@ fn parse(source: &str, root: Node<'_>, query: &Query) -> Parsed {
             "field.declaration" => {
                 let static_member = has_modifier(node, "static")
                     || node.parent().is_some_and(|p| p.kind() == "interface_body");
-                for declarator in named(node)
+                for declarator in named_children(node)
                     .into_iter()
                     .filter(|n| n.kind() == "variable_declarator")
                 {

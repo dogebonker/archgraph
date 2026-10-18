@@ -10,14 +10,38 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::{Context, Result};
+use tree_sitter::Node;
 
 use super::RawGraph;
-use crate::surface::Symbols;
+use crate::model::ImportRecord;
+use crate::surface::{SymbolExport, SymbolTarget, Symbols};
 
 pub struct Output {
     pub raw: RawGraph,
     pub symbols: Symbols,
     pub source_root: String,
+}
+
+fn text<'a>(node: Node<'_>, source: &'a str) -> &'a str {
+    &source[node.byte_range()]
+}
+fn named_children(node: Node<'_>) -> Vec<Node<'_>> {
+    let mut cursor = node.walk();
+    node.named_children(&mut cursor).collect()
+}
+/// An export defined by the file that declares it.
+fn self_export(file: &str, name: &str) -> SymbolExport {
+    SymbolExport {
+        file: file.to_owned(),
+        name: name.to_owned(),
+        target: SymbolTarget {
+            file: file.to_owned(),
+            name: name.to_owned(),
+        },
+    }
+}
+fn unresolved_count(records: &[ImportRecord]) -> usize {
+    records.iter().filter(|r| r.unresolved.is_some()).count()
 }
 
 /// Inventory regular source files without following repository symlinks or package installations.
