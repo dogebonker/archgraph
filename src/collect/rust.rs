@@ -975,8 +975,8 @@ fn refuse(root: &Path) -> Result<Vec<(PathBuf, String)>> {
 /// a program, a library or a target the repository chooses: `[env]`, `[unstable]` (rust-analyzer
 /// runs some cargo commands as nightly), `include`, `build.target`, rustc, its
 /// wrappers, rustdoc, linkers, runners, `links` overrides, credential providers and the doc
-/// browser. Rustflags are allowed: CARGO_ENCODED_RUSTFLAGS replaces them. A file this reader
-/// cannot parse is refused too.
+/// browser. Rustflags are allowed: CARGO_ENCODED_RUSTFLAGS replaces them. Invalid TOML
+/// is refused too.
 pub fn cargo_config_refusal(text: &str) -> Result<(), String> {
     let keys = toml_keys(text)
         .map_err(|e| format!("cannot read it as TOML ({e}), so archgraph cannot check it"))?;
@@ -1036,9 +1036,10 @@ pub fn toolchain_channel(name: &str, text: &str) -> Result<Option<String>, Strin
                         );
                     }
                     ["toolchain", "channel"] => {
-                        channel = Some(value.ok_or(
-                            "sets `toolchain.channel` to a value that is not a one-line string",
-                        )?);
+                        channel =
+                            Some(value.ok_or(
+                                "sets `toolchain.channel` to a value that is not a string",
+                            )?);
                     }
                     _ => {}
                 }
@@ -1053,297 +1054,40 @@ pub fn toolchain_channel(name: &str, text: &str) -> Result<Option<String>, Strin
     }
 }
 
-/// The key paths a TOML document defines, in order: each table header and each assigned key
-/// under its table, then the keys of its inline tables, with the value when it is a one-line
-/// string. Errors on anything it does not recognise as TOML, so no key hides in syntax it skips.
+/// The key paths a TOML document defines, parents before children, with the value when it is a
+/// string; array elements share their array's path. Errors on invalid TOML, as cargo does.
 fn toml_keys(text: &str) -> Result<Keys, String> {
-    let mut p = Toml {
-        s: text.chars().collect(),
-        i: 0,
-        out: Vec::new(),
-    };
-    let mut table: Vec<String> = Vec::new();
-    loop {
-        p.blank();
-        let Some(c) = p.peek() else { break };
-        if c == '[' {
-            p.i += 1;
-            let array = p.eat('[');
-            table = p.key()?;
-            p.expect(']')?;
-            if array {
-                p.expect(']')?;
-            }
-            p.out.push((table.clone(), None));
-        } else {
-            let mut path = table.clone();
-            path.extend(p.key()?);
-            p.expect('=')?;
-            p.ws();
-            p.value(path)?;
-        }
-        p.ws();
-        if p.peek() == Some('#') {
-            p.comment();
-        }
-        match p.peek() {
-            None | Some('\n') => {}
-            Some('\r') if p.s.get(p.i + 1) == Some(&'\n') => {}
-            Some(c) => return Err(p.error(&format!("unexpected {c:?}"))),
-        }
-    }
-    Ok(p.out)
+    let table: toml::Table = text.parse().map_err(|e: toml::de::Error| {
+        let line = e
+            .span()
+            .map_or(1, |span| text[..span.start].matches('\n').count() + 1);
+        format!("{} on line {line}", e.message().trim_end())
+    })?;
+    let mut keys = Vec::new();
+    toml_paths(&[], &toml::Value::Table(table), &mut keys);
+    Ok(keys)
 }
 
-/// Each key path with its value when that is a one-line string.
+fn toml_paths(path: &[String], value: &toml::Value, keys: &mut Keys) {
+    match value {
+        toml::Value::Table(table) => {
+            for (key, value) in table {
+                let path = [path, std::slice::from_ref(key)].concat();
+                keys.push((path.clone(), value.as_str().map(str::to_owned)));
+                toml_paths(&path, value, keys);
+            }
+        }
+        toml::Value::Array(values) => {
+            for value in values {
+                toml_paths(path, value, keys);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Each key path with its value when that is a string.
 type Keys = Vec<(Vec<String>, Option<String>)>;
-
-struct Toml {
-    s: Vec<char>,
-    i: usize,
-    out: Keys,
-}
-
-impl Toml {
-    fn peek(&self) -> Option<char> {
-        self.s.get(self.i).copied()
-    }
-
-    fn eat(&mut self, c: char) -> bool {
-        let found = self.peek() == Some(c);
-        if found {
-            self.i += 1;
-        }
-        found
-    }
-
-    fn expect(&mut self, c: char) -> Result<(), String> {
-        if self.eat(c) {
-            Ok(())
-        } else {
-            Err(self.error(&format!("expected {c:?}")))
-        }
-    }
-
-    fn error(&self, what: &str) -> String {
-        let end = self.i.min(self.s.len());
-        let line = self.s[..end].iter().filter(|&&c| c == '\n').count() + 1;
-        format!("{what} on line {line}")
-    }
-
-    fn ws(&mut self) {
-        while matches!(self.peek(), Some(' ' | '\t')) {
-            self.i += 1;
-        }
-    }
-
-    fn comment(&mut self) {
-        while !matches!(self.peek(), None | Some('\n')) {
-            self.i += 1;
-        }
-    }
-
-    /// Spaces, line ends and comments.
-    fn blank(&mut self) {
-        loop {
-            match self.peek() {
-                Some(' ' | '\t' | '\n' | '\r') => self.i += 1,
-                Some('#') => self.comment(),
-                _ => return,
-            }
-        }
-    }
-
-    /// A dotted key, with the spaces around and inside it.
-    fn key(&mut self) -> Result<Vec<String>, String> {
-        let mut path = Vec::new();
-        loop {
-            self.ws();
-            let part = match self.peek() {
-                Some('"') => self.basic()?,
-                Some('\'') => self.literal()?,
-                _ => {
-                    let start = self.i;
-                    while self
-                        .peek()
-                        .is_some_and(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
-                    {
-                        self.i += 1;
-                    }
-                    if start == self.i {
-                        return Err(self.error("expected a key"));
-                    }
-                    self.s[start..self.i].iter().collect()
-                }
-            };
-            path.push(part);
-            self.ws();
-            if !self.eat('.') {
-                return Ok(path);
-            }
-        }
-    }
-
-    /// `n` hex digits as a char.
-    fn hex(&mut self, n: usize) -> Result<char, String> {
-        let digits: String = self
-            .s
-            .get(self.i..self.i + n)
-            .unwrap_or_default()
-            .iter()
-            .collect();
-        self.i += n;
-        u32::from_str_radix(&digits, 16)
-            .ok()
-            .filter(|_| digits.len() == n)
-            .and_then(char::from_u32)
-            .ok_or_else(|| self.error("bad escape"))
-    }
-
-    /// A one-line basic string, escapes decoded.
-    fn basic(&mut self) -> Result<String, String> {
-        self.i += 1;
-        let mut out = String::new();
-        loop {
-            match self.peek() {
-                None | Some('\n') => return Err(self.error("unterminated string")),
-                Some('"') => {
-                    self.i += 1;
-                    return Ok(out);
-                }
-                Some('\\') => {
-                    self.i += 1;
-                    let c = self
-                        .peek()
-                        .ok_or_else(|| self.error("unterminated string"))?;
-                    self.i += 1;
-                    out.push(match c {
-                        'b' => '\u{8}',
-                        't' => '\t',
-                        'n' => '\n',
-                        'f' => '\u{c}',
-                        'r' => '\r',
-                        'e' => '\u{1b}',
-                        '"' => '"',
-                        '\\' => '\\',
-                        'x' => self.hex(2)?,
-                        'u' => self.hex(4)?,
-                        'U' => self.hex(8)?,
-                        _ => return Err(self.error("bad escape")),
-                    });
-                }
-                Some(c) => {
-                    out.push(c);
-                    self.i += 1;
-                }
-            }
-        }
-    }
-
-    /// A one-line literal string.
-    fn literal(&mut self) -> Result<String, String> {
-        self.i += 1;
-        let start = self.i;
-        loop {
-            match self.peek() {
-                None | Some('\n') => return Err(self.error("unterminated string")),
-                Some('\'') => {
-                    let s = self.s[start..self.i].iter().collect();
-                    self.i += 1;
-                    return Ok(s);
-                }
-                Some(_) => self.i += 1,
-            }
-        }
-    }
-
-    /// Skips a multi-line string opened by three `quote`s, through its closing three and the
-    /// up to two quotes TOML allows right before them.
-    fn multiline(&mut self, quote: char) -> Result<(), String> {
-        self.i += 3;
-        loop {
-            match self.peek() {
-                None => return Err(self.error("unterminated multi-line string")),
-                Some('\\') if quote == '"' => self.i += 2,
-                Some(c) if c == quote && self.s.get(self.i..self.i + 3) == Some(&[c, c, c]) => {
-                    self.i += 3;
-                    for _ in 0..2 {
-                        self.eat(quote);
-                    }
-                    return Ok(());
-                }
-                Some(_) => self.i += 1,
-            }
-        }
-    }
-
-    /// A value assigned to `path`: records `path`, and the keys of any inline table in it.
-    fn value(&mut self, path: Vec<String>) -> Result<(), String> {
-        let at = self.out.len();
-        self.out.push((path.clone(), None));
-        match self.peek() {
-            Some(q @ ('"' | '\'')) => {
-                if self.s.get(self.i..self.i + 3) == Some(&[q, q, q]) {
-                    self.multiline(q)?;
-                } else {
-                    let s = if q == '"' {
-                        self.basic()?
-                    } else {
-                        self.literal()?
-                    };
-                    self.out[at].1 = Some(s);
-                }
-            }
-            Some('[') => {
-                self.i += 1;
-                loop {
-                    self.blank();
-                    if self.eat(']') {
-                        break;
-                    }
-                    self.value(path.clone())?;
-                    self.blank();
-                    if !self.eat(',') {
-                        self.expect(']')?;
-                        break;
-                    }
-                }
-            }
-            Some('{') => {
-                self.i += 1;
-                loop {
-                    self.blank();
-                    if self.eat('}') {
-                        break;
-                    }
-                    let mut inner = path.clone();
-                    inner.extend(self.key()?);
-                    self.expect('=')?;
-                    self.ws();
-                    self.value(inner)?;
-                    self.blank();
-                    if !self.eat(',') {
-                        self.expect('}')?;
-                        break;
-                    }
-                }
-            }
-            _ => {
-                let start = self.i;
-                while !matches!(
-                    self.peek(),
-                    None | Some(',' | ']' | '}' | '\n' | '\r' | '#')
-                ) {
-                    self.i += 1;
-                }
-                if self.s[start..self.i].iter().all(|c| c.is_whitespace()) {
-                    return Err(self.error("expected a value"));
-                }
-            }
-        }
-        Ok(())
-    }
-}
 
 #[cfg(test)]
 mod import_tests {

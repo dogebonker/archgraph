@@ -13,7 +13,8 @@ fn cargo_config_keys_that_run_programs_or_change_the_environment_are_refused() {
     for (text, key) in [
         ("[env]\nDYLD_INSERT_LIBRARIES = \"/x.dylib\"\n", "env"),
         ("[env]\n", "env"),
-        ("env.LD_PRELOAD = \"/x.so\"\n", "env.LD_PRELOAD"),
+        // A dotted key names its refused table, as a table header does.
+        ("env.LD_PRELOAD = \"/x.so\"\n", "env"),
         (
             "env = { LD_PRELOAD = { value = \"x\", force = true } }\n",
             "env",
