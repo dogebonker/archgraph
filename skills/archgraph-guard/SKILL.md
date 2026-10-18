@@ -7,6 +7,10 @@ compatibility: Needs git, bash and the archgraph binary (setup in the archgraph 
 
 # archgraph-guard
 
+## MCP tools
+
+Prefer MCP `check_diff({base})` when available; omit `base` for guard-style merge-base selection, or provide the intended base explicitly. It compares current edits under current rules and discloses policy changes. Use returned stable finding IDs with `propose`, fix code, then repeat `check_diff` and run project tests. `verify` needs explicit `expect` predicates to assert a result; without them, success only confirms inspection. It does not replace the base comparison. Inspect truncation markers: a partial list is not a pass. Use the CLI guard below for its complete evidence, configurable failure policy and exit codes, or when MCP is unavailable.
+
 A change passes the guard when `scripts/guard.sh` exits 0: compared with its base commit, the working tree adds no forbidden import and no import cycle. New unplanned imports are listed too; `ARCHGRAPH_FAIL_ON=new-forbidden,new-cycles,new-unplanned` makes them fail, matching a CI gate set that way. Treat a red guard like a failing test: the task is not done.
 
 ## Warm graphs and concise evidence

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Git dirty-state proofs now compare text content before claiming a tracked edit; stat-only, binary and metadata-only cases defer to full status, avoiding false dirty provenance after rapid edit/revert.
+
+- `mcp` exposes context, diff checks, proposals, move simulation, verification, explanations and relevant rules over stdio through the official Rust MCP SDK. Typed tool schemas, stable semantic finding IDs and bounded default answers support agent clients; a matching local daemon can supply live scans. Includes Claude Code, Cursor and Codex configs and MCP-first skill guidance. Existing v1/v1.1 graph formats are unchanged.
+
 - `serve` keeps a watched graph available over a local authenticated Unix socket or loopback TCP endpoint. CLI commands discover it automatically, `--no-daemon` bypasses it and `--once` warms/answers one request without a watcher. Native TS/JS, Python and Go reuse parsed source; conservative dirty-region analysis and logged full-refresh fallbacks preserve correctness. Retains two graph generations plus indexes; latency benchmarks are recorded separately from parser timings.
 - Global `--brief` provides bounded agent output with explicit omissions; structured check/report/context/impact/surface outputs share their standalone and daemon execution paths. Adds graph-evidence `explain` and daemon `status` commands while preserving policy exit codes and complete output artifacts.
 - Scan `source.generated_at` now uses `SOURCE_DATE_EPOCH`, Git HEAD commit time or the Unix epoch, making repeated scans reproducible for identical inputs. It no longer represents wall-clock execution time; v1/v1.1 graph shapes remain readable.

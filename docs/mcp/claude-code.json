@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "archgraph": {
+      "type": "stdio",
+      "command": "archgraph",
+      "args": [
+        "mcp",
+        "/absolute/path/to/repo",
+        "--engine",
+        "native",
+        "--symbols"
+      ]
+    }
+  }
+}

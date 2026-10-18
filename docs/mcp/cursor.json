@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "archgraph": {
+      "command": "archgraph",
+      "args": [
+        "mcp",
+        "${workspaceFolder}",
+        "--engine",
+        "native",
+        "--symbols"
+      ]
+    }
+  }
+}

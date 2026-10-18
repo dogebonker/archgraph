@@ -7,6 +7,10 @@ compatibility: Needs git and the archgraph binary (setup in the archgraph skill)
 
 # archgraph-rules
 
+## MCP tools
+
+Prefer MCP `rules({paths})` and `explain({path})`/`explain({module})` when available to inspect existing constraints and dependency evidence. Use `check_diff` for newly introduced violations under the current policy; it does not prove a rule existed historically or represents the intended architecture. Inspect truncation markers and use CLI scans/checks for complete evidence. Drafting, calibrating planted violations and changing `layout.yaml` still follow the workflow below; MCP does not write policy. Fall back to the CLI when MCP is unavailable.
+
 A rules file is done when it is **calibrated**: every rule has caught a planted violation, every intended import still passes, and the user has approved the layout it encodes. An uncalibrated rule may silently allow everything.
 
 ## Steps

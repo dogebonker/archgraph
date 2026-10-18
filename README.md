@@ -41,6 +41,8 @@ All supported languages also have an experimental Rust-native engine: `archgraph
 
 For agents making repeated edits, `archgraph serve . --engine native --symbols` keeps a watched graph warm. Commands discover the local daemon automatically; `--no-daemon` forces standalone execution. Use `archgraph check .archgraph/daemon-graph.json --brief` for bounded policy evidence or `archgraph context --graph .archgraph/daemon-graph.json --root . --task "your change" --brief` for a reading plan. Native TS/JS, Python and Go support incremental parsing; other paths log full-refresh fallbacks. See [daemon behavior, limits and benchmarks](docs/guide.md#warm-graphs-for-agents). Measured latency varies by repository.
 
+For Claude Code, install the MCP server with `claude mcp add --transport stdio archgraph -- archgraph mcp . --engine native --symbols`. It exposes seven typed architecture tools, with bounded answers by default. The native engine remains experimental; [client configs and tool semantics](docs/guide.md#mcp-server) cover Claude Code, Cursor and Codex.
+
 <details>
 <summary>Other ways to install, and what each language needs</summary>
 

@@ -7,6 +7,10 @@ compatibility: Needs the archgraph binary on PATH (install.sh, npx archgraph-cli
 
 # archgraph
 
+## MCP tools
+
+When the client's archgraph MCP tools are available, prefer them to spawning CLI commands: `context` before reading, `check_diff` for regressions, `propose` for a stable finding ID, `simulate` before moving, `verify` after editing, and `explain`/`rules` for local evidence. Tool names may carry a client/server prefix. All accept `brief` (default true); inspect truncation markers, narrow requests when needed, and use the CLI for complete evidence. `brief: false` retains the MCP hard cap. MCP does not change code or replace project tests. Follow the CLI workflows below when the tools are unavailable. See [MCP setup and semantics](../../docs/guide.md#mcp-server).
+
 archgraph reads a repository's file imports, groups files into modules (folders, or rules), and reports metrics, cycles, rule verdicts and findings as JSON (`schema: archgraph/v1.1`; legacy v1 input remains supported). Every claim you make about the architecture must come from its output. The experimental `--engine native` supports all listed languages without external parsers; native Go still requires read-only `go list` metadata. Reference collectors remain the default.
 
 ## Repeated agent calls

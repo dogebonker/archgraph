@@ -70,6 +70,47 @@ The selected engine is recorded as optional `config.collection.engine`; an absen
 
 The [comparison runner](../benchmarks/native_engine.py) scans the first 20 entries of the showcase manifest at their exact pins with both paths, retaining raw JSON, logs, hashes, file-scope changes and every edge disagreement. The [generated report](native-engine-comparison.md) reports precision and recall for resolved internal edges, separate kind/target agreement and unresolved counts. A default switch requires **both precision and recall above 98% for every repository**, plus review of kind, scope and resolution differences. Matching endpoints alone cannot justify a switch when runtime classifications or unresolved counts disagree. Agreement with a reference collector is not proof of correctness, and no speed multiplier is assumed.
 
+## MCP server
+
+```sh
+# From the repository you want the agent to inspect:
+claude mcp add --transport stdio archgraph -- archgraph mcp . --engine native --symbols
+# Or launch the protocol server directly:
+archgraph mcp /absolute/path/to/repo --engine native --symbols
+```
+
+`mcp [root]` serves the seven tools below using the official [Rust MCP SDK](https://github.com/modelcontextprotocol/rust-sdk). The client starts a local stdio process: stdout contains MCP messages and diagnostics go to stderr. It accepts the shared scan options, including `--rules`, `--hotspots`, language selection and exclusions. Hotspot/history facts remain unavailable unless collected; unavailable facts are never treated as zero. The reference engine remains the default; the examples explicitly select the experimental native engine and enable symbol evidence. Recorded `--collector-input` snapshots are rejected because MCP verification requires live source collection. Collector trust requirements and language limits still apply.
+
+Use the [Claude Code config](mcp/claude-code.json) as a project `.mcp.json`, the [Cursor config](mcp/cursor.json) as `.cursor/mcp.json`, or merge [the Codex TOML](mcp/codex.toml) into your Codex configuration. Replace `/absolute/path/to/repo` in the Claude/Codex examples; Cursor expands `${workspaceFolder}` from the folder containing `.cursor/mcp.json`. Install `archgraph` on the client's PATH, or set `command` to its absolute executable path. Merge existing configuration rather than overwriting other servers. Client configuration details: [Claude Code](https://code.claude.com/docs/en/mcp), [Cursor](https://cursor.com/docs/mcp), [Codex](https://developers.openai.com/codex/mcp).
+
+| Tool | Inputs besides optional `brief` | Evidence returned |
+| --- | --- | --- |
+| `context` | `task`, `budget_tokens`, optional `files`, `symbols` | Tiered reading plan, reasons and token estimates; the budget covers source context, not response size. |
+| `check_diff` | Optional `base` | New forbidden imports, new/grown cycles and current findings compared with the working tree. |
+| `propose` | `finding_id` | Ordered actions backed by a current finding, expected deltas and verification predicates. |
+| `simulate` | `moves: [{from, to}]` | Before/after cycles, removed pairs and new cycles without moving files. |
+| `verify` | Optional typed `expect` | Fresh findings and pass/fail for the requested predicates. |
+| `explain` | Exactly one of `path`, `module` | Importers, imports and available architecture evidence within the smaller explanation cap. |
+| `rules` | `paths` | Relevant configured layout rules and surface constraints. |
+
+Tool input and output JSON Schemas are advertised by MCP `tools/list`; use discovery as the contract rather than parsing display text. Every tool accepts `brief: bool`, default `true`. Lists use deterministic ordering. Finding IDs derive from semantic identity rather than array positions, scores or timestamps; use an ID from the current findings when calling `propose`. A fixed commit and collection inputs retain the same IDs. A changed finding can have a new identity. Proposed steps are import-graph evidence, not proof that code compiles; run the project's tests after editing. Tools inspect or simulate code, and do not apply code changes.
+
+Results use an envelope `{data, truncated, omitted, counts?, hint?, error?}`. `data` is an object or `null`; `omitted` counts removed values and `counts` records original top-level array counts where available. Both brief projection and hard-cap pruning set `truncated: true` with a hint, so an original count can exceed the displayed array length. Read the marker before interpreting a partial answer. Errors carry an actionable message and MCP error status.
+
+Responses have a hard cap of **2,000 UTF-8 bytes** for the serialized MCP tool result, including repeated text and structured content. `explain` uses **300 bytes**. These conservative byte limits bound token usage without choosing a client tokenizer; they often leave less room than 2,000/300 natural-language tokens. Truncation is explicit and includes a hint. `brief: false` requests more detail within the same hard cap; narrow the task, seed files or paths, or use the CLI for complete evidence. Verification evaluates the full result before truncating its presentation. Do not interpret omitted findings as absent. `explain` returns a compact `data.summary`; the same compact summary is included as text for clients that only render text content. `?` means unavailable or unclassified, rather than zero. It prioritizes import/importer examples and counts, layer, rule ID and available hotspot/history facts. Long identifiers may require a counts-only summary with an explicit truncation marker.
+
+Without an explicit `base`, `check_diff` uses the guard's merge-base selection: `origin/HEAD`, then `main` or `master`, falling back to `HEAD` when none exists. An explicit base resolves to a commit. The head snapshot includes uncommitted edits. Both snapshots use the current layout rules, and policy changes are disclosed; the result does not claim a rule existed at the base revision. New/grown cycles use the existing architecture diff semantics. Recipe generation remains based on today's findings until richer recipes are available.
+
+Use explicit predicates when verification must assert a result, for example:
+
+```json
+{"expect":{"cycles_in":["app/editor"],"equals":0,"forbidden":0}}
+```
+
+`cycles_in` contains exact existing module IDs; `equals` defaults to zero and applies separately to each listed module's cycle count. `forbidden` is the expected total, not just new imports. Other optional predicates are `findings_absent: [finding_id]`, `absent_edges: [{from, to}]`, `files_present: [path]` and `files_absent: [path]`. File predicates refer to the scanned graph's file inventory, so excluded files are absent from that evidence even if they exist on disk. Combine predicates to check the proposed change and guard against regressions; run `check_diff` again against the same base. A syntactically valid already-absent finding ID passes an absence check, without proving the finding existed before. Calling `verify` without `expect` is an inspection: its success confirms the scan completed, **not** that the architecture is clean. Use the returned `expectations_supplied` and predicate results when interpreting `pass`.
+
+A matching running `serve` daemon can provide scans through its authenticated local socket or loopback endpoint. The stdio process bridges that protocol; the daemon's length-framed `command` socket is not a raw MCP transport and must not be entered as an MCP URL. Collection options and environment must match for cached scans. `--no-daemon` forces standalone collection, and an unreachable stale endpoint falls back to standalone. Refresh/setup errors remain errors with a next step rather than a successful stale answer. No scan-schema migration is required: v1/v1.1 readers remain supported.
+
 ## Warm graphs for agents
 
 ```sh

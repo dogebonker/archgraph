@@ -7,6 +7,10 @@ compatibility: Needs git, the archgraph binary (setup in the archgraph skill), a
 
 # archgraph-fix
 
+## MCP tools
+
+Prefer MCP `check_diff`/`verify` to obtain current findings, then `propose({finding_id})` for ordered evidence-backed steps. Use `simulate({moves:[{from,to}]})` before moving a file; it does not edit imports or move code. After applying the approved change, call `verify` with the proposal's supported predicates, repeat `check_diff` against the same base, and run project tests. Use explicit `expect` predicates: `verify` without them only confirms that inspection succeeded. An absent old finding alone does not prove no new violation. Inspect truncation markers and fall back to the complete CLI workflow below when needed or when MCP is unavailable. MCP does not relax the scope and approval rules below.
+
 One run fixes one finding, as one reviewable change. Every step ends on evidence; the change survives only if the last step is green.
 
 ## Steps
