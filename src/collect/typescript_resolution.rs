@@ -414,6 +414,7 @@ impl Resolver {
             return Resolution::Unresolved(ImportReason::Alias);
         }
         let importer = self.root.join(from);
+        let mut alias = false;
         if !specifier.starts_with(['.', '/'])
             && !native(specifier)
             && known.is_none_or(|dependency| dependency["coreModule"].as_bool() != Some(true))
@@ -436,7 +437,9 @@ impl Resolver {
                         return resolution;
                     }
                 }
-                return Resolution::Unresolved(ImportReason::Alias);
+                // TypeScript falls back to baseUrl and package resolution when no target exists.
+                alias = true;
+                break;
             }
             if let Some(base) = config.base
                 && let Some(resolution) = self.candidate(&base.join(specifier), specifier)
@@ -444,6 +447,20 @@ impl Resolver {
                 return resolution;
             }
         }
+        match self.resolve_unaliased(from, specifier, require, known, depth) {
+            Resolution::Unresolved(_) if alias => Resolution::Unresolved(ImportReason::Alias),
+            resolution => resolution,
+        }
+    }
+    fn resolve_unaliased(
+        &mut self,
+        from: &str,
+        specifier: &str,
+        require: bool,
+        known: Option<&Value>,
+        depth: usize,
+    ) -> Resolution {
+        let importer = self.root.join(from);
         if let Some(known) =
             known.filter(|dependency| dependency["couldNotResolve"].as_bool() != Some(true))
         {
@@ -660,10 +677,12 @@ impl Resolver {
             }
         }
         candidates.push(candidate.clone());
-        if extension.is_none() {
-            for extension in ["ts", "tsx", "js", "jsx", "mjs", "cjs", "d.ts"] {
-                candidates.push(candidate.with_extension(extension));
-            }
+        // `./user.service` names `user.service.ts`: append, never replace, the last extension.
+        for extension in ["ts", "tsx", "js", "jsx", "mjs", "cjs", "d.ts"] {
+            let mut path = candidate.clone().into_os_string();
+            path.push(".");
+            path.push(extension);
+            candidates.push(path.into());
         }
         if candidate.is_dir() {
             if let Some(package) = self.package(&candidate) {

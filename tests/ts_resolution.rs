@@ -556,3 +556,34 @@ fn a_shadowed_parameter_call_does_not_invent_a_recovered_local_dependency() {
     assert!(graph.imports.unwrap().is_empty());
     assert_eq!(graph.files, ["main.ts"]);
 }
+
+#[test]
+fn a_paths_miss_falls_back_to_packages_and_dotted_names_get_extensions() {
+    let root = root("paths-fallback");
+    write(
+        &root,
+        "tsconfig.json",
+        r##"{"compilerOptions":{"paths":{"@app/*":["src/*"],"*":["types/*"]}}}"##,
+    );
+    write(
+        &root,
+        "package.json",
+        r##"{"name":"app","dependencies":{"react":"18.0.0"}}"##,
+    );
+    write(
+        &root,
+        "src/main.ts",
+        "import React from 'react'; import {S} from './user.service'; import {M} from '@app/user.model'; import {Z} from 'nowhere';",
+    );
+    write(&root, "src/user.service.ts", "export const S=1;");
+    write(&root, "src/user.model.ts", "export const M=1;");
+    let records = scan(&root, "src/main.ts").imports.unwrap();
+    let record = |specifier: &str| records.iter().find(|r| r.specifier == specifier).unwrap();
+    assert_eq!(record("react").external.as_deref(), Some("react"));
+    assert_eq!(record("./user.service").targets, ["src/user.service.ts"]);
+    assert_eq!(record("@app/user.model").targets, ["src/user.model.ts"]);
+    assert!(matches!(
+        record("nowhere").unresolved,
+        Some(ImportReason::Alias)
+    ));
+}
