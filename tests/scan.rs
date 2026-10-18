@@ -570,6 +570,38 @@ fn cochange_finds_hidden_coupling_and_records_git() {
     assert_eq!(doc["cochange"], Value::Null);
 }
 
+#[test]
+fn cochange_reads_only_commits_under_the_root_and_matches_quoted_paths() {
+    let repo = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("cochange-subdir-repo");
+    let _ = fs::remove_dir_all(&repo);
+    fs::create_dir_all(&repo).unwrap();
+    git(&repo, &["init", "-q"]);
+    let (x, q) = ("src/a/x.ts", "src/b/q\"t.ts");
+    let in_app = ["app/src/a/x.ts", "app/src/b/q\"t.ts"];
+    for round in 1..=3 {
+        commit(&repo, round, &in_app);
+    }
+    // Newer commits outside the root and a merge must not use up --cochange=3.
+    git(&repo, &["checkout", "-q", "-b", "side"]);
+    commit(&repo, 4, &["other/z.ts"]);
+    git(&repo, &["checkout", "-q", "-"]);
+    commit(&repo, 5, &["other/w.ts"]);
+    git(&repo, &["merge", "-q", "--no-ff", "-m", "merge", "side"]);
+    let (_, input) = synthetic("cochange-subdir-input", 2, &[(x.to_owned(), q.to_owned())]);
+    let root = repo.join("app");
+    let (doc, _, _) = scan(&[
+        root.to_str().unwrap(),
+        "--collector-input",
+        &input,
+        "--cochange=3",
+    ]);
+    assert_eq!(
+        doc["cochange"],
+        json!({ "limit": 3, "commits": 3, "skipped": 0, "pairs": [
+            { "files": [x, q], "commits": 3 } ] })
+    );
+}
+
 /// Edge pairs from a cycle's `break` list.
 fn links(cycle: &Value) -> Vec<(String, String)> {
     cycle["break"]

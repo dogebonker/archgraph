@@ -1,11 +1,12 @@
 //! Files that change together in git history.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::Path;
 use std::process::Command;
 
 use anyhow::{Context, Result, bail};
 
+use crate::hotspots;
 use crate::model::{Cochange, CochangePair};
 
 /// A commit touching more files is a sweep (formatting, renames, vendoring) and says nothing
@@ -16,24 +17,27 @@ const MIN_COMMITS: usize = 3;
 
 /// Pairs of `files` changed together in the last `limit` commits, following renames.
 pub fn collect(root: &Path, limit: usize, files: &[String]) -> Result<Cochange> {
-    // `--relative` limits the log to the scanned root and makes its paths relative to it.
+    // `--relative` and the `.` pathspec limit the log to commits touching the scanned root and
+    // make their paths relative to it; `-z` leaves paths unquoted, so they match the scanned names.
     let out = Command::new("git")
         .arg("-C")
         .arg(root)
-        // Unquoted non-ASCII paths, so they match the scanned names.
         // core.fsmonitor=false: never run a program the repository's config names.
         .args([
             "-c",
             "core.fsmonitor=false",
-            "-c",
-            "core.quotePath=false",
             "log",
-            "--name-status",
+            "--numstat",
+            "-z",
             "-M",
+            "--no-merges",
+            "--no-ext-diff",
+            "--no-textconv",
             "--relative",
-            "--format=%x00",
+            hotspots::LOG_FORMAT,
         ])
         .arg(format!("-n{limit}"))
+        .args(["--", "."])
         .output()
         .context("running git (is it installed?)")?;
     if !out.status.success() {
@@ -43,48 +47,32 @@ pub fn collect(root: &Path, limit: usize, files: &[String]) -> Result<Cochange> 
         );
     }
     let scanned: HashSet<&str> = files.iter().map(String::as_str).collect();
-    // Newest commit first, so a rename is seen before the commits that used the old name.
-    let mut renamed: HashMap<String, String> = HashMap::new();
-    let (mut commits, mut skipped) = (0, 0);
-    let mut counts: BTreeMap<(String, String), usize> = BTreeMap::new();
-    for commit in String::from_utf8_lossy(&out.stdout).split('\0').skip(1) {
-        let mut touched = Vec::new();
-        for line in commit.lines().filter(|l| l.contains('\t')) {
-            let fields: Vec<&str> = line.split('\t').collect();
-            let current = |p: &str| renamed.get(p).cloned().unwrap_or_else(|| p.to_owned());
-            let name = current(fields[fields.len() - 1]);
-            if let [status, old, _] = fields[..]
-                && status.starts_with('R')
-            {
-                renamed.insert(old.to_owned(), name.clone());
-            }
-            touched.push(name);
-        }
-        if touched.len() > MAX_FILES {
-            skipped += 1;
-            continue;
-        }
-        commits += 1;
-        let kept: BTreeSet<String> = touched
-            .into_iter()
-            .filter(|f| scanned.contains(f.as_str()))
+    let log = hotspots::parse_log(&String::from_utf8_lossy(&out.stdout))?;
+    let (commits, skipped) = hotspots::follow_renames(log, MAX_FILES);
+    let mut counts: BTreeMap<(&str, &str), usize> = BTreeMap::new();
+    for commit in &commits {
+        let kept: BTreeSet<&str> = commit
+            .changes
+            .iter()
+            .map(|c| c.path.as_str())
+            .filter(|p| scanned.contains(p))
             .collect();
-        let kept: Vec<String> = kept.into_iter().collect();
+        let kept: Vec<&str> = kept.into_iter().collect();
         for (i, a) in kept.iter().enumerate() {
             for b in &kept[i + 1..] {
-                *counts.entry((a.clone(), b.clone())).or_default() += 1;
+                *counts.entry((a, b)).or_default() += 1;
             }
         }
     }
     Ok(Cochange {
         limit,
-        commits,
+        commits: commits.len(),
         skipped,
         pairs: counts
             .into_iter()
             .filter(|&(_, n)| n >= MIN_COMMITS)
             .map(|((a, b), commits)| CochangePair {
-                files: [a, b],
+                files: [a.to_owned(), b.to_owned()],
                 commits,
             })
             .collect(),

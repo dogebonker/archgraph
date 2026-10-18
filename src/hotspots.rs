@@ -85,20 +85,23 @@ struct Changes {
     deleted: usize,
 }
 
-struct Change {
-    path: String,
+pub(crate) struct Change {
+    pub(crate) path: String,
     old: Option<String>,
     added: usize,
     deleted: usize,
 }
 
 #[derive(Default)]
-struct Commit {
+pub(crate) struct Commit {
     hash: String,
     author: String,
     fix: bool,
-    changes: Vec<Change>,
+    pub(crate) changes: Vec<Change>,
 }
+
+/// The `git log --numstat -z` header that `parse_log` reads.
+pub(crate) const LOG_FORMAT: &str = "--format=%x00ARCHGRAPH%x00%H%x00%aE%x00%B%x00";
 
 fn git(root: &Path, args: &[&str]) -> Result<Vec<u8>> {
     let out = Command::new("git")
@@ -160,8 +163,7 @@ fn since_timestamp(root: &Path, since: &str, end: i64) -> Result<i64> {
 }
 
 /// One NUL-delimited numstat pass; rename records carry separate old/new path tokens.
-fn parse_log(bytes: &[u8]) -> Result<Vec<Commit>> {
-    let text = std::str::from_utf8(bytes).context("Git hotspot paths must be UTF-8")?;
+pub(crate) fn parse_log(text: &str) -> Result<Vec<Commit>> {
     let fields: Vec<_> = text.split('\0').collect();
     let mut commits = Vec::new();
     let mut at = 0;
@@ -231,6 +233,25 @@ fn parse_log(bytes: &[u8]) -> Result<Vec<Commit>> {
     Ok(commits)
 }
 
+/// Renames each path to its newest name, then drops sweeps: commits touching more than
+/// `max_files` files, which say nothing about which files belong together. Returns the kept
+/// commits and the number of sweeps. Commits must be newest first.
+pub(crate) fn follow_renames(mut commits: Vec<Commit>, max_files: usize) -> (Vec<Commit>, usize) {
+    let mut renamed: HashMap<String, String> = HashMap::new();
+    for change in commits.iter_mut().flat_map(|c| &mut c.changes) {
+        if let Some(current) = renamed.get(&change.path) {
+            change.path = current.clone();
+        }
+        if let Some(old) = change.old.take() {
+            renamed.insert(old, change.path.clone());
+        }
+    }
+    let total = commits.len();
+    commits.retain(|c| c.changes.len() <= max_files);
+    let sweeps = total - commits.len();
+    (commits, sweeps)
+}
+
 pub fn collect(root: &Path, graph: &Document, options: &Options) -> Result<Hotspots> {
     if options.max_files == 0 {
         bail!("hotspot max-files must be greater than zero");
@@ -260,7 +281,6 @@ pub fn collect(root: &Path, graph: &Document, options: &Options) -> Result<Hotsp
     let prefix = prefix.trim_end_matches('\n');
     let scanned: HashSet<_> = graph.files.iter().map(|f| f.path.as_str()).collect();
     let mut stats: HashMap<String, Changes> = HashMap::new();
-    let mut renamed: HashMap<String, String> = HashMap::new();
     let (mut count, mut skipped) = (0, 0);
     if !shallow {
         let bytes = git(
@@ -274,29 +294,23 @@ pub fn collect(root: &Path, graph: &Document, options: &Options) -> Result<Hotsp
                 "--no-merges",
                 "--no-ext-diff",
                 "--no-textconv",
-                "--format=%x00ARCHGRAPH%x00%H%x00%aE%x00%B%x00",
+                LOG_FORMAT,
                 &format!("--since-as-filter=@{since_timestamp}"),
                 "--end-of-options",
                 as_of,
                 "--",
             ],
         )?;
-        for commit in parse_log(&bytes)? {
-            let sweep = commit.changes.len() > options.max_files;
-            if sweep {
-                skipped += 1;
-            } else if !commit.changes.is_empty() {
+        let text = std::str::from_utf8(&bytes).context("Git hotspot paths must be UTF-8")?;
+        let (commits, sweeps) = follow_renames(parse_log(text)?, options.max_files);
+        skipped = sweeps;
+        for commit in commits {
+            if !commit.changes.is_empty() {
                 count += 1;
             }
             for change in commit.changes {
-                let current = renamed.get(&change.path).cloned().unwrap_or(change.path);
-                if let Some(old) = change.old {
-                    renamed.insert(old, current.clone());
-                }
-                if sweep {
-                    continue;
-                }
-                let Some(path) = current
+                let Some(path) = change
+                    .path
                     .strip_prefix(prefix)
                     .filter(|p| scanned.contains(*p))
                 else {
