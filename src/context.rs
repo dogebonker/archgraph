@@ -6,7 +6,7 @@ use std::path::{Component, Path, PathBuf};
 use anyhow::{Context, Result, bail};
 use serde::Serialize;
 
-use crate::model::{File, SCHEMA, ScanInput};
+use crate::model::{SCHEMA, ScanInput};
 
 #[derive(Debug, Clone)]
 pub struct Options {
@@ -154,9 +154,6 @@ fn words(text: &str) -> BTreeSet<String> {
         .map(str::to_owned)
         .collect()
 }
-fn barrel(file: &File) -> bool {
-    file.barrel || barrel_path(&file.path)
-}
 fn barrel_path(path: &str) -> bool {
     matches!(
         Path::new(path).file_name().and_then(|s| s.to_str()),
@@ -259,7 +256,7 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
     let symbols: BTreeSet<_> = options.symbols.iter().map(|s| s.to_lowercase()).collect();
     let mut automatic = Vec::new();
     for file in &input.files {
-        if dependency_directory(&file.path) || downrank(&file.path) || barrel(file) {
+        if dependency_directory(&file.path) || downrank(&file.path) || file.barrel {
             continue;
         }
         let path_words = words(&file.path);
@@ -359,9 +356,7 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
 
     let mut redirects: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for edge in &input.edges {
-        if files
-            .get(edge.from.as_str())
-            .is_none_or(|file| barrel(file))
+        if files.get(edge.from.as_str()).is_none_or(|file| file.barrel)
             || edge.is_reexport
             || matches!(
                 edge.kind,
@@ -383,7 +378,7 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
         for import in &symbols.imports {
             if files
                 .get(import.from.as_str())
-                .is_none_or(|file| barrel(file))
+                .is_none_or(|file| file.barrel)
             {
                 continue;
             }
@@ -399,7 +394,10 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
     }
     let original_seeds = seeds.clone();
     for (path, explicit) in original_seeds {
-        if barrel_path(&path) || files.get(path.as_str()).is_some_and(|f| barrel(f)) {
+        if files
+            .get(path.as_str())
+            .map_or_else(|| barrel_path(&path), |f| f.barrel)
+        {
             seeds.remove(&path);
             let mut pending = vec![(path.clone(), 0)];
             let mut seen = BTreeSet::new();
@@ -409,7 +407,7 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
                     continue;
                 }
                 for target in redirects.get(&current).into_iter().flatten() {
-                    if files.get(target.as_str()).is_some_and(|f| barrel(f)) {
+                    if files.get(target.as_str()).is_some_and(|f| f.barrel) {
                         pending.push((target.clone(), depth + 1));
                     } else if files.contains_key(target.as_str()) {
                         seeds
@@ -437,8 +435,8 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
         .collect();
     let mut neighbors: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
     for edge in &input.edges {
-        if files.get(edge.from.as_str()).is_none_or(|f| barrel(f))
-            || files.get(edge.to.as_str()).is_none_or(|f| barrel(f))
+        if files.get(edge.from.as_str()).is_none_or(|f| f.barrel)
+            || files.get(edge.to.as_str()).is_none_or(|f| f.barrel)
         {
             continue;
         }
@@ -637,7 +635,7 @@ pub fn markdown(report: &Report) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Cochange, CochangePair, Edge, EdgeKind, RulesRef};
+    use crate::model::{Cochange, CochangePair, Edge, EdgeKind, File, RulesRef};
     use serde_json::json;
 
     struct Fixture(PathBuf);
@@ -1140,13 +1138,45 @@ mod tests {
     #[test]
     fn executable_index_components_are_not_pure_barrels() {
         let dir = Fixture::new();
-        let mut scan = input(&dir, &["scene/index.tsx", "component/index.jsx"], &[]);
+        let mut scan = input(
+            &dir,
+            &[
+                "scene/index.tsx",
+                "component/index.jsx",
+                "server/index.ts",
+                "server/app.ts",
+            ],
+            &[("server/index.ts", "server/app.ts")],
+        );
         let selected = select(&scan, &dir.0, &options("scene/index.tsx")).unwrap();
         assert!(
             selected
                 .entries
                 .iter()
                 .any(|entry| entry.path == "scene/index.tsx" && entry.mode == "body")
+        );
+        // An index.ts the graph does not flag as a barrel is an ordinary entry file.
+        let server = select(&scan, &dir.0, &options("server/index.ts")).unwrap();
+        assert!(
+            server
+                .entries
+                .iter()
+                .any(|entry| entry.path == "server/index.ts" && entry.mode == "body")
+        );
+        assert!(
+            server
+                .entries
+                .iter()
+                .any(|entry| entry.path == "server/app.ts")
+        );
+        // The name heuristic still applies to paths absent from the graph.
+        dir.write("missing/index.ts", "export * from './x';\n");
+        let missing = select(&scan, &dir.0, &options("missing/index.ts")).unwrap();
+        assert!(
+            missing
+                .omitted
+                .iter()
+                .any(|o| o.path == "missing/index.ts" && o.reason.contains("barrel omitted"))
         );
         scan.files[0].barrel = true;
         assert!(
