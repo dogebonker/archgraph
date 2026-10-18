@@ -215,7 +215,6 @@ impl Checkout {
             &[
                 "clone",
                 "--quiet",
-                "--no-hardlinks",
                 "--no-checkout",
                 "--",
                 repo.to_str().context("repository path is not UTF-8")?,
