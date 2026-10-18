@@ -886,3 +886,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
+
+## Daemon filesystem watcher
+
+`notify` 8.2.0 is distributed under CC0-1.0; `notify-types` 2.1.0 is MIT or Apache-2.0. Source and license files are included in their pinned crates: https://github.com/notify-rs/notify/tree/8.2.0 . Platform backend dependencies retain their individual licenses in Cargo metadata.

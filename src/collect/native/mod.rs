@@ -16,6 +16,41 @@ use super::RawGraph;
 use crate::model::ImportRecord;
 use crate::surface::{SymbolExport, SymbolTarget, Symbols};
 
+/// Parsed syntax stays private to each collector; explicit invalidation avoids reading unchanged files.
+#[derive(Default)]
+pub(super) struct ParseCache<T> {
+    entries: std::collections::BTreeMap<String, T>,
+    pub parsed: usize,
+    pub reused: usize,
+    fresh: std::collections::BTreeSet<String>,
+    reused_files: std::collections::BTreeSet<String>,
+}
+impl<T: Clone> ParseCache<T> {
+    pub fn get(&mut self, file: &str, parse: impl FnOnce() -> Result<T>) -> Result<T> {
+        if let Some(value) = self.entries.get(file) {
+            if !self.fresh.contains(file) {
+                self.reused_files.insert(file.to_owned());
+                self.reused = self.reused_files.len();
+            }
+            return Ok(value.clone());
+        }
+        let value = parse()?;
+        self.parsed += 1;
+        self.fresh.insert(file.to_owned());
+        self.entries.insert(file.to_owned(), value.clone());
+        Ok(value)
+    }
+    pub fn invalidate(&mut self, files: &[String]) {
+        self.parsed = 0;
+        self.reused = 0;
+        self.fresh.clear();
+        self.reused_files.clear();
+        for file in files {
+            self.entries.remove(file);
+        }
+    }
+}
+
 pub struct Output {
     pub raw: RawGraph,
     pub symbols: Symbols,

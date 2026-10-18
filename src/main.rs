@@ -1,21 +1,26 @@
+macro_rules! print { ($($arg:tt)*) => { archgraph::output::stdout(format_args!($($arg)*)) }; }
+macro_rules! println { () => { archgraph::output::stdout(format_args!("\n")) }; ($($arg:tt)*) => { archgraph::output::stdout(format_args!("{}\n", format_args!($($arg)*))) }; }
+macro_rules! eprintln { ($($arg:tt)*) => { archgraph::output::stderr(format_args!("{}\n", format_args!($($arg)*))) }; }
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
-use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// The global flags, set once in `main`; defaults elsewhere, as in unit tests.
-#[derive(Default)]
+/// Options belong to the calling thread, including daemon requests.
+#[derive(Clone, Default)]
 struct Globals {
     all_kinds: bool,
     legacy_v1: bool,
     granularity: Option<Granularity>,
+    brief: bool,
+    tty: bool,
+    tool_timeout: u64,
 }
-static GLOBALS: OnceLock<Globals> = OnceLock::new();
-
-fn globals() -> &'static Globals {
-    GLOBALS.get_or_init(Globals::default)
+thread_local! { static GLOBALS: RefCell<Globals> = RefCell::new(Globals::default()); }
+fn globals() -> Globals {
+    GLOBALS.with(|g| g.borrow().clone())
 }
 
 use anyhow::{Context, Result, bail};
@@ -24,10 +29,16 @@ use archgraph::model::{Document, Git, Granularity, Language, SCHEMA, ScanInput, 
 use archgraph::{codeowners, diff, history, modules, render, rules, simulate};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
+#[path = "cli/brief.rs"]
+mod brief_cli;
 #[path = "cli/check.rs"]
 mod check_cli;
 #[path = "cli/context.rs"]
 mod context_cli;
+#[path = "cli/daemon.rs"]
+mod daemon_cli;
+#[path = "cli/explain.rs"]
+mod explain_cli;
 #[path = "cli/history.rs"]
 mod history_cli;
 #[path = "cli/hotspots.rs"]
@@ -58,6 +69,12 @@ mod tour_cli;
 #[derive(Parser)]
 #[command(version, about = "Import-graph evidence for architecture decisions")]
 struct Cli {
+    /// Bounded deterministic JSON for agent context windows
+    #[arg(long, global = true)]
+    brief: bool,
+    /// Bypass a running daemon and collect independently
+    #[arg(long, global = true)]
+    no_daemon: bool,
     /// Include every import kind in cycle detection, for comparison
     #[arg(long, global = true)]
     all_kinds: bool,
@@ -77,6 +94,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Keep a repository graph warm over local JSON-RPC
+    Serve(daemon_cli::Serve),
+    /// Show the local daemon state
+    Status(daemon_cli::Status),
     /// Collect the import graph and write a scan document
     Scan(scan_cli::Scan),
     /// Scan, apply rules, write archgraph.json and archgraph.html, and print a summary
@@ -111,8 +132,17 @@ enum Cmd {
     Services(services_cli::ServicesArgs),
     /// List default file exclusions and their categories
     ShowExcludes,
+    /// Explain a file, module or finding from a saved graph
+    Explain(Explain),
     /// List imports whose file or external package could not be resolved
     Unresolved(Unresolved),
+}
+
+#[derive(Args)]
+struct Explain {
+    subject: String,
+    #[arg(long, default_value = ".archgraph/archgraph.json")]
+    graph: PathBuf,
 }
 
 #[derive(Args)]
@@ -277,14 +307,94 @@ struct Simulate {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    GLOBALS.get_or_init(|| Globals {
-        all_kinds: cli.all_kinds,
-        legacy_v1: cli.legacy_v1,
-        granularity: cli.granularity,
+    GLOBALS.with(|g| {
+        *g.borrow_mut() = Globals {
+            all_kinds: cli.all_kinds,
+            legacy_v1: cli.legacy_v1,
+            granularity: cli.granularity,
+            brief: cli.brief,
+            tty: false,
+            tool_timeout: cli.tool_timeout,
+        }
     });
-    let _ = collect::TOOL_TIMEOUT
-        .set((cli.tool_timeout > 0).then(|| std::time::Duration::from_secs(cli.tool_timeout)));
+    collect::request_timeout(
+        (cli.tool_timeout > 0).then(|| std::time::Duration::from_secs(cli.tool_timeout)),
+    );
+    if let Cmd::Serve(args) = cli.command {
+        return daemon_cli::serve(args).unwrap_or_else(|e| {
+            eprintln!("error: {e:#}");
+            ExitCode::from(2)
+        });
+    }
+    match daemon_cli::forward(&cli) {
+        Ok(Some(out)) => {
+            print!("{}", out.stdout);
+            if !out.stderr.is_empty() {
+                archgraph::output::stderr(format_args!("{}", out.stderr));
+            }
+            return ExitCode::from(out.code);
+        }
+        Ok(None) => {}
+        Err(error) => {
+            eprintln!("error: {error:#}");
+            return ExitCode::from(2);
+        }
+    }
+    execute(cli)
+}
+fn execute(cli: Cli) -> ExitCode {
+    let brief = cli.brief;
+    let capture = brief.then(archgraph::output::Capture::begin);
+    let code = execute_inner(cli);
+    if let Some(capture) = capture {
+        let out = capture.finish(if code == ExitCode::SUCCESS {
+            0
+        } else if code == ExitCode::from(1) {
+            1
+        } else {
+            2
+        });
+        if !out.stdout.is_empty() {
+            let value = serde_json::from_str::<serde_json::Value>(&out.stdout)
+                .unwrap_or_else(|_| serde_json::json!({"kind":"message","text":out.stdout}));
+            let value = if value["schema"] == "archgraph/brief/v1" {
+                value
+            } else {
+                brief_cli::project(&value)
+            };
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&value).expect("serializing brief output")
+            );
+        }
+        if !out.stderr.is_empty() {
+            archgraph::output::stderr(format_args!("{}", out.stderr));
+        }
+    }
+    code
+}
+fn execute_inner(cli: Cli) -> ExitCode {
+    use std::io::IsTerminal;
+    GLOBALS.with(|g| {
+        *g.borrow_mut() = Globals {
+            all_kinds: cli.all_kinds,
+            legacy_v1: cli.legacy_v1,
+            granularity: cli.granularity,
+            brief: cli.brief,
+            tty: daemon_cli::caller_tty().unwrap_or_else(|| std::io::stdout().is_terminal()),
+            tool_timeout: cli.tool_timeout,
+        }
+    });
+    collect::request_timeout(
+        (cli.tool_timeout > 0).then(|| std::time::Duration::from_secs(cli.tool_timeout)),
+    );
     let result = match cli.command {
+        Cmd::Serve(_) => unreachable!("serve is dispatched before request execution"),
+        Cmd::Status(args) => daemon_cli::status(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Explain(args) => recompute(&args.graph, None)
+            .and_then(|doc| explain_cli::explain(&doc, &args.subject))
+            .and_then(|value| write(None, &value))
+            .map(|()| ExitCode::SUCCESS),
         Cmd::Scan(args) => scan_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Report(args) => report_cli::run(args),
         Cmd::Check(args) => check_cli::run(args),
@@ -425,6 +535,11 @@ fn diff(args: DiffArgs) -> Result<ExitCode> {
 /// A scan document recomputed from its files, edges and config, with `rules` replacing the
 /// embedded ones.
 fn recompute(path: &Path, rules: Option<&Path>) -> Result<Document> {
+    if rules.is_none()
+        && let Some(doc) = daemon_cli::cached_graph(path)
+    {
+        return Ok(doc);
+    }
     let mut input = read_scan(path)?;
     if let Some(path) = rules {
         input.config.rules = Some(rules::load(path)?);
@@ -451,6 +566,9 @@ fn reassign(input: &mut ScanInput) -> Result<()> {
 }
 
 fn read_scan(path: &Path) -> Result<ScanInput> {
+    if let Some(doc) = daemon_cli::cached_graph(path) {
+        return Ok(serde_json::from_value(serde_json::to_value(doc)?)?);
+    }
     let text = fs::read(path).with_context(|| format!("reading {}", path.display()))?;
     let mut input: ScanInput = serde_json::from_slice(&text)
         .with_context(|| format!("reading scan document {}", path.display()))?;
@@ -478,6 +596,9 @@ fn write(output: Option<&Path>, value: &impl serde::Serialize) -> Result<()> {
     let mut value = serde_json::to_value(value)?;
     if globals().legacy_v1 {
         archgraph::compat::v1(&mut value)?;
+    }
+    if output.is_none() && globals().brief {
+        value = brief_cli::project(&value);
     }
     let json = serde_json::to_string_pretty(&value)? + "\n";
     match output {
@@ -545,9 +666,13 @@ fn git(root: &Path, outputs: &[&Path]) -> Option<Git> {
             .ok()?
             .trim()
             .to_owned(),
-        dirty: !archgraph::git::run(root, &status)
-            .ok()?
-            .trim_ascii()
-            .is_empty(),
+        dirty: !archgraph::git::run_with_index(
+            root,
+            &status,
+            daemon_cli::cached_index(root).as_deref(),
+        )
+        .ok()?
+        .trim_ascii()
+        .is_empty(),
     })
 }

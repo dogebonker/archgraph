@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["schema","kind","result","counts","omitted","hint"],"properties":{"schema":{"const":"archgraph/brief/v1"},"kind":{"type":["string","null"]},"result":{},"counts":{"type":"object"},"omitted":{"type":"object"},"hint":{"type":"string"}},"additionalProperties":false}

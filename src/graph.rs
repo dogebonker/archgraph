@@ -120,6 +120,19 @@ pub fn cycles<'a>(
     barrels: &BTreeSet<String>,
     directory_units: bool,
 ) -> Vec<Cycle> {
+    cycles_with_budget(module_of, edges, entries, barrels, directory_units, None)
+}
+
+/// A closed region uses the full graph's public-edge protection weight, preserving break-set
+/// tie breaking and heuristic results when unrelated components change size.
+pub(crate) fn cycles_with_budget<'a>(
+    module_of: &BTreeMap<String, String>,
+    edges: impl IntoIterator<Item = &'a Edge>,
+    entries: &BTreeSet<String>,
+    barrels: &BTreeSet<String>,
+    directory_units: bool,
+    runtime_edges: Option<usize>,
+) -> Vec<Cycle> {
     let all: Vec<&Edge> = edges.into_iter().collect();
     let wiring = wiring(|p| module_of[p].as_str(), all.iter().copied());
     // A file nobody imports is an entry point build config names, and an index is its module's
@@ -136,7 +149,7 @@ pub fn cycles<'a>(
             })
     };
     // Heavier than every cuttable import together.
-    let keep = edges.len() + 1;
+    let keep = runtime_edges.unwrap_or(edges.len()) + 1;
     let module_edges = module_edges(module_of, edges.iter().copied());
     let mut by_side: BTreeMap<(&str, &str), Vec<&Edge>> = BTreeMap::new();
     for e in edges {

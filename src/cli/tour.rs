@@ -14,7 +14,6 @@ pub(super) struct TourArgs {
 }
 
 pub(super) fn run(args: TourArgs) -> Result<()> {
-    use std::io::Write;
     let input = read_scan(&args.graph)?;
     let tour = archgraph::tour::markdown(
         &input,
@@ -23,6 +22,6 @@ pub(super) fn run(args: TourArgs) -> Result<()> {
             agent: args.agent,
         },
     )?;
-    std::io::stdout().lock().write_all(tour.as_bytes())?;
+    print!("{tour}");
     Ok(())
 }

@@ -667,7 +667,7 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
                 ownership: None,
             },
         );
-        // ponytail: every proposed move reruns the whole pipeline; batch or make it incremental
+        // ponytail: every surviving move reruns the whole pipeline; batch or make it incremental
         // if scans of large repositories with many misplaced files get slow.
         //
         // When the file's name is taken in the target directory there is no move to suggest, and
@@ -677,6 +677,21 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
             .clone()
             .unwrap_or_else(|| g.free_move(path, target));
         if g.crosses_module(path, &probe.to) {
+            continue;
+        }
+        let incident = outgoing
+            .iter()
+            .copied()
+            .chain(incoming.iter().copied().filter(|(from, _)| from != path));
+        if rejects_move_metrics(
+            g.doc,
+            g.rules,
+            &g.module_of,
+            file,
+            &probe.to,
+            target,
+            incident,
+        ) {
             continue;
         }
         let Ok(after) = simulate::apply(g.doc, g.rules, std::slice::from_ref(&probe)) else {
@@ -748,6 +763,105 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
 
 /// Whether a move raises the cohesion of every module receiving files by `MIN_COHESION_GAIN`,
 /// and that of all the `modules` it touches, taken together, at all.
+/// Forecast only the raw metrics that can reject a move; surviving probes still use `simulate`.
+fn rejects_move_metrics<'a>(
+    doc: &Document,
+    rules: Option<&Compiled>,
+    module_of: &BTreeMap<&str, &str>,
+    file: &crate::model::File,
+    to: &str,
+    target: &str,
+    incident: impl Iterator<Item = &'a (String, String)>,
+) -> bool {
+    if file.barrel
+        || modules::is_test(&file.path, &doc.config)
+        || file.class == Some(crate::model::ModuleClass::Tests)
+        || modules::is_test(to, &doc.config)
+        || file.module == target
+        || doc.files.iter().any(|existing| existing.path == to)
+        || modules::assigned(to, &doc.config, doc.source.language, rules) != target
+    {
+        return false;
+    }
+    let Some(own) = doc.modules.iter().find(|m| m.id == file.module) else {
+        return false;
+    };
+    let Some(receiver) = doc.modules.iter().find(|m| m.id == target) else {
+        return false;
+    };
+    let (mut own, mut receiver) = (own.clone(), receiver.clone());
+    for (from, to) in incident {
+        let (Some(&before_from), Some(&before_to)) =
+            (module_of.get(from.as_str()), module_of.get(to.as_str()))
+        else {
+            return false;
+        };
+        let after_from = if from == &file.path {
+            target
+        } else {
+            before_from
+        };
+        let after_to = if to == &file.path { target } else { before_to };
+        for module in [&mut own, &mut receiver] {
+            if !adjust_raw_metrics(module, before_from, before_to, false)
+                || !adjust_raw_metrics(module, after_from, after_to, true)
+            {
+                return false;
+            }
+        }
+    }
+    let ratio = |internal: usize, outgoing: usize| {
+        let total = internal + outgoing;
+        if total == 0 {
+            0.0
+        } else {
+            internal as f64 / total as f64
+        }
+    };
+    let modules = [file.module.as_str(), target];
+    receiver.outgoing_to.len() > receiver.ce
+        || !(ratio(receiver.internal_edges, receiver.outgoing_edges)
+            >= cohesion(doc, &[target]) + MIN_COHESION_GAIN - EPSILON
+            && ratio(
+                own.internal_edges + receiver.internal_edges,
+                own.outgoing_edges + receiver.outgoing_edges,
+            ) > cohesion(doc, &modules) + EPSILON)
+}
+
+/// A non-barrel rename preserves attributed file pairs; only the moved node's module changes.
+fn adjust_raw_metrics(module: &mut crate::model::Module, from: &str, to: &str, add: bool) -> bool {
+    if from != module.id {
+        return true;
+    }
+    let bump = |count: &mut usize| {
+        let next = if add {
+            count.checked_add(1)
+        } else {
+            count.checked_sub(1)
+        };
+        if let Some(next) = next {
+            *count = next;
+            true
+        } else {
+            false
+        }
+    };
+    if from == to {
+        return bump(&mut module.internal_edges);
+    }
+    if !bump(&mut module.outgoing_edges) {
+        return false;
+    }
+    let count = module.outgoing_to.entry(to.to_owned()).or_default();
+    if !bump(count) {
+        return false;
+    }
+    if *count == 0 {
+        module.outgoing_to.remove(to);
+    }
+    true
+}
+
 fn gains(before: &Document, after: &Document, receivers: &[&str], modules: &[&str]) -> bool {
     receivers
         .iter()
@@ -1388,5 +1502,216 @@ mod tests {
         ] {
             assert_eq!(go_public(path, &main), public, "{path}");
         }
+    }
+    fn metric_fixture(
+        edges: Vec<crate::model::Edge>,
+        custom: bool,
+        barrel: bool,
+        test: bool,
+    ) -> crate::model::Document {
+        use crate::model::{Collector, Language, NodeMetadata, Source};
+        let mut config: crate::model::Config = serde_json::from_value(serde_json::json!({
+            "depth": 1, "source_root": ".", "excludes": [], "include_tests": true, "rules": null
+        }))
+        .unwrap();
+        let files: Vec<String> = [
+            "old/a.ts",
+            "old/z.ts",
+            "target/b.ts",
+            "target/c.ts",
+            "other/d.ts",
+            "other/index.ts",
+            "third/e.ts",
+            "tests/check.spec.ts",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+        for file in &files {
+            config.file_metadata.insert(
+                file.clone(),
+                NodeMetadata {
+                    barrel: file == "other/index.ts" || (file == "old/a.ts" && barrel),
+                    test: file == "tests/check.spec.ts" || (file == "old/a.ts" && test),
+                },
+            );
+        }
+        if custom {
+            config.rules = Some(crate::model::RulesRef {
+                path: "layout.yaml".into(),
+                sha256: String::new(),
+                doc: serde_json::from_value(serde_json::json!({"version":1,
+                    "modules":[{"id":"receiver","path":"target/**"}],
+                    "edge_weights":{"runtime":0.8,"lazy":0.2,"type":0.05,"reexport":0.7}
+                }))
+                .unwrap(),
+            });
+        }
+        let rules = crate::rules::compile(&config).unwrap();
+        crate::build(
+            Source {
+                language: Language::Typescript,
+                collector: Collector::default(),
+                git: None,
+                generated_at: "1970-01-01T00:00:00Z".into(),
+                scan_root: None,
+            },
+            config,
+            files,
+            edges,
+            Vec::new(),
+            rules.as_ref(),
+            None,
+        )
+    }
+
+    fn metric_probe(doc: &crate::model::Document) -> (bool, bool) {
+        let rules = crate::rules::compile(&doc.config).unwrap();
+        let file = doc.files.iter().find(|f| f.path == "old/a.ts").unwrap();
+        let target = &doc
+            .files
+            .iter()
+            .find(|f| f.path == "target/b.ts")
+            .unwrap()
+            .module;
+        let module_of = doc
+            .files
+            .iter()
+            .map(|f| (f.path.as_str(), f.module.as_str()))
+            .collect();
+        let barrels = doc
+            .files
+            .iter()
+            .filter(|f| f.barrel)
+            .map(|f| f.path.clone())
+            .collect();
+        let pairs = crate::modules::attribute(&doc.edges, &barrels);
+        let incident = pairs
+            .iter()
+            .filter(|(from, to)| from == &file.path || to == &file.path);
+        let rejected = super::rejects_move_metrics(
+            doc,
+            rules.as_ref(),
+            &module_of,
+            file,
+            "target/a.ts",
+            target,
+            incident,
+        );
+        let after = crate::simulate::apply(
+            doc,
+            rules.as_ref(),
+            &[crate::model::Move {
+                file: file.path.clone(),
+                to: "target/a.ts".into(),
+            }],
+        )
+        .unwrap();
+        let failed = after.summary.modules[target].ce > doc.summary.modules[target].ce
+            || !super::gains(
+                doc,
+                &after,
+                &[target.as_str()],
+                &[file.module.as_str(), target.as_str()],
+            );
+        (rejected, failed)
+    }
+
+    #[test]
+    fn misplaced_metric_precheck_retains_successes_and_rejects_extra_fanout() {
+        let edge = |from: &str, to: &str| crate::model::Edge {
+            from: from.into(),
+            to: to.into(),
+            ..Default::default()
+        };
+        let mut edges = vec![
+            edge("target/b.ts", "old/a.ts"),
+            edge("target/c.ts", "old/a.ts"),
+        ];
+        assert_eq!(
+            metric_probe(&metric_fixture(edges.clone(), false, false, false)),
+            (false, false)
+        );
+        edges.extend([
+            edge("old/a.ts", "other/d.ts"),
+            edge("old/a.ts", "third/e.ts"),
+        ]);
+        assert_eq!(
+            metric_probe(&metric_fixture(edges, false, false, false)),
+            (true, true)
+        );
+    }
+
+    #[test]
+    fn misplaced_metric_forecast_matches_simulation_across_kinds_barrels_rules_and_tests() {
+        use crate::model::{Edge, EdgeKind};
+        let names = [
+            "old/a.ts",
+            "old/z.ts",
+            "target/b.ts",
+            "target/c.ts",
+            "other/d.ts",
+            "other/index.ts",
+            "third/e.ts",
+            "tests/check.spec.ts",
+        ];
+        let kinds = [
+            EdgeKind::Static,
+            EdgeKind::Dynamic,
+            EdgeKind::Type,
+            EdgeKind::Reexport,
+            EdgeKind::TypeReexport,
+        ];
+        let mut seed = 13u64;
+        let mut rejected = 0;
+        for turn in 0..240 {
+            let mut edges = Vec::new();
+            for from in names {
+                for to in names {
+                    seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+                    if from != to && (seed >> 32).is_multiple_of(5) {
+                        edges.push(Edge {
+                            from: from.into(),
+                            to: to.into(),
+                            kind: kinds[(seed >> 40) as usize % kinds.len()],
+                            ..Default::default()
+                        });
+                    }
+                }
+            }
+            let barrel = turn % 11 == 0;
+            let test = turn % 13 == 0;
+            let doc = metric_fixture(edges, turn % 2 == 0, barrel, test);
+            let (skip, failed) = metric_probe(&doc);
+            if barrel || test {
+                assert!(!skip);
+            } else {
+                assert_eq!(skip, failed, "case {turn}");
+            }
+            rejected += usize::from(skip);
+        }
+        assert!(
+            rejected > 50,
+            "forecast must exercise actual rejections: {rejected}"
+        );
+    }
+    #[test]
+    fn misplaced_metric_forecast_defers_test_destinations_to_simulation() {
+        let doc = metric_fixture(Vec::new(), false, false, false);
+        let file = doc.files.iter().find(|f| f.path == "old/a.ts").unwrap();
+        let module_of = doc
+            .files
+            .iter()
+            .map(|f| (f.path.as_str(), f.module.as_str()))
+            .collect();
+        assert!(!super::rejects_move_metrics(
+            &doc,
+            None,
+            &module_of,
+            file,
+            "target/a.spec.ts",
+            "target",
+            std::iter::empty()
+        ));
     }
 }

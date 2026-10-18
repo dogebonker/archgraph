@@ -6,7 +6,7 @@ use archgraph::model::Config;
 #[derive(Args)]
 pub(super) struct Scan {
     /// Repository root
-    root: PathBuf,
+    pub(super) root: PathBuf,
     #[command(flatten)]
     pub(super) opts: ScanOpts,
     #[command(flatten)]
@@ -41,6 +41,9 @@ pub(super) fn scan_doc(
     rules: Option<&Path>,
     outputs: &[&Path],
 ) -> Result<Document> {
+    if let Some(doc) = daemon_cli::cached_scan(root, args, hotspots, collector, rules, outputs) {
+        return Ok(doc);
+    }
     // Resolved here: a relative program path is not reliably resolved against the child's
     // working directory.
     let depcruise = (args.engine != collect::Engine::Native)
@@ -314,7 +317,7 @@ pub(super) fn scan_doc(
         language,
         collector: raw.collector,
         git: git(root, outputs),
-        generated_at: now_utc(),
+        generated_at: source_time(root)?,
         scan_root: git_scan_root(root),
     };
     // Keep package directories intact unless a depth is explicitly requested.
@@ -420,11 +423,15 @@ pub(super) fn scan_doc(
 }
 
 /// RFC 3339 UTC, whole seconds; the civil date is Howard Hinnant's civil_from_days.
-fn now_utc() -> String {
-    let secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64;
+pub(super) fn source_time(root: &Path) -> Result<String> {
+    let secs = match std::env::var("SOURCE_DATE_EPOCH") {
+        Ok(value) => value.parse::<i64>().ok().filter(|value| (0..=253_402_300_799).contains(value))
+            .ok_or_else(|| anyhow::anyhow!("invalid SOURCE_DATE_EPOCH; set an integer Unix timestamp between 0 and 253402300799, or unset it to use Git HEAD time"))?,
+        Err(std::env::VarError::NotPresent) => archgraph::git::text(root, &["show", "-s", "--format=%ct", "HEAD"])
+            .ok().and_then(|value| value.trim().parse::<i64>().ok())
+            .filter(|value| (0..=253_402_300_799).contains(value)).unwrap_or(0),
+        Err(error) => return Err(anyhow::anyhow!("cannot read SOURCE_DATE_EPOCH: {error}; unset it or provide an integer Unix timestamp")),
+    };
     let (days, rem) = (secs.div_euclid(86_400), secs.rem_euclid(86_400));
     let z = days + 719_468;
     let era = z.div_euclid(146_097);
@@ -435,10 +442,10 @@ fn now_utc() -> String {
     let day = doy - (153 * mp + 2) / 5 + 1;
     let month = if mp < 10 { mp + 3 } else { mp - 9 };
     let year = yoe + era * 400 + i64::from(month <= 2);
-    format!(
+    Ok(format!(
         "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}Z",
         rem / 3600,
         rem % 3600 / 60,
         rem % 60
-    )
+    ))
 }

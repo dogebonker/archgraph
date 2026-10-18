@@ -57,7 +57,7 @@ pub(super) fn run(args: InferLayoutArgs) -> Result<()> {
                 path.display()
             );
         }
-        None => std::io::stdout().lock().write_all(draft.as_bytes())?,
+        None => print!("{draft}"),
     }
     Ok(())
 }

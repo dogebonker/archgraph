@@ -11,7 +11,7 @@ pub fn supported_schema(schema: &str) -> bool {
     matches!(schema, "archgraph/v1" | SCHEMA)
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Document {
     pub schema: &'static str,
     pub kind: &'static str,
@@ -105,7 +105,7 @@ impl ScanInput {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Tool {
     pub name: &'static str,
     pub version: &'static str,
@@ -263,7 +263,7 @@ impl Granularity {
 }
 
 /// One explicit import specifier occurrence, independently of its symbol-reference edges.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct ImportRecord {
     pub from: String,
     pub specifier: String,
@@ -284,7 +284,7 @@ pub struct ImportRecord {
     pub unresolved: Option<ImportReason>,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ImportReason {
     Alias,
@@ -310,7 +310,7 @@ impl Serialize for ImportReason {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ImportResolution {
     pub imports: usize,
     pub resolved: usize,
@@ -318,14 +318,14 @@ pub struct ImportResolution {
     pub resolved_percent: Option<f64>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ExternalNode {
     pub id: String,
     pub external: bool,
     pub package: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TestCoverage {
     pub modules: usize,
     pub covered: usize,
@@ -415,7 +415,7 @@ pub enum Verdict {
     Unplanned,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Module {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -447,7 +447,7 @@ pub struct ModuleOwnership {
     pub primary: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PlacementOwnership {
     pub assessment: &'static str,
     pub file_owners: Vec<String>,
@@ -456,7 +456,7 @@ pub struct PlacementOwnership {
     pub destination_owners: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ModuleEdge {
     pub from: String,
     pub to: String,
@@ -600,7 +600,7 @@ impl Serialize for FindingKind {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Finding {
     pub kind: FindingKind,
     pub subject: String,
@@ -644,7 +644,7 @@ pub struct FindingContext {
 }
 
 /// One shape per finding kind, each named in the schema's `$defs`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
 pub enum Evidence {
     Grabbag(crate::grabbag::Evidence),
@@ -708,7 +708,7 @@ pub enum Evidence {
     },
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Component {
     pub files: Vec<String>,
     pub consumers: Vec<String>,
@@ -716,13 +716,13 @@ pub struct Component {
     pub moves: Vec<Move>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Cluster {
     pub files: Vec<String>,
     pub modules: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Suggestion {
     #[serde(rename = "move")]
     pub move_to: Move,
@@ -735,14 +735,14 @@ pub struct Move {
 }
 
 /// A proposed move's result; the state before it is the scan document's `summary`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct FindingSimulation {
     pub after: Changes,
 }
 
 /// A Summary after a move, listing only the modules whose metrics changed: `null` for a module
 /// the move empties, a new entry for a module it creates.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Changes {
     pub forbidden: usize,
     pub unplanned: usize,
@@ -770,7 +770,7 @@ pub struct ModuleSummary {
     pub instability: Option<f64>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Simulation {
     pub schema: &'static str,
     pub kind: &'static str,
@@ -782,7 +782,7 @@ pub struct Simulation {
     pub removed_forbidden: Vec<Edge>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct MovedFile {
     pub file: String,
     pub to: String,
@@ -809,7 +809,7 @@ pub struct CochangePair {
     pub commits: usize,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Diff {
     pub schema: &'static str,
     pub kind: &'static str,
@@ -825,14 +825,14 @@ pub struct Diff {
     pub new_unplanned: Vec<Edge>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Snapshot {
     pub commit: Option<String>,
     pub generated_at: String,
 }
 
 /// `[old, new]` per metric.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ModuleDelta {
     pub cohesion: [Option<f64>; 2],
     pub ca: [usize; 2],

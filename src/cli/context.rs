@@ -8,7 +8,7 @@ pub(super) struct ContextArgs {
     graph: PathBuf,
     /// Source checkout corresponding to the graph
     #[arg(long, default_value = ".")]
-    root: PathBuf,
+    pub(super) root: PathBuf,
     #[arg(long, allow_hyphen_values = true)]
     task: String,
     /// Seed files, relative to root or absolute paths inside it
@@ -44,7 +44,7 @@ fn budget(value: &str) -> std::result::Result<usize, String> {
 }
 
 pub(super) fn run(args: ContextArgs) -> Result<()> {
-    if matches!(args.format, Format::Json) && globals().legacy_v1 {
+    if (globals().brief || matches!(args.format, Format::Json)) && globals().legacy_v1 {
         bail!("context JSON requires archgraph/v1.1; omit --legacy-v1");
     }
     let root = args
@@ -87,6 +87,9 @@ pub(super) fn run(args: ContextArgs) -> Result<()> {
         Ok(true) => {}
         Ok(false) => report.limitations.push("Source root is unverified: the graph lacks Git or scan-root provenance, or the scanned/current checkout is dirty; source text may differ from the graph.".into()),
         Err(error) => report.limitations.push(format!("Source text may differ from the graph: {error:#}")),
+    }
+    if globals().brief {
+        return write(None, &report);
     }
     match args.format {
         Format::Json => write(None, &report),

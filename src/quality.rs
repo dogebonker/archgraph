@@ -84,13 +84,35 @@ pub fn cycles<'a>(
     directory_units: bool,
     all_kinds: bool,
 ) -> (Vec<Cycle>, Vec<DeferredCycle>) {
+    cycles_with_budget(
+        module_of,
+        edges,
+        entries,
+        barrels,
+        directory_units,
+        all_kinds,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn cycles_with_budget<'a>(
+    module_of: &BTreeMap<String, String>,
+    edges: impl IntoIterator<Item = &'a Edge>,
+    entries: &BTreeSet<String>,
+    barrels: &BTreeSet<String>,
+    directory_units: bool,
+    all_kinds: bool,
+    total_edges: Option<(usize, usize)>,
+) -> (Vec<Cycle>, Vec<DeferredCycle>) {
     let edges: Vec<&Edge> = edges.into_iter().collect();
-    let runtime = graph::cycles(
+    let runtime = graph::cycles_with_budget(
         module_of,
         edges.iter().copied(),
         entries,
         barrels,
         directory_units,
+        total_edges.map(|(runtime, _)| runtime),
     );
     let mut deferred = Vec::new();
     for level in [CycleLevel::Module, CycleLevel::File] {
@@ -146,6 +168,10 @@ pub fn cycles<'a>(
             });
         }
     }
+    deferred.sort_by(|a, b| {
+        let level = |c: &DeferredCycle| usize::from(c.level == CycleLevel::File);
+        (level(a), &a.members).cmp(&(level(b), &b.members))
+    });
     if all_kinds {
         // Every kind counts as a runtime import; the clones carry the rewritten kinds.
         let all: Vec<_> = edges
@@ -159,7 +185,14 @@ pub fn cycles<'a>(
             })
             .collect();
         (
-            graph::cycles(module_of, &all, entries, barrels, directory_units),
+            graph::cycles_with_budget(
+                module_of,
+                &all,
+                entries,
+                barrels,
+                directory_units,
+                total_edges.map(|(_, all)| all),
+            ),
             deferred,
         )
     } else {

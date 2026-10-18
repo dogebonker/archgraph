@@ -1,13 +1,12 @@
 use super::*;
 use archgraph::diff::count;
 use archgraph::model::CycleLevel;
-use std::io::IsTerminal;
 
 #[derive(Args)]
 pub(super) struct Report {
     /// Repository root
     #[arg(default_value = ".")]
-    root: PathBuf,
+    pub(super) root: PathBuf,
     #[command(flatten)]
     opts: ScanOpts,
     #[command(flatten)]
@@ -52,11 +51,25 @@ pub(super) fn run(args: Report) -> Result<ExitCode> {
     write(Some(&json), &doc)?;
     write_file(&html, render::render(&doc)?.as_bytes())?;
 
-    let bold = std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none();
-    print!(
-        "{}",
-        summary(&doc, root, rules.as_deref(), &json, &html, bold)
-    );
+    if globals().brief {
+        write(
+            None,
+            &serde_json::json!({
+                "schema": SCHEMA, "kind": "report", "summary": doc.summary,
+                "counts": {"files": doc.files.len(), "modules": doc.modules.len(), "imports": doc.edges.len()},
+                "import_resolution": doc.import_resolution,
+                "findings": doc.findings, "cycles": doc.cycles,
+                "limitations": doc.source.collector.limitations,
+                "artifacts": {"json": json, "html": html},
+            }),
+        )?;
+    } else {
+        let bold = globals().tty && std::env::var_os("NO_COLOR").is_none();
+        print!(
+            "{}",
+            summary(&doc, root, rules.as_deref(), &json, &html, bold)
+        );
+    }
     Ok(if doc.summary.forbidden > 0 {
         ExitCode::from(1)
     } else {

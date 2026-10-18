@@ -24,7 +24,7 @@ struct Import {
     dynamic: bool,
     at_module: bool,
 }
-#[derive(Default)]
+#[derive(Clone, Default)]
 struct Parsed {
     imports: Vec<Import>,
     declarations: BTreeSet<String>,
@@ -40,6 +40,37 @@ pub fn collect(
     package: Option<&str>,
     python_paths: &[PathBuf],
     policy: &Policy,
+) -> Result<super::Output> {
+    collect_cached(
+        root,
+        source_dir,
+        package,
+        python_paths,
+        policy,
+        &mut Cache::default(),
+    )
+}
+
+#[derive(Default)]
+pub(crate) struct Cache {
+    parsed: super::ParseCache<Parsed>,
+    external_roots: Option<BTreeSet<String>>,
+}
+impl Cache {
+    pub(crate) fn invalidate(&mut self, files: &[String]) {
+        self.parsed.invalidate(files);
+    }
+    pub(crate) fn counts(&self) -> (usize, usize) {
+        (self.parsed.parsed, self.parsed.reused)
+    }
+}
+pub(crate) fn collect_cached(
+    root: &Path,
+    source_dir: &str,
+    package: Option<&str>,
+    python_paths: &[PathBuf],
+    policy: &Policy,
+    cache: &mut Cache,
 ) -> Result<super::Output> {
     let root = root
         .canonicalize()
@@ -62,7 +93,10 @@ pub fn collect(
             search.push(path);
         }
     }
-    let external_roots = installed_roots(&root, &search)?;
+    if cache.external_roots.is_none() {
+        cache.external_roots = Some(installed_roots(&root, &search)?);
+    }
+    let external_roots = cache.external_roots.as_ref().unwrap();
     let all_files = super::source_files(&root, &["py"])?;
     let mut modules = BTreeMap::new();
     for base in search.iter().rev() {
@@ -137,7 +171,10 @@ pub fn collect(
         let file = files[index].clone();
         index += 1;
         if !parsed.contains_key(&file) {
-            match parse_file(&root, &file, &mut parser, &query) {
+            match cache
+                .parsed
+                .get(&file, || parse_file(&root, &file, &mut parser, &query))
+            {
                 Ok(info) => {
                     parsed.insert(file.clone(), info);
                 }
@@ -166,7 +203,12 @@ pub fn collect(
                 && selected.contains(base)
                 && !parsed.contains_key(base)
             {
-                parsed.insert(base.clone(), parse_file(&root, base, &mut parser, &query)?);
+                parsed.insert(
+                    base.clone(),
+                    cache
+                        .parsed
+                        .get(base, || parse_file(&root, base, &mut parser, &query))?,
+                );
             }
             let targets: Vec<_> = if import.from && !import.wildcard {
                 import

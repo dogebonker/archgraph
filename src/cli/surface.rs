@@ -24,6 +24,9 @@ pub(super) fn run(args: SurfaceArgs) -> Result<()> {
         write(Some(path), &doc)?;
     }
     let report = doc.surface.as_ref().unwrap();
+    if globals().brief {
+        return write(None, report);
+    }
     match args.format {
         Format::Json => write(None, report),
         Format::Markdown => {

@@ -349,9 +349,13 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
     if let Some(path) = &args.output {
         write(Some(path), &result)?;
     }
-    match args.format {
-        Format::Json => write(None, &result)?,
-        Format::Markdown => print!("{markdown}"),
+    if globals().brief {
+        write(None, &result)?;
+    } else {
+        match args.format {
+            Format::Json => write(None, &result)?,
+            Format::Markdown => print!("{markdown}"),
+        }
     }
     Ok(
         if args

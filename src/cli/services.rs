@@ -37,10 +37,7 @@ pub(super) fn run(args: ServicesArgs) -> Result<()> {
     match args.format {
         Format::Json => write(None, &report),
         Format::Markdown => {
-            use std::io::Write;
-            std::io::stdout()
-                .lock()
-                .write_all(archgraph::services::markdown(&report).as_bytes())?;
+            print!("{}", archgraph::services::markdown(&report));
             Ok(())
         }
     }

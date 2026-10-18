@@ -7,6 +7,7 @@ pub mod excludes;
 pub mod go;
 pub mod grimp;
 pub mod imports;
+pub mod incremental;
 pub mod java;
 pub mod native;
 pub mod rust;
@@ -126,8 +127,11 @@ impl Drop for TempDir {
     }
 }
 
-/// How long `run_with_input` lets a tool run (`--tool-timeout`), set once by the CLI. Unset or
-/// `None` waits forever.
+thread_local! { static REQUEST_TIMEOUT: std::cell::Cell<Option<Option<Duration>>> = const { std::cell::Cell::new(None) }; }
+pub fn request_timeout(timeout: Option<Duration>) {
+    REQUEST_TIMEOUT.with(|t| t.set(Some(timeout)));
+}
+/// Default timeout for library callers without a request override.
 pub static TOOL_TIMEOUT: OnceLock<Option<Duration>> = OnceLock::new();
 
 /// `run_with_input` with no input.
@@ -154,7 +158,10 @@ pub fn run_with_input(command: &mut Command, input: Vec<u8>) -> Result<Output> {
     let writer = thread::spawn(move || stdin.write_all(&input));
     let stdout = read_all(child.stdout.take().expect("piped stdout"));
     let stderr = read_all(child.stderr.take().expect("piped stderr"));
-    let status = match TOOL_TIMEOUT.get().copied().flatten() {
+    let status = match REQUEST_TIMEOUT
+        .with(|t| t.get())
+        .unwrap_or_else(|| TOOL_TIMEOUT.get().copied().flatten())
+    {
         None => child.wait()?,
         Some(timeout) => {
             let deadline = Instant::now() + timeout;

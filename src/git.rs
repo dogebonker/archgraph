@@ -12,7 +12,25 @@ fn subcommand<'a>(args: &[&'a str]) -> &'a str {
 
 /// Standard output of `git -C root args`; a failed exit is an error carrying Git's stderr.
 pub fn run(root: &Path, args: &[&str]) -> Result<Vec<u8>> {
-    let out = Command::new("git")
+    run_with_index(root, args, None)
+}
+/// A disposable index permits Git's own stat cache without changing the user's staging index.
+pub fn run_with_index(root: &Path, args: &[&str], index: Option<&Path>) -> Result<Vec<u8>> {
+    let mut command = Command::new("git");
+    if let Some(index) = index {
+        command.env("GIT_INDEX_FILE", index).args([
+            "-c",
+            "core.splitIndex=false",
+            "-c",
+            "core.untrackedCache=true",
+        ]);
+    }
+    let out = command
+        // Read-only queries must not rewrite the index and trigger the daemon watcher.
+        .env(
+            "GIT_OPTIONAL_LOCKS",
+            if index.is_some() { "1" } else { "0" },
+        )
         .arg("-C")
         .arg(root)
         .args([
@@ -20,6 +38,8 @@ pub fn run(root: &Path, args: &[&str]) -> Result<Vec<u8>> {
             "core.fsmonitor=false",
             "-c",
             "core.hooksPath=/dev/null",
+            "-c",
+            "diff.autoRefreshIndex=false",
         ])
         .args(args)
         .output()
@@ -68,4 +88,41 @@ pub fn is_shallow(root: &Path) -> Result<bool> {
 /// A full SHA-1 or SHA-256 commit hash, never an abbreviation or a ref name.
 pub fn is_full_hash(commit: &str) -> bool {
     matches!(commit.len(), 40 | 64) && commit.bytes().all(|c| c.is_ascii_hexdigit())
+}
+
+/// A changed tracked path proves the whole checkout is dirty without enumerating its status.
+/// A clean result is not proof of a clean checkout: callers must still check untracked/other paths.
+pub fn has_tracked_changes(root: &Path, paths: &[String]) -> Result<bool> {
+    if paths.is_empty() {
+        return Ok(false);
+    }
+    let out = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .env("GIT_OPTIONAL_LOCKS", "0")
+        .args([
+            "-c",
+            "core.fsmonitor=false",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "-c",
+            "diff.autoRefreshIndex=false",
+            "diff",
+            "--quiet",
+            "--no-ext-diff",
+            "--no-textconv",
+            "HEAD",
+            "--",
+        ])
+        .args(paths.iter().map(|p| format!(":(literal){p}")))
+        .output()
+        .context("checking changed tracked files")?;
+    match out.status.code() {
+        Some(0) => Ok(false),
+        Some(1) => Ok(true),
+        _ => bail!(
+            "git dirty proof failed: {}; use the complete Git status check",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ),
+    }
 }

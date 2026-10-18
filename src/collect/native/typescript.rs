@@ -1,6 +1,7 @@
 //! Query-driven ECMAScript syntax; oxc resolves module requests without executing the project.
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, Result};
 use tree_sitter::{Node, Parser, Query, QueryCursor, StreamingIterator};
@@ -129,6 +130,7 @@ fn binds_require(node: Node<'_>, source: &str) -> bool {
         .any(|n| binds_require(n, source))
 }
 
+#[derive(Clone, Default)]
 struct Parsed {
     statements: Vec<ImportStatement>,
     declared: Vec<String>,
@@ -385,8 +387,17 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
 #[derive(Clone)]
 struct RepositoryFs {
     root: PathBuf,
+    footprint: Arc<Mutex<BTreeSet<PathBuf>>>,
 }
 impl RepositoryFs {
+    fn record(&self, path: &Path) {
+        if path.starts_with(&self.root) {
+            self.footprint
+                .lock()
+                .expect("resolver metadata lock")
+                .insert(path.to_owned());
+        }
+    }
     fn checked(&self, path: &Path) -> std::io::Result<PathBuf> {
         let canonical = path.canonicalize()?;
         if !canonical.starts_with(&self.root) {
@@ -402,22 +413,51 @@ impl oxc_resolver::FileSystem for RepositoryFs {
     fn new() -> Self {
         Self {
             root: PathBuf::new(),
+            footprint: Default::default(),
         }
     }
     fn read(&self, path: &Path) -> std::io::Result<Vec<u8>> {
-        std::fs::read(self.checked(path)?)
+        self.record(path);
+        let checked = self.checked(path)?;
+        self.record(&checked);
+        std::fs::read(checked)
     }
     fn read_to_string(&self, path: &Path) -> std::io::Result<String> {
-        std::fs::read_to_string(self.checked(path)?)
+        self.record(path);
+        let checked = self.checked(path).inspect_err(|error| {
+            // Oxc appends .json after a failed extends-path probe, even for a .json request.
+            if error.kind() == std::io::ErrorKind::NotFound
+                && path
+                    .extension()
+                    .is_some_and(|extension| extension == "json")
+            {
+                self.record(&path.with_extension(""));
+            }
+        })?;
+        self.record(&checked);
+        std::fs::read_to_string(checked)
     }
     fn metadata(&self, path: &Path) -> std::io::Result<oxc_resolver::FileMetadata> {
+        if matches!(
+            path.extension().and_then(|extension| extension.to_str()),
+            Some("json" | "jsonc")
+        ) {
+            self.record(path);
+        }
         Ok(std::fs::metadata(self.checked(path)?)?.into())
     }
     fn symlink_metadata(&self, path: &Path) -> std::io::Result<oxc_resolver::FileMetadata> {
+        if matches!(
+            path.extension().and_then(|extension| extension.to_str()),
+            Some("json" | "jsonc")
+        ) {
+            self.record(path);
+        }
         self.checked(path)?;
         Ok(std::fs::symlink_metadata(path)?.into())
     }
     fn read_link(&self, path: &Path) -> std::result::Result<PathBuf, oxc_resolver::ResolveError> {
+        self.record(path);
         self.checked(path)
             .map_err(|_| oxc_resolver::ResolveError::NotFound(path.display().to_string()))?;
         std::fs::read_link(path)
@@ -438,6 +478,7 @@ fn resolver(
     require: bool,
     workspaces: &[(String, PathBuf)],
     tsconfig: bool,
+    footprint: Arc<Mutex<BTreeSet<PathBuf>>>,
 ) -> oxc_resolver::ResolverGeneric<RepositoryFs> {
     let options = oxc_resolver::ResolveOptions {
         tsconfig: tsconfig.then_some(oxc_resolver::TsconfigDiscovery::Auto),
@@ -484,11 +525,15 @@ fn resolver(
     oxc_resolver::ResolverGeneric::new_with_file_system(
         RepositoryFs {
             root: repo_root(root),
+            footprint,
         },
         options,
     )
 }
-fn package_manifests(root: &Path) -> Result<BTreeMap<PathBuf, serde_json::Value>> {
+fn package_manifests(
+    root: &Path,
+    footprint: &Arc<Mutex<BTreeSet<PathBuf>>>,
+) -> Result<BTreeMap<PathBuf, serde_json::Value>> {
     let mut manifests = BTreeMap::new();
     for file in super::source_files(root, &["json"])? {
         if Path::new(&file)
@@ -496,6 +541,10 @@ fn package_manifests(root: &Path) -> Result<BTreeMap<PathBuf, serde_json::Value>
             .is_some_and(|n| n == "package.json")
         {
             let path = root.join(file);
+            footprint
+                .lock()
+                .expect("resolver metadata lock")
+                .insert(path.clone());
             let source = std::fs::read_to_string(&path)
                 .with_context(|| format!("reading {}", path.display()))?;
             // Invalid fixture/package manifests cannot prove package identity.
@@ -577,24 +626,120 @@ pub fn collect(
     policy: &Policy,
     scan_all: bool,
 ) -> Result<super::Output> {
+    collect_cached(root, source_dir, policy, scan_all, &mut Cache::default())
+}
+
+#[derive(Default)]
+pub(crate) struct Cache {
+    parsed: super::ParseCache<Parsed>,
+    metadata: Option<Metadata>,
+    resolutions: Resolutions,
+    inventory: Option<Vec<String>>,
+    selection: Option<(Vec<u8>, BTreeSet<String>)>,
+    footprint: Arc<Mutex<BTreeSet<PathBuf>>>,
+}
+type Resolved = std::result::Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>;
+type Resolutions = BTreeMap<String, BTreeMap<(String, bool, bool), Resolved>>;
+fn resolve_cached(
+    resolutions: &mut Resolutions,
+    file: &str,
+    specifier: &str,
+    mode: (bool, bool),
+    resolver: &oxc_resolver::ResolverGeneric<RepositoryFs>,
+    root: &Path,
+) -> Resolved {
+    resolutions
+        .entry(file.to_owned())
+        .or_default()
+        .entry((specifier.to_owned(), mode.0, mode.1))
+        .or_insert_with(|| resolver.resolve_file(root.join(file), specifier))
+        .clone()
+}
+struct Metadata {
+    manifests: BTreeMap<PathBuf, serde_json::Value>,
+    workspaces: Vec<(String, PathBuf)>,
+    imports: oxc_resolver::ResolverGeneric<RepositoryFs>,
+    requires: oxc_resolver::ResolverGeneric<RepositoryFs>,
+    direct_imports: oxc_resolver::ResolverGeneric<RepositoryFs>,
+    direct_requires: oxc_resolver::ResolverGeneric<RepositoryFs>,
+}
+impl Cache {
+    pub(crate) fn invalidate(&mut self, files: &[String]) {
+        self.parsed.invalidate(files);
+        for file in files {
+            self.resolutions.remove(file);
+        }
+    }
+    pub(crate) fn metadata_files(&self) -> Vec<PathBuf> {
+        self.footprint
+            .lock()
+            .expect("resolver metadata lock")
+            .iter()
+            .cloned()
+            .collect()
+    }
+    pub(crate) fn counts(&self) -> (usize, usize) {
+        (self.parsed.parsed, self.parsed.reused)
+    }
+}
+pub(crate) fn collect_cached(
+    root: &Path,
+    source_dir: &str,
+    policy: &Policy,
+    scan_all: bool,
+    cache: &mut Cache,
+) -> Result<super::Output> {
     let root = root
         .canonicalize()
         .context("resolving native TypeScript scan root")?;
-    let files = super::source_files(
-        &root,
-        &["ts", "tsx", "js", "jsx", "mjs", "cjs", "mts", "cts"],
-    )?;
-    let selected: BTreeSet<_> = policy
-        .select(&files)?
-        .into_iter()
-        .filter(|p| scan_all || source_dir == "." || Path::new(p).starts_with(source_dir))
-        .collect();
-    let manifests = package_manifests(&repo_root(&root))?;
-    let workspaces = workspaces(&repo_root(&root), &manifests)?;
-    let imports = resolver(&root, false, &workspaces, true);
-    let requires = resolver(&root, true, &workspaces, true);
-    let direct_imports = resolver(&root, false, &workspaces, false);
-    let direct_requires = resolver(&root, true, &workspaces, false);
+    if cache.inventory.is_none() {
+        cache.inventory = Some(super::source_files(
+            &root,
+            &["ts", "tsx", "js", "jsx", "mjs", "cjs", "mts", "cts"],
+        )?);
+    }
+    let files = cache.inventory.as_ref().unwrap().clone();
+    let mut policy_key = policy.cache_key(&files)?;
+    policy_key.extend_from_slice(source_dir.as_bytes());
+    policy_key.push(u8::from(scan_all));
+    if cache
+        .selection
+        .as_ref()
+        .is_none_or(|(key, _)| key != &policy_key)
+    {
+        let selected = policy
+            .select(&files)?
+            .into_iter()
+            .filter(|path| scan_all || source_dir == "." || Path::new(path).starts_with(source_dir))
+            .collect();
+        cache.selection = Some((policy_key, selected));
+    }
+    let selected = cache.selection.as_ref().unwrap().1.clone();
+    if cache.metadata.is_none() {
+        let manifests = package_manifests(&repo_root(&root), &cache.footprint)?;
+        cache
+            .footprint
+            .lock()
+            .expect("resolver metadata lock")
+            .insert(repo_root(&root).join("pnpm-workspace.yaml"));
+        let workspaces = workspaces(&repo_root(&root), &manifests)?;
+        cache.metadata = Some(Metadata {
+            imports: resolver(&root, false, &workspaces, true, cache.footprint.clone()),
+            requires: resolver(&root, true, &workspaces, true, cache.footprint.clone()),
+            direct_imports: resolver(&root, false, &workspaces, false, cache.footprint.clone()),
+            direct_requires: resolver(&root, true, &workspaces, false, cache.footprint.clone()),
+            manifests,
+            workspaces,
+        });
+    }
+    let Metadata {
+        manifests,
+        workspaces,
+        imports,
+        requires,
+        direct_imports,
+        direct_requires,
+    } = cache.metadata.as_ref().unwrap();
     let mut config_failures = BTreeSet::new();
     let known: BTreeSet<_> = files.iter().cloned().collect();
     let mut graph = RawGraph {
@@ -624,9 +769,11 @@ pub fn collect(
         if !parsed_files.insert(file.clone()) {
             continue;
         }
-        let source = std::fs::read_to_string(root.join(&file))
-            .with_context(|| format!("reading TypeScript source {file}"))?;
-        let parsed = parse(&file, &source).with_context(|| format!("parsing {file}"))?;
+        let parsed = cache.parsed.get(&file, || {
+            let source = std::fs::read_to_string(root.join(&file))
+                .with_context(|| format!("reading TypeScript source {file}"))?;
+            parse(&file, &source).with_context(|| format!("parsing {file}"))
+        })?;
         if !parsed.limitations.is_empty() {
             symbols.complete = false;
             symbols.limitations.extend(parsed.limitations);
@@ -655,12 +802,14 @@ pub fn collect(
             if statement.specifier.is_none() {
                 record.unresolved = Some(ImportReason::Dynamic);
             } else {
-                let mut resolved = if statement.require {
-                    &requires
-                } else {
-                    &imports
-                }
-                .resolve_file(root.join(&file), &specifier);
+                let mut resolved = resolve_cached(
+                    &mut cache.resolutions,
+                    &file,
+                    &specifier,
+                    (statement.require, true),
+                    if statement.require { requires } else { imports },
+                    &root,
+                );
                 if let Err(
                     error @ (oxc_resolver::ResolveError::TsconfigLoadFailed { .. }
                     | oxc_resolver::ResolveError::TsconfigNotFound(_)
@@ -673,12 +822,18 @@ pub fn collect(
                         || specifier.starts_with("node:")
                         || package_name(&specifier).is_some()
                     {
-                        let fallback = if statement.require {
-                            &direct_requires
-                        } else {
-                            &direct_imports
-                        }
-                        .resolve_file(root.join(&file), &specifier);
+                        let fallback = resolve_cached(
+                            &mut cache.resolutions,
+                            &file,
+                            &specifier,
+                            (statement.require, false),
+                            if statement.require {
+                                direct_requires
+                            } else {
+                                direct_imports
+                            },
+                            &root,
+                        );
                         if specifier.starts_with('.')
                             || matches!(fallback, Err(oxc_resolver::ResolveError::Builtin { .. }))
                         {
@@ -808,7 +963,7 @@ pub fn collect(
                                     .is_ok_and(|p| p.starts_with(repo_root(&root)))
                         });
                         if workspace.is_some()
-                            && declared_package(&root.join(&file), &specifier, &manifests)
+                            && declared_package(&root.join(&file), &specifier, manifests)
                         {
                             record.external = Some(specifier.clone());
                         } else {
@@ -824,7 +979,7 @@ pub fn collect(
                     Err(_) => {
                         let declared = package_name(&specifier).filter(|pkg| {
                             !workspaces.iter().any(|(name, _)| name == pkg)
-                                && declared_package(&root.join(&file), pkg, &manifests)
+                                && declared_package(&root.join(&file), pkg, manifests)
                         });
                         if let Some(pkg) = declared {
                             record.external = Some(pkg);

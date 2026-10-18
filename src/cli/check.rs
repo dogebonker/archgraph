@@ -25,6 +25,36 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
     if doc.config.rules.is_none() && doc.surface.is_none() {
         bail!("no rules: pass --rules, or scan with --rules");
     }
+    if globals().brief {
+        let forbidden: Vec<_> = doc
+            .edges
+            .iter()
+            .chain(&doc.external_edges)
+            .filter(|edge| edge.verdict == Some(Verdict::Forbidden))
+            .collect();
+        let unplanned: Vec<_> = doc
+            .edges
+            .iter()
+            .chain(&doc.external_edges)
+            .filter(|edge| edge.verdict == Some(Verdict::Unplanned))
+            .collect();
+        if let Some(path) = &args.output {
+            write(Some(path), &doc)?;
+        }
+        write(
+            None,
+            &serde_json::json!({
+                "schema": SCHEMA, "kind": "check", "summary": doc.summary,
+                "cycles": doc.cycles, "forbidden": forbidden, "unplanned": unplanned,
+                "surface": doc.surface,
+            }),
+        )?;
+        return Ok(if forbidden.is_empty() {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::from(1)
+        });
+    }
     let (mut forbidden, mut unplanned) = (0, 0);
     for e in doc.edges.iter().chain(&doc.external_edges) {
         let label = match e.verdict {

@@ -1,4 +1,5 @@
-//! Library half of the `archgraph` binary, shared with the integration tests. Not a published API.
+macro_rules! eprintln { ($($arg:tt)*) => { $crate::output::stderr(format_args!("{}\n", format_args!($($arg)*))) }; }
+// Library half of the CLI and daemon, shared with integration tests.
 
 pub mod bisect;
 pub mod cochange;
@@ -15,9 +16,11 @@ pub mod graph;
 pub mod history;
 pub mod hotspots;
 pub mod impact;
+pub mod incremental;
 pub mod infer_layout;
 pub mod model;
 pub mod modules;
+pub mod output;
 pub mod package_splits;
 pub mod quality;
 pub mod render;
@@ -179,6 +182,47 @@ pub fn analyze(
     package_entries: Vec<String>,
     cochange: Option<Cochange>,
 ) -> Result<Document> {
+    analyze_inner(
+        source,
+        config,
+        files,
+        edges,
+        package_entries,
+        cochange,
+        None,
+    )
+}
+/// Shared analysis with cached SCC/metric regions for a daemon generation.
+#[allow(clippy::too_many_arguments)]
+pub fn analyze_cached(
+    source: Source,
+    config: Config,
+    files: Vec<String>,
+    edges: Vec<Edge>,
+    package_entries: Vec<String>,
+    cochange: Option<Cochange>,
+    cache: &mut incremental::Analysis,
+) -> Result<Document> {
+    analyze_inner(
+        source,
+        config,
+        files,
+        edges,
+        package_entries,
+        cochange,
+        Some(cache),
+    )
+}
+#[allow(clippy::too_many_arguments)]
+fn analyze_inner(
+    source: Source,
+    config: Config,
+    files: Vec<String>,
+    edges: Vec<Edge>,
+    package_entries: Vec<String>,
+    cochange: Option<Cochange>,
+    cache: Option<&mut incremental::Analysis>,
+) -> Result<Document> {
     let rules = rules::compile(&config)?;
     resolution::require_policy_accounting(&config)?;
     let owners = config
@@ -186,7 +230,7 @@ pub fn analyze(
         .as_ref()
         .map(codeowners::compile)
         .transpose()?;
-    let mut doc = build(
+    let mut doc = build_inner(
         source,
         config,
         files,
@@ -194,6 +238,7 @@ pub fn analyze(
         package_entries,
         rules.as_ref(),
         owners.as_ref(),
+        cache,
     );
     if doc.modules.iter().any(|m| {
         ![
@@ -223,10 +268,32 @@ pub fn build(
     source: Source,
     config: Config,
     files: Vec<String>,
+    edges: Vec<Edge>,
+    package_entries: Vec<String>,
+    rules: Option<&Compiled>,
+    owners: Option<&codeowners::Compiled>,
+) -> Document {
+    build_inner(
+        source,
+        config,
+        files,
+        edges,
+        package_entries,
+        rules,
+        owners,
+        None,
+    )
+}
+#[allow(clippy::too_many_arguments)]
+fn build_inner(
+    source: Source,
+    config: Config,
+    files: Vec<String>,
     mut edges: Vec<Edge>,
     mut package_entries: Vec<String>,
     rules: Option<&Compiled>,
     owners: Option<&codeowners::Compiled>,
+    cache: Option<&mut incremental::Analysis>,
 ) -> Document {
     let weights = config
         .rules
@@ -313,19 +380,43 @@ pub fn build(
     let pairs = modules::weighted(&edges, &barrels);
     let entries = modules::cycle_entries(module_of.keys(), &config.source_root, &package_entries);
     let module_edges = graph::module_edges(&module_of, &edges);
-    let production_edges = edges
-        .iter()
-        .filter(|e| !tests.contains(&e.from) && !tests.contains(&e.to));
-    let (cycles, type_only_cycles) = quality::cycles(
-        &module_of,
-        production_edges,
-        &entries,
-        &barrels,
-        source.language == model::Language::Go,
-        config.all_kinds,
-    );
-    let mut metrics = graph::modules(&module_of, pairs.keys());
-    quality::metrics(&mut metrics, &module_of, &pairs);
+    let (cycles, type_only_cycles, mut metrics) = if let Some(cache) = cache {
+        let work = cache
+            .update(
+                module_of.clone(),
+                edges.clone(),
+                incremental::Options {
+                    entries: entries.clone(),
+                    barrels: barrels.clone(),
+                    tests: tests.clone(),
+                    directory_units: source.language == model::Language::Go,
+                    all_kinds: config.all_kinds,
+                },
+            )
+            .expect("validated analysis endpoints");
+        if let Some(reason) = work.fallback {
+            eprintln!("daemon: full analysis fallback: {reason}");
+        }
+        (
+            cache.cycles().to_vec(),
+            cache.deferred_cycles().to_vec(),
+            cache.modules().to_vec(),
+        )
+    } else {
+        let (cycles, deferred) = quality::cycles(
+            &module_of,
+            edges
+                .iter()
+                .filter(|e| !tests.contains(&e.from) && !tests.contains(&e.to)),
+            &entries,
+            &barrels,
+            source.language == model::Language::Go,
+            config.all_kinds,
+        );
+        let mut metrics = graph::modules(&module_of, pairs.keys());
+        quality::metrics(&mut metrics, &module_of, &pairs);
+        (cycles, deferred, metrics)
+    };
     for module in &mut metrics {
         if !config.legacy_module_classes
             && module_of
