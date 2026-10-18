@@ -898,8 +898,12 @@ fn scan_doc(
                 (raw, source_dir.to_owned())
             }
             Language::Python => {
-                let package =
-                    grimp::package(root, source_dir, args.package.as_deref(), &excludes_set)?;
+                let package = grimp::package(
+                    root,
+                    source_dir,
+                    args.package.as_deref(),
+                    &collect::globset(&excludes)?,
+                )?;
                 python_package = Some(package.clone());
                 let json = match input {
                     Some(json) => json,

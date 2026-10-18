@@ -131,7 +131,6 @@ fn py_cycles_mapping_barrels_and_cycle() {
 
 #[test]
 fn python_package_detection_finds_namespace_packages_and_skips_tests() {
-    use archgraph::collect::{DEFAULT_EXCLUDES, TEST_EXCLUDES, globset, grimp};
     let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("namespace-package");
     let _ = std::fs::remove_dir_all(&root);
     // app has no __init__.py; tests has one but is excluded; docs holds no Python.
@@ -145,17 +144,22 @@ fn python_package_detection_finds_namespace_packages_and_skips_tests() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, text).unwrap();
     }
-    let defaults: Vec<String> = DEFAULT_EXCLUDES
-        .iter()
-        .chain(TEST_EXCLUDES)
-        .map(|g| g.to_string())
-        .collect();
-    let excludes = globset(&defaults).unwrap();
-    assert_eq!(grimp::package(&root, ".", None, &excludes).unwrap(), "app");
+    let dump = json!({ "grimp_version": "3.17", "modules": ["app", "app.service"], "imports": [] });
+    let input = common::write_tmp("namespace-package.json", &dump.to_string());
+    let args = [
+        root.to_str().unwrap(),
+        "--language",
+        "python",
+        "--collector-input",
+        &input,
+    ];
+    let (doc, _, _) = common::scan(&args);
+    assert_eq!(doc["config"]["source_root"], "app");
 
     // With tests kept, two packages: ambiguous.
-    let err = grimp::package(&root, ".", None, &globset(&[]).unwrap()).unwrap_err();
-    assert!(err.to_string().contains("app, tests"), "{err}");
+    let out = common::archgraph(&[&["scan"], &args[..], &["--include-tests"]].concat());
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(!out.status.success() && err.contains("app, tests"), "{err}");
 }
 
 #[test]
