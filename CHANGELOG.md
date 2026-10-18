@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Daemon watcher filtering now precedes the bounded event queue, preventing Linux file-read traffic from causing repeated startup refreshes while retaining real edits, overflow and rescan handling.
+
 - `archgraph/v1.2` adds stable finding IDs, typed fix recipes with structured verification and expected graph deltas, explicit forbidden-edge/deep-import findings, and advisory diagnostics for evidence without concrete edits. Existing v1/v1.1 inputs remain readable; compatibility exports retain the legacy finding shape.
 - `propose`, `apply --dry-run|--yes` and `verify` share recipes with MCP. Conservative mechanical plans use exact AST byte ranges, checked Git moves, local proposal/apply baselines, post-edit rescans and rollback on verification failure. Interface extraction and splits remain agent instructions; unavailable predictions are explicit rather than fabricated.
 - Finding ranking defaults to hotspot × confidence × pair reduction; `--rank legacy` retains the previous hotspot-first ordering. Guide and agent skills explain planning, staged moves versus worktree rewrites, verification predicates and language limits. Pinned showcase recipe outcomes are recorded separately.

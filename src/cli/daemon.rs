@@ -709,6 +709,25 @@ fn startup_stamps(root: &Path, extra: &[PathBuf]) -> Result<BTreeMap<PathBuf, Op
         .collect())
 }
 
+fn enqueue(
+    tx: &mpsc::SyncSender<notify::Result<notify::Event>>,
+    overflow: &std::sync::atomic::AtomicBool,
+    root: &Path,
+    event: notify::Result<notify::Event>,
+) {
+    // Linux reports our own reads; discard them before they can overflow the queue.
+    if let Ok(event) = &event
+        && !event.need_rescan()
+        && (event.kind.is_access()
+            || (!event.paths.is_empty() && event.paths.iter().all(|p| ignored(p, root))))
+    {
+        return;
+    }
+    if tx.try_send(event).is_err() {
+        overflow.store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
 fn drain(
     rx: &mpsc::Receiver<notify::Result<notify::Event>>,
     root: &Path,
@@ -717,11 +736,11 @@ fn drain(
     while let Ok(event) = rx.try_recv() {
         match event {
             Ok(event) => {
-                if event.kind.is_access() {
-                    continue;
-                }
                 if event.need_rescan() {
                     dirty.insert(root.to_owned());
+                }
+                if event.kind.is_access() {
+                    continue;
                 }
                 for p in event.paths {
                     if p.is_dir() && event.kind.is_modify() {
@@ -884,13 +903,12 @@ pub(super) fn serve(mut args: Serve) -> Result<ExitCode> {
     let (tx, rx) = mpsc::sync_channel(1024);
     let overflow = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let watch_overflow = overflow.clone();
+    let watch_root = root.clone();
     let mut watcher = if args.once {
         None
     } else {
         Some(notify::recommended_watcher(move |event| {
-            if tx.try_send(event).is_err() {
-                watch_overflow.store(true, std::sync::atomic::Ordering::Relaxed);
-            }
+            enqueue(&tx, &watch_overflow, &watch_root, event);
         })?)
     };
     if let Some(w) = &mut watcher {
@@ -1176,6 +1194,76 @@ mod tests {
             .unwrap();
         drain(&rx, root, &mut dirty);
         assert!(dirty.contains(root));
+    }
+    #[test]
+    fn watcher_reads_and_private_writes_cannot_overflow_before_a_source_edit() {
+        let root = Path::new("/repo");
+        let (tx, rx) = mpsc::sync_channel(2);
+        let overflow = std::sync::atomic::AtomicBool::new(false);
+        for _ in 0..4 {
+            let read = notify::Event::new(notify::EventKind::Access(
+                notify::event::AccessKind::Open(notify::event::AccessMode::Read),
+            ))
+            .add_path(root.join("src/a.ts"));
+            enqueue(&tx, &overflow, root, Ok(read));
+            let log_write = notify::Event::new(notify::EventKind::Modify(
+                notify::event::ModifyKind::Data(notify::event::DataChange::Any),
+            ))
+            .add_path(root.join(".archgraph/regression.log"));
+            enqueue(&tx, &overflow, root, Ok(log_write));
+        }
+        let source = root.join("src/b.ts");
+        let edit = notify::Event::new(notify::EventKind::Modify(notify::event::ModifyKind::Data(
+            notify::event::DataChange::Any,
+        )))
+        .add_path(root.join(".archgraph/regression.log"))
+        .add_path(source.clone());
+        enqueue(&tx, &overflow, root, Ok(edit));
+        assert!(!overflow.load(std::sync::atomic::Ordering::Relaxed));
+        let mut dirty = BTreeSet::new();
+        drain(&rx, root, &mut dirty);
+        assert_eq!(dirty, BTreeSet::from([source]));
+    }
+    #[test]
+    fn watcher_filter_preserves_rescans_errors_and_real_overflow() {
+        let root = Path::new("/repo");
+        let (tx, rx) = mpsc::sync_channel(2);
+        let overflow = std::sync::atomic::AtomicBool::new(false);
+        let rescan = notify::Event::new(notify::EventKind::Access(notify::event::AccessKind::Any))
+            .add_path(root.join(".archgraph/regression.log"))
+            .set_flag(notify::event::Flag::Rescan);
+        enqueue(&tx, &overflow, root, Ok(rescan));
+        let mut dirty = BTreeSet::new();
+        drain(&rx, root, &mut dirty);
+        assert_eq!(dirty, BTreeSet::from([root.to_owned()]));
+        dirty.clear();
+        enqueue(
+            &tx,
+            &overflow,
+            root,
+            Err(notify::Error::generic("fixture overflow")),
+        );
+        drain(&rx, root, &mut dirty);
+        assert_eq!(dirty, BTreeSet::from([root.to_owned()]));
+        enqueue(
+            &tx,
+            &overflow,
+            root,
+            Ok(notify::Event::new(notify::EventKind::Other)),
+        );
+        assert!(rx.try_recv().unwrap().unwrap().paths.is_empty());
+        for _ in 0..3 {
+            enqueue(
+                &tx,
+                &overflow,
+                root,
+                Ok(
+                    notify::Event::new(notify::EventKind::Create(notify::event::CreateKind::File))
+                        .add_path(root.join("src/new.ts")),
+                ),
+            );
+        }
+        assert!(overflow.load(std::sync::atomic::Ordering::Relaxed));
     }
     #[test]
     fn oversized_frame_is_rejected_before_allocation() {

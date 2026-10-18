@@ -1,10 +1,10 @@
 {
-  "binary_sha256": "d8904d3947dbe1f474d9575c00b37171a8ec6b04fbd32f530ffa60813c80675d",
+  "binary_sha256": "e33218e7154bcf2e3a7a84e4f24e88d4a6d29282b8f7e1c0ff3a678cbe746432",
   "binary_source": "/Users/dan/Work/archgraph/target/debug/archgraph",
   "code_changed_during_audit": false,
-  "code_input_sha256": "9794b79dc7784bebb6d9a0fcf7c3aab84325d7e891eb5d8c4833ac0751f7dedd",
-  "code_input_sha256_after": "9794b79dc7784bebb6d9a0fcf7c3aab84325d7e891eb5d8c4833ac0751f7dedd",
-  "elapsed_seconds": 123.634933,
+  "code_input_sha256": "d11d5fa2cdaa21b9e7e841b814e65770aa12742de748f200ada74486efd741f3",
+  "code_input_sha256_after": "d11d5fa2cdaa21b9e7e841b814e65770aa12742de748f200ada74486efd741f3",
+  "elapsed_seconds": 96.572224,
   "inventory_sha256": "5430972f519a77b131ca9ad16f688a7bcc7c221adfef2babae0566c77c1a5496",
   "inventory_source": "/Users/dan/Work/archgraph/target/debug/examples/recipe_inventory",
   "manifest_sha256": "1a91d643c65defb2098bff2edf1e48864d65cccfc5603202dd72ea4209425533",
@@ -13,7 +13,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-1b8c4f38ba2581b6f6255929dade312d6a530af0eefc03ae57d0ef32005d2ab0",
@@ -23,7 +23,7 @@
           "/private/tmp/archgraph-edge-quality/repos/nest"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-1b8c4f38ba2581b6f6255929dade312d6a530af0eefc03ae57d0ef32005d2ab0",
@@ -37,7 +37,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 1.289883,
+        "elapsed_seconds": 1.324064,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -343,7 +343,7 @@
       "path": ".",
       "pin": "1c2f689518412cbc6a6bc09662dd5cfed779f2bf",
       "propose": {
-        "elapsed_seconds": 5.389348,
+        "elapsed_seconds": 1.990094,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "abc442f35b0a576b0087a43361ab89363e3bd081db0df68682763c937ab6a8bc"
@@ -431,7 +431,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-1755e994cb3f8e965330af81fcd3bc5f5e95d5bf2ee5f3d88a4c161d87fb5745",
@@ -441,7 +441,7 @@
           "/private/tmp/archgraph-edge-quality/repos/next.js/packages/next"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-1755e994cb3f8e965330af81fcd3bc5f5e95d5bf2ee5f3d88a4c161d87fb5745",
@@ -455,7 +455,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 2.97915,
+        "elapsed_seconds": 2.909986,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -3897,7 +3897,7 @@
       "path": "packages/next",
       "pin": "00c4ba8b6e268c792da64207fa9453132bfcec5f",
       "propose": {
-        "elapsed_seconds": 3.641515,
+        "elapsed_seconds": 3.493905,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "a01574049b1e0296a21a8e0c262c15fc37752848d6d0d300da70e4f8c5255537"
@@ -4018,7 +4018,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-3cb8d012f56045995419e396d10d8546a389f044f1bb1b0f24eb486265f06220",
@@ -4028,7 +4028,7 @@
           "/private/tmp/archgraph-edge-quality/repos/excalidraw/packages/excalidraw"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-3cb8d012f56045995419e396d10d8546a389f044f1bb1b0f24eb486265f06220",
@@ -4042,7 +4042,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 0.367169,
+        "elapsed_seconds": 0.380148,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -5220,7 +5220,7 @@
       "path": "packages/excalidraw",
       "pin": "4c37956ba5f04ec342a9d9d5891a38f22c5b7b4e",
       "propose": {
-        "elapsed_seconds": 0.367464,
+        "elapsed_seconds": 0.46388,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "0c36f521e71b687c67115c6866e0c97ff50e7ed2113249aba29be662dac7936f"
@@ -5326,7 +5326,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-ca5d46cff599b8b980b9a50f6d53fb8422b5ae2864a309a189cea9bfd012ab34",
@@ -5336,7 +5336,7 @@
           "/private/tmp/archgraph-edge-quality/repos/immich/server"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-ca5d46cff599b8b980b9a50f6d53fb8422b5ae2864a309a189cea9bfd012ab34",
@@ -5350,7 +5350,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 0.375212,
+        "elapsed_seconds": 0.371394,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -5665,7 +5665,7 @@
       "path": "server",
       "pin": "3ae71117413cc0a79e4a0555df015e3ffde11786",
       "propose": {
-        "elapsed_seconds": 0.420521,
+        "elapsed_seconds": 0.416593,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "b7b475f64c9495ae7ecbac1adb6d359ef5aa7978d1d3e469f45d600d00db8b6b"
@@ -5751,7 +5751,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-58d02779d0ab7f55b6d8bf2fd3273fa9551e62b8cd7a8ebf03db6476d6966732",
@@ -5761,7 +5761,7 @@
           "/private/tmp/archgraph-edge-quality/repos/activepieces/packages/server/api"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-58d02779d0ab7f55b6d8bf2fd3273fa9551e62b8cd7a8ebf03db6476d6966732",
@@ -5775,7 +5775,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 2.250553,
+        "elapsed_seconds": 2.267317,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -9464,7 +9464,7 @@
       "path": "packages/server/api",
       "pin": "55134042a88da01be2229e06302a78c80f209ea0",
       "propose": {
-        "elapsed_seconds": 2.692039,
+        "elapsed_seconds": 2.536238,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "fbe3f087609805efe8475636be92e4a52d16e588130d0b32d57424aa65aca065"
@@ -9573,7 +9573,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-20e18205fa2386e4028061e97ca395012c3dfc40af464a8051ec60db3ecca517",
@@ -9583,7 +9583,7 @@
           "/private/tmp/archgraph-edge-quality/repos/payload/packages/payload"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-20e18205fa2386e4028061e97ca395012c3dfc40af464a8051ec60db3ecca517",
@@ -9597,7 +9597,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 2.047175,
+        "elapsed_seconds": 2.059645,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -10913,7 +10913,7 @@
       "path": "packages/payload",
       "pin": "f177a26219996b75afc5d45cd07165001e9afd8c",
       "propose": {
-        "elapsed_seconds": 2.271893,
+        "elapsed_seconds": 2.151382,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "5a12193ac6ce7e01c8cfdaa50452680e3a6baa321e389f3e1da91a2fd67e30ac"
@@ -11011,7 +11011,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-b8574eb1a7cbeb60d49688b146070ffc9dd400e326c747b0e1e6a01cefad7dbd",
@@ -11021,7 +11021,7 @@
           "/private/tmp/archgraph-edge-quality/repos/typeorm/packages/typeorm/src"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-b8574eb1a7cbeb60d49688b146070ffc9dd400e326c747b0e1e6a01cefad7dbd",
@@ -11048,7 +11048,7 @@
             "to": "driver/driver-factory/DriverFactory.ts"
           }
         ],
-        "elapsed_seconds": 0.54949,
+        "elapsed_seconds": 0.548196,
         "exit_code": 0,
         "moves": [
           {
@@ -11619,7 +11619,7 @@
       "path": "packages/typeorm/src",
       "pin": "fe92394287516feeada6e9c308ebe22deca2458e",
       "propose": {
-        "elapsed_seconds": 0.546497,
+        "elapsed_seconds": 0.535766,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "5c5cb38e312d76b002723f8d1aaa7792f0e45884d9452c3328cae0f3646ae040"
@@ -11722,7 +11722,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-c988b0fa25f15ccac837d64b0368ac852aeca38c1e534a89d8e662e35d5505b7",
@@ -11732,7 +11732,7 @@
           "/private/tmp/archgraph-edge-quality/repos/vite/packages/vite"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-c988b0fa25f15ccac837d64b0368ac852aeca38c1e534a89d8e662e35d5505b7",
@@ -11746,7 +11746,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 0.148249,
+        "elapsed_seconds": 0.146398,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -11962,7 +11962,7 @@
       "path": "packages/vite",
       "pin": "928e721b36690ac0f3f118290a21fc0cc4349055",
       "propose": {
-        "elapsed_seconds": 0.165076,
+        "elapsed_seconds": 0.16445,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "b47219bdeda1b086f49c978bc75881801fb8d6f826547acb356fb875725c7477"
@@ -12061,7 +12061,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-ee888c5d0583a4f57c5f22983498bd4097ded5e68a6e743b7c41192d8caa055d",
@@ -12071,7 +12071,7 @@
           "/private/tmp/archgraph-edge-quality/repos/outline"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-ee888c5d0583a4f57c5f22983498bd4097ded5e68a6e743b7c41192d8caa055d",
@@ -12085,7 +12085,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 4.912521,
+        "elapsed_seconds": 4.922889,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -13531,7 +13531,7 @@
       "path": ".",
       "pin": "095b096c2197f35e57057e6cc6ae9d7ef562330a",
       "propose": {
-        "elapsed_seconds": 5.203228,
+        "elapsed_seconds": 4.942742,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "93b71f8042f3cc1a5b91914a714c587167856812dad3e903c7a105d52c15f270"
@@ -13619,7 +13619,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-1d26c1e1dc987732950cda2201211f81ece51ece8667530d5be7c2763bb5a746",
@@ -13629,7 +13629,7 @@
           "/private/tmp/archgraph-edge-quality/repos/strapi/packages/core/core/src"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-1d26c1e1dc987732950cda2201211f81ece51ece8667530d5be7c2763bb5a746",
@@ -13643,7 +13643,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 0.073764,
+        "elapsed_seconds": 0.070476,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -13812,7 +13812,7 @@
       "path": "packages/core/core/src",
       "pin": "d764743be322a70b98cb7b43c5d1a3e0d67d7efd",
       "propose": {
-        "elapsed_seconds": 0.152945,
+        "elapsed_seconds": 0.13136,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "41ac13d4047cf6ee9eb7de2e5f43bd82a7b9bb3bbca5522b05f6378711785250"
@@ -13892,7 +13892,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-c015b376c93b2b31ccffae3adcb23b57e9727a12a28fe757184e5faca8931fc4",
@@ -13902,7 +13902,7 @@
           "/private/tmp/archgraph-edge-quality/repos/trpc/packages/server"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-c015b376c93b2b31ccffae3adcb23b57e9727a12a28fe757184e5faca8931fc4",
@@ -13916,7 +13916,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 0.043459,
+        "elapsed_seconds": 0.037564,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -14136,7 +14136,7 @@
       "path": "packages/server",
       "pin": "10e2ef98f7842b94eb3026e4f9bcfe62cc39b088",
       "propose": {
-        "elapsed_seconds": 0.067839,
+        "elapsed_seconds": 0.051861,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "1cd64ea59755cc35a4e43a97868f59b3a12d7505e709881566b8196359fb307c"
@@ -14218,7 +14218,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-de6bd44c53e2d59184be1ac34de3b1f51b46596ea745ef3c59341a91c40a109c",
@@ -14228,7 +14228,7 @@
           "/private/tmp/archgraph-edge-quality/repos/django"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-de6bd44c53e2d59184be1ac34de3b1f51b46596ea745ef3c59341a91c40a109c",
@@ -14242,7 +14242,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 1.570913,
+        "elapsed_seconds": 1.517051,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -14473,7 +14473,7 @@
       "path": ".",
       "pin": "d430084791a61b31cecec132bce3dca19194f7f2",
       "propose": {
-        "elapsed_seconds": 1.630154,
+        "elapsed_seconds": 1.631927,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "f9ffab1fe3a203f53650f3ae058b5196147c0cbba0a2401592e272ea1824060d"
@@ -14554,7 +14554,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-3160a19a52c85f1e739616f0165cba66f04d1611a515f35dd7dc3db6da83d37f",
@@ -14564,7 +14564,7 @@
           "/private/tmp/archgraph-edge-quality/repos/fastapi"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-3160a19a52c85f1e739616f0165cba66f04d1611a515f35dd7dc3db6da83d37f",
@@ -14578,7 +14578,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 0.023431,
+        "elapsed_seconds": 0.025208,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -15060,7 +15060,7 @@
       "path": ".",
       "pin": "0b919816378eaa773df7ce4204414c712c9fdbea",
       "propose": {
-        "elapsed_seconds": 0.049082,
+        "elapsed_seconds": 0.048056,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "1da8e5a46e430732e12aa1b7c3dc74496a19efdd24d5523ead7cdea151ced6ed"
@@ -15167,7 +15167,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-d3ce72f6cb82e83842c546ee425a0f7343dc9aafe9aba3fababa19988e7f6a8e",
@@ -15177,7 +15177,7 @@
           "/private/tmp/archgraph-edge-quality/repos/pydantic"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-d3ce72f6cb82e83842c546ee425a0f7343dc9aafe9aba3fababa19988e7f6a8e",
@@ -15191,7 +15191,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 0.071263,
+        "elapsed_seconds": 0.063747,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -15451,7 +15451,7 @@
       "path": ".",
       "pin": "5adfeaaaea947f81f0f01868604f219084ec151a",
       "propose": {
-        "elapsed_seconds": 0.13436,
+        "elapsed_seconds": 0.084088,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "11a5bf73a18f39c3f9f617e98f241b8dd4ebe07b85e3f060d950ffdaa59efc42"
@@ -15561,7 +15561,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-3d2f7ccfaca03e14cd63574d433a3822b004b692dda08d24a9cb90d44c197a71",
@@ -15571,7 +15571,7 @@
           "/private/tmp/archgraph-edge-quality/repos/scrapy"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-3d2f7ccfaca03e14cd63574d433a3822b004b692dda08d24a9cb90d44c197a71",
@@ -15585,7 +15585,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 1.458903,
+        "elapsed_seconds": 1.419432,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -16008,7 +16008,7 @@
       "path": ".",
       "pin": "fbfc89ae7b72531a97fb4ef6d65ef3af392aa45c",
       "propose": {
-        "elapsed_seconds": 2.734139,
+        "elapsed_seconds": 1.553667,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "5736090043407139fd8bc787e298d7beeeed9432a80a142273ea7683fbb94eec"
@@ -16103,7 +16103,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-733858a1482ac5679a8b9da375568a529456c23287dd0ff92cbce7ae1cc81af5",
@@ -16113,7 +16113,7 @@
           "/private/tmp/archgraph-edge-quality/repos/celery"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-733858a1482ac5679a8b9da375568a529456c23287dd0ff92cbce7ae1cc81af5",
@@ -16127,7 +16127,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 0.192011,
+        "elapsed_seconds": 0.618867,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -16339,7 +16339,7 @@
       "path": ".",
       "pin": "ef37e616ef6726a2e08126635c000f3eacffcbc2",
       "propose": {
-        "elapsed_seconds": 0.147771,
+        "elapsed_seconds": 0.421378,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "e564d071fb3cabf45daeabf8bc5a6fad7b119ac6eadc96a24460853d647a7b6b"
@@ -16421,7 +16421,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-618e92586a4ee1a71ce4acd4563dfdcc53ff08d8efb1c5143c037597b63802c9",
@@ -16431,7 +16431,7 @@
           "/private/tmp/archgraph-edge-quality/repos/zulip"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-618e92586a4ee1a71ce4acd4563dfdcc53ff08d8efb1c5143c037597b63802c9",
@@ -16445,7 +16445,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 0.943195,
+        "elapsed_seconds": 0.803711,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -18460,7 +18460,7 @@
       "path": ".",
       "pin": "fb4f7abc378de7308a572d9af375101707e0c1ee",
       "propose": {
-        "elapsed_seconds": 0.818305,
+        "elapsed_seconds": 0.842552,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "43742aafb05f4ae07ab93b8259111dd151062a053c0e1a4eb212f92ad27fbf54"
@@ -18557,7 +18557,7 @@
     {
       "commands": [
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "propose",
           "ag-31e505bb59f3b96087e53ca157c6207ead1bb214c4ed96af8636dc37e6e67fec",
@@ -18567,7 +18567,7 @@
           "/private/tmp/archgraph-edge-quality/repos/sqlalchemy/lib"
         ],
         [
-          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-zwggisih/archgraph",
+          "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-recipe-audit-s5_h5u6h/archgraph",
           "--no-daemon",
           "apply",
           "ag-31e505bb59f3b96087e53ca157c6207ead1bb214c4ed96af8636dc37e6e67fec",
@@ -18581,7 +18581,7 @@
       "dry_run": {
         "can_apply": false,
         "changes": [],
-        "elapsed_seconds": 2.202147,
+        "elapsed_seconds": 0.74705,
         "exit_code": 2,
         "moves": [],
         "pending": [
@@ -18749,7 +18749,7 @@
       "path": "lib",
       "pin": "262c0f0ef49a46fbc4c58df167a858d58313032b",
       "propose": {
-        "elapsed_seconds": 2.903574,
+        "elapsed_seconds": 0.65591,
         "exit_code": 0,
         "stderr": "",
         "stdout_sha256": "893e70cd334c7b998e848c9c5119ed3cf7d00c117b0b03b58b059d1d933c6848"
@@ -18828,5 +18828,5 @@
     }
   ],
   "script_sha256": "b7db38d76839fdc7242755ca9989bcf88a60ac158b9d3377dfc2ab116f075b2b",
-  "working_revision": "54540f82c6b31c8c5d764d1835368b8c130d9fb4"
+  "working_revision": "ec86673b00bef2abbb491d987d5bef16640d9ae4"
 }

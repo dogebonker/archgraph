@@ -2,7 +2,7 @@
 
 Actual CLI `propose` and `apply --dry-run` results for the original 20 TypeScript/Python showcase repositories. Findings are recomputed and ranked by the current engine from the saved edge-quality graphs; the source collector is not rerun. No recipes were applied.
 
-Binary SHA-256: `d8904d3947dbe1f474d9575c00b37171a8ec6b04fbd32f530ffa60813c80675d`. Manifest SHA-256: `1a91d643c65defb2098bff2edf1e48864d65cccfc5603202dd72ea4209425533`. Full recipes, exact commands, input graph hashes and source/index checks are in [`recipes-results.json`](recipes-results.json).
+Binary SHA-256: `e33218e7154bcf2e3a7a84e4f24e88d4a6d29282b8f7e1c0ff3a678cbe746432`. Manifest SHA-256: `1a91d643c65defb2098bff2edf1e48864d65cccfc5603202dd72ea4209425533`. Full recipes, exact commands, input graph hashes and source/index checks are in [`recipes-results.json`](recipes-results.json).
 
 The executables are frozen private copies for the whole audit, even if Cargo rebuilds concurrently. The JSON records the working revision and source-input hashes; binary hashes identify the measured engine, independently of uncommitted or concurrent source edits.
 
