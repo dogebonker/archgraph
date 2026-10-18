@@ -45,6 +45,9 @@
     if (unique.length > 1 || raw.split('/').some(s => /[<>]/.test(s) && !/^<[\p{L}\p{N}_]+>$/u.test(s))) throw Error('unsupported capture: '+raw);
     const token = unique[0];
     const any = glob(token ? raw.split(token).join('*') : raw);
+    const fragments = token && raw.split(token).map(p => glob(p).source.slice(4,-2));
+    // The reachability search tests the same rule target against many paths: compile it once.
+    const compiled = new Map();
     return {
       raw, token,
       bind(path) {
@@ -52,7 +55,6 @@
         if (!token) return null;
         // Bind literal path segments, including characters with glob meaning.
         for (const value of path.split('/')) {
-          const fragments = raw.split(token).map(p => glob(p).source.slice(4,-2));
           const literal = value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
           if (new RegExp('^(?:'+fragments.join(literal)+')$').test(path)) return value;
         }
@@ -60,11 +62,15 @@
       },
       instance(text, value) { return token && value !== null && value !== undefined ? text.split(token).join(value) : text; },
       matches(text, value, path) {
-        if ([...text.matchAll(/<[^>]*>/g)].some(m=>m[0]!==token)) throw Error('unbound capture: '+text);
-        if (!token || value === null || value === undefined) return glob(text).test(path);
-        const fragments = text.split(token).map(p => glob(p).source.slice(4,-2));
-        const literal = value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-        return new RegExp('^(?:'+fragments.join(literal)+')$').test(path);
+        const bound = token && value !== null && value !== undefined, id = bound ? text+'\0'+value : text;
+        let re = compiled.get(id);
+        if (!re) {
+          if ([...text.matchAll(/<[^>]*>/g)].some(m=>m[0]!==token)) throw Error('unbound capture: '+text);
+          const literal = bound && value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+          re = bound ? new RegExp('^(?:'+text.split(token).map(p => glob(p).source.slice(4,-2)).join(literal)+')$') : glob(text);
+          compiled.set(id, re);
+        }
+        return re.test(path);
       }
     };
   }
