@@ -613,6 +613,31 @@ fn drift_skips_failed_scans_but_rejects_an_entirely_failed_timeline() {
 
 #[test]
 #[cfg(unix)]
+fn checkout_removes_clones_left_by_dead_processes() {
+    let (root, _, _) = repo("stale-clones");
+    let mut exited = Command::new("true").spawn().unwrap();
+    exited.wait().unwrap();
+    let mut running = Command::new("sleep").arg("30").spawn().unwrap();
+    let temp = std::env::temp_dir();
+    let stale = temp.join(format!("archgraph-history-{}-1-0", exited.id()));
+    let live = temp.join(format!("archgraph-history-{}-1-0", running.id()));
+    let unrelated = temp.join(format!("archgraph-history-{}-other", exited.id()));
+    for dir in [&stale, &live, &unrelated] {
+        fs::create_dir_all(dir.join("repo")).unwrap();
+    }
+    drop(archgraph::history::Checkout::new(&root).unwrap());
+    running.kill().unwrap();
+    running.wait().unwrap();
+    let (live_kept, unrelated_kept) = (live.exists(), unrelated.exists());
+    fs::remove_dir_all(&live).unwrap();
+    fs::remove_dir_all(&unrelated).unwrap();
+    assert!(!stale.exists());
+    assert!(live_kept);
+    assert!(unrelated_kept);
+}
+
+#[test]
+#[cfg(unix)]
 fn drift_keeps_scans_whose_cache_writes_fail() {
     use archgraph::history::{HistoryOptions, collect_with_options};
     use std::os::unix::fs::PermissionsExt;

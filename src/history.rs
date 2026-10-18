@@ -208,6 +208,8 @@ impl Checkout {
         ));
         fs::create_dir(&path).context("creating history temporary directory")?;
         let temp = Temp(path);
+        #[cfg(unix)]
+        remove_stale(&temp.0);
         git(
             &temp.0,
             &[
@@ -233,6 +235,51 @@ impl Checkout {
         )?;
         git(&checkout, &["clean", "-ffdqx"])?;
         Ok(checkout.join(&self.relative))
+    }
+}
+
+/// Removes clones that interrupted runs left behind (a signal skips `Temp`'s drop): this
+/// user's `archgraph-history-<pid>-<nanos>-<sequence>` directories whose process is gone.
+#[cfg(unix)]
+fn remove_stale(ours: &Path) {
+    use std::os::unix::fs::MetadataExt;
+    let (Some(parent), Ok(own)) = (ours.parent(), fs::symlink_metadata(ours)) else {
+        return;
+    };
+    let Ok(entries) = fs::read_dir(parent) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let Some(parts) = name
+            .to_str()
+            .and_then(|name| name.strip_prefix("archgraph-history-"))
+            .map(|rest| rest.split('-').collect::<Vec<_>>())
+        else {
+            continue;
+        };
+        let Ok(pid) = parts[0].parse::<u32>() else {
+            continue;
+        };
+        if parts.len() != 3
+            || !parts
+                .iter()
+                .all(|part| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit()))
+            || pid == std::process::id()
+            || !fs::symlink_metadata(entry.path())
+                .is_ok_and(|metadata| metadata.is_dir() && metadata.uid() == own.uid())
+        {
+            continue;
+        }
+        // std cannot probe a process; when `kill` cannot run, the directory stays.
+        let gone = Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .stderr(std::process::Stdio::null())
+            .status()
+            .is_ok_and(|status| !status.success());
+        if gone {
+            let _ = fs::remove_dir_all(entry.path());
+        }
     }
 }
 
