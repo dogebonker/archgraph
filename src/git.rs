@@ -96,33 +96,28 @@ pub fn has_tracked_changes(root: &Path, paths: &[String]) -> Result<bool> {
     if paths.is_empty() {
         return Ok(false);
     }
-    let out = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .env("GIT_OPTIONAL_LOCKS", "0")
-        .args([
-            "-c",
-            "core.fsmonitor=false",
-            "-c",
-            "core.hooksPath=/dev/null",
-            "-c",
-            "diff.autoRefreshIndex=false",
-            "diff",
-            "--quiet",
-            "--no-ext-diff",
-            "--no-textconv",
-            "HEAD",
-            "--",
-        ])
-        .args(paths.iter().map(|p| format!(":(literal){p}")))
-        .output()
-        .context("checking changed tracked files")?;
-    match out.status.code() {
-        Some(0) => Ok(false),
-        Some(1) => Ok(true),
-        _ => bail!(
-            "git dirty proof failed: {}; use the complete Git status check",
-            String::from_utf8_lossy(&out.stderr).trim()
-        ),
-    }
+    let paths: Vec<_> = paths
+        .iter()
+        .map(|path| format!(":(literal){path}"))
+        .collect();
+    // Quiet/name-only diffs can flag stat-only changes; text numstat verifies content changes.
+    let mut args = vec![
+        "diff",
+        "--numstat",
+        "-z",
+        "--no-renames",
+        "--no-ext-diff",
+        "--no-textconv",
+        "HEAD",
+        "--",
+    ];
+    args.extend(paths.iter().map(String::as_str));
+    let output = run(root, &args)
+        .context("checking changed tracked files; use the complete Git status check on failure")?;
+    let mut rows = output
+        .split(|byte| *byte == 0)
+        .filter(|row| !row.is_empty());
+    // Binary/metadata-only stats may also be stat-only; defer to the caller's full status check.
+    Ok(!rows.clone().any(|row| row.starts_with(b"-\t-\t"))
+        && rows.any(|row| !row.starts_with(b"0\t0\t")))
 }
