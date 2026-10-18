@@ -109,29 +109,19 @@ pub fn run(root: &Path, go: &str, dirs: &[String]) -> Result<Vec<u8>> {
     } else {
         go.to_owned()
     };
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_nanos());
-    let dir = std::env::temp_dir().join(format!("archgraph-go-{}-{nanos}", std::process::id()));
-    fs::create_dir(&dir).with_context(|| format!("creating {}", dir.display()))?;
-    let out = fs::write(dir.join("go_dump.go"), DUMP)
-        .map_err(anyhow::Error::from)
-        .and_then(|()| {
-            super::run(
-                Command::new(&go)
-                    .args(["run", "go_dump.go"])
-                    .arg(&root)
-                    .arg(&go)
-                    .args(dirs)
-                    .current_dir(&dir)
-                    .env("PWD", &dir)
-                    .envs(ENV.iter().copied()),
-            )
-        });
-    let _ = fs::remove_dir_all(&dir);
-    let out = out.with_context(|| {
-        format!("running {go} (install Go from https://go.dev/dl, or pass --go)")
-    })?;
+    let dir = super::TempDir::new("go")?;
+    fs::write(dir.path().join("go_dump.go"), DUMP)?;
+    let out = super::run(
+        Command::new(&go)
+            .args(["run", "go_dump.go"])
+            .arg(&root)
+            .arg(&go)
+            .args(dirs)
+            .current_dir(dir.path())
+            .env("PWD", dir.path())
+            .envs(ENV.iter().copied()),
+    )
+    .with_context(|| format!("running {go} (install Go from https://go.dev/dl, or pass --go)"))?;
     let stderr = String::from_utf8_lossy(&out.stderr);
     if !out.status.success() {
         // The helper compiles with Go 1.21 or later; a compile error names its own file.

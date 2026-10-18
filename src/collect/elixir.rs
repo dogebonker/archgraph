@@ -4,7 +4,6 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Component, Path};
 use std::process::Command;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use anyhow::{Context, Result, bail, ensure};
 use serde::Deserialize;
@@ -33,46 +32,35 @@ pub fn run(root: &Path, elixir: &str, policy: &Policy) -> Result<Vec<u8>> {
         .collect();
     files = selected;
     ensure!(!files.is_empty(), "no Elixir source files after excludes");
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)?
-        .as_nanos();
-    static RUN_ID: AtomicU64 = AtomicU64::new(0);
-    let run_id = RUN_ID.fetch_add(1, Ordering::Relaxed);
-    let dir = std::env::temp_dir().join(format!(
-        "archgraph-elixir-{}-{nanos}-{run_id}",
-        std::process::id()
-    ));
-    fs::create_dir(&dir)?;
-    let result = (|| -> Result<_> {
-        fs::write(dir.join("elixir.exs"), include_str!("elixir.exs"))?;
-        let mut command = Command::new(&elixir);
-        command.args(["elixir.exs"]).arg(&root).current_dir(&dir);
-        sanitize(&mut command);
-        let out = super::run_with_input(&mut command, files.join("\0").into_bytes()).with_context(
-            || format!("running {elixir}: install Elixir 1.14 or later, or pass --elixir"),
-        )?;
-        if !out.status.success() {
-            bail!(
-                "Elixir helper failed: {}",
-                String::from_utf8_lossy(&out.stderr).trim()
-            );
-        }
-        for line in String::from_utf8_lossy(&out.stderr)
-            .lines()
-            .filter(|line| line.starts_with("warning:"))
-        {
-            eprintln!("{line}");
-        }
-        let mut value: serde_json::Value =
-            serde_json::from_slice(&out.stdout).context("reading Elixir helper JSON")?;
-        value
-            .as_object_mut()
-            .context("Elixir helper JSON must be an object")?
-            .insert("excluded_files".into(), serde_json::to_value(excluded)?);
-        Ok(serde_json::to_vec(&value)?)
-    })();
-    let _ = fs::remove_dir_all(&dir);
-    result
+    let temp = super::TempDir::new("elixir")?;
+    let dir = temp.path();
+    fs::write(dir.join("elixir.exs"), include_str!("elixir.exs"))?;
+    let mut command = Command::new(&elixir);
+    command.args(["elixir.exs"]).arg(&root).current_dir(dir);
+    sanitize(&mut command);
+    let out =
+        super::run_with_input(&mut command, files.join("\0").into_bytes()).with_context(|| {
+            format!("running {elixir}: install Elixir 1.14 or later, or pass --elixir")
+        })?;
+    if !out.status.success() {
+        bail!(
+            "Elixir helper failed: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    for line in String::from_utf8_lossy(&out.stderr)
+        .lines()
+        .filter(|line| line.starts_with("warning:"))
+    {
+        eprintln!("{line}");
+    }
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&out.stdout).context("reading Elixir helper JSON")?;
+    value
+        .as_object_mut()
+        .context("Elixir helper JSON must be an object")?
+        .insert("excluded_files".into(), serde_json::to_value(excluded)?);
+    Ok(serde_json::to_vec(&value)?)
 }
 
 /// Remove runtime startup flags and project code paths for collection and version probes.

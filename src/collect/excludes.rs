@@ -186,13 +186,6 @@ impl Policy {
     }
 }
 
-struct Temporary(PathBuf);
-impl Drop for Temporary {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
-
 /// Git implements escaping, directory matches, ordered negation and nested .gitignore files.
 fn ignored(root: &Path, paths: &[String], archignore: Option<&str>) -> Result<BTreeSet<String>> {
     if paths.is_empty() {
@@ -220,18 +213,8 @@ fn ignored(root: &Path, paths: &[String], archignore: Option<&str>) -> Result<BT
         ignored.clear();
     }
     // An isolated index also honors ignore files in non-Git roots and roots below a monorepo.
-    let nonce = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)?
-        .as_nanos();
-    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-    let sequence = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let temporary = std::env::temp_dir().join(format!(
-        "archgraph-ignore-{}-{nonce}-{sequence}",
-        std::process::id()
-    ));
-    std::fs::create_dir(&temporary)?;
-    let temp = Temporary(temporary);
-    let git_dir = temp.0.join("git");
+    let temp = super::TempDir::new("ignore")?;
+    let git_dir = temp.path().join("git");
     let init = Command::new("git")
         .args([
             "-c",
@@ -250,7 +233,7 @@ fn ignored(root: &Path, paths: &[String], archignore: Option<&str>) -> Result<BT
             String::from_utf8_lossy(&init.stderr).trim()
         );
     }
-    let ignore_file = temp.0.join("archgraphignore");
+    let ignore_file = temp.path().join("archgraphignore");
     std::fs::write(&ignore_file, archignore.unwrap_or_default())?;
     let mut custom = Command::new("git");
     custom

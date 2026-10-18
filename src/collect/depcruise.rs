@@ -87,13 +87,8 @@ fn cruise(
         }
     };
     // Written outside the scanned repository, removed after the run.
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_nanos());
-    let config = std::env::temp_dir().join(format!(
-        "archgraph-depcruise-{}-{nanos}.json",
-        std::process::id()
-    ));
+    let dir = super::TempDir::new("depcruise")?;
+    let config = dir.path().join("config.json");
     let ts_config = root.join("tsconfig.json").is_file();
     std::fs::write(&config, options(ts_config, pre_compilation))
         .with_context(|| format!("writing {}", config.display()))?;
@@ -103,9 +98,7 @@ fn cruise(
     let running = program.map_or("npx (is Node.js installed?)".into(), |p| {
         p.display().to_string()
     });
-    let out = super::run(cmd.arg(source_dir));
-    let _ = std::fs::remove_file(&config);
-    let out = out.with_context(|| format!("running {running}"))?;
+    let out = super::run(cmd.arg(source_dir)).with_context(|| format!("running {running}"))?;
     Ok(if out.status.success() {
         Ok(out.stdout)
     } else {

@@ -321,16 +321,8 @@ pub fn run(root: &Path, opts: &Options) -> Result<Vec<u8>> {
         bail!("no Cargo.toml in {}", root.display());
     }
     let channels = refuse(&root)?;
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_nanos());
-    let tmp = env::temp_dir().join(format!("archgraph-rust-{}-{nanos}", std::process::id()));
-    fs::create_dir(&tmp).with_context(|| format!("creating {}", tmp.display()))?;
-    let result = fs::canonicalize(&tmp)
-        .map_err(anyhow::Error::from)
-        .and_then(|tmp| run_in(&root, opts, &tmp, &channels));
-    let _ = fs::remove_dir_all(&tmp);
-    result
+    let tmp = super::TempDir::new("rust")?;
+    run_in(&root, opts, &fs::canonicalize(tmp.path())?, &channels)
 }
 
 fn run_in(

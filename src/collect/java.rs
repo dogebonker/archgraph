@@ -32,38 +32,30 @@ pub fn run(root: &Path, java: &str, excludes: &GlobSet) -> Result<Vec<u8>> {
                 .any(|dir| dir.starts_with('.'))
     });
     ensure!(!files.is_empty(), "no Java source files after excludes");
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)?
-        .as_nanos();
-    let dir = std::env::temp_dir().join(format!("archgraph-java-{}-{nanos}", std::process::id()));
-    fs::create_dir(&dir)?;
-    let result = (|| -> Result<_> {
-        fs::write(
-            dir.join("ArchgraphJava.java"),
-            include_str!("ArchgraphJava.java"),
-        )?;
-        let out = super::run_with_input(
-            Command::new(&java)
-                .args(["--class-path", ".", "ArchgraphJava.java"])
-                .arg(&root)
-                .current_dir(&dir)
-                .env_remove("JDK_JAVA_OPTIONS")
-                .env_remove("JAVA_TOOL_OPTIONS")
-                .env_remove("_JAVA_OPTIONS")
-                .env_remove("CLASSPATH"),
-            files.join("\0").into_bytes(),
-        )
-        .with_context(|| format!("running {java}: install JDK 11 or later, or pass --java"))?;
-        if !out.status.success() {
-            bail!(
-                "Java helper failed (requires JDK 11 or later): {}",
-                String::from_utf8_lossy(&out.stderr).trim()
-            );
-        }
-        Ok(out.stdout)
-    })();
-    let _ = fs::remove_dir_all(&dir);
-    result
+    let dir = super::TempDir::new("java")?;
+    fs::write(
+        dir.path().join("ArchgraphJava.java"),
+        include_str!("ArchgraphJava.java"),
+    )?;
+    let out = super::run_with_input(
+        Command::new(&java)
+            .args(["--class-path", ".", "ArchgraphJava.java"])
+            .arg(&root)
+            .current_dir(dir.path())
+            .env_remove("JDK_JAVA_OPTIONS")
+            .env_remove("JAVA_TOOL_OPTIONS")
+            .env_remove("_JAVA_OPTIONS")
+            .env_remove("CLASSPATH"),
+        files.join("\0").into_bytes(),
+    )
+    .with_context(|| format!("running {java}: install JDK 11 or later, or pass --java"))?;
+    if !out.status.success() {
+        bail!(
+            "Java helper failed (requires JDK 11 or later): {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    Ok(out.stdout)
 }
 
 #[derive(Deserialize)]

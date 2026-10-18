@@ -15,11 +15,12 @@ pub mod typescript_resolution;
 use std::collections::HashSet;
 use std::fs;
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, anyhow, bail};
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
@@ -92,6 +93,37 @@ pub fn globset(globs: &[String]) -> Result<GlobSet> {
         );
     }
     Ok(set.build()?)
+}
+
+/// A new directory under the system temporary directory, removed with its contents on drop.
+pub struct TempDir(PathBuf);
+
+impl TempDir {
+    /// `archgraph-<prefix>-<pid>-<nanos>-<sequence>`: the sequence keeps two directories created
+    /// in one clock tick apart.
+    pub fn new(prefix: &str) -> Result<Self> {
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| d.as_nanos());
+        let path = std::env::temp_dir().join(format!(
+            "archgraph-{prefix}-{}-{nanos}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir(&path).with_context(|| format!("creating {}", path.display()))?;
+        Ok(Self(path))
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.0
+    }
+}
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
 }
 
 /// How long `run_with_input` lets a tool run (`--tool-timeout`), set once by the CLI. Unset or
@@ -298,5 +330,15 @@ mod tests {
         );
         let echoed = run_with_input(&mut Command::new("cat"), input.clone()).unwrap();
         assert_eq!(echoed.stdout, input);
+    }
+
+    #[test]
+    fn temp_dirs_created_together_are_distinct_and_removed_on_drop() {
+        let (first, second) = (TempDir::new("test").unwrap(), TempDir::new("test").unwrap());
+        assert_ne!(first.path(), second.path());
+        let path = first.path().to_owned();
+        fs::write(path.join("file"), "").unwrap();
+        drop(first);
+        assert!(!path.exists());
     }
 }
