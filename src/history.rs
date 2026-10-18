@@ -547,8 +547,13 @@ pub fn collect_with_options(
                 commit: commit.hash.clone(),
                 dirty: false,
             });
-            if let Some(path) = &path {
-                write_atomic(path, &serde_json::to_vec(&graph)?)?;
+            // A failed cache write (a full disk) must not discard a successful scan.
+            if let Some(path) = &path
+                && let Err(error) = serde_json::to_vec(&graph)
+                    .map_err(anyhow::Error::from)
+                    .and_then(|bytes| write_atomic(path, &bytes))
+            {
+                eprintln!("history: not cached {}: {error:#}", commit.hash);
             }
             Ok(graph)
         })();
@@ -573,11 +578,13 @@ pub fn collect_with_options(
                 .join("; ")
         );
     }
-    if let Some(cache) = cache {
-        write_atomic(
-            &cache.join(index),
-            &serde_json::to_vec(&snapshots.iter().map(|s| &s.commit).collect::<Vec<_>>())?,
-        )?;
+    if let Some(cache) = cache
+        && let Err(error) =
+            serde_json::to_vec(&snapshots.iter().map(|s| &s.commit).collect::<Vec<_>>())
+                .map_err(anyhow::Error::from)
+                .and_then(|bytes| write_atomic(&cache.join(index), &bytes))
+    {
+        eprintln!("history: sample index not cached: {error:#}");
     }
     Ok(History {
         schema: SCHEMA,

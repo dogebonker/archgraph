@@ -613,6 +613,43 @@ fn drift_skips_failed_scans_but_rejects_an_entirely_failed_timeline() {
 
 #[test]
 #[cfg(unix)]
+fn drift_keeps_scans_whose_cache_writes_fail() {
+    use archgraph::history::{HistoryOptions, collect_with_options};
+    use std::os::unix::fs::PermissionsExt;
+    let (root, commits) = drift_repo("readonly-cache");
+    let cache = root.join("readonly-cache");
+    let options = HistoryOptions {
+        cache_dir: Some(cache.clone()),
+        cache_key: "fixture-options-v1".into(),
+        ..HistoryOptions::default()
+    };
+    // A first, failed run creates the cache namespace, which is then made read-only.
+    assert!(collect_with_options(&root, "HEAD", &options, |_| anyhow::bail!("none")).is_err());
+    let namespaces: Vec<_> = fs::read_dir(&cache)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect();
+    let mode = |mode| {
+        for namespace in &namespaces {
+            fs::set_permissions(namespace, fs::Permissions::from_mode(mode)).unwrap();
+        }
+    };
+    mode(0o555);
+    let result = collect_with_options(&root, "HEAD", &options, drift_graph);
+    mode(0o755);
+    assert_eq!(
+        result
+            .unwrap()
+            .snapshots
+            .iter()
+            .map(|s| &s.commit)
+            .collect::<Vec<_>>(),
+        vec![&commits[0], &commits[2], &commits[3]]
+    );
+}
+
+#[test]
+#[cfg(unix)]
 fn drift_refuses_symlink_cache_directories() {
     use archgraph::history::{HistoryOptions, collect_with_options};
     let (root, _) = drift_repo("symlink");
