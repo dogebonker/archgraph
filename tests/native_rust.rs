@@ -281,3 +281,54 @@ fn qualified_associated_calls_require_a_proven_source_declaration() {
             .any(|r| r.specifier.contains("missing") && r.unresolved.is_some())
     );
 }
+#[test]
+fn packaged_copies_do_not_shadow_workspace_crates() {
+    let manifest = "[package]\nname='b'\nversion='0.1.0'";
+    let f = Fixture::new(&[
+        (
+            "a/Cargo.toml",
+            "[package]\nname='a'\nversion='0.1.0'\n[dependencies]\nb={path='../b'}",
+        ),
+        ("a/src/lib.rs", "use b::foo;"),
+        ("b/Cargo.toml", manifest),
+        ("b/src/lib.rs", "pub fn foo() {}"),
+        ("target/package/b-0.1.0/Cargo.toml", manifest),
+        ("target/package/b-0.1.0/src/lib.rs", "pub fn foo() {}"),
+    ]);
+    let out = f.scan();
+    assert!(
+        out.raw
+            .edges
+            .iter()
+            .any(|e| e.from == "a/src/lib.rs" && e.to == "b/src/lib.rs")
+    );
+}
+#[test]
+fn relative_paths_prefer_child_modules_and_path_attributes_skip_comments() {
+    let f = Fixture::new(&[
+        ("Cargo.toml", "[package]\nname='sample'\nversion='0.1.0'"),
+        (
+            "src/lib.rs",
+            "mod a; mod inner;\n#[path = \"alternate.rs\"]\n/// Domain docs.\n#[cfg(all())]\nmod domain;",
+        ),
+        ("src/inner.rs", "pub struct Thing;"),
+        ("src/a/mod.rs", "mod inner; use inner::Thing;"),
+        ("src/a/inner.rs", "pub struct Thing;"),
+        ("src/alternate.rs", "pub struct Shape;"),
+    ]);
+    let out = f.scan();
+    assert!(
+        out.raw
+            .imports
+            .as_ref()
+            .unwrap()
+            .iter()
+            .any(|r| r.specifier == "inner::Thing" && r.targets == ["src/a/inner.rs"])
+    );
+    assert!(
+        out.raw
+            .edges
+            .iter()
+            .any(|e| e.from == "src/lib.rs" && e.to == "src/alternate.rs")
+    );
+}

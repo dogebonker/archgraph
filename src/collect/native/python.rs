@@ -61,9 +61,7 @@ pub fn collect(
         }
     }
     let external_roots = installed_roots(&root, &search)?;
-    let mut all_files = Vec::new();
-    walk(&root, &root, &mut all_files)?;
-    all_files.sort();
+    let all_files = super::source_files(&root, &["py"])?;
     let mut modules = BTreeMap::new();
     for base in search.iter().rev() {
         for file in &all_files {
@@ -194,11 +192,16 @@ pub fn collect(
             }
         }
     }
-    files.retain(|file| selected.contains(file));
     files.sort();
+    let inventory = files;
+    let files: Vec<_> = inventory
+        .iter()
+        .filter(|file| selected.contains(*file))
+        .cloned()
+        .collect();
     let file_set: BTreeSet<_> = files.iter().cloned().collect();
     let mut graph = RawGraph {
-        files: files.clone(),
+        files: inventory,
         edges: Vec::new(),
         metadata: Default::default(),
         imports: Some(Vec::new()),
@@ -470,42 +473,6 @@ fn contained_directory(root: &Path, path: &Path) -> Result<PathBuf> {
         );
     }
     Ok(path)
-}
-fn walk(root: &Path, directory: &Path, files: &mut Vec<String>) -> Result<()> {
-    for entry in
-        fs::read_dir(directory).with_context(|| format!("reading {}", directory.display()))?
-    {
-        let entry = entry?;
-        let kind = entry.file_type()?;
-        let path = entry.path();
-        if kind.is_symlink() {
-            continue;
-        }
-        if kind.is_dir() {
-            if ![
-                ".git",
-                ".venv",
-                "venv",
-                "node_modules",
-                "vendor",
-                "__pycache__",
-                "target",
-                "dist",
-                "build",
-            ]
-            .contains(&entry.file_name().to_string_lossy().as_ref())
-            {
-                walk(root, &path, files)?;
-            }
-        } else if kind.is_file() && path.extension().is_some_and(|e| e == "py") {
-            files.push(
-                path.strip_prefix(root)?
-                    .to_string_lossy()
-                    .replace('\\', "/"),
-            );
-        }
-    }
-    Ok(())
 }
 fn text<'a>(node: Node<'_>, source: &'a str) -> &'a str {
     &source[node.byte_range()]
@@ -833,6 +800,7 @@ fn import_kind(mut node: Node<'_>, source: &str, imports: &[Import]) -> EdgeKind
     let mut lazy = false;
     while let Some(parent) = node.parent() {
         if parent.kind() == "if_statement"
+            && parent.child_by_field_name("consequence") == Some(node)
             && parent
                 .child_by_field_name("condition")
                 .is_some_and(|condition| {
@@ -989,118 +957,9 @@ fn installed_roots(root: &Path, search: &[PathBuf]) -> Result<BTreeSet<String>> 
 }
 
 fn stdlib(module: &str) -> bool {
-    // Python's stable standard-library roots; unknown/uninstalled packages remain unresolved.
-    matches!(
-        module.split('.').next().unwrap_or(module),
-        "__future__"
-            | "abc"
-            | "argparse"
-            | "array"
-            | "ast"
-            | "asyncio"
-            | "base64"
-            | "binascii"
-            | "bisect"
-            | "builtins"
-            | "calendar"
-            | "cgi"
-            | "cmath"
-            | "codecs"
-            | "collections"
-            | "concurrent"
-            | "contextlib"
-            | "contextvars"
-            | "copy"
-            | "csv"
-            | "ctypes"
-            | "dataclasses"
-            | "datetime"
-            | "decimal"
-            | "difflib"
-            | "dis"
-            | "email"
-            | "enum"
-            | "errno"
-            | "fcntl"
-            | "fnmatch"
-            | "fractions"
-            | "functools"
-            | "gc"
-            | "getopt"
-            | "getpass"
-            | "gettext"
-            | "glob"
-            | "gzip"
-            | "hashlib"
-            | "heapq"
-            | "hmac"
-            | "html"
-            | "http"
-            | "importlib"
-            | "inspect"
-            | "io"
-            | "ipaddress"
-            | "itertools"
-            | "json"
-            | "keyword"
-            | "linecache"
-            | "locale"
-            | "logging"
-            | "lzma"
-            | "marshal"
-            | "math"
-            | "mimetypes"
-            | "multiprocessing"
-            | "numbers"
-            | "operator"
-            | "os"
-            | "pathlib"
-            | "pickle"
-            | "pkgutil"
-            | "platform"
-            | "pprint"
-            | "queue"
-            | "random"
-            | "re"
-            | "reprlib"
-            | "resource"
-            | "secrets"
-            | "select"
-            | "selectors"
-            | "shlex"
-            | "shutil"
-            | "signal"
-            | "site"
-            | "socket"
-            | "sqlite3"
-            | "ssl"
-            | "stat"
-            | "statistics"
-            | "string"
-            | "struct"
-            | "subprocess"
-            | "sys"
-            | "sysconfig"
-            | "tarfile"
-            | "tempfile"
-            | "textwrap"
-            | "threading"
-            | "time"
-            | "timeit"
-            | "token"
-            | "tokenize"
-            | "traceback"
-            | "types"
-            | "typing"
-            | "unicodedata"
-            | "unittest"
-            | "urllib"
-            | "uuid"
-            | "warnings"
-            | "weakref"
-            | "xml"
-            | "zipfile"
-            | "zipimport"
-            | "zlib"
-    )
+    // sys.stdlib_module_names from CPython 3.10, 3.12 and 3.13, plus modules removed since 3.8.
+    let root = module.split('.').next().unwrap_or(module);
+    include_str!("python_stdlib.txt")
+        .lines()
+        .any(|name| name == root)
 }

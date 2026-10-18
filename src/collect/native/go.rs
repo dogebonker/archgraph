@@ -321,7 +321,7 @@ pub fn collect(root: &Path, go: &str, policy: &Policy) -> Result<super::Output> 
                 go_modules: dirs,
                 limitations: Vec::new(),
             },
-            files,
+            files: all_files,
             edges: edges.into_values().collect(),
             imports: Some(imports),
         },

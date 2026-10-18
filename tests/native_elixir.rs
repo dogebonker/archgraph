@@ -161,3 +161,35 @@ fn native_elixir_nested_definitions_and_exclusions_never_execute_source() {
     );
     assert!(!out.raw.edges.iter().any(|e| e.from.contains("bad_test")));
 }
+
+#[test]
+fn native_elixir_multi_alias_binds_last_segment_and_indexes_excluded_modules() {
+    let file = common::write_tmp(
+        "native-elixir-multi-alias/lib/client.ex",
+        "defmodule Demo.Client do\n  alias Demo.{Accounts.User}\n  def run, do: User.get() && Demo.Support.run()\nend\n",
+    );
+    let root = Path::new(&file).ancestors().nth(2).unwrap();
+    common::write_tmp(
+        "native-elixir-multi-alias/lib/user.ex",
+        "defmodule Demo.Accounts.User do end\n",
+    );
+    common::write_tmp(
+        "native-elixir-multi-alias/test/support.ex",
+        "defmodule Demo.Support do end\n",
+    );
+    let out = elixir::collect(
+        root,
+        &Policy::new(root, archgraph::model::Language::Elixir, Options::default()).unwrap(),
+    )
+    .unwrap();
+    assert!(
+        out.raw
+            .edges
+            .iter()
+            .any(|e| e.from == "lib/client.ex" && e.to == "lib/user.ex")
+    );
+    assert!(!out.raw.edges.iter().any(|e| e.to == "test/support.ex"));
+    assert!(out.raw.imports.unwrap().iter().any(|r| {
+        r.specifier == "Demo.Support" && r.targets == ["test/support.ex"] && r.unresolved.is_none()
+    }));
+}

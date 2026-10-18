@@ -59,8 +59,14 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
         }
         parsed.insert(file.clone(), info);
     }
+    // Excluded copies (generated sources, build output) must not make included types ambiguous.
+    for candidates in index.values_mut() {
+        if candidates.len() > 1 && candidates.iter().any(|file| included.contains(file)) {
+            candidates.retain(|file| included.contains(file));
+        }
+    }
     let mut raw = RawGraph {
-        files: files.clone(),
+        files: inventory,
         edges: Vec::new(),
         metadata: Default::default(),
         imports: Some(Vec::new()),
@@ -254,15 +260,7 @@ fn resolve(name: &str, info: &Parsed, index: &Index) -> BTreeSet<String> {
     info.imports
         .iter()
         .filter(|i| i.wildcard)
-        .flat_map(|i| {
-            let target = format!("{}.{name}", i.name);
-            let exact = lookup_exact(&target, index);
-            if exact.is_empty() && i.static_member {
-                lookup_exact(&i.name, index)
-            } else {
-                exact
-            }
-        })
+        .flat_map(|i| lookup_exact(&format!("{}.{name}", i.name), index))
         .collect()
 }
 

@@ -184,12 +184,14 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                     continue;
                 };
                 let mut path = None;
-                if let Some(attribute) = node
-                    .prev_named_sibling()
-                    .filter(|n| n.kind() == "attribute_item")
-                {
-                    let raw = text(attribute, source);
-                    if raw.starts_with("#[path") {
+                let mut sibling = node.prev_named_sibling();
+                while let Some(attribute) = sibling.filter(|n| {
+                    matches!(
+                        n.kind(),
+                        "attribute_item" | "line_comment" | "block_comment"
+                    )
+                }) {
+                    if text(attribute, source).starts_with("#[path") {
                         let mut stack = vec![attribute];
                         while let Some(n) = stack.pop() {
                             if n.kind() == "string_literal" {
@@ -202,7 +204,9 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                             }
                             stack.extend(children(n));
                         }
+                        break;
                     }
+                    sibling = attribute.prev_named_sibling();
                 }
                 result.modules.push(ModuleDecl {
                     name: text(name, source).into(),
@@ -333,17 +337,21 @@ fn dependencies(
         }
     }
 }
-fn manifests(root: &Path, files: &BTreeSet<String>) -> Result<Vec<Package>> {
+fn manifests(root: &Path, files: &BTreeSet<String>, policy: &Policy) -> Result<Vec<Package>> {
     let mut values = BTreeMap::new();
-    for file in super::source_files(root, &["toml"])? {
-        if Path::new(&file)
-            .file_name()
-            .is_some_and(|n| n == "Cargo.toml")
-        {
-            let value: toml::Value = toml::from_str(&std::fs::read_to_string(root.join(&file))?)
-                .with_context(|| format!("reading Rust manifest {file}"))?;
-            values.insert(Path::new(&file).parent().unwrap().to_path_buf(), value);
-        }
+    let manifests: Vec<_> = super::source_files(root, &["toml"])?
+        .into_iter()
+        .filter(|file| {
+            Path::new(file)
+                .file_name()
+                .is_some_and(|n| n == "Cargo.toml")
+        })
+        .collect();
+    // Packaged and vendored copies must not shadow the crates they duplicate.
+    for file in policy.select(&manifests)? {
+        let value: toml::Value = toml::from_str(&std::fs::read_to_string(root.join(&file))?)
+            .with_context(|| format!("reading Rust manifest {file}"))?;
+        values.insert(Path::new(&file).parent().unwrap().to_path_buf(), value);
     }
     let workspace = values
         .get(Path::new(""))
@@ -467,7 +475,12 @@ fn resolve(
             );
         }
         Some(first) => {
-            if let Some(dependency) = packages[package].deps.get(first) {
+            let mut child = base.to_vec();
+            child.push(first.to_owned());
+            if modules.contains_key(&(package, child)) {
+                // Rust 2018 paths may start with a child module of the current module.
+                location = base.to_vec();
+            } else if let Some(dependency) = packages[package].deps.get(first) {
                 if let Some(index) = packages
                     .iter()
                     .position(|p| p.name == dependency.replace('-', "_"))
@@ -521,7 +534,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
     let files = super::source_files(&root, &["rs"])?;
     let known: BTreeSet<_> = files.iter().cloned().collect();
     let selected: BTreeSet<_> = policy.select(&files)?.into_iter().collect();
-    let packages = manifests(&root, &known)?;
+    let packages = manifests(&root, &known, policy)?;
     if packages.is_empty() {
         bail!(
             "native Rust needs a Cargo.toml package with an existing src/lib.rs, src/main.rs or [lib].path"

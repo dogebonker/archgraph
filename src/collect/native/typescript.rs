@@ -200,7 +200,13 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
         match query.capture_names()[m.captures()[*i].index as usize] {
             "import" | "export" => {
                 let export = node.kind() == "export_statement";
-                let source_node = node.child_by_field_name("source");
+                let require_clause = children(node)
+                    .into_iter()
+                    .find(|n| n.kind() == "import_require_clause");
+                let require = require_clause.is_some();
+                let source_node = node
+                    .child_by_field_name("source")
+                    .or_else(|| require_clause?.child_by_field_name("source"));
                 // The pinned grammar wraps `type` in ERROR for TS 5 `export type *`.
                 let type_only = has_token(node, "type")
                     || export
@@ -255,8 +261,8 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                         type_only,
                     });
                 }
-                let wildcard = imported.iter().any(|n| n.imported == "*");
-                let side_effect = !export && imported.is_empty();
+                let wildcard = require || imported.iter().any(|n| n.imported == "*");
+                let side_effect = !export && !require && imported.is_empty();
                 parsed.statements.push(ImportStatement {
                     specifier: source_node.and_then(|n| literal(n, source)),
                     line: node.start_position().row + 1,
@@ -275,7 +281,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                     reexport: export,
                     wildcard,
                     side_effect,
-                    require: false,
+                    require,
                 });
             }
             "type_definition" => {
@@ -353,7 +359,17 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
         ) {
             parsed.pure = false;
         }
-        if child.kind() == "expression_statement" && text(child, source).contains("exports") {
+        if child.kind() == "expression_statement"
+            && let Some(assignment) = children(child)
+                .into_iter()
+                .find(|n| n.kind() == "assignment_expression")
+            && let Some(left) = assignment.child_by_field_name("left")
+            && let left = text(left, source)
+            && (left == "module.exports"
+                || ["exports.", "exports[", "module.exports.", "module.exports["]
+                    .iter()
+                    .any(|prefix| left.starts_with(prefix)))
+        {
             parsed
                 .limitations
                 .push(format!("{file}: CommonJS exports are not symbol-indexed"));

@@ -38,7 +38,10 @@ pub fn source_files(root: &Path, extensions: &[&str]) -> Result<Vec<String>> {
                 result => result?,
             };
             if kind.is_dir() {
-                if !matches!(entry.file_name().to_str(), Some(".git" | "node_modules")) {
+                if !matches!(
+                    entry.file_name().to_str(),
+                    Some(".git" | "node_modules" | ".venv" | "venv" | "__pycache__")
+                ) {
                     pending.push(path);
                 }
             } else if kind.is_file()

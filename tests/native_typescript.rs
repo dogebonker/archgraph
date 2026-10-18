@@ -542,3 +542,38 @@ fn type_star_reexports_recover_the_grammar_error_type_token() {
             .any(|e| e.from == "runtime.ts" && e.kind == EdgeKind::Reexport)
     );
 }
+#[test]
+fn import_equals_require_is_a_require_edge() {
+    let f = Fixture::new(&[
+        ("b.ts", "export const value = 1;"),
+        ("c.ts", "export interface Shape {}"),
+        (
+            "a.ts",
+            "import b = require('./b');\nimport type c = require('./c');\nconsole.log('exports'); reexportsFoo();",
+        ),
+        ("cjs.js", "module.exports = {};"),
+    ]);
+    let out = f.scan();
+    assert!(
+        out.raw
+            .edges
+            .iter()
+            .any(|e| e.from == "a.ts" && e.to == "b.ts" && e.kind == EdgeKind::Static)
+    );
+    assert!(
+        out.raw
+            .edges
+            .iter()
+            .any(|e| e.from == "a.ts" && e.to == "c.ts" && e.kind == EdgeKind::Type)
+    );
+    let commonjs: Vec<_> = out
+        .symbols
+        .limitations
+        .iter()
+        .filter(|s| s.contains("CommonJS exports are not symbol-indexed"))
+        .collect();
+    assert_eq!(
+        commonjs,
+        ["cjs.js: CommonJS exports are not symbol-indexed"]
+    );
+}

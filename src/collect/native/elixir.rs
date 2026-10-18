@@ -213,9 +213,10 @@ impl Walker<'_> {
                             if let Some(prefix) = module(prefix, self.source, scope) {
                                 for suffix in children(tuple) {
                                     if suffix.kind() == "alias" {
+                                        let suffix = text(suffix, self.source);
                                         scope.aliases.insert(
-                                            text(suffix, self.source).to_owned(),
-                                            format!("{prefix}.{}", text(suffix, self.source)),
+                                            suffix.rsplit('.').next().unwrap_or(suffix).to_owned(),
+                                            format!("{prefix}.{suffix}"),
                                         );
                                     }
                                 }
@@ -358,13 +359,13 @@ impl Walker<'_> {
 pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
     let root = root.canonicalize()?;
     let all = super::source_files(&root, &["ex", "exs"])?;
-    let files = policy.select(&all)?;
+    let files: BTreeSet<_> = policy.select(&all)?.into_iter().collect();
     let language = tree_sitter_elixir::LANGUAGE.into();
     let mut parser = Parser::new();
     parser.set_language(&language)?;
     let query = Query::new(&language, include_str!("queries/elixir.scm"))?;
     let mut trees = Vec::new();
-    for file in &files {
+    for file in &all {
         let source = fs::read_to_string(root.join(file))
             .with_context(|| format!("reading Elixir {file}"))?;
         let tree = parser.parse(&source, None).context("parsing Elixir")?;
@@ -397,7 +398,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
     }
     let mut records = Vec::new();
     let mut symbols = Symbols { complete: false, limitations: vec!["Elixir macros, dynamic dispatch and generated definitions are not expanded; the bundled OTP application catalog is from Elixir 1.20.1 / OTP 29.".into()], ..Default::default() };
-    for (file, source, tree, calls) in &trees {
+    for (file, source, tree, calls) in trees.iter().filter(|(file, ..)| files.contains(*file)) {
         let mut walker = Walker {
             file,
             source,
@@ -421,7 +422,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
     let mut edges = BTreeMap::new();
     for record in &records {
         for target in &record.targets {
-            if record.from != *target {
+            if record.from != *target && files.contains(target) {
                 edges
                     .entry((record.from.clone(), target.clone(), record.kind))
                     .or_insert_with(|| Edge {

@@ -62,7 +62,14 @@ fn native_java_resolves_reference_fixture_without_jdk() {
             ),
         ]
     );
-    assert!(!output.raw.files.iter().any(|f| f.ends_with("Test.java")));
+    assert!(output.raw.files.iter().any(|f| f.ends_with("Test.java")));
+    assert!(
+        !output
+            .raw
+            .edges
+            .iter()
+            .any(|e| e.from.ends_with("Test.java") || e.to.ends_with("Test.java"))
+    );
 }
 #[test]
 fn native_java_nested_types_wildcards_and_qualified_static_receivers() {
@@ -149,7 +156,8 @@ fn native_java_jdk_catalog_excluded_targets_and_no_execution() {
             .any(|i| i.specifier == "javax.enterprise.Inject" && i.unresolved.is_some())
     );
     assert!(imports.iter().any(|i| i.targets == ["HiddenTest.java"]));
-    assert!(!output.raw.files.contains(&"HiddenTest.java".into()));
+    assert!(output.raw.files.contains(&"HiddenTest.java".into()));
+    assert!(!output.raw.edges.iter().any(|e| e.to == "HiddenTest.java"));
     assert!(
         output
             .symbols
@@ -243,4 +251,45 @@ fn native_java_local_classes_do_not_become_importable_member_types() {
             .any(|i| i.specifier == "model.Outer.Local" && i.unresolved.is_some())
     );
     assert!(output.raw.edges.is_empty());
+}
+#[test]
+fn native_java_excluded_copies_do_not_make_included_types_ambiguous() {
+    let util = "package p; public class Util { public static void helper(){} }";
+    let root = fixture(&[
+        ("src/main/java/p/Util.java", util),
+        ("target/generated-sources/delombok/p/Util.java", util),
+        (
+            "src/main/java/app/Use.java",
+            "package app; import p.Util; class Use { Util util; }",
+        ),
+        (
+            "src/main/java/app/Wild.java",
+            "package app; import static p.Util.*; class Wild { int count; void run(){ String label = \"x\"; helper(); } }",
+        ),
+    ]);
+    let output = collect(root.path());
+    let record = output
+        .raw
+        .imports
+        .as_ref()
+        .unwrap()
+        .iter()
+        .find(|i| i.specifier == "p.Util")
+        .unwrap();
+    assert_eq!(record.targets, ["src/main/java/p/Util.java"]);
+    assert!(record.unresolved.is_none());
+    assert!(output.raw.edges.iter().any(|e| {
+        e.from == "src/main/java/app/Use.java" && e.to == "src/main/java/p/Util.java"
+    }));
+    let names: std::collections::BTreeSet<_> = output
+        .symbols
+        .imports
+        .iter()
+        .filter(|i| i.from == "src/main/java/app/Wild.java")
+        .map(|i| i.name.as_str())
+        .collect();
+    assert_eq!(
+        names,
+        std::collections::BTreeSet::from(["helper", "p.Util"])
+    );
 }

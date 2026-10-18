@@ -105,7 +105,14 @@ fn native_go_queries_resolve_named_blank_and_same_package_references_without_com
             .iter()
             .any(|limit| limit.contains("header-only generated"))
     );
-    assert!(!output.raw.files.iter().any(|p| p.ends_with("_test.go")));
+    assert!(output.raw.files.contains(&"main_test.go".into()));
+    assert!(
+        !output
+            .raw
+            .edges
+            .iter()
+            .any(|e| e.from == "main_test.go" || e.to == "main_test.go")
+    );
     for target in ["helper.go", "model/model.go", "hooks/doc.go"] {
         assert!(
             output
@@ -124,7 +131,10 @@ fn native_go_queries_resolve_named_blank_and_same_package_references_without_com
             .iter()
             .any(|e| e.from == "helper.go" && e.to == "main.go")
     );
-    assert_eq!(output.raw.collector.bound_files, output.raw.files);
+    assert_eq!(
+        output.raw.collector.bound_files,
+        ["helper.go", "hooks/doc.go", "main.go", "model/model.go"]
+    );
     let imports = output.raw.imports.unwrap();
     assert!(
         imports

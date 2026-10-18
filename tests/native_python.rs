@@ -59,12 +59,13 @@ fn native_python_relative_src_namespace_and_exclusions() {
             .any(|e| e.from == "src/pkg/a.py" && e.to == "src/pkg/b.py")
     );
     assert!(output.raw.edges.iter().any(|e| e.to == "src/pkg/ns/c.py"));
+    assert!(output.raw.files.contains(&"src/pkg/test_hidden.py".into()));
     assert!(
         !output
             .raw
-            .files
+            .edges
             .iter()
-            .any(|f| f.ends_with("test_hidden.py"))
+            .any(|e| e.to == "src/pkg/test_hidden.py")
     );
     let record = output
         .raw
@@ -118,9 +119,10 @@ fn native_python_type_lazy_dynamic_and_missing_are_accounted() {
     let dir = fixture(&[
         (
             "src/pkg/a.py",
-            "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from .b import B\ndef f():\n    from .b import B\nimport importlib\nimportlib.import_module(name)\nimport definitely_not_installed\n",
+            "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from .b import B\nelse:\n    from .c import C\ndef f():\n    from .b import B\nimport importlib\nimportlib.import_module(name)\nimport definitely_not_installed\nimport configparser, tomllib\n",
         ),
         ("src/pkg/b.py", "class B: pass\n"),
+        ("src/pkg/c.py", "class C: pass\n"),
     ]);
     let records = collect(&dir, Some("pkg"), &[]).raw.imports.unwrap();
     assert!(
@@ -148,6 +150,33 @@ fn native_python_type_lazy_dynamic_and_missing_are_accounted() {
         records
             .iter()
             .any(|i| i.external.as_deref() == Some("typing"))
+    );
+    assert!(
+        records
+            .iter()
+            .any(|i| i.specifier == ".c" && i.kind == EdgeKind::Static)
+    );
+    for module in ["configparser", "tomllib"] {
+        assert!(
+            records
+                .iter()
+                .any(|i| i.external.as_deref() == Some(module))
+        );
+    }
+}
+#[test]
+fn native_python_policy_decides_build_named_subpackages() {
+    let dir = fixture(&[
+        ("src/pkg/a.py", "from .target import helper\n"),
+        ("src/pkg/target/helper.py", "value = 1\n"),
+    ]);
+    let output = collect(&dir, Some("pkg"), &[]);
+    assert!(
+        output
+            .raw
+            .edges
+            .iter()
+            .any(|e| e.from == "src/pkg/a.py" && e.to == "src/pkg/target/helper.py")
     );
 }
 #[test]
@@ -361,12 +390,13 @@ fn native_python_reference_scope_discovers_production_dependencies_from_excluded
             .iter()
             .any(|s| s.contains("excluded source unavailable"))
     );
+    assert!(output.raw.files.contains(&"src/pkg/test_scope.py".into()));
     assert!(
         !output
             .raw
-            .files
+            .edges
             .iter()
-            .any(|f| f.ends_with("test_scope.py"))
+            .any(|e| e.from == "src/pkg/test_scope.py")
     );
     assert!(
         output
