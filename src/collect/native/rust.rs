@@ -10,7 +10,7 @@ use crate::collect::{
     barrels::{self, BarrelModule, ExportRoute, ImportRoute},
     excludes::Policy,
 };
-use crate::model::{Collector, Edge, EdgeKind, ImportReason, ImportRecord};
+use crate::model::{Collector, Confidence, Edge, EdgeKind, ImportReason, ImportRecord};
 use crate::surface::{SymbolImport, SymbolTarget, Symbols};
 
 use super::{named_children, self_export, text, unresolved_count};
@@ -103,6 +103,8 @@ fn use_paths(
 }
 #[derive(Clone)]
 struct Request {
+    reference: bool,
+    macro_reference: bool,
     path: Vec<String>,
     local: String,
     wildcard: bool,
@@ -110,8 +112,10 @@ struct Request {
     context: Vec<String>,
     public: bool,
     written: String,
+    test: bool,
 }
 struct ModuleDecl {
+    test: bool,
     name: String,
     context: Vec<String>,
     path: Option<String>,
@@ -126,6 +130,33 @@ struct Parsed {
     pure: bool,
     limitations: Vec<String>,
     includes: Vec<(usize, String)>,
+    used: BTreeSet<String>,
+    macros: BTreeSet<String>,
+}
+fn test_only(mut node: Node<'_>, source: &str) -> bool {
+    loop {
+        let mut sibling = node.prev_named_sibling();
+        while let Some(attribute) = sibling.filter(|n| {
+            matches!(
+                n.kind(),
+                "attribute_item" | "line_comment" | "block_comment"
+            )
+        }) {
+            let attribute_text: String = text(attribute, source)
+                .chars()
+                .filter(|c| !c.is_whitespace())
+                .collect();
+            // shortcut: only definitely test-gated items; general cfg expressions need Cargo evaluation.
+            if attribute_text == "#[cfg(test)]" || attribute_text.starts_with("#[cfg(all(test,") {
+                return true;
+            }
+            sibling = attribute.prev_named_sibling();
+        }
+        let Some(parent) = node.parent() else {
+            return false;
+        };
+        node = parent;
+    }
 }
 fn parse(file: &str, source: &str) -> Result<Parsed> {
     let language = tree_sitter_rust::LANGUAGE.into();
@@ -146,6 +177,8 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
         pure: true,
         limitations: Vec::new(),
         includes: Vec::new(),
+        used: BTreeSet::new(),
+        macros: BTreeSet::new(),
     };
     if tree.root_node().has_error() {
         result.limitations.push(format!(
@@ -157,6 +190,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
     while let Some((matched, index)) = captures.next() {
         let capture = matched.captures()[*index];
         let node = capture.node;
+        let test = test_only(node, source);
         match query.capture_names()[capture.index as usize] {
             "use" => {
                 if let Some(argument) = node.child_by_field_name("argument") {
@@ -164,6 +198,9 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                     use_paths(argument, source, &[], &mut paths);
                     for (path, local, wildcard) in paths {
                         result.requests.push(Request {
+                            reference: false,
+                            macro_reference: false,
+                            test,
                             path,
                             local,
                             wildcard,
@@ -205,6 +242,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                     sibling = attribute.prev_named_sibling();
                 }
                 result.modules.push(ModuleDecl {
+                    test,
                     name: text(name, source).into(),
                     context: context(node, source),
                     path,
@@ -215,6 +253,9 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
             "extern" => {
                 if let Some(name) = node.child_by_field_name("name") {
                     result.requests.push(Request {
+                        reference: false,
+                        macro_reference: false,
+                        test,
                         path: vec![text(name, source).into()],
                         local: node
                             .child_by_field_name("alias")
@@ -229,7 +270,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                     });
                 }
             }
-            "definition" => {
+            "definition" if !test => {
                 if context(node, source).is_empty()
                     && let Some(name) = node.child_by_field_name("name")
                 {
@@ -243,7 +284,9 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
             "reference" => {
                 let mut parent = node.parent();
                 let mut skip = false;
+                let mut macro_reference = false;
                 while let Some(p) = parent {
+                    macro_reference |= p.kind() == "macro_invocation";
                     if matches!(
                         p.kind(),
                         "use_declaration" | "scoped_identifier" | "scoped_type_identifier"
@@ -255,11 +298,11 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                 }
                 if !skip {
                     let path = parts(node, source);
-                    if path
-                        .first()
-                        .is_some_and(|p| matches!(p.as_str(), "crate" | "self" | "super"))
-                    {
+                    if !path.is_empty() {
                         result.requests.push(Request {
+                            reference: true,
+                            macro_reference,
+                            test,
                             local: path.last().cloned().unwrap_or_default(),
                             path,
                             wildcard: false,
@@ -271,7 +314,47 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                     }
                 }
             }
-            "macro" => {
+            "identifier" if !test => {
+                let mut parent = node.parent();
+                let mut imported = false;
+                while let Some(p) = parent {
+                    if matches!(p.kind(), "use_declaration" | "attribute_item") {
+                        imported = true;
+                        break;
+                    }
+                    parent = p.parent();
+                }
+                if !imported {
+                    result.used.insert(text(node, source).into());
+                }
+            }
+            "macro_definition" if !test => {
+                let mut sibling = node.prev_named_sibling();
+                while let Some(attribute) = sibling.filter(|n| {
+                    matches!(
+                        n.kind(),
+                        "attribute_item" | "line_comment" | "block_comment"
+                    )
+                }) {
+                    let spelling: String = text(attribute, source)
+                        .chars()
+                        .filter(|c| !c.is_whitespace())
+                        .collect();
+                    if spelling == "#[macro_export]"
+                        || spelling == "#[macro_export(local_inner_macros)]"
+                    {
+                        if let Some(name) = node.child_by_field_name("name") {
+                            result.macros.insert(text(name, source).into());
+                            result.public.insert(text(name, source).into());
+                            result.definitions.insert(text(name, source).into());
+                        }
+                        break;
+                    }
+                    sibling = attribute.prev_named_sibling();
+                }
+                result.pure = false;
+            }
+            "macro" if !test => {
                 let raw = text(node, source);
                 if raw.starts_with("include!")
                     || raw.starts_with("include_str!")
@@ -298,6 +381,7 @@ struct Package {
     name: String,
     root: String,
     deps: BTreeMap<String, String>,
+    conventional: bool,
 }
 fn dependencies(
     value: &toml::Value,
@@ -378,6 +462,17 @@ fn manifests(root: &Path, files: &BTreeSet<String>, policy: &Policy) -> Result<V
         packages.push(Package {
             dir: dir.clone(),
             name: name.replace('-', "_"),
+            conventional: configured.is_none()
+                && value
+                    .get("bin")
+                    .and_then(toml::Value::as_array)
+                    .is_none_or(|bins| {
+                        bins.iter().all(|b| {
+                            b.get("path")
+                                .and_then(toml::Value::as_str)
+                                .is_none_or(|path| path.starts_with("src/"))
+                        })
+                    }),
             root: entry,
             deps,
         });
@@ -518,6 +613,48 @@ fn resolve(
     (None, None, name)
 }
 
+fn forwarded_names(
+    file: &str,
+    parsed: &BTreeMap<String, Parsed>,
+    modules: &BTreeMap<(usize, Vec<String>), String>,
+    contexts: &BTreeMap<String, (usize, Vec<String>)>,
+    packages: &[Package],
+    depth: usize,
+    seen: &mut BTreeSet<String>,
+) -> BTreeSet<String> {
+    if depth >= 10 || !seen.insert(file.into()) {
+        return BTreeSet::new();
+    }
+    let Some(syntax) = parsed.get(file) else {
+        return BTreeSet::new();
+    };
+    let mut names = syntax.public.clone();
+    for request in syntax.requests.iter().filter(|r| r.public && !r.test) {
+        if !request.wildcard {
+            names.insert(request.local.clone());
+            continue;
+        }
+        if let Some((package, base)) = contexts.get(file) {
+            let mut current = base.clone();
+            current.extend(request.context.clone());
+            let (target, _, _) =
+                resolve(&request.path, *package, &current, packages, modules, parsed);
+            if let Some(target) = target {
+                names.extend(forwarded_names(
+                    &target,
+                    parsed,
+                    modules,
+                    contexts,
+                    packages,
+                    depth + 1,
+                    seen,
+                ));
+            }
+        }
+    }
+    names
+}
+
 pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
     let root = root.canonicalize().context("resolving native Rust root")?;
     let files = super::source_files(&root, &["rs"])?;
@@ -558,6 +695,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
     }
     let mut modules = BTreeMap::new();
     let mut contexts = BTreeMap::new();
+    let mut test_contexts = BTreeSet::new();
     let mut queue = Vec::new();
     for (index, package) in packages.iter().enumerate() {
         modules.insert((index, Vec::new()), package.root.clone());
@@ -573,7 +711,9 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
             continue;
         };
         let (package, base) = contexts[&file].clone();
-        for declaration in &syntax.modules {
+        let mut declarations: Vec<_> = syntax.modules.iter().collect();
+        declarations.sort_by_key(|declaration| declaration.test);
+        for declaration in declarations {
             let mut path = base.clone();
             path.extend(declaration.context.clone());
             path.push(declaration.name.clone());
@@ -587,13 +727,95 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
                 &known,
             ) {
                 modules.insert((package, path.clone()), target.clone());
-                contexts.entry(target.clone()).or_insert((package, path));
+                let test_mount = declaration.test || test_contexts.contains(&file);
+                if !contexts.contains_key(&target) || test_contexts.contains(&target) && !test_mount
+                {
+                    contexts.insert(target.clone(), (package, path));
+                    if test_mount {
+                        test_contexts.insert(target.clone());
+                    } else {
+                        test_contexts.remove(&target);
+                    }
+                    seen.remove(&target);
+                }
                 queue.push(target);
             }
         }
     }
+    let mut production_files: BTreeSet<_> = packages.iter().map(|p| p.root.clone()).collect();
+    loop {
+        let mut added = false;
+        for (file, syntax) in &parsed {
+            if !production_files.contains(file) {
+                continue;
+            }
+            for declaration in &syntax.modules {
+                if !declaration.test
+                    && !declaration.inline
+                    && let Some(target) = module_file(
+                        &root,
+                        file,
+                        packages.iter().any(|p| p.root == *file),
+                        declaration,
+                        &known,
+                    )
+                {
+                    added |= production_files.insert(target);
+                }
+            }
+        }
+        if !added {
+            break;
+        }
+    }
+    let mut test_files: BTreeSet<String> = parsed
+        .keys()
+        .filter(|f| crate::collect::excludes::is_rust_test(f))
+        .cloned()
+        .collect();
+    loop {
+        let mut added = false;
+        for (file, syntax) in &parsed {
+            for declaration in &syntax.modules {
+                if (declaration.test || test_files.contains(file))
+                    && !declaration.inline
+                    && let Some(target) = module_file(
+                        &root,
+                        file,
+                        packages.iter().any(|p| p.root == *file),
+                        declaration,
+                        &known,
+                    )
+                {
+                    added |= test_files.insert(target);
+                }
+            }
+        }
+        if !added {
+            break;
+        }
+    }
+    test_files.retain(|file| {
+        !production_files.contains(file) || crate::collect::excludes::is_rust_test(file)
+    });
+    let enabled: BTreeSet<_> = selected
+        .iter()
+        .filter(|f| !test_files.contains(*f) || policy.includes_test_code(f))
+        .cloned()
+        .collect();
+    let mut macro_definitions = BTreeMap::new();
+    for (file, syntax) in &parsed {
+        if let Some((package, _)) = contexts.get(file) {
+            for name in &syntax.macros {
+                macro_definitions.insert((*package, name.clone()), file.clone());
+            }
+        }
+    }
     let mut graph = RawGraph {
-        files,
+        files: files
+            .into_iter()
+            .filter(|f| !test_files.contains(f) || enabled.contains(f))
+            .collect(),
         edges: Vec::new(),
         imports: Some(Vec::new()),
         metadata: BTreeMap::new(),
@@ -620,6 +842,9 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
     };
     let mut barrels = Vec::new();
     for (file, syntax) in &parsed {
+        if !enabled.contains(file) {
+            continue;
+        }
         symbols.limitations.extend(syntax.limitations.clone());
         for (line, specifier) in &syntax.includes {
             graph.imports.as_mut().unwrap().push(ImportRecord {
@@ -649,10 +874,94 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
         for name in &syntax.public {
             symbols.exports.push(self_export(file, name));
         }
-        for request in &syntax.requests {
+        let requests: Vec<_> = syntax
+            .requests
+            .iter()
+            .flat_map(|request| {
+                if !request.wildcard || request.public || request.test {
+                    return vec![request.clone()];
+                }
+                let mut current = base.clone();
+                current.extend(request.context.clone());
+                let (target, _, _) = resolve(
+                    &request.path,
+                    package,
+                    &current,
+                    &packages,
+                    &modules,
+                    &parsed,
+                );
+                let forwarded = target
+                    .as_deref()
+                    .map(|target| {
+                        forwarded_names(
+                            target,
+                            &parsed,
+                            &modules,
+                            &contexts,
+                            &packages,
+                            0,
+                            &mut BTreeSet::new(),
+                        )
+                    })
+                    .unwrap_or_default();
+                let names: BTreeSet<_> = target
+                    .as_ref()
+                    .and_then(|target| parsed.get(target))
+                    .into_iter()
+                    .flat_map(|target| {
+                        target
+                            .definitions
+                            .iter()
+                            .cloned()
+                            .chain(
+                                target
+                                    .requests
+                                    .iter()
+                                    .filter(|r| r.public)
+                                    .map(|r| r.local.clone()),
+                            )
+                            .chain(target.modules.iter().map(|m| m.name.clone()))
+                    })
+                    .chain(forwarded)
+                    .filter(|name| syntax.used.contains(name))
+                    .collect();
+                if names.is_empty() {
+                    return vec![request.clone()];
+                }
+                names
+                    .into_iter()
+                    .map(|name| {
+                        let mut named = request.clone();
+                        named.path.push(name.clone());
+                        named.local = name;
+                        named.wildcard = false;
+                        named
+                    })
+                    .collect()
+            })
+            .collect();
+        for request in &requests {
+            if request.test && !policy.includes_test_code(file) {
+                continue;
+            }
+
             let mut current = base.clone();
             current.extend(request.context.clone());
-            let (target, external, mut name) = resolve(
+            if request.reference
+                && !request
+                    .path
+                    .first()
+                    .is_some_and(|p| matches!(p.as_str(), "crate" | "self" | "super"))
+            {
+                // Bare qualified expressions are dependencies only when their module is lexically known.
+                let mut child = current.clone();
+                child.push(request.path[0].clone());
+                if !modules.contains_key(&(package, child)) {
+                    continue;
+                }
+            }
+            let (mut target, external, mut name) = resolve(
                 &request.path,
                 package,
                 &current,
@@ -660,9 +969,45 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
                 &modules,
                 &parsed,
             );
+            if request.macro_reference
+                && request.path.len() == 2
+                && request.path[0] == "crate"
+                && let Some(definition) = macro_definitions.get(&(package, request.path[1].clone()))
+            {
+                target = Some(definition.clone());
+            }
+            let unknown_macro = request.macro_reference
+                && request.path.first().is_some_and(|p| p == "crate")
+                && !macro_definitions
+                    .contains_key(&(package, request.path.last().cloned().unwrap_or_default()));
+            if unknown_macro {
+                target = None;
+            }
             if request.wildcard {
                 name = "*".into();
             }
+            if request.test {
+                graph.imports.as_mut().unwrap().push(ImportRecord {
+                    from: file.clone(),
+                    specifier: request.written.clone(),
+                    line: Some(request.line),
+                    kind: EdgeKind::Static,
+                    unresolved: (target.is_none() && external.is_none())
+                        .then_some(ImportReason::Missing),
+                    targets: target.into_iter().collect(),
+                    external,
+                    ..Default::default()
+                });
+                symbols.limitations.push(format!("{file}:{}: included inline test import retained in accounting, excluded from production graph; inline tests cannot be independently visualized or included in per-file test coverage", request.line));
+                continue;
+            }
+            if target
+                .as_ref()
+                .is_some_and(|target| !enabled.contains(target))
+            {
+                continue;
+            }
+
             let mut record = ImportRecord {
                 from: file.clone(),
                 specifier: request.written.clone(),
@@ -713,12 +1058,16 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
                     });
                 }
             } else if record.external.is_none() {
-                record.unresolved = Some(ImportReason::Missing);
+                record.unresolved = Some(if unknown_macro {
+                    ImportReason::Native
+                } else {
+                    ImportReason::Missing
+                });
             }
             graph.imports.as_mut().unwrap().push(record);
         }
         for declaration in &syntax.modules {
-            if declaration.inline {
+            if declaration.inline || declaration.test && !policy.includes_test_code(file) {
                 continue;
             }
             let target = module_file(
@@ -732,15 +1081,16 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
                 from: file.clone(),
                 specifier: format!("mod {}", declaration.name),
                 line: Some(declaration.line),
-                kind: EdgeKind::Static,
+                kind: EdgeKind::Reexport,
                 ..Default::default()
             };
-            if let Some(target) = target {
+            if let Some(target) = target.filter(|target| enabled.contains(target)) {
                 record.targets.push(target.clone());
                 graph.edges.push(Edge {
                     from: file.clone(),
                     to: target,
-                    kind: EdgeKind::Static,
+                    kind: EdgeKind::Reexport,
+                    is_reexport: true,
                     specifier: Some(record.specifier.clone()),
                     line: record.line,
                     ..Default::default()
@@ -758,13 +1108,44 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
     barrels::forward_exports(&mut symbols.exports, &barrels, false);
     barrels::import_targets(&mut symbols.imports, &symbols.exports);
     barrels::retarget_records(&mut graph, false);
-    symbols.limitations.push("Rust syntax only: cfg branches are combined; macros, include!, generated code, trait resolution and visibility semantics are not evaluated. Runtime graph kinds retain Rust imports conservatively.".into());
+    for edge in &mut graph.edges {
+        if edge.names == ["*"] && !edge.is_reexport {
+            edge.kind = EdgeKind::Reexport;
+            edge.confidence = Some(Confidence::Low);
+            edge.resolution_reason =
+                Some("Rust glob import could not be narrowed to used definitions".into());
+        }
+        if edge
+            .specifier
+            .as_ref()
+            .is_some_and(|s| s.starts_with("mod "))
+        {
+            edge.kind = EdgeKind::Reexport;
+            edge.is_reexport = true;
+            edge.resolution_reason =
+                Some("Rust module containment, not a symbol dependency".into());
+        }
+    }
+    for file in &test_files {
+        if enabled.contains(file) {
+            graph.metadata.entry(file.clone()).or_default().test = true;
+        }
+    }
+    symbols.limitations.push("Rust syntax only: definitely #[cfg(test)] imports are excluded from production; other cfg branches are combined; macros, include!, generated code, trait resolution and visibility semantics are not evaluated. Runtime kinds mean source coupling, not runtime initialization cycles.".into());
     symbols.limitations.sort();
     symbols.limitations.dedup();
     graph.collector.unresolved = Some(unresolved_count(graph.imports.as_ref().unwrap()));
     Ok(super::Output {
         raw: graph,
         symbols,
-        source_root: ".".into(),
+        source_root: if packages.len() == 1
+            && packages[0].dir.as_os_str().is_empty()
+            && packages[0].conventional
+            && matches!(packages[0].root.as_str(), "src/lib.rs" | "src/main.rs")
+        {
+            "src".into()
+        } else {
+            ".".into()
+        },
     })
 }

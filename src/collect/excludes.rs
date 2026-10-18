@@ -24,6 +24,14 @@ pub const TEST_EXCLUDES: &[&str] = &[
     "**/*Test.java",
     "**/*Tests.java",
 ];
+pub const RUST_TEST_EXCLUDES: &[&str] = &[
+    "**/tests.rs",
+    "**/*_tests.rs",
+    "**/*_test.rs",
+    "**/test_support.rs",
+    "**/test_support/**",
+];
+
 pub const GENERATED_EXCLUDES: &[&str] = &[
     "**/generated/**",
     "**/__generated__/**",
@@ -73,6 +81,7 @@ pub struct Policy {
     patterns: Vec<String>,
     archignore: Option<String>,
     settings_key: String,
+    include_tests: bool,
 }
 
 pub fn defaults(language: Language) -> Vec<String> {
@@ -86,6 +95,9 @@ fn active_defaults(
     let mut patterns: Vec<_> = SUPPORT_EXCLUDES.iter().map(|s| (*s).to_owned()).collect();
     if !include_tests {
         patterns.extend(TEST_EXCLUDES.iter().map(|s| (*s).to_owned()));
+        if language == Language::Rust {
+            patterns.extend(RUST_TEST_EXCLUDES.iter().map(|s| (*s).to_owned()));
+        }
     }
     if !include_generated {
         patterns.extend(GENERATED_EXCLUDES.iter().map(|s| (*s).to_owned()));
@@ -106,6 +118,9 @@ pub fn output_globs(language: Language) -> Vec<String> {
 }
 
 pub fn is_test(path: &str) -> bool {
+    if path.ends_with(".rs") && is_rust_test(path) {
+        return true;
+    }
     static TESTS: std::sync::OnceLock<GlobSet> = std::sync::OnceLock::new();
     TESTS
         .get_or_init(|| {
@@ -116,6 +131,21 @@ pub fn is_test(path: &str) -> bool {
                     .collect::<Vec<_>>(),
             )
             .expect("built-in test globs are valid")
+        })
+        .is_match(path)
+}
+
+pub fn is_rust_test(path: &str) -> bool {
+    static TESTS: std::sync::OnceLock<GlobSet> = std::sync::OnceLock::new();
+    TESTS
+        .get_or_init(|| {
+            globset(
+                &RUST_TEST_EXCLUDES
+                    .iter()
+                    .map(|s| (*s).to_owned())
+                    .collect::<Vec<_>>(),
+            )
+            .expect("built-in Rust test globs are valid")
         })
         .is_match(path)
 }
@@ -161,7 +191,11 @@ impl Policy {
             patterns,
             archignore,
             settings_key,
+            include_tests: options.include_tests || options.no_defaults,
         })
+    }
+    pub fn includes_test_code(&self, path: &str) -> bool {
+        self.include_tests || self.included(path)
     }
     pub fn included(&self, path: &str) -> bool {
         self.includes.is_match(path)

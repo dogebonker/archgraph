@@ -360,6 +360,10 @@ pub fn find(
         .edges
         .iter()
         .filter(|e| {
+            !(doc.source.language == Language::Rust
+                && e.specifier.as_ref().is_some_and(|s| s.starts_with("mod ")))
+        })
+        .filter(|e| {
             e.is_reexport
                 || matches!(e.kind, EdgeKind::Reexport | EdgeKind::TypeReexport)
                     && e.confidence != Some(crate::model::Confidence::Low)

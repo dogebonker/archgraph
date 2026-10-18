@@ -419,3 +419,41 @@ fn a_scan_outside_any_repository_works_in_a_translated_locale() {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+#[test]
+fn rust_test_conventions_are_language_scoped_and_overridable() {
+    let root = root("rust-tests");
+    let candidates = paths(&[
+        "src/tests.rs",
+        "src/unit_tests.rs",
+        "src/unit_test.rs",
+        "src/test_support.rs",
+        "src/test_support/helper.rs",
+        "src/test_support/helper.py",
+        "src/domain.rs",
+    ]);
+    let rust = Policy::new(&root, Language::Rust, Options::default()).unwrap();
+    assert_eq!(rust.select(&candidates).unwrap(), paths(&["src/domain.rs"]));
+    let python = Policy::new(&root, Language::Python, Options::default()).unwrap();
+    assert_eq!(python.select(&candidates).unwrap(), candidates);
+    let rust = Policy::new(
+        &root,
+        Language::Rust,
+        Options {
+            include_tests: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(rust.select(&candidates).unwrap(), candidates);
+    for path in [
+        "src/tests.rs",
+        "src/unit_tests.rs",
+        "src/unit_test.rs",
+        "src/test_support.rs",
+        "src/test_support/helper.rs",
+    ] {
+        assert!(is_test(path));
+    }
+    assert!(!is_test("src/test_support/helper.py"));
+}

@@ -12,3 +12,7 @@
 (static_item) @definition
 (union_item) @definition
 (macro_invocation) @macro
+
+(identifier) @identifier
+(type_identifier) @identifier
+(macro_definition) @macro_definition
