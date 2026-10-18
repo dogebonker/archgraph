@@ -632,7 +632,7 @@ ul.wi-findings .path { color: var(--label2); margin-top: 2px; }
       <h3>Next steps, from the scanned root</h3>
       <label>1. Confirm with the CLI<textarea id="whatif-cli" readonly rows="3"></textarea></label>
       <div class="whatif-actions"><button type="button" id="whatif-copy-cli">Copy simulate command</button></div>
-      <label>2. Apply the move<textarea id="whatif-git" readonly rows="3"></textarea></label>
+      <label>2. Apply the move<textarea id="whatif-git" readonly rows="4"></textarea></label>
       <div class="whatif-actions"><button type="button" id="whatif-copy-git">Copy git mv snippet</button></div>
       <details><summary>Graph JSON path</summary><input id="whatif-graph" value="graph.json" aria-label="Graph JSON path for CLI" autocomplete="off" spellcheck="false"></details>
     </div>
@@ -865,7 +865,6 @@ const MOD_PREFIX = (() => {
   return first && mods.every(m => m.id.startsWith(first) && m.id.length > first.length) ? first : "";
 })();
 const short = p => PREFIX && p.startsWith(PREFIX) ? p.slice(PREFIX.length) : p;
-const shortText = s => PREFIX ? s.split(PREFIX).join("") : s;
 
 const medges = doc.module_edges.map((e, i) => ({ i, a: modIndex.get(e.from), b: modIndex.get(e.to), imports: e.imports,
   forbidden: e.forbidden, v: { allowed: 0, forbidden: 0, unplanned: 0, none: 0 }, types: 0, list: [] }));
@@ -1185,7 +1184,7 @@ function advice(kind, f) {
 const subjectText = f => {
   if (f.subject === ".") return "the whole source tree";
   /* A long member list (a 96-module cycle) names a few and counts the rest. */
-  const parts = shortText(f.subject).split(", ");
+  const parts = f.subject.split(", ").map(short);
   return parts.length > 8 ? `${parts.slice(0, 6).join(", ")} and ${parts.length - 6} more` : parts.join(", ");
 };
 const edgeBetween = (a, b) => files[a].outs.find(e => edges[e].b === b);
@@ -4097,7 +4096,7 @@ function drawExternals(px) {
     const active = target?.type === "external" && target.i === p.i;
     ctx.globalAlpha = 1; ctx.fillStyle = C.surface; ctx.strokeStyle = active ? C.focus : C.muted; ctx.lineWidth = (active ? 2 : 1) * px;
     ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(p.r, 4 * px), 0, TAU); ctx.fill(); ctx.stroke();
-    if (active) { ctx.font = `12px ${MONO}`; ctx.fillStyle = C.fg; ctx.textAlign = "center"; ctx.save(); ctx.translate(p.x, p.y + p.r + 16 * px); ctx.scale(px, px); ctx.fillText("pkg:" + p.package, 0, 0); ctx.restore(); }
+    if (active) { ctx.font = `12px ${MONO}`; ctx.fillStyle = C.fg; ctx.save(); ctx.textAlign = "center"; ctx.translate(p.x, p.y + p.r + 16 * px); ctx.scale(px, px); ctx.fillText("pkg:" + p.package, 0, 0); ctx.restore(); }
   }
   ctx.globalAlpha = 1;
 }

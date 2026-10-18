@@ -37,6 +37,12 @@ test('complete graph script is valid JavaScript', () => {
   assert.doesNotThrow(() => new vm.Script(script));
 });
 
+test('finding subjects drop the shared prefix only at the start of each member', () => {
+  const ctx = vm.createContext({ PREFIX: 'src/' });
+  vm.runInContext(fragment('const short =', '\n') + fragment('const subjectText =', 'const edgeBetween'), ctx);
+  assert.equal(vm.runInContext('subjectText({ subject: "src/websrc/a.ts, src/b.ts" })', ctx), 'websrc/a.ts, b.ts');
+});
+
 test('churn marks encode frequency and summaries explain counts and cycle size', () => {
   const ctx = context();
   assert.equal(vm.runInContext('churnMark(0).scale', ctx), 1);

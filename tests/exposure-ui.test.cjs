@@ -88,9 +88,13 @@ test('external dots are visible without drawing every package link; selected pac
   const { run, context, calls } = setup({ external_nodes: [packageNode], external_edges: [packageEdge] });
   run('drawExternals(1)'); assert.ok(calls.some(call => call[0] === 'arc'));
   assert.equal(calls.filter(call => call[0] === 'lineTo').length, 0);
+  const saved = [];
+  context.ctx = new Proxy({ textAlign: 'start', save() { saved.push(this.textAlign); }, restore() { this.textAlign = saved.pop(); } },
+    { get: (target, key) => target[key] || ((...args) => calls.push([key, ...args])) });
   context.sel = { type: 'external', i: 0 }; run('drawExternals(1)');
   assert.equal(calls.filter(call => call[0] === 'lineTo').length, 1);
   assert.ok(calls.some(call => call[0] === 'fillText' && call[1] === 'pkg:typeorm'));
+  assert.equal(context.ctx.textAlign, 'start', 'the centred package label must not leak into later labels');
 });
 test('ring integrates camera bounds, hit testing, search, selection and module context', () => {
   for (const [start, end, expected] of [
