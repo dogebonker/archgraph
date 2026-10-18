@@ -671,13 +671,17 @@ fn unresolved(args: Unresolved) -> Result<()> {
     }
     for import in &doc.unresolved {
         println!(
-            "{}:{} {} — {}",
+            "{}{} {} — {}",
             serde_json::to_string(&import.from)?,
-            import.line.unwrap_or(0),
+            import
+                .line
+                .map(|line| format!(":{line}"))
+                .unwrap_or_default(),
             serde_json::to_string(&import.specifier)?,
-            serde_json::to_value(import.unresolved)?
-                .as_str()
-                .unwrap_or("missing")
+            import
+                .unresolved
+                .map(archgraph::model::ImportReason::as_str)
+                .unwrap_or_default()
         );
     }
     println!("{} unresolved imports", doc.unresolved.len());

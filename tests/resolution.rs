@@ -84,6 +84,16 @@ fn ledger_counts_imports_not_edges_and_external_nodes_do_not_change_metrics() {
     let rows: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(rows[0]["reason"], "alias");
     assert_eq!(rows[0]["specifier"], "alias/missing");
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        .args(["unresolved", path.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .starts_with("\"app/a.ts\" \"alias/missing\" — alias\n"),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
     let mut invalid = saved;
     invalid["imports"][0]["targets"] = json!(["../outside.ts"]);
     assert!(archgraph::restore_scan(serde_json::from_value(invalid).unwrap()).is_err());

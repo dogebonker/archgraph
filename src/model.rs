@@ -264,13 +264,30 @@ pub struct ImportRecord {
     pub unresolved: Option<ImportReason>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ImportReason {
     Alias,
     Missing,
     Dynamic,
     Native,
+}
+
+impl ImportReason {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Alias => "alias",
+            Self::Missing => "missing",
+            Self::Dynamic => "dynamic",
+            Self::Native => "native",
+        }
+    }
+}
+
+impl Serialize for ImportReason {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
+    }
 }
 
 #[derive(Debug, Serialize)]
