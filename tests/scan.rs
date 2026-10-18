@@ -1014,19 +1014,31 @@ fn a_failed_type_marking_run_is_recorded() {
 
 #[test]
 fn a_tool_running_past_the_tool_timeout_is_killed_and_reported() {
-    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("tool-timeout");
-    let _ = fs::remove_dir_all(&dir);
+    // Keep repository/Git probes outside the one-second child-process timeout check.
+    let fixture = archgraph::collect::TempDir::new("tool-timeout").unwrap();
+    let dir = fixture.path();
     fs::create_dir_all(dir.join("src")).unwrap();
     fs::write(dir.join("src/a.ts"), "export const a = 1;\n").unwrap();
     let pid = dir.join("pid");
     let script = dir.join("depcruise");
     fs::write(
         &script,
-        format!("#!/bin/sh\necho $$ > '{}'\nexec sleep 30\n", pid.display()),
+        format!(
+            "#!/bin/sh\nif [ \"$1\" = --probe ]; then printf ready; exit 0; fi\necho $$ > '{}'\nexec sleep 30\n",
+            pid.display()
+        ),
     )
     .unwrap();
     use std::os::unix::fs::PermissionsExt;
     fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+    // macOS may delay the first execution of a newly written script beyond the test deadline.
+    let probe = std::process::Command::new(&script)
+        .arg("--probe")
+        .output()
+        .unwrap();
+    assert!(probe.status.success(), "{probe:?}");
+    assert_eq!(probe.stdout, b"ready");
+    assert!(!pid.exists(), "the probe must not run the timed branch");
     let started = std::time::Instant::now();
     let out = archgraph(&[
         "--tool-timeout",
@@ -1042,7 +1054,7 @@ fn a_tool_running_past_the_tool_timeout_is_killed_and_reported() {
     assert!(!out.status.success(), "{stderr}");
     assert!(stderr.contains("timed out after 1 s"), "{stderr}");
     assert!(started.elapsed() < std::time::Duration::from_secs(20));
-    let pid = fs::read_to_string(&pid).unwrap();
+    let pid = fs::read_to_string(&pid).unwrap_or_else(|error| panic!("{error}: {stderr}"));
     let alive = std::process::Command::new("kill")
         .args(["-0", pid.trim()])
         .status()
