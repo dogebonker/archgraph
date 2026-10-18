@@ -377,6 +377,10 @@ pub fn refuse_symlink(path: &Path) -> Result<()> {
 /// it truncated.
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
     refuse_symlink(path)?;
+    // Devices and pipes (`-o /dev/null`) cannot be replaced; they are written in place.
+    if fs::metadata(path).is_ok_and(|m| !m.is_file()) {
+        return Ok(fs::write(path, bytes)?);
+    }
     let temporary = path.with_extension(format!(
         "{}-{}.tmp",
         std::process::id(),
