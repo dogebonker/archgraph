@@ -15,14 +15,7 @@ defmodule ArchgraphElixir do
       Enum.map(files, fn file ->
         source = File.read!(Path.join(root, file))
 
-        case Code.string_to_quoted(source, file: file, columns: true) do
-          {:ok, tree} ->
-            {file, tree}
-
-          {:error, {location, message, token}} ->
-            line = if is_list(location), do: Keyword.get(location, :line, 1), else: location
-            raise "#{file}:#{line}: #{message}#{inspect(token)}"
-        end
+        {file, Code.string_to_quoted!(source, file: file, columns: true)}
       end)
 
     initial = %{modules: %{}, records: []}
@@ -377,4 +370,3 @@ defmodule ArchgraphElixir do
 end
 
 ArchgraphElixir.main()
-
