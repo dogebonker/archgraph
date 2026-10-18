@@ -39,6 +39,8 @@ That prints a summary and writes `.archgraph/archgraph.html`: open it in a brows
 
 All supported languages also have an experimental Rust-native engine: `archgraph report path/to/repo --engine native`. Embedded tree-sitter grammars replace external parsers; Go still needs its toolchain for read-only `go list` package metadata. Native collection needs no Node/npx, Python interpreter, rust-analyzer, JDK or Elixir runtime. The reference collectors remain the default; the [pinned comparison](docs/native-engine-comparison.md) covers TypeScript/JavaScript and Python, with kind and resolution gaps still under review. `--engine depcruise` explicitly selects the TypeScript reference path. See [engine selection and limits](docs/guide.md#native-engine).
 
+For agents making repeated edits, `archgraph serve . --engine native --symbols` keeps a watched graph warm. Commands discover the local daemon automatically; `--no-daemon` forces standalone execution. Use `archgraph check .archgraph/daemon-graph.json --brief` for bounded policy evidence or `archgraph context --graph .archgraph/daemon-graph.json --root . --task "your change" --brief` for a reading plan. Native TS/JS, Python and Go support incremental parsing; other paths log full-refresh fallbacks. See [daemon behavior, limits and benchmarks](docs/guide.md#warm-graphs-for-agents). Measured latency varies by repository.
+
 <details>
 <summary>Other ways to install, and what each language needs</summary>
 

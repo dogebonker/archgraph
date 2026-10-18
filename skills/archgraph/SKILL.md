@@ -7,7 +7,23 @@ compatibility: Needs the archgraph binary on PATH (install.sh, npx archgraph-cli
 
 # archgraph
 
-archgraph reads a repository's file imports, groups files into modules (folders, or rules), and reports metrics, cycles, rule verdicts and findings as JSON (`schema: archgraph/v1.1`; legacy v1 input remains supported). Every claim you make about the architecture must come from its output.
+archgraph reads a repository's file imports, groups files into modules (folders, or rules), and reports metrics, cycles, rule verdicts and findings as JSON (`schema: archgraph/v1.1`; legacy v1 input remains supported). Every claim you make about the architecture must come from its output. The experimental `--engine native` supports all listed languages without external parsers; native Go still requires read-only `go list` metadata. Reference collectors remain the default.
+
+## Repeated agent calls
+
+Prefer `--brief` when consuming answers in a context window. Structured output is a separate `archgraph/brief/v1` wrapper containing `result`, full top-level array `counts`, explicit `omitted` records and a hint to request full evidence. The cap is 20 array entries across the result, 240 nodes, depth 8 and 512 characters per string. Do not feed the projection back as a scan document; graph output written with `-o` stays complete. If relevant evidence was omitted, rerun without `--brief` before making a claim.
+
+For repeated edits, `archgraph serve <root> --engine native --symbols` keeps a watched graph in `<root>/.archgraph/daemon-graph.json`. It writes local daemon metadata and graph snapshots there; start it only within the requested workspace. Use the same collection flags for cached scans. CLI commands discover the daemon automatically; `--no-daemon` forces a standalone run. Existing saved graphs retain their own snapshot semantics, so pass the daemon graph explicitly for current edits:
+
+```sh
+archgraph status <root> --brief
+archgraph check <root>/.archgraph/daemon-graph.json --brief
+archgraph explain src/billing/invoice.ts --graph <root>/.archgraph/daemon-graph.json --brief
+```
+
+Native TS/JS, Python and Go incrementally reparse changed files; global resolution and connected analysis regions may still require repository-wide work. Other engines/languages log full-refresh fallbacks. No sub-100 ms latency guarantee is established by the feature itself. A refresh error requires fixing the source/configuration and retrying; do not cite the last saved daemon graph as current evidence after an error. Stop a daemon you launched when the task no longer needs it. `serve --once` warms and answers one request without watching, then exits.
+
+Scan timestamps identify source time (`SOURCE_DATE_EPOCH`, Git HEAD time, then epoch), not the current clock. Check graph provenance and current source rather than deciding freshness from `generated_at` alone. Keep v1/v1.1 full scan evidence for comparisons.
 
 ## Setup
 
@@ -17,7 +33,7 @@ archgraph reads a repository's file imports, groups files into modules (folders,
 4. Go: `go version` must print 1.21 or later (1.27.1 is tested); otherwise ask the user to install Go from https://go.dev/dl, or pass `--go <path>` to a Go elsewhere. Nothing is installed into the repository and no module downloads are needed. If the scan fails because the repository's `go.mod` asks for a newer Go, say so: archgraph never downloads a toolchain.
 5. Elixir: use Elixir 1.14+ / OTP 25+ on `PATH`, or pass `--elixir <path>`. `--language elixir` selects it explicitly in mixed repositories. Scans parse `.ex`/`.exs` across the scan root, including umbrella apps, without loading Mix projects, evaluating source, compiling or expanding macros.
 
-Write archgraph output to a temporary directory outside the repository unless the user asks to keep it. archgraph writes into the scanned repository only when `report` runs without `--out-dir` (into `<root>/.archgraph/`), so always pass `--out-dir <tmp>`.
+Write archgraph output to a temporary directory outside the repository unless the user asks to keep it. `report` writes into `<root>/.archgraph/` without `--out-dir`; pass `--out-dir <tmp>` for reports. `serve` maintains its local endpoint and live graph in `<root>/.archgraph/`.
 
 **Scan only repositories you trust.** A TypeScript/JavaScript scan runs `npx --no-install depcruise` inside the repository, and npx resolves the repository's own `node_modules/.bin/depcruise` and reads its `.npmrc`, so the repository decides what runs (`--depcruise <path>` runs that executable instead). For a repository you did not write or do not trust, tell the user and scan it inside a sandbox or container. (Python scans run the interpreter with `-I` and keep the repository off `sys.path` until grimp is loaded; Go scans compile only archgraph's own helper, outside the repository, and run `go list` with no network, no toolchain switch and no `go.work`; git runs with `core.fsmonitor=false`.)
 

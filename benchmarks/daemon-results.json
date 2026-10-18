@@ -1,0 +1,846 @@
+{
+  "binary_sha256": "6655c101e4f6c16a9776152a4f133121e0b0d86030106cf5541664f9d0f5098c",
+  "engine": "native",
+  "fixture_2k": {
+    "body_command": "status, requiring generation advancement; body changes leave graph bytes unchanged",
+    "commit": "77be956b6a333746eab9f5213262bef9cbc8985b",
+    "files": 2000,
+    "git_backed": true,
+    "import_command": "--brief scan, requiring the new edge count; exact pair checked after timing",
+    "initial_edges": 1999,
+    "modules": 100,
+    "pooled": {
+      "body": {
+        "p50_ms": 55.626,
+        "p95_ms": 59.037
+      },
+      "import": {
+        "p50_ms": 81.797,
+        "p95_ms": 90.158
+      }
+    },
+    "pooled_samples_per_case": 6,
+    "rerun_reason": "The initial run coincided with the end of validation. A second run was requested to check host-load sensitivity; all six observations are included.",
+    "runs": [
+      {
+        "body": {
+          "p50_ms": 55.679,
+          "p95_ms": 57.633,
+          "samples": [
+            {
+              "elapsed_ms": 57.633,
+              "rss_kib": 64288,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 2,
+                "parsed_files": 1,
+                "refresh_ms": 21.358834,
+                "timings": {
+                  "analyze_ms": 0.34825,
+                  "collect_ms": 9.630333,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.981167,
+                  "provenance_ms": 4.252708,
+                  "publish_ms": 5.911625
+                }
+              }
+            },
+            {
+              "elapsed_ms": 54.02,
+              "rss_kib": 66880,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 4,
+                "parsed_files": 1,
+                "refresh_ms": 19.250041,
+                "timings": {
+                  "analyze_ms": 0.400708,
+                  "collect_ms": 9.067250000000001,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.9087919999999999,
+                  "provenance_ms": 3.9311670000000003,
+                  "publish_ms": 4.4628749999999995
+                }
+              }
+            },
+            {
+              "elapsed_ms": 55.679,
+              "rss_kib": 67104,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 6,
+                "parsed_files": 1,
+                "refresh_ms": 20.313709,
+                "timings": {
+                  "analyze_ms": 0.361167,
+                  "collect_ms": 9.629333,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.908208,
+                  "provenance_ms": 4.612791,
+                  "publish_ms": 4.313875
+                }
+              }
+            }
+          ]
+        },
+        "cold": {
+          "p50_ms": 265.099,
+          "p95_ms": 372.925,
+          "samples_ms": [
+            265.099,
+            262.219,
+            372.925
+          ]
+        },
+        "idle": {
+          "p50_ms": 28.411,
+          "p95_ms": 35.593,
+          "samples_ms": [
+            35.593,
+            28.411,
+            28.302
+          ]
+        },
+        "import": {
+          "p50_ms": 83.182,
+          "p95_ms": 90.158,
+          "samples": [
+            {
+              "elapsed_ms": 90.158,
+              "rss_kib": 67840,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 8,
+                "parsed_files": 1,
+                "refresh_ms": 33.0565,
+                "timings": {
+                  "analyze_ms": 12.767083,
+                  "collect_ms": 9.5575,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.901834,
+                  "provenance_ms": 3.870833,
+                  "publish_ms": 5.432625
+                }
+              }
+            },
+            {
+              "elapsed_ms": 83.182,
+              "rss_kib": 68032,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 10,
+                "parsed_files": 1,
+                "refresh_ms": 37.867042,
+                "timings": {
+                  "analyze_ms": 13.930125,
+                  "collect_ms": 11.828833000000001,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.99925,
+                  "provenance_ms": 5.160375,
+                  "publish_ms": 5.299957999999999
+                }
+              }
+            },
+            {
+              "elapsed_ms": 76.375,
+              "rss_kib": 68064,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 12,
+                "parsed_files": 1,
+                "refresh_ms": 32.548167,
+                "timings": {
+                  "analyze_ms": 12.258791,
+                  "collect_ms": 9.673292,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.868833,
+                  "provenance_ms": 4.184,
+                  "publish_ms": 5.042083
+                }
+              }
+            }
+          ]
+        },
+        "label": "initial"
+      },
+      {
+        "body": {
+          "p50_ms": 55.573,
+          "p95_ms": 59.037,
+          "samples": [
+            {
+              "elapsed_ms": 55.573,
+              "rss_kib": 63984,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 2,
+                "parsed_files": 1,
+                "refresh_ms": 19.821666,
+                "timings": {
+                  "analyze_ms": 0.378125,
+                  "collect_ms": 9.175041,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.964625,
+                  "provenance_ms": 3.6990830000000003,
+                  "publish_ms": 5.371417
+                }
+              }
+            },
+            {
+              "elapsed_ms": 59.037,
+              "rss_kib": 64336,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 4,
+                "parsed_files": 1,
+                "refresh_ms": 21.625291,
+                "timings": {
+                  "analyze_ms": 0.37533299999999997,
+                  "collect_ms": 9.439542000000001,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.890334,
+                  "provenance_ms": 3.9890000000000003,
+                  "publish_ms": 6.448709
+                }
+              }
+            },
+            {
+              "elapsed_ms": 55.392,
+              "rss_kib": 64912,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 6,
+                "parsed_files": 1,
+                "refresh_ms": 19.471124999999997,
+                "timings": {
+                  "analyze_ms": 0.369125,
+                  "collect_ms": 9.23375,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.9222090000000001,
+                  "provenance_ms": 3.817417,
+                  "publish_ms": 4.610292
+                }
+              }
+            }
+          ]
+        },
+        "cold": {
+          "p50_ms": 225.352,
+          "p95_ms": 229.555,
+          "samples_ms": [
+            225.352,
+            223.219,
+            229.555
+          ]
+        },
+        "idle": {
+          "p50_ms": 28.841,
+          "p95_ms": 31.813,
+          "samples_ms": [
+            31.813,
+            28.501,
+            28.841
+          ]
+        },
+        "import": {
+          "p50_ms": 80.411,
+          "p95_ms": 84.12,
+          "samples": [
+            {
+              "elapsed_ms": 70.968,
+              "rss_kib": 65344,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 8,
+                "parsed_files": 1,
+                "refresh_ms": 32.346542,
+                "timings": {
+                  "analyze_ms": 12.598125,
+                  "collect_ms": 9.064459000000001,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.8945,
+                  "provenance_ms": 3.85375,
+                  "publish_ms": 5.440916
+                }
+              }
+            },
+            {
+              "elapsed_ms": 84.12,
+              "rss_kib": 65440,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 10,
+                "parsed_files": 1,
+                "refresh_ms": 33.294625,
+                "timings": {
+                  "analyze_ms": 12.683666,
+                  "collect_ms": 9.734959,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.904375,
+                  "provenance_ms": 4.043792,
+                  "publish_ms": 5.384042
+                }
+              }
+            },
+            {
+              "elapsed_ms": 80.411,
+              "rss_kib": 65472,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 12,
+                "parsed_files": 1,
+                "refresh_ms": 32.985583,
+                "timings": {
+                  "analyze_ms": 12.374457999999999,
+                  "collect_ms": 9.153875000000001,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 0.884958,
+                  "provenance_ms": 3.860292,
+                  "publish_ms": 6.201
+                }
+              }
+            }
+          ]
+        },
+        "label": "followup_after_validation"
+      }
+    ],
+    "shape": "one directed chain through 100 folders of 20 files; the new import adds a forward edge m000/f00 to m050/f00 without a cycle"
+  },
+  "host": {
+    "cpus": 14,
+    "machine": "arm64",
+    "platform": "macOS-26.2-arm64-arm-64bit"
+  },
+  "methodology": {
+    "cold": "Standalone --no-daemon --brief scan, full collection; OS filesystem caches retained.",
+    "edits": "Time from first file write until --brief scan returns the baseline plus N new edges; exact added pairs verified after timing; restores verified before the next sample. Imports use existing non-barrel source files and a known internal leaf.",
+    "idle": "Matching --brief scan through the warm daemon without a file edit.",
+    "load": "Showcase samples accompanied final validation. A second Git-backed fixture run checked load sensitivity after validation; both fixture runs are retained and pooled, not selected.",
+    "memory": "RSS sampled outside timing, KiB; not peak memory.",
+    "percentiles": "Median and nearest-rank p95; three-sample observations are not latency guarantees."
+  },
+  "repos": [
+    {
+      "cold": {
+        "p50_ms": 3011.506,
+        "p95_ms": 3065.847,
+        "samples_ms": [
+          2933.912,
+          3065.847,
+          3011.506
+        ]
+      },
+      "commit": "00c4ba8b6e268c792da64207fa9453132bfcec5f",
+      "edits": {
+        "1": {
+          "files": 1,
+          "p50_ms": 240.38,
+          "p95_ms": 241.434,
+          "samples": [
+            {
+              "elapsed_ms": 240.38,
+              "rss_kib": 158592,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 2,
+                "parsed_files": 1,
+                "refresh_ms": 166.312333,
+                "timings": {
+                  "analyze_ms": 94.570875,
+                  "collect_ms": 42.274625,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 5.660333,
+                  "provenance_ms": 12.096499999999999,
+                  "publish_ms": 10.494209
+                }
+              }
+            },
+            {
+              "elapsed_ms": 241.434,
+              "rss_kib": 171616,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 4,
+                "parsed_files": 1,
+                "refresh_ms": 158.740417,
+                "timings": {
+                  "analyze_ms": 88.289167,
+                  "collect_ms": 39.133,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 4.860917000000001,
+                  "provenance_ms": 12.361458,
+                  "publish_ms": 11.243875000000001
+                }
+              }
+            },
+            {
+              "elapsed_ms": 239.452,
+              "rss_kib": 183536,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 6,
+                "parsed_files": 1,
+                "refresh_ms": 156.73666699999998,
+                "timings": {
+                  "analyze_ms": 88.73337500000001,
+                  "collect_ms": 39.938291,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 4.923875000000001,
+                  "provenance_ms": 10.679542,
+                  "publish_ms": 9.320917
+                }
+              }
+            }
+          ],
+          "verified_new_edges": 1
+        },
+        "50": {
+          "files": 50,
+          "p50_ms": 305.567,
+          "p95_ms": 320.231,
+          "samples": [
+            {
+              "elapsed_ms": 305.567,
+              "rss_kib": 195088,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 8,
+                "parsed_files": 50,
+                "refresh_ms": 225.918375,
+                "timings": {
+                  "analyze_ms": 89.71412500000001,
+                  "collect_ms": 104.333,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 4.98225,
+                  "provenance_ms": 12.378833,
+                  "publish_ms": 11.227834000000001
+                }
+              }
+            },
+            {
+              "elapsed_ms": 304.173,
+              "rss_kib": 205072,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 10,
+                "parsed_files": 50,
+                "refresh_ms": 223.007958,
+                "timings": {
+                  "analyze_ms": 89.381875,
+                  "collect_ms": 101.975542,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 4.983458,
+                  "provenance_ms": 12.447583999999999,
+                  "publish_ms": 11.023041000000001
+                }
+              }
+            },
+            {
+              "elapsed_ms": 320.231,
+              "rss_kib": 215056,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 12,
+                "parsed_files": 50,
+                "refresh_ms": 226.051041,
+                "timings": {
+                  "analyze_ms": 91.399709,
+                  "collect_ms": 101.622084,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 4.993,
+                  "provenance_ms": 11.935792000000001,
+                  "publish_ms": 12.496417
+                }
+              }
+            }
+          ],
+          "verified_new_edges": 50
+        }
+      },
+      "files": 1252,
+      "flags": [
+        "--depth",
+        "2",
+        "--exclude",
+        "src/compiled/**",
+        "--exclude",
+        "src/bundles/**",
+        "--exclude",
+        "src/.storybook/**",
+        "--exclude",
+        ".storybook/**"
+      ],
+      "idle": {
+        "p50_ms": 494.885,
+        "p95_ms": 506.96,
+        "rss_kib": 146544,
+        "samples_ms": [
+          506.96,
+          494.885,
+          442.105
+        ]
+      },
+      "name": "next.js",
+      "root": "packages/next"
+    },
+    {
+      "cold": {
+        "p50_ms": 1079.548,
+        "p95_ms": 1097.781,
+        "samples_ms": [
+          1077.875,
+          1097.781,
+          1079.548
+        ]
+      },
+      "commit": "d430084791a61b31cecec132bce3dca19194f7f2",
+      "edits": {
+        "1": {
+          "files": 1,
+          "p50_ms": 343.259,
+          "p95_ms": 343.366,
+          "samples": [
+            {
+              "elapsed_ms": 327.958,
+              "rss_kib": 89152,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 2,
+                "parsed_files": 1,
+                "refresh_ms": 302.977875,
+                "timings": {
+                  "analyze_ms": 32.801207999999995,
+                  "collect_ms": 249.795917,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 2.604166,
+                  "provenance_ms": 9.126458000000001,
+                  "publish_ms": 8.132375000000001
+                }
+              }
+            },
+            {
+              "elapsed_ms": 343.366,
+              "rss_kib": 99056,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 4,
+                "parsed_files": 1,
+                "refresh_ms": 319.04279099999997,
+                "timings": {
+                  "analyze_ms": 32.531125,
+                  "collect_ms": 264.401958,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 2.612208,
+                  "provenance_ms": 9.190459,
+                  "publish_ms": 8.974542
+                }
+              }
+            },
+            {
+              "elapsed_ms": 343.259,
+              "rss_kib": 101792,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 6,
+                "parsed_files": 1,
+                "refresh_ms": 317.78974999999997,
+                "timings": {
+                  "analyze_ms": 32.167750000000005,
+                  "collect_ms": 265.412459,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 2.6645839999999996,
+                  "provenance_ms": 9.354709,
+                  "publish_ms": 6.784625
+                }
+              }
+            }
+          ],
+          "verified_new_edges": 1
+        },
+        "50": {
+          "files": 50,
+          "p50_ms": 398.145,
+          "p95_ms": 406.341,
+          "samples": [
+            {
+              "elapsed_ms": 396.466,
+              "rss_kib": 106496,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 8,
+                "parsed_files": 50,
+                "refresh_ms": 373.521917,
+                "timings": {
+                  "analyze_ms": 32.864166,
+                  "collect_ms": 316.045542,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 2.6425,
+                  "provenance_ms": 9.505333,
+                  "publish_ms": 11.011709
+                }
+              }
+            },
+            {
+              "elapsed_ms": 398.145,
+              "rss_kib": 106560,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 10,
+                "parsed_files": 50,
+                "refresh_ms": 374.486041,
+                "timings": {
+                  "analyze_ms": 35.058333,
+                  "collect_ms": 317.49645799999996,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 2.8912500000000003,
+                  "provenance_ms": 9.632833,
+                  "publish_ms": 7.887542000000001
+                }
+              }
+            },
+            {
+              "elapsed_ms": 406.341,
+              "rss_kib": 108624,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 12,
+                "parsed_files": 50,
+                "refresh_ms": 381.9495,
+                "timings": {
+                  "analyze_ms": 36.008958,
+                  "collect_ms": 322.411125,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 2.980292,
+                  "provenance_ms": 9.574208,
+                  "publish_ms": 9.192458
+                }
+              }
+            }
+          ],
+          "verified_new_edges": 50
+        }
+      },
+      "files": 706,
+      "flags": [
+        "--package",
+        "django",
+        "--depth",
+        "2",
+        "--exclude",
+        "django/conf/locale/**",
+        "--exclude",
+        "**/migrations/[0-9]*.py"
+      ],
+      "idle": {
+        "p50_ms": 82.576,
+        "p95_ms": 84.413,
+        "rss_kib": 70672,
+        "samples_ms": [
+          82.576,
+          84.413,
+          79.216
+        ]
+      },
+      "name": "django",
+      "root": "."
+    },
+    {
+      "cold": {
+        "p50_ms": 1119.227,
+        "p95_ms": 1129.689,
+        "samples_ms": [
+          1091.71,
+          1119.227,
+          1129.689
+        ]
+      },
+      "commit": "fe92394287516feeada6e9c308ebe22deca2458e",
+      "edits": {
+        "1": {
+          "files": 1,
+          "p50_ms": 90.531,
+          "p95_ms": 93.262,
+          "samples": [
+            {
+              "elapsed_ms": 90.531,
+              "rss_kib": 72624,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 2,
+                "parsed_files": 1,
+                "refresh_ms": 68.095833,
+                "timings": {
+                  "analyze_ms": 36.470875,
+                  "collect_ms": 14.956166,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 1.591292,
+                  "provenance_ms": 7.992875,
+                  "publish_ms": 6.710916
+                }
+              }
+            },
+            {
+              "elapsed_ms": 93.262,
+              "rss_kib": 75728,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 4,
+                "parsed_files": 1,
+                "refresh_ms": 70.258292,
+                "timings": {
+                  "analyze_ms": 35.590792,
+                  "collect_ms": 15.902375,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 1.697541,
+                  "provenance_ms": 8.8995,
+                  "publish_ms": 7.189417
+                }
+              }
+            },
+            {
+              "elapsed_ms": 87.371,
+              "rss_kib": 76368,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 6,
+                "parsed_files": 1,
+                "refresh_ms": 64.941625,
+                "timings": {
+                  "analyze_ms": 34.625333,
+                  "collect_ms": 13.7465,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 1.5452919999999999,
+                  "provenance_ms": 7.046875,
+                  "publish_ms": 7.045458
+                }
+              }
+            }
+          ],
+          "verified_new_edges": 1
+        },
+        "50": {
+          "files": 50,
+          "p50_ms": 119.038,
+          "p95_ms": 120.889,
+          "samples": [
+            {
+              "elapsed_ms": 119.038,
+              "rss_kib": 77744,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 8,
+                "parsed_files": 50,
+                "refresh_ms": 99.431667,
+                "timings": {
+                  "analyze_ms": 36.822624999999995,
+                  "collect_ms": 43.891209,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 1.5412080000000001,
+                  "provenance_ms": 7.984292000000001,
+                  "publish_ms": 8.178917
+                }
+              }
+            },
+            {
+              "elapsed_ms": 118.621,
+              "rss_kib": 78736,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 10,
+                "parsed_files": 50,
+                "refresh_ms": 95.890291,
+                "timings": {
+                  "analyze_ms": 35.351542,
+                  "collect_ms": 42.606416,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 1.5436670000000001,
+                  "provenance_ms": 8.111958000000001,
+                  "publish_ms": 7.08275
+                }
+              }
+            },
+            {
+              "elapsed_ms": 120.889,
+              "rss_kib": 78896,
+              "status": {
+                "cached_snapshots": 2,
+                "fallback_reason": null,
+                "generation": 12,
+                "parsed_files": 50,
+                "refresh_ms": 99.78275000000001,
+                "timings": {
+                  "analyze_ms": 36.994917,
+                  "collect_ms": 43.742125,
+                  "full_scan_ms": 0.0,
+                  "normalize_ms": 1.568125,
+                  "provenance_ms": 8.054499999999999,
+                  "publish_ms": 8.319708
+                }
+              }
+            }
+          ],
+          "verified_new_edges": 50
+        }
+      },
+      "files": 496,
+      "flags": [
+        "--depth",
+        "2"
+      ],
+      "idle": {
+        "p50_ms": 63.332,
+        "p95_ms": 65.942,
+        "rss_kib": 70144,
+        "samples_ms": [
+          65.942,
+          63.023,
+          63.332
+        ]
+      },
+      "name": "typeorm",
+      "root": "packages/typeorm/src"
+    }
+  ],
+  "reproduce": {
+    "fixture": "python3 -B ci/bench_daemon_2k.py --archgraph target/release/archgraph --repeats 3 --output /tmp/daemon-2k-results.json",
+    "showcase": "ci/bench-daemon.sh --archgraph target/release/archgraph --repeats 3 --output /tmp/daemon-results.json"
+  },
+  "runner_sha256": {
+    "ci/bench-daemon.sh": "0986b7cd05b00565c8759c9480745270d70d06a4c63536f920f66835d817c4af",
+    "ci/bench_daemon.py": "358cf4bd8ce7aad5b5b1006f88b90b5c9c5a2441b1016449867f8da25cc49bed",
+    "ci/bench_daemon_2k.py": "16b4510f8efcb359dbc5512ecbd4d23feb579ebf78d5d2ad9732e2a78f67a673"
+  },
+  "samples_per_showcase_case": 3,
+  "schema": "archgraph/daemon-benchmark-results/v1",
+  "source_inputs_sha256": "a826c74ee7885969f6bd8c3f32b96947db73b7e4c57039c71d4a8f65564bb72c"
+}

@@ -9,6 +9,12 @@ compatibility: Needs git, bash and the archgraph binary (setup in the archgraph 
 
 A change passes the guard when `scripts/guard.sh` exits 0: compared with its base commit, the working tree adds no forbidden import and no import cycle. New unplanned imports are listed too; `ARCHGRAPH_FAIL_ON=new-forbidden,new-cycles,new-unplanned` makes them fail, matching a CI gate set that way. Treat a red guard like a failing test: the task is not done.
 
+## Warm graphs and concise evidence
+
+A daemon started with `archgraph serve <root> --engine native` can reuse matching working-tree scan options; `--no-daemon` forces standalone collection. Pass `--engine native` in `ARCHGRAPH_SCAN_ARGS` when using that daemon. The guard still scans its separate base worktree and compares complete scan documents; a warm working-tree graph does not eliminate the base scan. Reference and unsupported incremental paths use logged full-refresh fallbacks. The guard script keeps its existing output and exit semantics.
+
+For a quick policy answer between guard runs, use `archgraph check <root>/.archgraph/daemon-graph.json --brief`. It reports cycles and violations in bounded `archgraph/brief/v1` JSON with explicit omissions. Policy exit 1 means forbidden imports, not merely a cycle; the regression guard remains necessary to fail on newly introduced cycles. Never use a brief projection as the graph input to `diff`. Scan `generated_at` is reproducible source time, not a measure of snapshot freshness; check provenance/current edits and daemon refresh status instead.
+
 ## Steps
 
 1. **Set up.** archgraph must run; follow Setup in [the archgraph skill](../archgraph/SKILL.md#setup). Find the scan flags the repository needs: run `archgraph scan <root> -o <tmp>/probe.json` with no flags and add what its error names: `--depcruise <path>` when dependency-cruiser is installed outside the repository (one in the repository's `node_modules` is found on its own), `--python <interpreter>` for Python, `--package <pkg>` when a Python root holds several packages, `--depth N` when modules sit deeper than two folders. Pass them as `ARCHGRAPH_SCAN_ARGS`. Done when the probe scan exits 0.

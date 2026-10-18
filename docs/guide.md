@@ -4,7 +4,7 @@ The full reference: install options, every command, the CI action, the rules fil
 
 archgraph turns a repository's import graph into evidence for architecture decisions. It collects file-level imports with an existing tool (dependency-cruiser for TypeScript/JavaScript, grimp for Python, the Go toolchain's own `go list` and `go/types` for Go, `rust-analyzer` for Rust, the JDK compiler for Java, Elixir’s `Code.string_to_quoted` for Elixir), groups files into modules, and reports per-module coupling and cohesion, cycles with their smallest break set, rule verdicts for every import, and findings that propose file moves backed by a simulation of each move.
 
-The default reference engine uses those collectors; its Python pass also reads importing files with the standard `ast` module, without running them, to distinguish deferred and type-only imports. The experimental native engine uses tree-sitter queries for every supported language, with Rust resolvers. Both feed the same graph analysis. For Go, imports and identifiers are resolved with Go's standard library (`go/types`) by an embedded helper run with your Go toolchain, which compiles nothing from the repository and runs no repository code. It writes into the scanned repository only when `report` or `history` runs without `--out-dir` (into `<root>/.archgraph/`).
+The default reference engine uses those collectors; its Python pass also reads importing files with the standard `ast` module, without running them, to distinguish deferred and type-only imports. The experimental native engine uses tree-sitter queries for every supported language, with Rust resolvers. Both feed the same graph analysis. For Go, imports and identifiers are resolved with Go's standard library (`go/types`) by an embedded helper run with your Go toolchain, which compiles nothing from the repository and runs no repository code. `report` and `history` write into `<root>/.archgraph/` without `--out-dir`; `serve` also maintains its local endpoint and live graph there.
 
 **Scan only repositories you trust, or scan inside a sandbox.** For TypeScript/JavaScript, `scan` runs `npx --no-install depcruise` in the scanned repository, and npx resolves that repository's own `node_modules/.bin/depcruise` and reads its `.npmrc`: the repository controls what runs. `--depcruise <path>` runs that executable instead, so the repository no longer picks the binary (depcruise still reads its `tsconfig.json`). The Python collector runs your interpreter with `-I` and adds the source root to `sys.path` last, so repository files cannot shadow the standard library or grimp; git runs with `core.fsmonitor=false`. The Go collector writes its helper to a temporary directory outside the repository and runs `go run` there, which compiles only the helper; the helper runs `go list -e -find -json ./...` in each module of the repository, which reads `go.mod` and the source files' package clauses and build constraints and builds, generates and runs nothing. Both run with `GOTOOLCHAIN=local` (a `toolchain` line in the repository's `go.mod` would otherwise make the go command download and run another toolchain; with it the line is ignored, and a `go` line newer than your Go fails the scan instead), `GOPROXY=off` (no network), `GOWORK=off` (a `go.work` in the repository is not read), `CGO_ENABLED=0` (no C toolchain) and `GOFLAGS=-mod=readonly` (replacing any `GOFLAGS` from your environment or `go env`, so no `-toolexec` or `-overlay` applies, and `go.mod` and `go.sum` are never written).
 
@@ -69,6 +69,69 @@ Native Go resolves package identities through `go list -e -deps -json`, using lo
 The selected engine is recorded as optional `config.collection.engine`; an absent value means `reference`, preserving older scans and historical cache behavior. Collector names are `tree-sitter-typescript`, `tree-sitter-python`, `tree-sitter-go`, `tree-sitter-rust`, `tree-sitter-java` and `tree-sitter-elixir`. All use the existing scan schema and shared exclusions, barrel handling and analysis. History keeps the chosen engine for snapshots, so native history does not install or launch reference collectors. Go snapshots still need the local Go toolchain.
 
 The [comparison runner](../benchmarks/native_engine.py) scans the first 20 entries of the showcase manifest at their exact pins with both paths, retaining raw JSON, logs, hashes, file-scope changes and every edge disagreement. The [generated report](native-engine-comparison.md) reports precision and recall for resolved internal edges, separate kind/target agreement and unresolved counts. A default switch requires **both precision and recall above 98% for every repository**, plus review of kind, scope and resolution differences. Matching endpoints alone cannot justify a switch when runtime classifications or unresolved counts disagree. Agreement with a reference collector is not proof of correctness, and no speed multiplier is assumed.
+
+## Warm graphs for agents
+
+```sh
+# Run in a dedicated terminal, from the checkout agents will edit.
+archgraph serve . --engine native --symbols
+# In another terminal, in the same checkout and environment:
+archgraph status . --brief
+archgraph check .archgraph/daemon-graph.json --brief
+archgraph context --graph .archgraph/daemon-graph.json --root . --task "change billing" --budget 8k --brief
+archgraph explain src/billing/invoice.ts --graph .archgraph/daemon-graph.json --brief
+```
+
+`serve [root]` warms the graph, watches the checkout and answers local commands serially. It accepts the same collection options as `scan`; use matching engine, rules, exclusions and symbol options when requesting a cached scan. The reference engine remains the default. Start with `--engine native` for incremental TypeScript/JavaScript, Python and Go collection; the other native languages and reference collectors use a logged full-collection fallback. No dependency-cruiser partial overlay is assumed to preserve reference semantics.
+
+The default Unix socket is `<root>/.archgraph/daemon.sock`. `--socket <path>` changes it; `--port [number]` selects authenticated loopback TCP (`127.0.0.1`), with an omitted number or zero choosing an available port. Use TCP on platforms without Unix sockets. The CLI discovers `.archgraph/daemon.json` from the requested root or working directory and its ancestors. The descriptor contains the connection token; keep it local and do not commit it. Unix descriptors and sockets use owner-only permissions. Transport is JSON-RPC 2.0 with method `command`, CLI arguments and caller context, framed by a four-byte big-endian JSON length; frames are capped at 16 MiB. Use the CLI to construct requests and retain output/exit-code handling.
+
+`scan`, `report`, `check`, `simulate`, `context`, `impact`, `surface`, `explain` and `status` automatically use a matching running daemon. `--no-daemon` forces standalone execution. If the daemon cannot be reached, normal standalone execution continues; stale sockets therefore do not make the CLI unusable. Restarting `serve` recovers stale endpoints. If a response is lost after a request was sent, the command may already have written artifacts: inspect them before retrying. An environment mismatch asks you to restart the daemon in the caller's environment or use `--no-daemon`.
+
+The daemon maintains `.archgraph/daemon-graph.json` as its current graph. It uses a disposable `.archgraph/daemon.index` for Git status caching; the original staging index is not rewritten. Pass the live graph path explicitly to analyze live edits. Ordinary saved graphs retain their snapshot semantics. `report` still writes its JSON and HTML artifacts, and its default Git provenance probes can add work beyond the warm graph; use `--no-provenance` when measuring graph latency. Automatic forwarding does not guarantee a cache hit when scan options differ. The same input, options, environment and terminal mode use the same command implementation and output bytes through either route.
+
+Changed source files are reparsed individually on the incremental path. Import resolution and barrel propagation are composed against the complete cached source index; these steps can still scale with the repository. Go package membership changes require metadata refresh. A dirty dependency region uses a conservative weakly connected closure when recomputing SCCs, so joining or splitting a cycle cannot hide a component outside a previous SCC. Structural/configuration changes, watcher overflow, unsupported collectors and uncertain dependencies trigger an explicit full-refresh log. Refresh failures return an error rather than presenting the previous generation as current.
+
+At most **two graph generations** are retained (current and previous), alongside source/resolver and analysis indexes. This bounds snapshot count, not resident memory in bytes; memory still grows with repository size. `archgraph serve . --engine native --once` warms, answers one request and exits without a watcher; launch it in the background, wait for the descriptor/readiness message, then issue a matching CLI command. This mode validates the serving path in CI; it does not watch edits.
+
+### Brief output and explanations
+
+`--brief` is a global agent-oriented output option. Structured commands emit `schema: "archgraph/brief/v1"`, with `kind`, `result`, full top-level array `counts`, explicit JSON-pointer `omitted` records and a hint for requesting the complete output. Limits are **20 array entries across the result**, 240 value nodes, nesting depth 8 and 512 characters per string. Per-module metric dictionaries in scan/simulation summaries are omitted explicitly to retain findings and summary counts. The brief wrapper is a projection, not a complete v1/v1.1 graph; remove `--brief` before feeding output to graph-reading commands. Output files remain complete graph/report documents even when stdout is brief. Text-only commands use a bounded text projection. Brief mode overrides Markdown display for context, impact and surface.
+
+`archgraph explain <subject> --graph <graph.json>` accepts an exact repository-relative file path, module ID or finding subject. It returns imports, importers, relevant cycles and findings, with owning module metrics for files. It does not infer runtime dispatch beyond the collected static evidence. `archgraph status [root]` reports whether a daemon is running and its graph counts; a stopped daemon includes the command to start it. `check --brief` reports cycles alongside policy evidence, while retaining existing exit semantics: forbidden imports exit 1, valid policy checks exit 0, input/setup errors exit 2. Merely having a cycle does not change that policy exit code.
+
+Scan `source.generated_at` is reproducible: integer `SOURCE_DATE_EPOCH` when set, otherwise Git HEAD commit time, otherwise `1970-01-01T00:00:00Z`. It identifies source revision time rather than execution time. Invalid or out-of-range environment values fail with a correction hint. Identical source, Git state, collector/dependency environment and options therefore produce identical scan bytes; changing the checkout's dirty state or dependency evidence remains a real input change.
+
+### Daemon benchmarks
+
+The [recorded results](../benchmarks/daemon-results.json) use a frozen release binary with `--engine native` on macOS 26.2 arm64 (14 reported CPUs). Three samples per showcase case; the table shows median milliseconds. Each checkout uses its exact [showcase pin and exclusions](../showcase/repos.json).
+
+| Repository | Files | Standalone cold | Warm idle | One-file import edit | 50-file import edit |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Next.js | 1,252 | 3,011.5 | 494.9 | 240.4 | 305.6 |
+| Django | 706 | 1,079.5 | 82.6 | 343.3 | 398.1 |
+| TypeORM | 496 | 1,119.2 | 63.3 | 90.5 | 119.0 |
+
+Cold means a new standalone process performing full collection with `--no-daemon --brief scan`; OS filesystem caches remain warm. Idle and edited cases use the same brief scan through the daemon. Edits add new literal imports to existing non-barrel source files. Timing runs from the first file write until the response contains the new edge count; exact added pairs are checked after timing, and restores are verified before the next sample. These are end-to-end command timings, not parser-only results. Idle requests include the freshness barrier: Next.js's idle median exceeded its edit median in this short run, and no causal conclusion is drawn from that anomaly.
+
+A separate reproducible **Git-backed 2,000-file fixture** has 100 modules and 1,999 imports forming a DAG. Its body edit changes an initializer; its import edit adds a forward dependency without a cycle. An initial three-sample run and a follow-up checking host-load sensitivity after validation are both retained in the artifact; the table pools all six observations. P95 uses nearest rank.
+
+| Fixture case | Samples | Median ms | P95 ms |
+| --- | ---: | ---: | ---: |
+| Body edit → fresh `status` generation | 6 | 55.6 | 59.0 |
+| New import → fresh `--brief scan` | 6 | 81.8 | 90.2 |
+
+The measured fixture cases reached the below-100-ms target. This does not establish that every command or repository stays below 100 ms: reference collector fallbacks, full resolution composition, connected graph regions, Git probes and artifact serialization can cost more. Showcase samples accompanied final validation; all numbers are workstation observations with small sample counts, not latency guarantees. Raw timings, phase counters, sampled RSS, both fixture runs, commit pins and the binary/source hashes are in the result artifact. RSS is sampled outside timing and is not a peak-memory measurement.
+
+Reproduce from the repository root (the runners require Python 3 and Git):
+
+```sh
+cargo build --release --locked
+ci/bench-daemon.sh --archgraph target/release/archgraph --repeats 3 --output /tmp/daemon-results.json
+python3 -B ci/bench_daemon_2k.py --archgraph target/release/archgraph --repeats 3 --output /tmp/daemon-2k-results.json
+```
+
+The showcase runner clones isolated checkouts; `--cache /path/to/showcase/clones` reuses local Git objects without editing the originals. The fixture runner creates and commits its generated sources using command-local Git settings. Both restore edited files, stop their daemons, and retain their work directories and logs for inspection.
 
 ## Commands
 
@@ -665,7 +728,7 @@ New documents have `schema: "archgraph/v1.1"` and `kind: "scan" | "simulation" |
 - Scans may carry optional `symbols` (exports, imports, resolution targets, completeness and limitations) and `surface` (per-module analysis and threshold) blocks. Standalone surface reports use `kind: "surface"`. Older scans remain readable; absent symbol data never establishes that an export is unused.
 - v1.1 adds weighted metrics and deferred-cycle accounting and uses canonical edge-kind names. Upgraded readers accept v1 and v1.1; frozen v1 readers need the compatibility export described below. Optional fields and unknown finding kinds should be ignored by consumers that do not use them.
 - Historical v1 change before the first release, 0.1.0 (the kind names in this paragraph are the old names): `cycles`, and with them `summary.cycles`, each cycle's `break` and `two_way` and a diff's `new_cycles` and `resolved_cycles`, count runtime imports only (`static`, `reexport`). Edge `kind` gained `type-reexport` for `export type … from`, formerly `reexport`. Builds before this change also counted `type`, `dynamic` and type-only re-exports and list more and larger cycles; rescan both sides before diffing across it. Python edges gained `type` and `dynamic` (until then every grimp edge was `static`), and scans have `package_entries` and two-way `registry`/`entry` flags. In the same change an `internals-reach` finding became one per bypassed module (subject: the module id) with `imports`, `importers`, `importing_files` and up to 20 `edges`, replacing one finding per import with `from` and `to`; with rules, one per bound `public` module (subject: its pattern).
-- Graph-node paths stay relative to the scan root. Raw import specifiers and explicitly configured external Python search roots may contain absolute paths. Arrays have deterministic ordering; scans with the same tree, collectors, options and dependency environment differ only in `generated_at` and `git`.
+- Graph-node paths stay relative to the scan root. Raw import specifiers and explicitly configured external Python search roots may contain absolute paths. Arrays have deterministic ordering. `generated_at` uses `SOURCE_DATE_EPOCH`, Git HEAD time or the Unix epoch; identical trees, Git state, collectors, options and dependency environments produce identical scan bytes.
 - Instability and cohesion ratios are rounded to 4 decimals and are `null` when their denominator is zero. In v1.1 they use the weighted totals described below; raw integer counts remain available.
 
 ### Edge quality and migration

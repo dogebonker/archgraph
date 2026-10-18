@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- `serve` keeps a watched graph available over a local authenticated Unix socket or loopback TCP endpoint. CLI commands discover it automatically, `--no-daemon` bypasses it and `--once` warms/answers one request without a watcher. Native TS/JS, Python and Go reuse parsed source; conservative dirty-region analysis and logged full-refresh fallbacks preserve correctness. Retains two graph generations plus indexes; latency benchmarks are recorded separately from parser timings.
+- Global `--brief` provides bounded agent output with explicit omissions; structured check/report/context/impact/surface outputs share their standalone and daemon execution paths. Adds graph-evidence `explain` and daemon `status` commands while preserving policy exit codes and complete output artifacts.
+- Scan `source.generated_at` now uses `SOURCE_DATE_EPOCH`, Git HEAD commit time or the Unix epoch, making repeated scans reproducible for identical inputs. It no longer represents wall-clock execution time; v1/v1.1 graph shapes remain readable.
+
 - Experimental `--engine native` collects all supported languages through embedded tree-sitter grammars and queries. TypeScript resolution uses oxc_resolver; Python, Rust, Java and Elixir resolution runs in Rust without language runtimes, analyzers or project builds. Go uses read-only `go list` package metadata and retains conservative move/symbol limits. Reference collectors remain the default; a pinned 20-repository TypeScript/Python comparison records endpoint, kind, scope and resolution disagreement rather than assuming a speed or correctness gain. `--engine depcruise` remains the TypeScript escape hatch. Release archives include grammar/runtime attributions.
 
 - Elixir source-reference collection through `Code.string_to_quoted`, including umbrella apps, aliases, static module calls and type references. Scans do not load Mix projects, evaluate source, compile or expand macros; unresolved dynamic and unavailable dependency references remain visible. Adds runtime selection, shared exclusions and live collector CI coverage.
