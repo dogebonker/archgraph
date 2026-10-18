@@ -63,12 +63,6 @@ function setWhatifMode(on) {
   } else { showPanel(); $("whatif-toggle").focus(); }
   applyFocus(); redraw();
 }
-function whatifFolder(module) {
-  const dirs = modFiles[module].map(i => dirname(doc.files[i].path).split("/").filter(Boolean));
-  const prefix = [...(dirs[0] || [])];
-  for (const dir of dirs) while (prefix.some((part, i) => dir[i] !== part)) prefix.pop();
-  return prefix.join("/") || ".";
-}
 function whatifDrop(i, x, y, originalLocal) {
   if (whatifSaved?.i === i && Math.hypot(x - mx[files[i].mod], y - my[files[i].mod]) <= modR[files[i].mod]) { clearWhatif(); return; }
   let target = -1;
@@ -82,7 +76,7 @@ function whatifDrop(i, x, y, originalLocal) {
     buildGrid(); redraw(); return;
   }
   whatifUI.file.value = doc.files[i].path;
-  whatifUI.folder.value = whatifFolder(target);
+  whatifUI.folder.value = modRoot[target].slice(0, -1) || ".";
   runWhatif([x, y]);
 }
 /* Every counted metric here is lower-is-better, so a rise is red and a drop is green. */

@@ -668,6 +668,18 @@ const fmt = x => x === null || x === undefined ? "n/a" : typeof x === "number" &
 /* "1 cycle", "2 cycles": the count with its noun in the matching number. */
 const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const dirname = p => p.slice(0, Math.max(p.lastIndexOf("/"), 0));
+/* The deepest directory the paths share, with a trailing slash; "" when they share none. */
+const commonDir = paths => {
+  if (!paths.length) return "";
+  let p = dirname(paths[0]).split("/");
+  for (const path of paths) {
+    const q = dirname(path).split("/");
+    let j = 0;
+    while (j < p.length && j < q.length && p[j] === q[j]) j++;
+    p = p.slice(0, j);
+  }
+  return p.length && p[0] !== "" ? p.join("/") + "/" : "";
+};
 const basename = p => p.slice(p.lastIndexOf("/") + 1);
 const TAU = Math.PI * 2;
 
@@ -848,17 +860,9 @@ const modFiles = mods.map(() => []);
 for (const f of files) modFiles[f.mod].push(f.i);
 
 /* The directory every file shares, left out of the paths the panel prints. */
-const PREFIX = (() => {
-  if (!F) return "";
-  let p = dirname(files[0].path).split("/");
-  for (const f of files) {
-    const q = dirname(f.path).split("/");
-    let j = 0;
-    while (j < p.length && j < q.length && p[j] === q[j]) j++;
-    p = p.slice(0, j);
-  }
-  return p.length && p[0] !== "" ? p.join("/") + "/" : "";
-})();
+const PREFIX = commonDir(files.map(f => f.path));
+/* The deepest directory each module's files share, for module-relative paths. */
+const modRoot = modFiles.map(fs => commonDir(fs.map(i => files[i].path)));
 /* A first folder every module id shares ("src/"), left off the labels on the canvas. */
 const MOD_PREFIX = (() => {
   const first = N > 1 && mods[0].id.includes("/") ? mods[0].id.slice(0, mods[0].id.indexOf("/") + 1) : "";
@@ -979,9 +983,7 @@ const groups = mods.map(() => []);
 mods.forEach((m, mi) => {
   const fs = modFiles[mi];
   if (!fs.length) { modR[mi] = 15; return; }
-  const dirs = fs.map(i => dirname(files[i].path).split("/"));
-  let depth = dirs[0].length;
-  for (const d of dirs) { let j = 0; while (j < depth && j < d.length && d[j] === dirs[0][j]) j++; depth = j; }
+  const dirs = fs.map(i => dirname(files[i].path).split("/")), depth = modRoot[mi].split("/").length - 1;
   const byKey = new Map(), gOf = new Map();
   fs.forEach((f, j) => {
     const k = dirs[j].length > depth ? dirs[j][depth] : "";
@@ -1555,15 +1557,15 @@ const assessment = (() => {
       ". Something the imports do not show (events, DI, shared data) links them."].flat() });
   }
   const reachList = ofKind("internals-reach");
+  /* One finding per module; the one bypassed most leads. */
+  const reachTop = [...reachList].sort((p, q) => q.f.evidence.imports - p.f.evidence.imports || (p.f.subject < q.f.subject ? -1 : 1))[0];
   if (reachList.length) {
-    /* One finding per module; the one bypassed most leads. */
-    const top = [...reachList].sort((p, q) => q.f.evidence.imports - p.f.evidence.imports || (p.f.subject < q.f.subject ? -1 : 1))[0];
-    const total = reachList.reduce((s, fd) => s + fd.f.evidence.imports, 0), k = top.f.evidence.imports;
-    const mi = modIndex.get(top.f.evidence.module);
+    const total = reachList.reduce((s, fd) => s + fd.f.evidence.imports, 0), k = reachTop.f.evidence.imports;
+    const mi = modIndex.get(reachTop.f.evidence.module);
     /* Ranked like the others by files touched: the importing files, summed over the modules. */
     const touch = reachList.reduce((s, fd) => s + (fd.f.evidence.importing_files || 0), 0);
-    bad.push({ touch, parts: [{ fd: top.i, label: count(total, "import reaches", "imports reach") },
-      reachList.length > 1 ? ` past the public entries of ${reachList.length} modules, ${k} of them into ` : " past the public entry of ", mi !== undefined ? { m: mi } : top.f.evidence.module,
+    bad.push({ touch, parts: [{ fd: reachTop.i, label: count(total, "import reaches", "imports reach") },
+      reachList.length > 1 ? ` past the public entries of ${reachList.length} modules, ${k} of them into ` : " past the public entry of ", mi !== undefined ? { m: mi } : reachTop.f.evidence.module,
       ": importers depend on details the module may change."] });
   }
   const seam = ofKind("seam")[0];
@@ -1650,8 +1652,7 @@ const assessment = (() => {
     next.push([{ fd: fd.i, label: `Split ${fd.f.subject}` }, ` along its ${fd.f.evidence.components.length} groups of importers: ${groups.slice(0, 3).join("; ")}.`]);
   }
   if (reachList.length) {
-    const fd = [...reachList].sort((p, q) => q.f.evidence.imports - p.f.evidence.imports || (p.f.subject < q.f.subject ? -1 : 1))[0];
-    const ev = fd.f.evidence, entry = ev.entries[0];
+    const fd = reachTop, ev = fd.f.evidence, entry = ev.entries[0];
     next.push([{ fd: fd.i, label: `Import ${ev.module} through its entry` }, entry ? ` (${short(entry)})` : "", ev.imports === 1 ? " in the one place that reaches past it." : ` in the ${ev.imports} places that reach past it.`]);
   }
   if (unstable.length) {
@@ -1924,14 +1925,6 @@ function band(v, lo, hi, d) {
   return v;
 }
 const clampTo = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-function zoomAt(sx, sy, factor) {
-  const k = clampK(view.k * factor), f = k / view.k;
-  view.x = sx - (sx - view.x) * f;
-  view.y = sy - (sy - view.y) * f;
-  view.k = k;
-  markMoving();
-  redraw();
-}
 function zoomBy(factor) { const [cx, cy] = centerWorld(); animateTo(view.k * factor, cx, cy); }
 function fitBox(x0, y0, x1, y1, maxK, animated) {
   const k = Math.min(maxK, visW() / Math.max(x1 - x0, 1), visH() / Math.max(y1 - y0, 1));
@@ -2679,10 +2672,9 @@ canvas.addEventListener("pointerdown", ev => {
     const hist = [[ev.timeStamp, x, y]];
     if (node) {
       const wx = (x - view.x) / view.k, wy = (y - view.y) / view.k;
-      const nx = node.type === "module" ? mx[node.i] : files[node.i].x, ny = node.type === "module" ? my[node.i] : files[node.i].y;
       cancelSettle((node.type === "module" ? "m" : "f") + node.i);
-      const nx2 = node.type === "module" ? mx[node.i] : files[node.i].x, ny2 = node.type === "module" ? my[node.i] : files[node.i].y;
-      drag = { node, x, y, moved: false, gx: nx2 - wx, gy: ny2 - wy, hist, start: [nx2, ny2],
+      const nx = node.type === "module" ? mx[node.i] : files[node.i].x, ny = node.type === "module" ? my[node.i] : files[node.i].y;
+      drag = { node, x, y, moved: false, gx: nx - wx, gy: ny - wy, hist, start: [nx, ny],
         startLocal: node.type === "file" ? [lx[node.i], ly[node.i]] : null };
       liftNode(node);
     } else drag = { x, y, cx, cy, moved: false, hist };
@@ -3325,16 +3317,20 @@ grab.addEventListener("pointermove", ev => {
   const raw = sheetDrag.y0 + dy;
   setSheetY(raw < top ? top - rubber(top - raw, 120) : raw > bottom ? bottom + rubber(raw - bottom, 80) : raw);
 });
+/* The detent nearest where a release at velocity v would coast to. */
+function nearestDetent(v) {
+  const projected = sheetY + v * 0.998 / (1 - 0.998) / 1000;
+  let best = 0;
+  for (const k of [0, 1, 2]) if (Math.abs(detentY(k) - projected) < Math.abs(detentY(best) - projected)) best = k;
+  return best;
+}
 function endSheet(ev) {
   if (!sheetDrag) return;
   const d = sheetDrag;
   sheetDrag = null;
   if (!d.moved) { snapSheet((sheetDetent + 1) % 3, 0); return; }
   const v = velocity(d.hist)[1];
-  const projected = sheetY + v * 0.998 / (1 - 0.998) / 1000;
-  let best = 0;
-  for (const k of [0, 1, 2]) if (Math.abs(detentY(k) - projected) < Math.abs(detentY(best) - projected)) best = k;
-  snapSheet(best, ev.type === "pointerup" ? v : 0);
+  snapSheet(nearestDetent(v), ev.type === "pointerup" ? v : 0);
 }
 grab.addEventListener("pointerup", endSheet);
 grab.addEventListener("pointercancel", endSheet);
@@ -3363,11 +3359,8 @@ grab.addEventListener("pointercancel", endSheet);
   const end = ev => {
     if (!t0 || !t0.drag) { t0 = null; return; }
     const v = ev.type === "touchend" ? velocity(t0.drag.hist)[1] : 0;
-    const projected = sheetY + v * 0.998 / (1 - 0.998) / 1000;
-    let best = 0;
-    for (const k of [0, 1, 2]) if (Math.abs(detentY(k) - projected) < Math.abs(detentY(best) - projected)) best = k;
     t0 = null;
-    snapSheet(best, v);
+    snapSheet(nearestDetent(v), v);
   };
   panel.addEventListener("touchend", end);
   panel.addEventListener("touchcancel", end);
@@ -3440,6 +3433,10 @@ function btn(text, cls, on, title) {
   b.addEventListener("click", on);
   return b;
 }
+function fileLink(path) {
+  const i = fileIndex.get(path);
+  return i === undefined ? el("span", { class: "path" }, path) : btn(short(path), "path", () => go({ type: "file", i }), path);
+}
 const icon = name => $("icons").querySelector(`[data-icon="${name}"]`).cloneNode(true);
 /* Paths and code set in monospace; names and prose in the system face. */
 const looksLikePath = t => /[\/]|\.[a-z]{1,4}$/i.test(t) && !/\s/.test(t);
@@ -3468,19 +3465,6 @@ function metrics(pairs) {
   }
   return dl;
 }
-/* The deepest directory each module's files share, for module-relative paths. */
-const modRoot = mods.map((_, i) => {
-  const fs = modFiles[i];
-  if (!fs.length) return "";
-  let p = dirname(files[fs[0]].path).split("/");
-  for (const f of fs) {
-    const q = dirname(files[f].path).split("/");
-    let j = 0;
-    while (j < p.length && j < q.length && p[j] === q[j]) j++;
-    p = p.slice(0, j);
-  }
-  return p.length && p[0] !== "" ? p.join("/") + "/" : "";
-});
 /* ---------- file trees, IDE navigator style ---------- */
 /* ponytail: rows are real DOM, revealed a page of at most 400 rows at a time, not virtualized; the
    971-import cycle break list fully shown and expanded is 1,381 rows in about 70ms. Virtualize with
@@ -3784,13 +3768,14 @@ function meRows(list, other) {
   }
   return box;
 }
-function findingList(list) {
+function findingList(list, grouped = false) {
   const ul = el("ul", { class: "flist" });
   for (const fd of list) {
-    const li = el("li");
-    const b = btn("", looksLikePath(subjectText(fd.f)) ? "finding path" : "finding", () => go({ type: "finding", i: fd.i }), fd.f.subject);
+    const li = el("li"), text = subjectText(fd.f), path = looksLikePath(text);
+    const b = btn("", grouped ? (path ? "path" : "") : path ? "finding path" : "finding", () => go({ type: "finding", i: fd.i }), fd.f.subject);
     const t = el("span", { class: "clamp" });
-    t.append(el("span", { class: "muted" }, fd.f.kind + "  "), document.createTextNode(subjectText(fd.f)));
+    if (!grouped) t.append(el("span", { class: "muted" }, fd.f.kind + "  "));
+    t.append(document.createTextNode(text));
     b.append(t);
     if (findingAge(fd.f)) b.append(el("span", { class: "pill" }, findingAge(fd.f)));
     li.append(b);
@@ -3811,8 +3796,8 @@ function hotspotContext(rows, limit = 3) {
   }
   if (rows.length > limit) panel.append(el("p", { class: "muted" }, `Top ${limit} of ${rows.length} files by hotspot score.`));
   for (const h of [...rows].sort((a, b) => b.score - a.score).slice(0, limit)) {
-    const p = el("p"), i = fileIndex.get(h.path);
-    p.append(i === undefined ? el("span", {}, h.path) : btn(short(h.path), "path", () => go({ type: "file", i })));
+    const p = el("p");
+    p.append(fileLink(h.path));
     panel.append(p, el("p", {}, hotspotSummary(h)), el("p", { class: "muted" },
       `Score ${fmt(h.score)} = normalized churn ${fmt(h.churn)} × (coupling ${fmt(h.coupling)} + cycle factor ${fmt(h.cycle)}) × (1 + author factor ${fmt(h.author_factor)}). ` +
       `${h.lines_added} lines added, ${h.lines_deleted} deleted.${h.cut_candidate ? " Touches an existing cycle-cut candidate." : ""}`));
@@ -3942,17 +3927,7 @@ function overview() {
     d.append(sum);
     if (KIND_TEXT[kind]) d.append(el("p", { class: "muted" }, KIND_TEXT[kind]));
     for (const a of advice(kind)) { a.style.margin = "4px 12px 6px 36px"; d.append(a); }
-    const ul = el("ul", { class: "flist" });
-    for (const fd of list) {
-      const li = el("li");
-      const text = subjectText(fd.f);
-      const b = btn("", looksLikePath(text) ? "path" : "", () => go({ type: "finding", i: fd.i }), fd.f.subject);
-      b.append(el("span", { class: "clamp" }, text));
-      if (findingAge(fd.f)) b.append(el("span", { class: "pill" }, findingAge(fd.f)));
-      li.append(b);
-      ul.append(li);
-    }
-    d.append(ul);
+    d.append(findingList(list, true));
     kinds.append(d);
   }
   if (byKind.size) panel.append(kinds);
@@ -3981,10 +3956,6 @@ function packageSplitContext(moduleId) {
     for (const limit of report.limitations || []) panel.append(el("p", { class: "muted" }, limit));
     if (!candidates.length) panel.append(el("p", { class: "muted" }, "No package split candidates meet the selected thresholds."));
   }
-  const fileLink = path => {
-    const i = fileIndex.get(path);
-    return i === undefined ? el("span", { class: "path" }, path) : btn(short(path), "path", () => go({ type: "file", i }), path);
-  };
   const list = el("div", { class: "kinds" });
   for (const candidate of candidates) {
     const state = packageSplitState(candidate), detail = el("details", { class: "kind" });
@@ -4046,10 +4017,6 @@ function surfaceContext(row) {
   panel.append(el("h3", {}, "Public surface"));
   panel.append(el("p", {}, `${count(row.exported.length, "exported symbol", "exported symbols")}; ${count(row.used_externally.length, "symbol used externally", "symbols used externally")}; ${count(row.deep_imports.length, "deep import", "deep imports")}.`));
   if (!doc.surface.complete) panel.append(el("p", { class: "note" }, "Symbol collection is incomplete: counts are partial or conservative estimates; absence of external use is not proof that a symbol can become internal."));
-  const fileLink = path => {
-    const i = fileIndex.get(path);
-    return i === undefined ? el("span", { class: "path" }, path) : btn(short(path), "path", () => go({ type: "file", i }), path);
-  };
   if (row.entrypoints.length) {
     const p = el("p", {}, "Entrypoints: ");
     row.entrypoints.forEach((path, i) => { if (i) p.append(document.createTextNode(", ")); p.append(fileLink(path)); });
@@ -4275,10 +4242,7 @@ function findingPanel(j) {
     line(`${ev.level === "module" ? "Modules" : "Files"} in the cycle: ${ev.members.length}. ` +
       `${ev.exact ? "The break is the smallest." : "The break is a heuristic, not proven smallest."}`);
     const breakHead = el("h3", {}, `Break: remove ${count(ev.break.length, "import", "imports")}`);
-    const linkEdges = links => links.map(l => {
-      const a = fileIndex.get(l.from), b = fileIndex.get(l.to);
-      return a === undefined || b === undefined ? undefined : edgeBetween(a, b);
-    }).filter(x => x !== undefined);
+    const linkEdges = links => links.map(edgeOf).filter(x => x !== undefined);
     const ul = importList(linkEdges(ev.break));
     const twoWay = [];
     if (ev.two_way && ev.two_way.length) {
@@ -4348,10 +4312,7 @@ function findingPanel(j) {
     if (ev.entries.length) line(`Entries: ${ev.entries.map(short).join(", ")}`);
     if (ev.barrel_share !== undefined) line(`Share of imports into ${ev.module} through its barrels: ${fmt(ev.barrel_share)}.`);
     panel.append(el("h3", {}, ev.edges.length < ev.imports ? `Imports: the first ${ev.edges.length} of ${ev.imports}` : "Imports"));
-    panel.append(importList(ev.edges.map(l => {
-      const a = fileIndex.get(l.from), b = fileIndex.get(l.to);
-      return a === undefined || b === undefined ? undefined : edgeBetween(a, b);
-    }).filter(x => x !== undefined)));
+    panel.append(importList(ev.edges.map(edgeOf).filter(x => x !== undefined)));
   } else if (f.kind === "unstable-dependency") {
     line(`${ev.from} (instability ${fmt(ev.from_instability)}) imports ${ev.to} (instability ${fmt(ev.to_instability)}) ${count(ev.imports, "time", "times")} at runtime.`);
   } else if (f.kind === "seam") {
