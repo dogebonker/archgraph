@@ -135,6 +135,9 @@ fn enrich(root: &Path, doc: &mut Document, opts: &ScanOpts, changed: &[String]) 
 }
 
 pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
+    if args.opts.collector_input.is_some() {
+        bail!("impact scans both endpoints; --collector-input describes only one recorded graph");
+    }
     let (base, head) = args
         .range
         .split_once("..")
@@ -183,12 +186,6 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
     args.opts.rules = args
         .opts
         .rules
-        .as_deref()
-        .map(fs::canonicalize)
-        .transpose()?;
-    args.opts.collector_input = args
-        .opts
-        .collector_input
         .as_deref()
         .map(fs::canonicalize)
         .transpose()?;
@@ -268,9 +265,8 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
         }
     }
     // Removed files and imports are visible only in the base snapshot.
-    let need_base = args.base_graph.is_some()
-        || args.graph.is_none() && args.opts.collector_input.is_none()
-        || !result.unscanned_files.is_empty();
+    let need_base =
+        args.base_graph.is_some() || args.graph.is_none() || !result.unscanned_files.is_empty();
     if need_base {
         let base_result = (|| -> Result<(Document, Impact)> {
             let base_root = checkout.at(&base)?;
@@ -278,12 +274,10 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
                 let graph = recompute(path, None)?;
                 check_graph(&graph, &base)?;
                 graph
-            } else if args.graph.is_none() && args.opts.collector_input.is_none() {
+            } else if args.graph.is_none() {
                 provenance_cli::probe(&base_root, &doc, &args.opts)?
             } else {
-                bail!(
-                    "supply --base-graph for removed files when reusing --graph or --collector-input"
-                );
+                bail!("supply --base-graph for removed files when reusing --graph");
             };
             let limitations = enrich(&base_root, &mut base_doc, &args.opts, &changed);
             let mut base_result =

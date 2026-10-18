@@ -229,6 +229,19 @@ fn impact_cli_defaults_to_success_and_depth_failure_is_opt_in() {
             .status
             .success()
     );
+    let out = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        .args([
+            "impact",
+            &format!("{}..{}", fixture.base, fixture.head),
+            "--root",
+        ])
+        .arg(&fixture.root)
+        .arg("--collector-input")
+        .arg(&fixture.graph)
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("--collector-input"));
 }
 
 #[test]
