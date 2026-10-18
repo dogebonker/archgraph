@@ -461,6 +461,35 @@ fn sink_split_ignores_the_parent_module_as_a_consumer() {
 }
 
 #[test]
+fn sink_split_counts_a_file_importing_a_non_index_named_index() {
+    // main.ts imports x, y and shared's index.styles.ts, which is no index: it
+    // consumes shared, it does not register it.
+    let doc = scan_edges(
+        "sink-index-styles",
+        &[
+            ("src/boot.ts", "src/main.ts"),
+            ("src/main.ts", "src/x/m.ts"),
+            ("src/main.ts", "src/y/m.ts"),
+            ("src/main.ts", "src/shared/index.styles.ts"),
+            ("src/x/m.ts", "src/shared/a1.ts"),
+            ("src/x/m.ts", "src/shared/a2.ts"),
+            ("src/y/m.ts", "src/shared/b1.ts"),
+            ("src/z/m.ts", "src/shared/b2.ts"),
+            ("src/y/m.ts", "src/shared/b2.ts"),
+        ],
+        &["--depth", "1"],
+    );
+    assert_eq!(
+        components(&doc),
+        json!([
+            [["src/shared/a1.ts", "src/shared/a2.ts"], ["x"]],
+            [["src/shared/b1.ts", "src/shared/b2.ts"], ["y", "z"]],
+            [["src/shared/index.styles.ts"], ["main.ts"]]
+        ])
+    );
+}
+
+#[test]
 fn sink_split_ignores_a_wiring_file_that_imports_only_the_entry() {
     // main.ts imports shared only through its barrel, alongside x and y: it registers shared, it
     // does not consume a1 or b1. Without it, a1, a2 serve x and b1, b2 serve y and z.

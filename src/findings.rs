@@ -181,9 +181,7 @@ impl Graph<'_> {
     /// Whether `file` is one of `module`'s entries or an index (`index.*`, `__init__.py`).
     fn is_entry_or_index(&self, module: &str, file: &str) -> bool {
         let name = file.rsplit('/').next().unwrap_or(file);
-        self.entries.get(module).is_some_and(|e| e.contains(file))
-            || name.starts_with("index.")
-            || name == "__init__.py"
+        self.entries.get(module).is_some_and(|e| e.contains(file)) || modules::is_index(name)
     }
 
     /// Whether moving `file` to `to` would take it into another Go module (go.mod directory).

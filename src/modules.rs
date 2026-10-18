@@ -13,6 +13,11 @@ pub const TS_INDEX: &[&str] = &[
     "index.cjs",
 ];
 
+/// Whether a file name is a module's index: `__init__.py` or one of `TS_INDEX`.
+pub fn is_index(name: &str) -> bool {
+    name == "__init__.py" || TS_INDEX.contains(&name)
+}
+
 /// The file's directory below `source_root`, truncated to `depth` segments. A file directly in
 /// the source root is its own module, named by its file name with extension (`main.ts`), so it
 /// never merges with another root file or with a directory module; in Go the root's files are
