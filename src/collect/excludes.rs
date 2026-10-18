@@ -277,7 +277,10 @@ fn check_ignore(
     paths: &[String],
     allow_nonrepo: bool,
 ) -> Result<Option<BTreeSet<String>>> {
+    // Untranslated messages keep the "not a git repository" check below locale-independent.
     let mut child = command
+        .env("LC_ALL", "C")
+        .env_remove("LANGUAGE")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

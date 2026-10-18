@@ -388,3 +388,34 @@ fn broken_and_escaping_archgraphignore_symlinks_are_errors() {
     std::os::unix::fs::symlink(&outside, root.join(".archgraphignore")).unwrap();
     assert!(Policy::new(&root, Language::Typescript, Options::default()).is_err());
 }
+
+#[test]
+fn a_scan_outside_any_repository_works_in_a_translated_locale() {
+    // CARGO_TARGET_TMPDIR sits inside this repository; the system temporary directory does not.
+    let root = std::env::temp_dir().join(format!("archgraph-no-repo-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    write(&root, "src/a.ts", "export const A = 1;");
+    let input = root.with_extension("json");
+    std::fs::write(
+        &input,
+        r#"{"modules":[{"source":"src/a.ts","dependencies":[]}],"summary":{"totalCruised":1}}"#,
+    )
+    .unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        .arg("scan")
+        .arg(&root)
+        .args(["--language", "typescript", "--collector-input"])
+        .arg(&input)
+        .env("LC_ALL", "de_DE.UTF-8")
+        .env("LANG", "de_DE.UTF-8")
+        .env("LANGUAGE", "de")
+        .output()
+        .unwrap();
+    let _ = std::fs::remove_dir_all(&root);
+    let _ = std::fs::remove_file(&input);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
