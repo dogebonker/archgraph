@@ -18,10 +18,11 @@ fn raw(file: &str) -> Vec<u8> {
     serde_json::to_vec(&json!({"modules":[{"source":file,"dependencies":[]}],"summary":{"totalCruised":1,"environment":{"version":"fixture"}}})).unwrap()
 }
 fn scan(root: &Path, file: &str) -> archgraph::collect::RawGraph {
-    let (json, ledger) = enrich(root, &raw(file)).unwrap();
-    let mut graph = depcruise::parse_at(&json, root).unwrap();
+    let mut sources = imports::Sources::new(root).unwrap();
+    let (json, ledger) = enrich(&raw(file), &mut sources).unwrap();
+    let mut graph = depcruise::parse_at(&json, &mut sources).unwrap();
     graph.imports = ledger;
-    barrels::typescript(root, &json, &mut graph).unwrap();
+    barrels::typescript(&json, &mut graph, &mut sources).unwrap();
     graph
 }
 
@@ -230,7 +231,11 @@ fn inherited_repo_config_and_outside_scan_workspace_are_bounded_and_external() {
 #[test]
 fn source_less_recordings_do_not_claim_occurrence_completeness() {
     let root = root("recording");
-    let (_, ledger) = enrich(&root, &raw("missing.ts")).unwrap();
+    let (_, ledger) = enrich(
+        &raw("missing.ts"),
+        &mut imports::Sources::new(&root).unwrap(),
+    )
+    .unwrap();
     assert!(ledger.is_none());
 }
 
@@ -288,7 +293,9 @@ fn implicit_interfaces_and_explicit_mixed_bindings_refine_only_proven_type_uses(
         EdgeKind::Static
     );
     assert!(
-        imports::type_only_exports("export interface Token {} export const Token=1;").is_empty()
+        imports::analyze("export interface Token {} export const Token=1;")
+            .type_exports
+            .is_empty()
     );
 }
 
@@ -375,7 +382,11 @@ fn source_and_config_symlinks_cannot_escape_the_enclosing_repository() {
     std::os::unix::fs::symlink(&outside, root.join("escape.ts")).unwrap();
     write(&root, "main.ts", "import {Secret} from './escape';");
     let json = json!({"modules":[{"source":"main.ts","dependencies":[{"module":"./escape","resolved":"escape.ts"}]},{"source":"escape.ts","dependencies":[]}],"summary":{"totalCruised":2}});
-    let (json, records) = enrich(&root, &serde_json::to_vec(&json).unwrap()).unwrap();
+    let (json, records) = enrich(
+        &serde_json::to_vec(&json).unwrap(),
+        &mut imports::Sources::new(&root).unwrap(),
+    )
+    .unwrap();
     assert!(records.is_none());
     let graph = depcruise::parse(&json).unwrap();
     assert!(graph.edges.is_empty());
@@ -407,9 +418,14 @@ fn local_interface_does_not_override_a_forwarded_runtime_export() {
             .filter(|edge| edge.from == "mixed.ts")
             .all(|edge| edge.kind != EdgeKind::Type)
     );
-    assert!(imports::type_only_exports("export {Foo} from './value'; interface Foo {}").is_empty());
     assert!(
-        imports::type_only_exports("export interface Foo {} export {Foo} from './value';")
+        imports::analyze("export {Foo} from './value'; interface Foo {}")
+            .type_exports
+            .is_empty()
+    );
+    assert!(
+        imports::analyze("export interface Foo {} export {Foo} from './value';")
+            .type_exports
             .is_empty()
     );
     assert!(graph.edges.iter().any(|edge| edge.from == "mixed.ts"
@@ -506,7 +522,11 @@ fn nearest_config_alias_overrides_a_successful_but_root_based_collector_target()
         "import {X} from 'alias';",
     );
     let json = json!({"modules":[{"source":"packages/app/src/main.ts","dependencies":[{"module":"alias","resolved":"shared.ts","couldNotResolve":false,"dependencyTypes":["local","import"]}]}],"summary":{"totalCruised":1}});
-    let (json, records) = enrich(&root, &serde_json::to_vec(&json).unwrap()).unwrap();
+    let (json, records) = enrich(
+        &serde_json::to_vec(&json).unwrap(),
+        &mut imports::Sources::new(&root).unwrap(),
+    )
+    .unwrap();
     assert_eq!(records.unwrap()[0].targets, ["packages/app/src/local.ts"]);
     let graph = depcruise::parse(&json).unwrap();
     assert!(graph.edges.iter().all(|e| e.to != "shared.ts"));

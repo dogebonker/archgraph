@@ -1,4 +1,10 @@
 //! Import syntax only: dependency-cruiser remains responsible for file resolution.
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
+
+use anyhow::{Context, Result};
+
 use crate::model::EdgeKind;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,18 +33,80 @@ struct Token {
     line: usize,
 }
 
+/// What the passes over one source need, from a single lex.
+#[derive(Debug)]
+pub struct Analysis {
+    pub statements: Vec<ImportStatement>,
+    pub exports: ModuleExports,
+    pub type_exports: BTreeSet<String>,
+    type_only_names: BTreeSet<String>,
+}
+
+pub fn analyze(source: &str) -> Analysis {
+    let tokens = lex(source);
+    let statements = statements(&tokens);
+    Analysis {
+        exports: module_exports(&tokens, &statements),
+        type_exports: type_only_exports(&tokens, &statements),
+        type_only_names: type_only_names(&tokens),
+        statements,
+    }
+}
+
+impl Analysis {
+    /// The `names` used only in erased type syntax outside import statements.
+    pub fn type_only_uses(&self, names: &[String]) -> BTreeSet<String> {
+        names
+            .iter()
+            .filter(|name| self.type_only_names.contains(*name))
+            .cloned()
+            .collect()
+    }
+}
+
+/// Sources inside one root, each read and analyzed once, by root-relative path.
+pub struct Sources {
+    pub(super) root: PathBuf,
+    analyzed: BTreeMap<String, Option<Rc<Analysis>>>,
+}
+
+impl Sources {
+    pub fn new(root: &Path) -> Result<Self> {
+        Ok(Self {
+            root: root.canonicalize().context("resolving TypeScript root")?,
+            analyzed: BTreeMap::new(),
+        })
+    }
+
+    /// `None` for a file outside the root or unreadable.
+    pub fn get(&mut self, file: &str) -> Option<Rc<Analysis>> {
+        if let Some(analysis) = self.analyzed.get(file) {
+            return analysis.clone();
+        }
+        let analysis = self
+            .root
+            .join(file)
+            .canonicalize()
+            .ok()
+            .filter(|path| path.starts_with(&self.root))
+            .and_then(|path| std::fs::read_to_string(path).ok())
+            .map(|source| Rc::new(analyze(&source)));
+        self.analyzed.insert(file.to_owned(), analysis.clone());
+        analysis
+    }
+}
+
 /// Collects literal and computed imports without interpreting JavaScript expressions.
 /// shortcut: require shadowing needs semantic metadata; validate these candidates with dependency-cruiser.
-pub fn typescript(source: &str) -> Vec<ImportStatement> {
-    let tokens = lex(source);
+fn statements(tokens: &[Token]) -> Vec<ImportStatement> {
     let mut result = Vec::new();
     let mut functions = Vec::new();
     let mut parens = Vec::new();
     let mut closed_paren = None;
     let mut expression_arrows = Vec::new();
     let mut brackets = 0usize;
-    let parameter_opens = function_parameters(&tokens);
-    let shadowed_requires = parameter_require_scopes(&tokens, &parameter_opens);
+    let parameter_opens = function_parameters(tokens);
+    let shadowed_requires = parameter_require_scopes(tokens, &parameter_opens);
     for (i, token) in tokens.iter().enumerate() {
         let text = token.text.as_str();
         let prev = i.checked_sub(1).map(|j| tokens[j].text.as_str());
@@ -572,9 +640,7 @@ pub struct ModuleExports {
 }
 
 /// Recognizes forwarding-only modules; any executable declaration keeps load-time edges intact.
-pub fn module_exports(source: &str) -> ModuleExports {
-    let tokens = lex(source);
-    let statements = typescript(source);
+fn module_exports(tokens: &[Token], statements: &[ImportStatement]) -> ModuleExports {
     let mut result = ModuleExports {
         pure: true,
         ..ModuleExports::default()
@@ -680,7 +746,7 @@ pub fn module_exports(source: &str) -> ModuleExports {
                 } else if matches!(declaration, Some("const" | "let" | "var")) {
                     result
                         .declared
-                        .extend(variable_bindings(&tokens, declaration_index + 1));
+                        .extend(variable_bindings(tokens, declaration_index + 1));
                 } else if matches!(
                     declaration,
                     Some("function" | "class" | "interface" | "type" | "enum")
@@ -873,10 +939,9 @@ fn generic_arguments(tokens: &[Token], start: usize) -> bool {
 }
 
 /// Only names with an erased declaration and no same-name value declaration are proven types.
-pub fn type_only_exports(source: &str) -> std::collections::BTreeSet<String> {
-    let tokens = lex(source);
-    let mut erased = std::collections::BTreeSet::new();
-    let mut values = std::collections::BTreeSet::new();
+fn type_only_exports(tokens: &[Token], statements: &[ImportStatement]) -> BTreeSet<String> {
+    let mut erased = BTreeSet::new();
+    let mut values = BTreeSet::new();
     for (i, token) in tokens.iter().enumerate() {
         if i > 0 && tokens[i - 1].text == "." {
             continue;
@@ -905,23 +970,23 @@ pub fn type_only_exports(source: &str) -> std::collections::BTreeSet<String> {
             values.insert(name.text.clone());
         }
         if matches!(token.text.as_str(), "const" | "let" | "var") {
-            values.extend(variable_bindings(&tokens, i + 1));
+            values.extend(variable_bindings(tokens, i + 1));
         }
     }
-    let forwarded = typescript(source)
-        .into_iter()
+    let forwarded = statements
+        .iter()
         .filter(|statement| statement.reexport)
-        .flat_map(|statement| statement.names.into_iter().map(|name| name.local))
-        .collect::<std::collections::BTreeSet<_>>();
+        .flat_map(|statement| statement.names.iter().map(|name| name.local.as_str()))
+        .collect::<BTreeSet<_>>();
     erased.retain(|name| {
-        !values.contains(name) && !forwarded.contains(name) && !forwarded.contains("*")
+        !values.contains(name) && !forwarded.contains(name.as_str()) && !forwarded.contains("*")
     });
     erased
 }
 
-/// Unknown expression contexts stay runtime; only recognized erased syntax proves a type use.
-pub fn type_only_uses(source: &str, names: &[String]) -> std::collections::BTreeSet<String> {
-    let tokens = lex(source);
+/// The names whose every occurrence outside import statements is erased type syntax. Unknown
+/// expression contexts stay runtime; only recognized erased syntax proves a type use.
+fn type_only_names(tokens: &[Token]) -> BTreeSet<String> {
     let mut erased = vec![false; tokens.len()];
     let mut imported = vec![false; tokens.len()];
     for (i, token) in tokens.iter().enumerate() {
@@ -946,31 +1011,31 @@ pub fn type_only_uses(source: &str, names: &[String]) -> std::collections::BTree
                 if let Some(open) =
                     (i + 2..tokens.len()).find(|&j| matches!(tokens[j].text.as_str(), "{" | ";"))
                     && tokens[open].text == "{"
-                    && let Some(close) = closing(&tokens, open, "{", "}")
+                    && let Some(close) = closing(tokens, open, "{", "}")
                 {
                     erased[i..=close].fill(true);
                 }
             } else {
                 let mut end = i + 2;
-                skip_initializer(&tokens, &mut end, &[";"], true);
+                skip_initializer(tokens, &mut end, &[";"], true);
                 erased[i..end].fill(true);
             }
         }
         if matches!(token.text.as_str(), "const" | "let" | "var") {
             let mut start = i + 1;
             loop {
-                if !binding_pattern(&tokens, &mut start, &mut Vec::new(), 0) {
+                if !binding_pattern(tokens, &mut start, &mut Vec::new(), 0) {
                     break;
                 }
                 if tokens.get(start).is_some_and(|t| t.text == ":") {
                     let begin = start;
                     start += 1;
-                    skip_initializer(&tokens, &mut start, &["=", ",", ";"], true);
+                    skip_initializer(tokens, &mut start, &["=", ",", ";"], true);
                     erased[begin..start].fill(true);
                 }
                 if tokens.get(start).is_some_and(|t| t.text == "=") {
                     start += 1;
-                    skip_initializer(&tokens, &mut start, &[",", ";"], false);
+                    skip_initializer(tokens, &mut start, &[",", ";"], false);
                 }
                 if tokens.get(start).is_none_or(|t| t.text != ",") {
                     break;
@@ -985,8 +1050,8 @@ pub fn type_only_uses(source: &str, names: &[String]) -> std::collections::BTree
             erased[i + 1] = true;
         }
     }
-    for open in function_parameters(&tokens) {
-        let Some(close) = closing(&tokens, open, "(", ")") else {
+    for open in function_parameters(tokens) {
+        let Some(close) = closing(tokens, open, "(", ")") else {
             continue;
         };
         let mut nesting = Vec::new();
@@ -1022,18 +1087,16 @@ pub fn type_only_uses(source: &str, names: &[String]) -> std::collections::BTree
             }
         }
     }
-    names
-        .iter()
-        .filter(|name| {
-            let occurrences: Vec<_> = tokens
-                .iter()
-                .enumerate()
-                .filter(|(i, token)| token.text == **name && !imported[*i])
-                .map(|(i, _)| i)
-                .collect();
-            !occurrences.is_empty() && occurrences.iter().all(|&i| erased[i])
-        })
-        .cloned()
+    let mut all_erased: BTreeMap<&str, bool> = BTreeMap::new();
+    for (i, token) in tokens.iter().enumerate() {
+        if !imported[i] {
+            *all_erased.entry(&token.text).or_insert(true) &= erased[i];
+        }
+    }
+    all_erased
+        .into_iter()
+        .filter(|&(_, erased)| erased)
+        .map(|(name, _)| name.to_owned())
         .collect()
 }
 

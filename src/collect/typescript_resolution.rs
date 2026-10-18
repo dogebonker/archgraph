@@ -36,10 +36,13 @@ struct Resolver {
 }
 
 /// Preserve unknown occurrence counts when recorded collector files are unavailable.
-pub fn enrich(root: &Path, json_bytes: &[u8]) -> Result<(Vec<u8>, Option<Vec<ImportRecord>>)> {
+pub fn enrich(
+    json_bytes: &[u8],
+    sources: &mut imports::Sources,
+) -> Result<(Vec<u8>, Option<Vec<ImportRecord>>)> {
     let mut json: Value =
         serde_json::from_slice(json_bytes).context("reading TypeScript collector JSON")?;
-    let mut resolver = Resolver::new(root)?;
+    let mut resolver = Resolver::new(&sources.root)?;
     let mut modules: BTreeMap<String, Value> = json["modules"]
         .as_array()
         .into_iter()
@@ -79,16 +82,13 @@ pub fn enrich(root: &Path, json_bytes: &[u8]) -> Result<(Vec<u8>, Option<Vec<Imp
             .as_array()
             .cloned()
             .unwrap_or_default();
-        let source = resolver.source(&file);
+        let source = safe_relative(&file).then(|| sources.get(&file)).flatten();
         if source.is_none() {
             complete = false;
         }
-        let statements = source
-            .as_deref()
-            .map(imports::typescript)
-            .unwrap_or_default();
+        let statements = source.as_ref().map_or(&[][..], |s| &s.statements);
         let mut enriched = dependencies.clone();
-        for statement in &statements {
+        for statement in statements {
             let Some(specifier) = &statement.specifier else {
                 ledger.push(ImportRecord {
                     from: file.clone(),
@@ -243,15 +243,6 @@ impl Resolver {
         };
         resolver.discover_workspaces()?;
         Ok(resolver)
-    }
-    fn source(&self, file: &str) -> Option<String> {
-        if !safe_relative(file) {
-            return None;
-        }
-        let path = self.root.join(file).canonicalize().ok()?;
-        path.starts_with(&self.root)
-            .then(|| std::fs::read_to_string(path).ok())
-            .flatten()
     }
     fn read_json(&self, path: &Path, jsonc: bool) -> Option<Value> {
         let path = path.canonicalize().ok()?;

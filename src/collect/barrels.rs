@@ -1,6 +1,5 @@
 //! Symbol-directed forwarding resolution shared by source collectors.
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -382,8 +381,11 @@ struct CruiseDependency {
 }
 
 /// Reads source only inside the scan root and trusts dependency-cruiser for target resolution.
-pub fn typescript(root: &Path, json: &[u8], graph: &mut RawGraph) -> Result<Vec<String>> {
-    let root = root.canonicalize()?;
+pub fn typescript(
+    json: &[u8],
+    graph: &mut RawGraph,
+    sources: &mut imports::Sources,
+) -> Result<Vec<String>> {
     let cruise: Cruise = serde_json::from_slice(json)?;
     let files: BTreeSet<_> = graph.files.iter().cloned().collect();
     let mut modules = Vec::new();
@@ -391,26 +393,19 @@ pub fn typescript(root: &Path, json: &[u8], graph: &mut RawGraph) -> Result<Vec<
         if !files.contains(&module.source) {
             continue;
         }
-        let Ok(path) = root.join(&module.source).canonicalize() else {
+        let Some(analysis) = sources.get(&module.source) else {
             continue;
         };
-        if !path.starts_with(&root) {
-            continue;
-        }
-        let Ok(source) = std::fs::read_to_string(path) else {
-            continue;
-        };
-        let statements = imports::typescript(&source);
-        let syntax = imports::module_exports(&source);
+        let syntax = &analysis.exports;
         let mut metadata = BarrelModule {
             file: module.source.clone(),
             pure: syntax.pure,
-            declared: syntax.declared,
+            declared: syntax.declared.clone(),
             exports: Vec::new(),
             imports: Vec::new(),
         };
         let mut bindings = BTreeMap::new();
-        for statement in statements {
+        for statement in &analysis.statements {
             let Some(specifier) = statement.specifier.as_deref() else {
                 continue;
             };
@@ -471,55 +466,45 @@ pub fn typescript(root: &Path, json: &[u8], graph: &mut RawGraph) -> Result<Vec<
                 });
             }
         }
-        for local in syntax.local {
+        for local in &syntax.local {
             if let Some((imported, to)) = bindings.get(&local.imported) {
                 metadata.exports.push(ExportRoute {
-                    exported: local.local,
+                    exported: local.local.clone(),
                     imported: imported.clone(),
                     to: to.clone(),
                 });
             } else {
-                metadata.declared.push(local.local);
+                metadata.declared.push(local.local.clone());
             }
         }
         modules.push(metadata);
     }
     let warnings = resolve(graph, &modules);
-    refine_types(&root, graph);
+    refine_types(graph, sources);
     Ok(warnings)
 }
 
-fn refine_types(root: &Path, graph: &mut RawGraph) {
-    let mut sources = BTreeMap::new();
-    for file in &graph.files {
-        let Ok(path) = root.join(file).canonicalize() else {
-            continue;
-        };
-        if !path.starts_with(root) {
-            continue;
-        }
-        if let Ok(source) = std::fs::read_to_string(path) {
-            sources.insert(file.clone(), source);
-        }
-    }
-    let definitions: BTreeMap<_, _> = sources
-        .iter()
-        .map(|(file, source)| (file.as_str(), imports::type_only_exports(source)))
-        .collect();
+fn refine_types(graph: &mut RawGraph, sources: &mut imports::Sources) {
+    let files: BTreeSet<&str> = graph.files.iter().map(String::as_str).collect();
+    let mut analysis = |file: &str| files.contains(file).then(|| sources.get(file)).flatten();
     for edge in &mut graph.edges {
         if !matches!(edge.kind, EdgeKind::Static | EdgeKind::Reexport) || edge.names.is_empty() {
             continue;
         }
-        let Some(types) = definitions.get(edge.to.as_str()) else {
+        let Some(definitions) = analysis(&edge.to) else {
             continue;
         };
-        if !edge.names.iter().all(|name| types.contains(name)) {
+        if !edge
+            .names
+            .iter()
+            .all(|name| definitions.type_exports.contains(name))
+        {
             continue;
         }
-        let Some(source) = sources.get(&edge.from) else {
+        let Some(source) = analysis(&edge.from) else {
             continue;
         };
-        let statement = imports::typescript(source).into_iter().find(|statement| {
+        let statement = source.statements.iter().find(|statement| {
             statement.specifier == edge.specifier && Some(statement.line) == edge.line
         });
         let Some(statement) = statement else {
@@ -532,7 +517,7 @@ fn refine_types(root: &Path, graph: &mut RawGraph) {
             .map(|name| name.local.clone())
             .collect();
         if statement.reexport
-            || !names.is_empty() && imports::type_only_uses(source, &names).len() == names.len()
+            || !names.is_empty() && source.type_only_uses(&names).len() == names.len()
         {
             edge.kind = EdgeKind::Type;
             edge.weight = None;

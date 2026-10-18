@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use archgraph::collect::RawGraph;
 use archgraph::collect::barrels::{BarrelModule, ExportRoute, ImportRoute, resolve, typescript};
+use archgraph::collect::imports::{Sources, analyze};
 use archgraph::model::{Confidence, Edge, EdgeKind};
 
 fn module(
@@ -282,9 +283,13 @@ fn typescript_source_proves_purity_and_local_export_aliases() {
     ]});
     let mut graph = graph(&modules);
     assert!(
-        typescript(&root, &serde_json::to_vec(&json).unwrap(), &mut graph)
-            .unwrap()
-            .is_empty()
+        typescript(
+            &serde_json::to_vec(&json).unwrap(),
+            &mut graph,
+            &mut Sources::new(&root).unwrap(),
+        )
+        .unwrap()
+        .is_empty()
     );
     assert!(graph.metadata["facade.ts"].barrel);
     assert!(!graph.metadata["mixed.ts"].barrel);
@@ -364,7 +369,12 @@ fn source_metadata_ignores_missing_and_escaping_files() {
     let mut graph = graph(&modules);
     let before = graph.edges.clone();
     let json = serde_json::json!({"modules":[{"source":"missing.ts","dependencies":[{"module":"./leaf","resolved":"leaf.ts"}]}]});
-    typescript(&root, &serde_json::to_vec(&json).unwrap(), &mut graph).unwrap();
+    typescript(
+        &serde_json::to_vec(&json).unwrap(),
+        &mut graph,
+        &mut Sources::new(&root).unwrap(),
+    )
+    .unwrap();
     assert_eq!(graph.edges, before);
     assert!(graph.metadata.is_empty());
     #[cfg(unix)]
@@ -373,7 +383,12 @@ fn source_metadata_ignores_missing_and_escaping_files() {
         std::fs::write(&outside, "export {Foo} from './leaf';").unwrap();
         let _ = std::fs::remove_file(root.join("missing.ts"));
         std::os::unix::fs::symlink(&outside, root.join("missing.ts")).unwrap();
-        typescript(&root, &serde_json::to_vec(&json).unwrap(), &mut graph).unwrap();
+        typescript(
+            &serde_json::to_vec(&json).unwrap(),
+            &mut graph,
+            &mut Sources::new(&root).unwrap(),
+        )
+        .unwrap();
         assert_eq!(graph.edges, before);
         assert!(graph.metadata.is_empty());
     }
@@ -381,14 +396,13 @@ fn source_metadata_ignores_missing_and_escaping_files() {
 
 #[test]
 fn forwarding_metadata_is_conservative_about_executable_statements() {
-    use archgraph::collect::imports::module_exports;
     for source in [
         "export {Foo} from './leaf';",
         "export type {Foo as Public} from './leaf';",
         "import {Foo} from './leaf'; export {Foo};",
         "import * as api from './leaf'; export {api};",
     ] {
-        assert!(module_exports(source).pure, "{source}");
+        assert!(analyze(source).exports.pure, "{source}");
     }
     for source in [
         "import './load'; export {Foo} from './leaf';",
@@ -396,14 +410,18 @@ fn forwarding_metadata_is_conservative_about_executable_statements() {
         "import {Unused} from './leaf'; export {Foo} from './other';",
         "export const Foo = 1;",
     ] {
-        assert!(!module_exports(source).pure, "{source}");
+        assert!(!analyze(source).exports.pure, "{source}");
     }
     assert_eq!(
-        module_exports("export default class Foo {} export interface Shape {}").declared,
+        analyze("export default class Foo {} export interface Shape {}")
+            .exports
+            .declared,
         ["Shape", "default"]
     );
     assert_eq!(
-        module_exports("export async function load() {} export declare class Model {}").declared,
+        analyze("export async function load() {} export declare class Model {}")
+            .exports
+            .declared,
         ["Model", "load"]
     );
 }
@@ -449,8 +467,7 @@ fn executable_reexport_modules_retain_runtime_cycles() {
 
 #[test]
 fn exported_variable_metadata_collects_all_bindings_not_initializer_names() {
-    use archgraph::collect::imports::module_exports;
-    let exports = module_exports(
+    let exports = analyze(
         r#"
 export const Foo = call(1, 2), Bar = { notExported: [3, 4] };
 export let Empty, AlsoEmpty;
@@ -461,7 +478,8 @@ export const [ArrayFirst, , ArrayThird = make(1, 2), ...ArrayRest] = value;
 export const Template = `${outside, inside = value}`, AfterTemplate = 1;
 export const Deferred = import('./load'), AfterDeferred = 2;
 "#,
-    );
+    )
+    .exports;
     assert_eq!(
         exports.declared,
         [
@@ -535,9 +553,13 @@ fn later_exported_declarators_resolve_star_imports_and_preserve_a_runtime_cycle(
     ]});
     let mut graph = graph(&modules);
     assert!(
-        typescript(&root, &serde_json::to_vec(&json).unwrap(), &mut graph)
-            .unwrap()
-            .is_empty()
+        typescript(
+            &serde_json::to_vec(&json).unwrap(),
+            &mut graph,
+            &mut Sources::new(&root).unwrap(),
+        )
+        .unwrap()
+        .is_empty()
     );
     let edge = graph
         .edges

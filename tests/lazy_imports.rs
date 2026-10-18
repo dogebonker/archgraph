@@ -25,9 +25,12 @@ impl Source {
             "modules": [{"source": "entry.ts", "dependencies": dependencies}, {"source": "target.ts"}],
             "summary": {"totalCruised": 2}
         });
-        depcruise::parse_at(&serde_json::to_vec(&input).unwrap(), &self.0)
-            .unwrap()
-            .edges
+        depcruise::parse_at(
+            &serde_json::to_vec(&input).unwrap(),
+            &mut archgraph::collect::imports::Sources::new(&self.0).unwrap(),
+        )
+        .unwrap()
+        .edges
     }
 }
 

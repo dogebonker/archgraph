@@ -188,27 +188,23 @@ fn mark_pre_compilation(full: &[u8], compiled: &[u8]) -> Result<Vec<u8>> {
 }
 
 /// Refine load timing only for dependencies confirmed by dependency-cruiser.
-pub fn parse_at(json: &[u8], root: &Path) -> Result<RawGraph> {
+pub fn parse_at(json: &[u8], sources: &mut super::imports::Sources) -> Result<RawGraph> {
     let mut graph = parse(json)?;
     let out: Output = serde_json::from_slice(json)?;
-    let Ok(root) = root.canonicalize() else {
-        return Ok(graph);
-    };
+    let files: std::collections::BTreeSet<&str> = graph.files.iter().map(String::as_str).collect();
     let mut lazy = BTreeMap::new();
+    // Only edges between graph files are refined.
     for module in &out.modules {
-        let Ok(path) = root.join(&module.source).canonicalize() else {
-            continue;
-        };
-        if !path.starts_with(&root) {
+        if !files.contains(module.source.as_str()) {
             continue;
         }
-        let Ok(source) = std::fs::read_to_string(path) else {
+        let Some(analysis) = sources.get(&module.source) else {
             continue;
         };
-        let imports = super::imports::typescript(&source);
         for dependency in &module.dependencies {
             let all_lazy = dependency.module.as_deref().is_some_and(|specifier| {
-                let mut matches = imports
+                let mut matches = analysis
+                    .statements
                     .iter()
                     .filter(|i| i.specifier.as_deref() == Some(specifier))
                     .peekable();

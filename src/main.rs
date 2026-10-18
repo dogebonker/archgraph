@@ -872,10 +872,11 @@ fn scan_doc(
                         depcruise.as_deref(),
                     )?,
                 };
-                let (json, imports) = collect::typescript_resolution::enrich(root, &json)?;
-                let mut raw = depcruise::parse_at(&json, root)?;
+                let mut sources = collect::imports::Sources::new(root)?;
+                let (json, imports) = collect::typescript_resolution::enrich(&json, &mut sources)?;
+                let mut raw = depcruise::parse_at(&json, &mut sources)?;
                 raw.imports = imports;
-                for warning in collect::barrels::typescript(root, &json, &mut raw)? {
+                for warning in collect::barrels::typescript(&json, &mut raw, &mut sources)? {
                     eprintln!("warning: {warning}");
                 }
                 raw.collector.type_marking = type_marking.map(str::to_owned);

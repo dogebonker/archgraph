@@ -1,5 +1,9 @@
-use archgraph::collect::imports::typescript;
+use archgraph::collect::imports::{ImportStatement, analyze};
 use archgraph::model::EdgeKind;
+
+fn typescript(source: &str) -> Vec<ImportStatement> {
+    analyze(source).statements
+}
 
 #[test]
 fn multiline_aliases_and_type_only_clauses() {
@@ -246,21 +250,21 @@ fn mixed_inline_type_flags_and_require_syntax_are_preserved_per_binding() {
 
 #[test]
 fn erased_use_proofs_do_not_accept_object_values_or_parameter_defaults() {
-    use archgraph::collect::imports::type_only_uses;
     let names = vec!["Guard".into()];
     assert!(
-        type_only_uses(
-            "import {Guard} from './guard'; function use(...guards: (Guard | Function)[]) {}",
-            &names
-        )
-        .contains("Guard")
+        analyze("import {Guard} from './guard'; function use(...guards: (Guard | Function)[]) {}")
+            .type_only_uses(&names)
+            .contains("Guard")
     );
     for source in [
         "import {Guard} from './guard'; const value={guard:Guard};",
         "import {Guard} from './guard'; function use(value = Guard) {}",
         "import {Guard} from './guard'; const typed: Guard = new Guard();",
     ] {
-        assert!(type_only_uses(source, &names).is_empty(), "{source}");
+        assert!(
+            analyze(source).type_only_uses(&names).is_empty(),
+            "{source}"
+        );
     }
 }
 
