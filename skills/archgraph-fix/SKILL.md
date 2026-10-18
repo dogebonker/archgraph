@@ -7,6 +7,10 @@ compatibility: Needs git, the archgraph binary (setup in the archgraph skill), a
 
 # archgraph-fix
 
+## Input-quality interpretation
+
+Check the saved source root, grouping depth and collector limitations before comparing SCC counts. Native Rust excludes definite test-only references and keeps containment structural; unknown cfg, macro expansion and type resolution remain incomplete. Its cycles measure source coupling, not initialization failure. A shared state container is a hub; do not attribute an entire component to it without a counterfactual. Rust/Java/Elixir semantic cuts stay non-mechanical. For Python, empty initializers do not establish a facade, and unresolved installed dependencies need actual package metadata. Explicit layout policies remain authoritative. Restart a running daemon and rescan after a collector upgrade.
+
 ## MCP tools
 
 Prefer MCP `check_diff`/`verify` to obtain current findings, then `propose({finding_id})` for ordered evidence-backed steps. Use `simulate({moves:[{from,to}]})` before moving a file; it does not edit imports or move code. After applying the approved change, call `verify` with the proposal's complete `verify.structured` predicate, repeat `check_diff` against the same base, and run project tests. Use explicit `expect` predicates: `verify` without them only confirms that inspection succeeded. An absent old finding alone does not prove no new violation. Inspect truncation markers and fall back to the complete CLI workflow below when needed or when MCP is unavailable. MCP does not relax the scope and approval rules below.

@@ -7,6 +7,10 @@ compatibility: Needs the archgraph binary on PATH (install.sh, npx archgraph-cli
 
 # archgraph
 
+## Input-quality interpretation
+
+Check the saved source root, grouping depth and collector limitations before comparing SCC counts. Native Rust excludes definite test-only references and keeps containment structural; unknown cfg, macro expansion and type resolution remain incomplete. Its cycles measure source coupling, not initialization failure. A shared state container is a hub; do not attribute an entire component to it without a counterfactual. Rust/Java/Elixir semantic cuts stay non-mechanical. For Python, empty initializers do not establish a facade, and unresolved installed dependencies need actual package metadata. Explicit layout policies remain authoritative. Restart a running daemon and rescan after a collector upgrade.
+
 ## MCP tools
 
 When the client's archgraph MCP tools are available, prefer them to spawning CLI commands: `context` before reading, `check_diff` for regressions, `propose` for a stable finding ID, `simulate` before moving, `verify` after editing, and `explain`/`rules` for local evidence. Tool names may carry a client/server prefix. All accept `brief` (default true); inspect truncation markers, narrow requests when needed, and use the CLI for complete evidence. `brief: false` retains the MCP hard cap. MCP does not change code or replace project tests. Follow the CLI workflows below when the tools are unavailable. See [MCP setup and semantics](../../docs/guide.md#mcp-server).

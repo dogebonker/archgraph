@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Native Rust excludes definite test-only references by default, classifies Rust test files, separates module containment from dependency cycles, narrows parent globs and resolves statically exported macros to their defining files. Real local-module references remain dependencies. Conventional single-crate scans normalize grouping below `src`; saved graph grouping remains unchanged.
+- Native Python recognizes installed wheels through validated `RECORD` metadata and refreshes cached installation evidence. Empty package initializers no longer imply a facade policy; explicit entrypoints/public rules remain enforced.
+- Reports and agent explanations disclose grouping and Rust source-reference semantics. Cycle recipes avoid test/structural cuts and mark unsupported rewrites as non-mechanical immediately; forecast attachment avoids copying prior recipes. Adds focused regressions and a reproducible real-project comparison runner.
+
 - Daemon watcher filtering now precedes the bounded event queue, preventing Linux file-read traffic from causing repeated startup refreshes while retaining real edits, overflow and rescan handling.
 
 - `archgraph/v1.2` adds stable finding IDs, typed fix recipes with structured verification and expected graph deltas, explicit forbidden-edge/deep-import findings, and advisory diagnostics for evidence without concrete edits. Existing v1/v1.1 inputs remain readable; compatibility exports retain the legacy finding shape.

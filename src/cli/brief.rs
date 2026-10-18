@@ -81,6 +81,8 @@ fn compact(
                 "schema",
                 "kind",
                 "summary",
+                "grouping",
+                "source_semantics",
                 "import_resolution",
                 "risk",
                 "status",

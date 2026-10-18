@@ -381,7 +381,12 @@ fn explain_summary(value: &Value, details: bool) -> Value {
     let history = value["history"]
         .get(0)
         .map_or("?".into(), |h| format!("{}days", h["age_days"]));
-    json!({"summary":format!("imports:{};importers:{};layer:{};rules:{};hotspot:{};history:{}",neighbor("imports","to"),neighbor("importers","from"),layer,rule,hotspot,history)})
+    let semantics = if value["source_semantics"] == "rust-source-references" {
+        "Rust source refs;"
+    } else {
+        ""
+    };
+    json!({"summary":format!("{semantics}imports:{};importers:{};layer:{};rules:{};hotspot:{};history:{}",neighbor("imports","to"),neighbor("importers","from"),layer,rule,hotspot,history)})
 }
 fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
     let explain = name == "explain";

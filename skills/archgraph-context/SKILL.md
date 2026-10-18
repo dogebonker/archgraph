@@ -5,6 +5,10 @@ description: Select a token-budgeted architecture reading plan before a coding t
 
 # Architecture context
 
+## Input-quality interpretation
+
+Check the saved source root, grouping depth and collector limitations before comparing SCC counts. Native Rust excludes definite test-only references and keeps containment structural; unknown cfg, macro expansion and type resolution remain incomplete. Its cycles measure source coupling, not initialization failure. A shared state container is a hub; do not attribute an entire component to it without a counterfactual. Rust/Java/Elixir semantic cuts stay non-mechanical. For Python, empty initializers do not establish a facade, and unresolved installed dependencies need actual package metadata. Explicit layout policies remain authoritative. Restart a running daemon and rescan after a collector upgrade.
+
 ## MCP tools
 
 Prefer the archgraph MCP `context` tool when available: pass `task`, optional `files`/`symbols`, and `budget_tokens` (for example 40000). Read constraints first, then tiered entries. Tool output has a separate hard cap: check truncation markers, narrow seeds/task or use the CLI below for complete context. `brief: false` stays capped. Use `rules({paths})` for the relevant constraints. Fall back to the CLI steps below when MCP is unavailable; do not silently change client configuration.

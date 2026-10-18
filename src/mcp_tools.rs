@@ -400,7 +400,7 @@ pub fn call(
                 .collect();
             let history:Vec<_>=doc.findings.iter().filter(|f|f.subject==*subject || f.subject==module.id).filter(|f|f.age_days.is_some()||f.introduced_by.is_some()).map(|f|json!({"finding_id":finding_id(f),"age_days":f.age_days,"introduced_by":f.introduced_by})).collect();
             Ok(
-                json!({"subject":subject,"module":module.id,"layer":layer,"layers":layers,"layer_status":layer_status,"imports":imports,"importers":importers,"rules":relevant(doc,&paths)?,"hotspots":hotspots,"history":history,"facts_available":{"hotspots":doc.hotspots.is_some(),"history":!history.is_empty()},"limitations":["At least these static dependencies; dynamic dispatch may add others."]}),
+                json!({"subject":subject,"module":module.id,"grouping":crate::modules::grouping(&doc.config),"source_semantics":crate::modules::dependency_semantics(doc.source.language),"layer":layer,"layers":layers,"layer_status":layer_status,"imports":imports,"importers":importers,"rules":relevant(doc,&paths)?,"hotspots":hotspots,"history":history,"facts_available":{"hotspots":doc.hotspots.is_some(),"history":!history.is_empty()},"limitations":["At least these static dependencies; dynamic dispatch may add others."]}),
             )
         }
         "rules" => {
@@ -635,7 +635,7 @@ pub fn schemas() -> Vec<ToolSchema> {
             "Explain one exact path or module using imports, importers, layer, rules and available history facts.",
             json!({"path":{"type":"string","minLength":1},"module":{"type":"string","minLength":1}}),
             &[],
-            json!({"type":"object","required":["subject","module","imports","importers","rules","facts_available"],"properties":{"subject":{"type":"string"},"module":{"type":"string"},"layer_status":{"enum":["uniform","mixed","unclassified"]},"layers":{"type":"array","items":{"type":"array","prefixItems":[{"type":"integer","minimum":0},{"type":"string"}],"minItems":2,"maxItems":2}},"imports":array(json!({"type":"object","required":["from","to","kind"]})),"importers":array(json!({"type":"object","required":["from","to","kind"]})),"rules":{"type":"object"},"hotspots":{"type":"array"},"history":{"type":"array"},"facts_available":object(json!({"hotspots":{"type":"boolean"},"history":{"type":"boolean"}}),&["hotspots","history"])}}),
+            json!({"type":"object","required":["subject","module","imports","importers","rules","facts_available"],"properties":{"subject":{"type":"string"},"module":{"type":"string"},"grouping":{"type":"string"},"source_semantics":{"enum":["rust-source-references","import-dependencies"]},"layer_status":{"enum":["uniform","mixed","unclassified"]},"layers":{"type":"array","items":{"type":"array","prefixItems":[{"type":"integer","minimum":0},{"type":"string"}],"minItems":2,"maxItems":2}},"imports":array(json!({"type":"object","required":["from","to","kind"]})),"importers":array(json!({"type":"object","required":["from","to","kind"]})),"rules":{"type":"object"},"hotspots":{"type":"array"},"history":{"type":"array"},"facts_available":object(json!({"hotspots":{"type":"boolean"},"history":{"type":"boolean"}}),&["hotspots","history"])}}),
         ),
         schema(
             "rules",

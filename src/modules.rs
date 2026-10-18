@@ -18,6 +18,37 @@ pub fn is_index(name: &str) -> bool {
     name == "__init__.py" || TS_INDEX.contains(&name)
 }
 
+/// Human-readable grouping evidence shared by reports and agent explanations.
+pub fn grouping(config: &Config) -> String {
+    let mode = if config.granularity == crate::model::Granularity::File {
+        "file granularity".to_owned()
+    } else {
+        let fallback = if config.package_modules {
+            "package directories".to_owned()
+        } else {
+            format!("folder depth {}", config.depth)
+        };
+        if config
+            .rules
+            .as_ref()
+            .is_some_and(|r| !r.doc.modules.is_empty())
+        {
+            format!("layout modules; fallback {fallback}")
+        } else {
+            fallback
+        }
+    };
+    format!("{mode} under {}", config.source_root)
+}
+
+pub fn dependency_semantics(language: Language) -> &'static str {
+    if language == Language::Rust {
+        "rust-source-references"
+    } else {
+        "import-dependencies"
+    }
+}
+
 /// Whether `path` is a test file, by the collector's metadata or by its path.
 pub fn is_test(path: &str, config: &Config) -> bool {
     config.file_metadata.get(path).is_some_and(|m| m.test)

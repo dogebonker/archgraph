@@ -57,6 +57,8 @@ pub(super) fn run(args: Report) -> Result<ExitCode> {
             &serde_json::json!({
                 "schema": SCHEMA, "kind": "report", "summary": doc.summary,
                 "counts": {"files": doc.files.len(), "modules": doc.modules.len(), "imports": doc.edges.len()},
+                "grouping": modules::grouping(&doc.config),
+                "source_semantics": modules::dependency_semantics(doc.source.language),
                 "import_resolution": doc.import_resolution,
                 "findings": doc.findings, "diagnostics": doc.diagnostics, "cycles": doc.cycles,
                 "limitations": doc.source.collector.limitations,
@@ -111,6 +113,10 @@ fn summary(
         count(doc.modules.len(), "module"),
         count(doc.edges.len(), "import")
     );
+    out += &format!("  grouping: {}\n", modules::grouping(&doc.config));
+    if doc.source.language == Language::Rust {
+        out += "  Rust cycles describe source/type coupling, not runtime initialization; review cfg and resolution limits\n";
+    }
     if !doc.source.collector.limitations.is_empty() {
         out += &format!(
             "  {} collection limits recorded in source.collector.limitations\n",

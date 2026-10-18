@@ -7,6 +7,10 @@ compatibility: Needs git and the archgraph binary (setup in the archgraph skill)
 
 # archgraph-rules
 
+## Input-quality interpretation
+
+Check the saved source root, grouping depth and collector limitations before comparing SCC counts. Native Rust excludes definite test-only references and keeps containment structural; unknown cfg, macro expansion and type resolution remain incomplete. Its cycles measure source coupling, not initialization failure. A shared state container is a hub; do not attribute an entire component to it without a counterfactual. Rust/Java/Elixir semantic cuts stay non-mechanical. For Python, empty initializers do not establish a facade, and unresolved installed dependencies need actual package metadata. Explicit layout policies remain authoritative. Restart a running daemon and rescan after a collector upgrade.
+
 ## MCP tools
 
 Prefer MCP `rules({paths})` and `explain({path})`/`explain({module})` when available to inspect existing constraints and dependency evidence. Use `check_diff` for newly introduced violations under the current policy; it does not prove a rule existed historically or represents the intended architecture. Inspect truncation markers and use CLI scans/checks for complete evidence. Drafting, calibrating planted violations and changing `layout.yaml` still follow the workflow below; MCP does not write policy. Fall back to the CLI when MCP is unavailable.

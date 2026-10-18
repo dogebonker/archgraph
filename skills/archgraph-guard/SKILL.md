@@ -7,6 +7,10 @@ compatibility: Needs git, bash and the archgraph binary (setup in the archgraph 
 
 # archgraph-guard
 
+## Input-quality interpretation
+
+Check the saved source root, grouping depth and collector limitations before comparing SCC counts. Native Rust excludes definite test-only references and keeps containment structural; unknown cfg, macro expansion and type resolution remain incomplete. Its cycles measure source coupling, not initialization failure. A shared state container is a hub; do not attribute an entire component to it without a counterfactual. Rust/Java/Elixir semantic cuts stay non-mechanical. For Python, empty initializers do not establish a facade, and unresolved installed dependencies need actual package metadata. Explicit layout policies remain authoritative. Restart a running daemon and rescan after a collector upgrade.
+
 ## MCP tools
 
 Prefer MCP `check_diff({base})` when available; omit `base` for guard-style merge-base selection, or provide the intended base explicitly. It compares current edits under current rules and discloses policy changes. Use returned stable finding IDs with `propose` before editing. Keep its complete `verify.structured` contract and baseline, fix code, then call `verify({expect: <saved structured predicate>})`, repeat `check_diff` and run project tests. Unknown predictions remain unavailable; advisory diagnostics are not automatically fixable findings. For CLI mechanical edits, inspect `apply <finding_id> --dry-run` before `--yes`; pending agent work cannot be overridden. `verify` needs explicit `expect` predicates to assert a result; without them, success only confirms inspection. It does not replace the base comparison. Inspect truncation markers: a partial list is not a pass. Use the CLI guard below for its complete evidence, configurable failure policy and exit codes, or when MCP is unavailable.

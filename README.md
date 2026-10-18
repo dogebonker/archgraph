@@ -63,6 +63,8 @@ Actionable findings include a stable ID, ordered fix steps, expected graph delta
 
 Default finding order uses hotspot evidence × recipe confidence × pairs removed; `--rank legacy` restores the previous ordering. Evidence without a concrete fix remains advisory diagnostics. See [recipes and verification](docs/guide.md#fix-recipes-and-verification) and the [pinned showcase recipes](showcase/recipes.md), including actual dry-run outcomes.
 
+The [native input-quality comparison](docs/native-input-quality.md) measures Rust test/containment handling and Python package/facade inference on real working trees. Rust components describe source coupling; review the recorded grouping, test profile and collector limitations before choosing a refactor.
+
 ## What it tells you
 
 ### Which import to cut

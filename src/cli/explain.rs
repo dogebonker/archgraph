@@ -45,6 +45,8 @@ pub(super) fn explain(doc: &Document, subject: &str) -> Result<Value> {
         "schema": "archgraph/explain/v1", "kind": "explain", "subject": subject,
         "file": file, "module": module, "imports": imports, "imported_by": imported_by,
         "cycles": cycles, "findings": findings,
+        "grouping": archgraph::modules::grouping(&doc.config),
+        "source_semantics": archgraph::modules::dependency_semantics(doc.source.language),
         "limitations": doc.source.collector.limitations,
         "hint": "Static imports establish at least these relationships; dynamic dispatch may add others."
     }))
