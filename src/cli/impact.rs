@@ -118,7 +118,13 @@ fn enrich(root: &Path, doc: &mut Document, opts: &ScanOpts, changed: &[String]) 
             Err(error) => limitations.push(format!("Hotspot history unavailable: {error:#}")),
         }
     }
-    if doc.source.language == Language::Typescript {
+    let native = opts.engine == collect::Engine::Native
+        || doc
+            .config
+            .collection
+            .as_ref()
+            .is_some_and(|collection| collection.engine == collect::Engine::Native);
+    if doc.source.language == Language::Typescript && !native {
         match super::impact_typescript::resolve_barrels(root, opts.depcruise.as_deref(), doc, changed) {
             Ok(count) if count > 0 => limitations.push(format!("Resolved {count} barrel import edges to their source declarations using TypeScript.")),
             Ok(_) => {},
@@ -161,6 +167,19 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
     .collect();
 
     args.opts.include_tests = true;
+    let saved = args
+        .graph
+        .as_ref()
+        .map(|path| recompute(path, None))
+        .transpose()?;
+    if saved.as_ref().is_some_and(|doc| {
+        doc.config
+            .collection
+            .as_ref()
+            .is_some_and(|collection| collection.engine == collect::Engine::Native)
+    }) {
+        args.opts.engine = collect::Engine::Native;
+    }
     args.opts.rules = args
         .opts
         .rules
@@ -173,37 +192,39 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
         .as_deref()
         .map(fs::canonicalize)
         .transpose()?;
-    args.opts.depcruise = args
-        .opts
-        .depcruise
-        .as_deref()
-        .map(fs::canonicalize)
-        .transpose()?;
-    args.opts.rust_analyzer = args
-        .opts
-        .rust_analyzer
-        .as_deref()
-        .map(fs::canonicalize)
-        .transpose()?;
-    for program in [
-        &mut args.opts.python,
-        &mut args.opts.go,
-        &mut args.opts.java,
-    ] {
-        if program.contains(['/', '\\']) {
-            *program = fs::canonicalize(&*program)?.to_string_lossy().into_owned();
+    if args.opts.engine != collect::Engine::Native {
+        args.opts.depcruise = args
+            .opts
+            .depcruise
+            .as_deref()
+            .map(fs::canonicalize)
+            .transpose()?;
+        args.opts.rust_analyzer = args
+            .opts
+            .rust_analyzer
+            .as_deref()
+            .map(fs::canonicalize)
+            .transpose()?;
+        for program in [
+            &mut args.opts.python,
+            &mut args.opts.go,
+            &mut args.opts.java,
+        ] {
+            if program.contains(['/', '\\']) {
+                *program = fs::canonicalize(&*program)?.to_string_lossy().into_owned();
+            }
         }
-    }
-    if args.opts.depcruise.is_none() {
-        args.opts.depcruise = root
-            .ancestors()
-            .map(|p| p.join("node_modules/.bin/depcruise"))
-            .find(|p| p.is_file());
+        if args.opts.depcruise.is_none() {
+            args.opts.depcruise = root
+                .ancestors()
+                .map(|p| p.join("node_modules/.bin/depcruise"))
+                .find(|p| p.is_file());
+        }
     }
     let checkout = history::Checkout::new(&root)?;
     let head_root = checkout.at(&head)?;
-    let mut doc = match &args.graph {
-        Some(path) => recompute(path, None)?,
+    let mut doc = match saved {
+        Some(doc) => doc,
         None => {
             let local_rules = head_root.join("layout.yaml");
             scan_doc(
@@ -217,6 +238,11 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
         }
     };
     check_graph(&doc, &head)?;
+    if doc.source.language == Language::Go && args.opts.go.contains(['/', '\\']) {
+        args.opts.go = fs::canonicalize(&args.opts.go)?
+            .to_string_lossy()
+            .into_owned();
+    }
     let context_limitations = enrich(&head_root, &mut doc, &args.opts, &changed);
     let mut result = impact::analyze(&doc, changed.clone(), args.max_depth, &args.tests)?;
     if !doc.config.include_tests {

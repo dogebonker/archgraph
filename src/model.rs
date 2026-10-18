@@ -139,6 +139,8 @@ pub struct Collector {
     /// from one Go module into another. Absent otherwise.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub go_modules: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub limitations: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -193,6 +195,8 @@ pub struct NodeMetadata {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollectionOptions {
+    #[serde(default, skip_serializing_if = "crate::collect::Engine::is_reference")]
+    pub engine: crate::collect::Engine,
     pub python_package: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub python_paths: Vec<String>,

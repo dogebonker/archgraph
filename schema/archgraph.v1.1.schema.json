@@ -1316,7 +1316,13 @@
                     "go-types",
                     "rust-analyzer",
                     "java-javac",
-                    "elixir-ast"
+                    "elixir-ast",
+                    "tree-sitter-typescript",
+                    "tree-sitter-python",
+                    "tree-sitter-go",
+                    "tree-sitter-rust",
+                    "tree-sitter-java",
+                    "tree-sitter-elixir"
                   ]
                 },
                 "version": {
@@ -1356,6 +1362,12 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/$defs/path"
+                  }
+                },
+                "limitations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
                   }
                 }
               }
@@ -1435,6 +1447,14 @@
                 "rust_build_scripts"
               ],
               "properties": {
+                "engine": {
+                  "enum": [
+                    "reference",
+                    "native",
+                    "depcruise"
+                  ],
+                  "default": "reference"
+                },
                 "python_package": {
                   "type": [
                     "string",

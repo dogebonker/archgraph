@@ -170,6 +170,9 @@ struct Report {
 /// What `scan`, `report` and `history` share.
 #[derive(Args, Clone, serde::Serialize)]
 struct ScanOpts {
+    /// Collector engine; native uses tree-sitter and source-level resolution
+    #[arg(long, value_enum, default_value_t = collect::Engine::Reference)]
+    engine: collect::Engine,
     /// Directory segments below the source root that form a module [default: 2; Go/Java: each
     /// package is a module]
     #[arg(long)]
@@ -380,18 +383,22 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         _ => None,
     };
     if let Some(program) = program
+        && (args.opts.engine != collect::Engine::Native || language == Language::Go)
         && program.contains(['/', '\\'])
     {
         *program = fs::canonicalize(&*program)?.to_string_lossy().into_owned();
     }
     // Ignored node_modules are absent from snapshots; reuse the installed collector.
-    if language == Language::Typescript && args.opts.depcruise.is_none() {
+    if args.opts.engine != collect::Engine::Native
+        && language == Language::Typescript
+        && args.opts.depcruise.is_none()
+    {
         args.opts.depcruise = fs::canonicalize(&args.root)?
             .ancestors()
             .map(|dir| dir.join("node_modules/.bin/depcruise"))
             .find(|path| path.is_file());
     }
-    if language == Language::Typescript {
+    if args.opts.engine != collect::Engine::Native && language == Language::Typescript {
         args.opts.depcruise = args
             .opts
             .depcruise
@@ -457,122 +464,133 @@ fn history(mut args: HistoryArgs) -> Result<()> {
     if let Some(path) = &rules {
         key.extend_from_slice(&fs::read(path)?);
     }
-    // A caller-supplied collector may change in place without its path changing.
-    let executable = match language {
-        Language::Typescript => args.opts.depcruise.as_ref(),
-        Language::Rust => args.opts.rust_analyzer.as_ref(),
-        _ => None,
-    };
-    if let Some(executable) = executable {
-        key.extend_from_slice(&fs::read(executable)?);
-    }
-    let runtime = match language {
-        Language::Typescript => ("node", vec!["--version"]),
-        Language::Python => (args.opts.python.as_str(), vec!["--version"]),
-        Language::Go => (args.opts.go.as_str(), vec!["version"]),
-        Language::Java => (args.opts.java.as_str(), vec!["-version"]),
-        Language::Elixir => (args.opts.elixir.as_str(), vec!["--version"]),
-        Language::Rust => ("rustup", vec!["show", "active-toolchain"]),
-    };
-    {
-        let (program, version_args) = runtime;
-        let mut command = Command::new(program);
-        command
-            .args(version_args)
+    if args.opts.engine == collect::Engine::Native && language == Language::Go {
+        let output = Command::new(&args.opts.go)
+            .arg("version")
             .current_dir(std::env::temp_dir())
-            .env("RUSTUP_AUTO_INSTALL", "0");
-        if language == Language::Elixir {
-            elixir::sanitize(&mut command);
-        }
-        if let Ok(output) = command.output() {
-            key.extend_from_slice(&output.stdout);
-            key.extend_from_slice(&output.stderr);
-        }
+            .env("GOTOOLCHAIN", "local")
+            .output()?;
+        key.extend_from_slice(&output.stdout);
     }
-    // Collector packages can change independently of their interpreter or toolchain label.
-    for (query_language, program, version_args, cwd) in [
-        (
-            Language::Python,
-            args.opts.python.clone(),
-            vec![
-                "-I".to_owned(),
-                "-c".to_owned(),
-                "import importlib.metadata; print(importlib.metadata.version('grimp'))".to_owned(),
-            ],
-            std::env::temp_dir(),
-        ),
-        (
-            Language::Typescript,
-            args.opts
-                .depcruise
-                .as_ref()
-                .map_or_else(|| "npx".to_owned(), |p| p.to_string_lossy().into_owned()),
-            if args.opts.depcruise.is_some() {
-                vec!["--version".to_owned()]
-            } else {
-                vec![
-                    "--no-install".to_owned(),
-                    "depcruise".to_owned(),
-                    "--version".to_owned(),
-                ]
-            },
-            fs::canonicalize(&args.root)?,
-        ),
-    ] {
-        if language != query_language {
-            continue;
+    if args.opts.engine != collect::Engine::Native {
+        // A caller-supplied collector may change in place without its path changing.
+        let executable = match language {
+            Language::Typescript => args.opts.depcruise.as_ref(),
+            Language::Rust => args.opts.rust_analyzer.as_ref(),
+            _ => None,
+        };
+        if let Some(executable) = executable {
+            key.extend_from_slice(&fs::read(executable)?);
         }
-        if let Ok(output) = Command::new(program)
-            .args(version_args)
-            .current_dir(cwd)
-            .output()
+        let runtime = match language {
+            Language::Typescript => ("node", vec!["--version"]),
+            Language::Python => (args.opts.python.as_str(), vec!["--version"]),
+            Language::Go => (args.opts.go.as_str(), vec!["version"]),
+            Language::Java => (args.opts.java.as_str(), vec!["-version"]),
+            Language::Elixir => (args.opts.elixir.as_str(), vec!["--version"]),
+            Language::Rust => ("rustup", vec!["show", "active-toolchain"]),
+        };
+        {
+            let (program, version_args) = runtime;
+            let mut command = Command::new(program);
+            command
+                .args(version_args)
+                .current_dir(std::env::temp_dir())
+                .env("RUSTUP_AUTO_INSTALL", "0");
+            if language == Language::Elixir {
+                elixir::sanitize(&mut command);
+            }
+            if let Ok(output) = command.output() {
+                key.extend_from_slice(&output.stdout);
+                key.extend_from_slice(&output.stderr);
+            }
+        }
+        // Collector packages can change independently of their interpreter or toolchain label.
+        for (query_language, program, version_args, cwd) in [
+            (
+                Language::Python,
+                args.opts.python.clone(),
+                vec![
+                    "-I".to_owned(),
+                    "-c".to_owned(),
+                    "import importlib.metadata; print(importlib.metadata.version('grimp'))"
+                        .to_owned(),
+                ],
+                std::env::temp_dir(),
+            ),
+            (
+                Language::Typescript,
+                args.opts
+                    .depcruise
+                    .as_ref()
+                    .map_or_else(|| "npx".to_owned(), |p| p.to_string_lossy().into_owned()),
+                if args.opts.depcruise.is_some() {
+                    vec!["--version".to_owned()]
+                } else {
+                    vec![
+                        "--no-install".to_owned(),
+                        "depcruise".to_owned(),
+                        "--version".to_owned(),
+                    ]
+                },
+                fs::canonicalize(&args.root)?,
+            ),
+        ] {
+            if language != query_language {
+                continue;
+            }
+            if let Ok(output) = Command::new(program)
+                .args(version_args)
+                .current_dir(cwd)
+                .output()
+                && output.status.success()
+            {
+                key.extend_from_slice(&output.stdout);
+            }
+        }
+        let analyzer = (language == Language::Rust)
+            .then(|| {
+                args.opts.rust_analyzer.clone().or_else(|| {
+                    let output = Command::new("rustup")
+                        .args(["which", "rust-analyzer"])
+                        .current_dir(std::env::temp_dir())
+                        .env("RUSTUP_AUTO_INSTALL", "0")
+                        .output()
+                        .ok()?;
+                    output
+                        .status
+                        .success()
+                        .then(|| PathBuf::from(String::from_utf8_lossy(&output.stdout).trim()))
+                })
+            })
+            .flatten();
+        if let Some(analyzer) = analyzer
+            && let Ok(output) = Command::new(analyzer)
+                .arg("--version")
+                .current_dir(std::env::temp_dir())
+                .output()
             && output.status.success()
         {
             key.extend_from_slice(&output.stdout);
         }
-    }
-    let analyzer = (language == Language::Rust)
-        .then(|| {
-            args.opts.rust_analyzer.clone().or_else(|| {
-                let output = Command::new("rustup")
-                    .args(["which", "rust-analyzer"])
-                    .current_dir(std::env::temp_dir())
-                    .env("RUSTUP_AUTO_INSTALL", "0")
-                    .output()
-                    .ok()?;
-                output
-                    .status
-                    .success()
-                    .then(|| PathBuf::from(String::from_utf8_lossy(&output.stdout).trim()))
-            })
-        })
-        .flatten();
-    if let Some(analyzer) = analyzer
-        && let Ok(output) = Command::new(analyzer)
-            .arg("--version")
-            .current_dir(std::env::temp_dir())
-            .output()
-        && output.status.success()
-    {
-        key.extend_from_slice(&output.stdout);
-    }
-    let mut package_roots = Vec::new();
-    if language == Language::Typescript {
-        package_roots.push(fs::canonicalize(&args.root)?);
-    }
-    if let Some(executable) = &args.opts.depcruise {
-        package_roots.push(fs::canonicalize(executable)?);
-    }
-    for root in package_roots {
-        for directory in root.ancestors() {
-            for package in ["dependency-cruiser", "typescript"] {
-                if let Ok(bytes) = fs::read(
-                    directory
-                        .join("node_modules")
-                        .join(package)
-                        .join("package.json"),
-                ) {
-                    key.extend_from_slice(&bytes);
+        let mut package_roots = Vec::new();
+        if language == Language::Typescript {
+            package_roots.push(fs::canonicalize(&args.root)?);
+        }
+        if let Some(executable) = &args.opts.depcruise {
+            package_roots.push(fs::canonicalize(executable)?);
+        }
+        for root in package_roots {
+            for directory in root.ancestors() {
+                for package in ["dependency-cruiser", "typescript"] {
+                    if let Ok(bytes) = fs::read(
+                        directory
+                            .join("node_modules")
+                            .join(package)
+                            .join("package.json"),
+                    ) {
+                        key.extend_from_slice(&bytes);
+                    }
                 }
             }
         }
@@ -695,9 +713,9 @@ fn show_excludes() -> Result<()> {
 fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Document> {
     // Resolved here: a relative program path is not reliably resolved against the child's
     // working directory.
-    let depcruise = args
-        .depcruise
-        .as_deref()
+    let depcruise = (args.engine != collect::Engine::Native)
+        .then_some(args.depcruise.as_ref())
+        .flatten()
         .map(|p| {
             fs::canonicalize(p)
                 .with_context(|| format!("--depcruise {}: no such executable", p.display()))
@@ -738,115 +756,181 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         .as_ref()
         .map(|p| fs::read(p).with_context(|| format!("reading {}", p.display())))
         .transpose()?;
+    if args.engine == collect::Engine::Depcruise && language != Language::Typescript {
+        bail!(
+            "--engine depcruise supports TypeScript/JavaScript; use --engine reference for {language:?}"
+        );
+    }
+    if args.engine == collect::Engine::Native && input.is_some() {
+        bail!("--engine native reads source; --collector-input belongs to the reference engine");
+    }
+    let mut native_symbols = None;
     let excludes_set = collect::globset(&discovery_excludes)?;
     // Go: files that cannot be split across packages, in pairs.
     let mut bound = Vec::new();
     let mut generated = Vec::new();
     let mut test_support = Vec::new();
     let mut python_package = None;
-    let (raw, source_root) = match language {
-        Language::Typescript => {
-            let (json, type_marking) = match input {
-                Some(json) => (json, None),
-                None => depcruise::run(
-                    root,
-                    if args.include_tests
-                        || args.include_generated
-                        || args.no_default_excludes
-                        || !includes.is_empty()
-                    {
-                        "."
-                    } else {
-                        source_dir
-                    },
-                    depcruise.as_deref(),
-                )?,
-            };
-            let (json, imports) = collect::typescript_resolution::enrich(root, &json)?;
-            let mut raw = depcruise::parse_at(&json, root)?;
-            raw.imports = imports;
-            for warning in collect::barrels::typescript(root, &json, &mut raw)? {
-                eprintln!("warning: {warning}");
-            }
-            raw.collector.type_marking = type_marking.map(str::to_owned);
-            (raw, source_dir.to_owned())
-        }
-        Language::Python => {
-            let package = grimp::package(root, source_dir, args.package.as_deref(), &excludes_set)?;
-            python_package = Some(package.clone());
-            let json = match input {
-                Some(json) => json,
-                None => grimp::run(
+    let (raw, source_root) = if args.engine == collect::Engine::Native {
+        let mut output = match language {
+            Language::Typescript => collect::native::typescript::collect(
+                root,
+                source_dir,
+                &policy,
+                args.include_tests
+                    || args.include_generated
+                    || args.no_default_excludes
+                    || !includes.is_empty(),
+            )?,
+            Language::Python => {
+                let output = collect::native::python::collect(
                     root,
                     source_dir,
-                    &package,
-                    &args.python,
-                    args.include_tests || args.no_default_excludes || !includes.is_empty(),
+                    args.package.as_deref(),
                     &args.python_path,
-                )?,
-            };
-            (
-                grimp::parse(&json, root, source_dir)?,
-                collect::join(source_dir, &package),
-            )
-        }
-        // Package paths are what the go command reports, from the scan root, `src/` or not.
-        Language::Go => {
-            let json = match input {
-                Some(json) => json,
-                None => {
-                    let (dirs, warnings) = go::module_dirs(root, &excludes_set)?;
-                    for w in warnings {
-                        eprintln!("warning: {w}");
-                    }
-                    if dirs.is_empty() {
-                        bail!("no go.mod with a module line under {}", root.display());
-                    }
-                    go::run(root, &args.go, &dirs)?
-                }
-            };
-            if !args.include_tests && !args.no_default_excludes && includes.is_empty() {
-                let omitted = go::parse(&json, true, false)?.left_out;
-                if !omitted.is_empty() {
-                    eprintln!(
-                        "warning: left out as test support (--include-tests keeps them): {}",
-                        omitted.join(", ")
-                    );
-                }
+                    &policy,
+                )?;
+                python_package = Some(
+                    output
+                        .source_root
+                        .strip_prefix(&format!("{source_dir}/"))
+                        .unwrap_or(&output.source_root)
+                        .replace('/', "."),
+                );
+                output
             }
-            let parsed = go::parse(&json, true, true)?;
-            generated = parsed.generated;
-            test_support = parsed.test_support;
-            bound = parsed.bound;
-            (parsed.raw, ".".to_owned())
+            Language::Go => collect::native::go::collect(root, &args.go, &policy)?,
+            Language::Rust => collect::native::rust::collect(root, &policy)?,
+            Language::Java => collect::native::java::collect(root, &policy)?,
+            Language::Elixir => collect::native::elixir::collect(root, &policy)?,
+        };
+        if output
+            .raw
+            .imports
+            .as_ref()
+            .is_some_and(|imports| imports.iter().any(|import| import.unresolved.is_some()))
+        {
+            output.symbols.complete = false;
+            output.symbols.limitations.push("Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.".into());
         }
-        Language::Rust => {
-            let json = match input {
-                Some(json) => json,
-                None => rust::run(
-                    root,
-                    &rust::Options {
-                        rust_analyzer: args.rust_analyzer.as_deref(),
-                        features: args.rust_features,
-                        build_scripts: args.rust_build_scripts,
-                    },
-                )?,
-            };
-            (rust::parse(&json)?, ".".to_owned())
+        output.symbols.limitations.sort();
+        output.symbols.limitations.dedup();
+        output
+            .raw
+            .collector
+            .limitations
+            .clone_from(&output.symbols.limitations);
+        for limit in output.raw.collector.limitations.iter().take(10) {
+            eprintln!("warning: {limit}");
         }
-        Language::Elixir => {
-            let json = match input {
-                Some(json) => json,
-                None => elixir::run(root, &args.elixir, &policy)?,
-            };
-            (elixir::parse(&json)?, ".".to_owned())
-        }
-        Language::Java => {
-            let json = match input {
-                Some(json) => json,
-                None => java::run(root, &args.java, &excludes_set)?,
-            };
-            (java::parse(&json)?, ".".to_owned())
+        native_symbols = Some(output.symbols);
+        (output.raw, output.source_root)
+    } else {
+        match language {
+            Language::Typescript => {
+                let (json, type_marking) = match input {
+                    Some(json) => (json, None),
+                    None => depcruise::run(
+                        root,
+                        if args.include_tests
+                            || args.include_generated
+                            || args.no_default_excludes
+                            || !includes.is_empty()
+                        {
+                            "."
+                        } else {
+                            source_dir
+                        },
+                        depcruise.as_deref(),
+                    )?,
+                };
+                let (json, imports) = collect::typescript_resolution::enrich(root, &json)?;
+                let mut raw = depcruise::parse_at(&json, root)?;
+                raw.imports = imports;
+                for warning in collect::barrels::typescript(root, &json, &mut raw)? {
+                    eprintln!("warning: {warning}");
+                }
+                raw.collector.type_marking = type_marking.map(str::to_owned);
+                (raw, source_dir.to_owned())
+            }
+            Language::Python => {
+                let package =
+                    grimp::package(root, source_dir, args.package.as_deref(), &excludes_set)?;
+                python_package = Some(package.clone());
+                let json = match input {
+                    Some(json) => json,
+                    None => grimp::run(
+                        root,
+                        source_dir,
+                        &package,
+                        &args.python,
+                        args.include_tests || args.no_default_excludes || !includes.is_empty(),
+                        &args.python_path,
+                    )?,
+                };
+                (
+                    grimp::parse(&json, root, source_dir)?,
+                    collect::join(source_dir, &package),
+                )
+            }
+            // Package paths are what the go command reports, from the scan root, `src/` or not.
+            Language::Go => {
+                let json = match input {
+                    Some(json) => json,
+                    None => {
+                        let (dirs, warnings) = go::module_dirs(root, &excludes_set)?;
+                        for w in warnings {
+                            eprintln!("warning: {w}");
+                        }
+                        if dirs.is_empty() {
+                            bail!("no go.mod with a module line under {}", root.display());
+                        }
+                        go::run(root, &args.go, &dirs)?
+                    }
+                };
+                if !args.include_tests && !args.no_default_excludes && includes.is_empty() {
+                    let omitted = go::parse(&json, true, false)?.left_out;
+                    if !omitted.is_empty() {
+                        eprintln!(
+                            "warning: left out as test support (--include-tests keeps them): {}",
+                            omitted.join(", ")
+                        );
+                    }
+                }
+                let parsed = go::parse(&json, true, true)?;
+                generated = parsed.generated;
+                test_support = parsed.test_support;
+                bound = parsed.bound;
+                (parsed.raw, ".".to_owned())
+            }
+            Language::Rust => {
+                let json = match input {
+                    Some(json) => json,
+                    None => rust::run(
+                        root,
+                        &rust::Options {
+                            rust_analyzer: args.rust_analyzer.as_deref(),
+                            features: args.rust_features,
+                            build_scripts: args.rust_build_scripts,
+                        },
+                    )?,
+                };
+                (rust::parse(&json)?, ".".to_owned())
+            }
+            Language::Elixir => {
+                let json = match input {
+                    Some(json) => json,
+                    None => elixir::run(root, &args.elixir, &policy)?,
+                };
+                (elixir::parse(&json)?, ".".to_owned())
+            }
+            Language::Java => {
+                let json = match input {
+                    Some(json) => json,
+                    None => java::run(root, &args.java, &excludes_set)?,
+                };
+                (java::parse(&json)?, ".".to_owned())
+            }
         }
     };
     let mut raw = raw;
@@ -876,7 +960,9 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
     if let Some(imports) = &mut raw.imports {
         imports.retain(|i| kept.contains(&i.from));
     }
-    raw.collector.bound_files = go::bound_files(&bound, &raw.files);
+    if args.engine != collect::Engine::Native {
+        raw.collector.bound_files = go::bound_files(&bound, &raw.files);
+    }
     if let Some(n) = raw.collector.unresolved.filter(|&n| n > 0) {
         if raw.imports.is_some() {
             eprintln!(
@@ -921,18 +1007,22 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
         no_default_excludes: args.no_default_excludes,
         rules: loaded_rules,
         codeowners: codeowners::load(root)?,
-        collection: matches!(language, Language::Python | Language::Rust).then_some(
-            archgraph::model::CollectionOptions {
-                python_package,
-                python_paths: args
-                    .python_path
-                    .iter()
-                    .map(|p| p.to_string_lossy().into_owned())
-                    .collect(),
-                rust_features: (language == Language::Rust).then_some(args.rust_features),
-                rust_build_scripts: language == Language::Rust && args.rust_build_scripts,
-            },
-        ),
+        collection: (args.engine == collect::Engine::Native
+            || matches!(language, Language::Python | Language::Rust))
+        .then_some(archgraph::model::CollectionOptions {
+            engine: args.engine,
+            python_package,
+            python_paths: args
+                .python_path
+                .iter()
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect(),
+            rust_features: (language == Language::Rust && args.engine != collect::Engine::Native)
+                .then_some(args.rust_features),
+            rust_build_scripts: language == Language::Rust
+                && args.engine != collect::Engine::Native
+                && args.rust_build_scripts,
+        }),
         file_metadata: raw.metadata,
         legacy_module_classes: false,
         import_records: raw.imports,
@@ -957,15 +1047,32 @@ fn scan_doc(root: &Path, args: &ScanOpts, rules: Option<&Path>) -> Result<Docume
     };
     let mut doc = archgraph::analyze(source, config, raw.files, raw.edges, entries, cochange)?;
     if args.symbols {
-        let symbols = archgraph::symbols::collect(
-            root,
-            &doc,
-            archgraph::symbols::Options {
-                depcruise: depcruise.as_deref(),
-                python: &args.python,
-                go: &args.go,
-            },
-        )?;
+        let symbols = if let Some(mut symbols) = native_symbols {
+            let kept: std::collections::BTreeSet<_> =
+                doc.files.iter().map(|file| file.path.as_str()).collect();
+            symbols.exports.retain(|export| {
+                kept.contains(export.file.as_str()) && kept.contains(export.target.file.as_str())
+            });
+            symbols.imports.retain(|import| {
+                kept.contains(import.from.as_str())
+                    && kept.contains(import.to.as_str())
+                    && import
+                        .target
+                        .as_ref()
+                        .is_none_or(|target| kept.contains(target.file.as_str()))
+            });
+            symbols
+        } else {
+            archgraph::symbols::collect(
+                root,
+                &doc,
+                archgraph::symbols::Options {
+                    depcruise: depcruise.as_deref(),
+                    python: &args.python,
+                    go: &args.go,
+                },
+            )?
+        };
         archgraph::surface::attach(&mut doc, symbols, archgraph::surface::DEFAULT_MAX_SYMBOLS)?;
     }
     if let Some(since) = &args.hotspots {
@@ -1040,6 +1147,12 @@ fn report(args: Report) -> Result<ExitCode> {
         count(doc.modules.len(), "module"),
         count(doc.edges.len(), "import")
     );
+    if !doc.source.collector.limitations.is_empty() {
+        out += &format!(
+            "  {} collection limits recorded in source.collector.limitations\n",
+            doc.source.collector.limitations.len()
+        );
+    }
     if let Some(resolution) = &doc.import_resolution {
         let percent = resolution
             .resolved_percent

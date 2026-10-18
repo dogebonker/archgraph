@@ -18,6 +18,9 @@ inputs:
   language:
     description: typescript, python, go, rust, java or elixir (default detected; Elixir needs a preinstalled runtime)
     default: ""
+  engine:
+    description: reference (default), experimental native (all supported languages; Go needs go list), or depcruise (TypeScript/JavaScript)
+    default: reference
   package:
     description: Python package to scan (default the single package under the source root)
     default: ""
@@ -73,6 +76,7 @@ runs:
         INPUT_RULES: ${{ inputs.rules }}
         INPUT_DEPTH: ${{ inputs.depth }}
         INPUT_LANGUAGE: ${{ inputs.language }}
+        INPUT_ENGINE: ${{ inputs.engine }}
         INPUT_PACKAGE: ${{ inputs.package }}
         INPUT_EXCLUDE: ${{ inputs.exclude }}
         INPUT_FAIL_ON: ${{ inputs.fail-on }}

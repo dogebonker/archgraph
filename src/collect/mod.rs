@@ -8,6 +8,7 @@ pub mod go;
 pub mod grimp;
 pub mod imports;
 pub mod java;
+pub mod native;
 pub mod rust;
 pub mod typescript_resolution;
 
@@ -19,6 +20,31 @@ use anyhow::{Context, Result, bail};
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 
 use crate::model::{Collector, Edge, Language, NodeMetadata};
+
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    clap::ValueEnum,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum Engine {
+    #[default]
+    Reference,
+    Native,
+    Depcruise,
+}
+
+impl Engine {
+    pub fn is_reference(&self) -> bool {
+        *self == Self::Reference
+    }
+}
 
 pub struct RawGraph {
     pub files: Vec<String>,

@@ -37,6 +37,8 @@ That prints a summary and writes `.archgraph/archgraph.html`: open it in a brows
 > [!WARNING]
 > For TypeScript, `scan` runs the repository's own dependency-cruiser through npx, so the repository decides what runs. Scan code you trust, or scan inside a sandbox.
 
+All supported languages also have an experimental Rust-native engine: `archgraph report path/to/repo --engine native`. Embedded tree-sitter grammars replace external parsers; Go still needs its toolchain for read-only `go list` package metadata. Native collection needs no Node/npx, Python interpreter, rust-analyzer, JDK or Elixir runtime. The reference collectors remain the default; the [pinned comparison](docs/native-engine-comparison.md) covers TypeScript/JavaScript and Python, with kind and resolution gaps still under review. `--engine depcruise` explicitly selects the TypeScript reference path. See [engine selection and limits](docs/guide.md#native-engine).
+
 <details>
 <summary>Other ways to install, and what each language needs</summary>
 
@@ -224,7 +226,7 @@ Five skills in the open Agent Skills format, for Claude Code, Codex, Cursor and 
 
 ## How it works
 
-archgraph has no parser of its own. It asks [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) (TypeScript, JavaScript) or [grimp](https://github.com/python-grimp/grimp) (Python) for every file-level import, uses the standard `go/types` package for Go, `rust-analyzer` for Rust, the JDK compiler for Java, or Elixir’s `Code.string_to_quoted` for Elixir, groups files into modules by folder or by your rules, and computes coupling, cohesion, cycles over runtime imports, rule verdicts and findings. For Python it also reads each importing file with the standard `ast` module, without running it, to tell imports inside functions and `TYPE_CHECKING` blocks apart from load-time ones. Everything lands in one JSON document with a versioned schema ([`archgraph/v1`](schema/archgraph.v1.schema.json)) that `check`, `simulate`, `render` and `diff` read. The [guide](docs/guide.md) has every command, flag and rule.
+The default reference engine asks [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) (TypeScript, JavaScript) or [grimp](https://github.com/python-grimp/grimp) (Python) for file-level imports, uses the standard `go/types` package for Go, `rust-analyzer` for Rust, the JDK compiler for Java, or Elixir’s `Code.string_to_quoted` for Elixir. The experimental native engine extracts imports and symbols with tree-sitter queries in Rust for every supported language; TypeScript resolution uses oxc_resolver. Both paths share module grouping, coupling, cohesion, runtime-cycle analysis, rule verdicts and findings. Everything lands in one JSON document with a versioned schema ([`archgraph/v1.1`](schema/archgraph.v1.1.schema.json)) that `check`, `simulate`, `render` and `diff` read. The [guide](docs/guide.md) has every command, flag and rule.
 
 ## Limits
 
@@ -240,4 +242,4 @@ No paid tier, no account, no telemetry. What comes next is open source too: Kotl
 
 ## License
 
-MIT or Apache-2.0, at your option. Issues and pull requests are welcome.
+MIT or Apache-2.0, at your option. Bundled parser/runtime attributions are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and included in release archives. Issues and pull requests are welcome.

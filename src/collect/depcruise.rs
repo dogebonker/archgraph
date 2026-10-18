@@ -302,6 +302,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
         main_packages: Vec::new(),
         bound_files: Vec::new(),
         go_modules: Vec::new(),
+        limitations: Vec::new(),
     };
     Ok(RawGraph {
         imports: None,

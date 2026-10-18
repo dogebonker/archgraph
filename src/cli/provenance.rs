@@ -35,12 +35,20 @@ pub(super) struct BisectArgs {
     opts: ScanOpts,
 }
 
-fn collector_opts(root: &Path, options: &ScanOpts) -> Result<ScanOpts> {
+fn collector_opts(root: &Path, options: &ScanOpts, language: Language) -> Result<ScanOpts> {
     let mut options = options.clone();
     if options.collector_input.is_some() {
         bail!(
             "provenance needs live collectors; --collector-input cannot describe historical commits"
         );
+    }
+    if options.engine == collect::Engine::Native {
+        if language == Language::Go && options.go.contains(['/', '\\']) {
+            options.go = fs::canonicalize(&options.go)?
+                .to_string_lossy()
+                .into_owned();
+        }
+        return Ok(options);
     }
     options.depcruise = options
         .depcruise
@@ -66,6 +74,11 @@ fn collector_opts(root: &Path, options: &ScanOpts) -> Result<ScanOpts> {
 pub(super) fn probe(root: &Path, original: &Document, opts: &ScanOpts) -> Result<Document> {
     let mut opts = opts.clone();
     opts.language = Some(original.source.language);
+    opts.engine = original
+        .config
+        .collection
+        .as_ref()
+        .map_or(collect::Engine::Reference, |collection| collection.engine);
     opts.depth = (!original.config.package_modules).then_some(original.config.depth);
     opts.exclude = original
         .config
@@ -138,7 +151,13 @@ pub(super) fn run(args: BisectArgs) -> Result<()> {
             to: to.clone(),
         }
     };
-    let options = collector_opts(&args.root, &args.opts)?;
+    let mut requested = args.opts.clone();
+    requested.engine = doc
+        .config
+        .collection
+        .as_ref()
+        .map_or(collect::Engine::Reference, |collection| collection.engine);
+    let options = collector_opts(&args.root, &requested, doc.source.language)?;
     let checkout = history::Checkout::new(&args.root)?;
     let mut result = bisect::investigate(
         &args.root,
@@ -223,7 +242,7 @@ pub(super) fn enrich_from(
     let setup = std::cell::OnceCell::new();
     for index in 0..doc.findings.len() {
         let result = match setup.get_or_init(|| {
-            collector_opts(root, opts)
+            collector_opts(root, opts, doc.source.language)
                 .and_then(|options| Ok((options, history::Checkout::new(root)?)))
         }) {
             Err(error) => Err(anyhow::anyhow!(
@@ -390,6 +409,44 @@ fn markdown(result: &Investigation) -> String {
 #[cfg(test)]
 mod tests {
     use super::repository;
+
+    #[test]
+    fn native_provenance_freezes_go_executable_before_historical_checkout() {
+        use clap::Parser;
+        let super::super::Cmd::Scan(args) = super::super::Cli::try_parse_from([
+            "archgraph",
+            "scan",
+            ".",
+            "--engine",
+            "native",
+            "--go",
+            "./Cargo.toml",
+            "--depcruise",
+            "/nonexistent/unused-native-tool",
+        ])
+        .unwrap()
+        .command
+        else {
+            unreachable!()
+        };
+        let options = super::collector_opts(
+            std::path::Path::new("/nonexistent/historical-root"),
+            &args.opts,
+            archgraph::model::Language::Go,
+        )
+        .unwrap();
+        assert_eq!(
+            std::path::Path::new(&options.go),
+            std::fs::canonicalize("Cargo.toml").unwrap()
+        );
+        let options = super::collector_opts(
+            std::path::Path::new("/nonexistent/historical-root"),
+            &args.opts,
+            archgraph::model::Language::Typescript,
+        )
+        .unwrap();
+        assert_eq!(options.go, "./Cargo.toml");
+    }
 
     #[test]
     fn saved_collection_settings_do_not_authorize_rust_code_execution() {

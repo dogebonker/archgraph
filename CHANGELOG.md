@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Experimental `--engine native` collects all supported languages through embedded tree-sitter grammars and queries. TypeScript resolution uses oxc_resolver; Python, Rust, Java and Elixir resolution runs in Rust without language runtimes, analyzers or project builds. Go uses read-only `go list` package metadata and retains conservative move/symbol limits. Reference collectors remain the default; a pinned 20-repository TypeScript/Python comparison records endpoint, kind, scope and resolution disagreement rather than assuming a speed or correctness gain. `--engine depcruise` remains the TypeScript escape hatch. Release archives include grammar/runtime attributions.
+
 - Elixir source-reference collection through `Code.string_to_quoted`, including umbrella apps, aliases, static module calls and type references. Scans do not load Mix projects, evaluate source, compile or expand macros; unresolved dynamic and unavailable dependency references remain visible. Adds runtime selection, shared exclusions and live collector CI coverage.
 
 ### Edge quality: kinds and weights

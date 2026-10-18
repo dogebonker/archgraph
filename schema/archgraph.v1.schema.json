@@ -104,7 +104,8 @@
               "type": "object",
               "required": ["name", "version", "cruised"],
               "properties": {
-                "name": { "description": "May grow within archgraph/v1 as collectors are added.", "enum": ["dependency-cruiser", "grimp", "go-types", "rust-analyzer", "java-javac", "elixir-ast"] },
+                "name": { "description": "May grow within archgraph/v1 as collectors are added.", "enum": ["dependency-cruiser", "grimp", "go-types", "rust-analyzer", "java-javac", "elixir-ast", "tree-sitter-typescript", "tree-sitter-python", "tree-sitter-go", "tree-sitter-rust", "tree-sitter-java", "tree-sitter-elixir"] },
+                "limitations": { "type": "array", "items": { "type": "string" } },
                 "version": { "type": ["string", "null"] },
                 "cruised": { "$ref": "#/$defs/count" },
                 "type_marking": { "description": "unavailable when dependency-cruiser could not tell imports of types only (written without import type) from value imports; they are then static. Absent otherwise.", "enum": ["unavailable"] },
@@ -138,7 +139,7 @@
             "include_tests": { "type": "boolean" },
             "no_default_excludes": { "type": "boolean" },
             "codeowners": { "$ref": "#/$defs/codeowners" },
-            "collection": { "type": "object", "required": ["python_package", "rust_features", "rust_build_scripts"], "properties": {"python_package": {"type":["string","null"]}, "rust_features": {"enum":["all","default",null]}, "rust_build_scripts": {"type":"boolean"}} },
+            "collection": { "type": "object", "required": ["python_package", "rust_features", "rust_build_scripts"], "properties": {"engine": {"enum":["reference","native","depcruise"], "default":"reference"}, "python_package": {"type":["string","null"]}, "rust_features": {"enum":["all","default",null]}, "rust_build_scripts": {"type":"boolean"}} },
             "rules": {
               "oneOf": [
                 { "type": "null" },

@@ -257,6 +257,7 @@ mod tests {
                 main_packages: Vec::new(),
                 bound_files: Vec::new(),
                 go_modules: Vec::new(),
+                limitations: Vec::new(),
             },
             git: None,
             generated_at: String::new(),

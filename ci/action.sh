@@ -3,7 +3,7 @@
 # variable, so this runs outside Actions too, given RUNNER_TEMP, GITHUB_OUTPUT and
 # GITHUB_STEP_SUMMARY:
 #
-#   INPUT_PATH INPUT_RULES INPUT_DEPTH INPUT_LANGUAGE INPUT_PACKAGE INPUT_EXCLUDE INPUT_FAIL_ON
+#   INPUT_PATH INPUT_RULES INPUT_DEPTH INPUT_LANGUAGE INPUT_ENGINE INPUT_PACKAGE INPUT_EXCLUDE INPUT_FAIL_ON
 #   INPUT_FAIL_ON_RULES_CHANGE INPUT_VERSION INPUT_BINARY INPUT_BASE_REF   as in action.yml
 #   ARCHGRAPH_DEPCRUISE, ARCHGRAPH_PYTHON, ARCHGRAPH_GO   a collector to use instead of installing one
 #   ARCHGRAPH_ELIXIR   a preinstalled Elixir executable (default elixir)
@@ -45,6 +45,11 @@ here=$(cd "$(dirname "$0")/.." && pwd)
 path=${INPUT_PATH:-.}
 [[ -d $path ]] || die "path $path is not a directory"
 lang=${INPUT_LANGUAGE:-}
+engine=${INPUT_ENGINE:-reference}
+case $engine in
+  reference | native | depcruise) ;;
+  *) die "engine must be reference, native or depcruise" ;;
+esac
 fail_on=${INPUT_FAIL_ON-new-forbidden,new-cycles}
 fail_on=${fail_on//[[:space:]]/}
 base_ref=${INPUT_BASE_REF:-}
@@ -64,8 +69,11 @@ fi
 "$archgraph" --version
 
 # Options shared by the HEAD report and the base scan.
-# Empty when nothing is set: expanded as ${opts[@]+...} for bash 3.2 under set -u.
+# Keep reference defaults compatible with previously released binaries that lack --engine.
 opts=()
+if [[ $engine != reference ]]; then
+  opts+=(--engine "$engine")
+fi
 if [[ -n ${INPUT_DEPTH:-} ]]; then
   opts+=(--depth "$INPUT_DEPTH")
 fi
@@ -109,6 +117,7 @@ has() {
   done
   return 1
 }
+if [[ $engine != native ]]; then
 if [[ $lang == typescript ]] || { [[ -z $lang ]] && has package.json tsconfig.json; }; then
   depcruise=${ARCHGRAPH_DEPCRUISE:-}
   if [[ -z $depcruise ]]; then
@@ -175,6 +184,10 @@ if [[ $lang == elixir ]] || { [[ -z $lang ]] && has mix.exs; }; then
       die "Elixir scans need Elixir 1.14+ / OTP 25+ on PATH: install Elixir or set ARCHGRAPH_ELIXIR"
   fi
   opts+=(--elixir "$elixir")
+fi
+elif [[ -n ${ARCHGRAPH_GO:-} ]]; then
+  # Native Go only reads package metadata; use an explicitly provided toolchain without installing one.
+  opts+=(--go "$ARCHGRAPH_GO")
 fi
 
 head=$work/head

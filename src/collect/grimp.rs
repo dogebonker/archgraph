@@ -220,6 +220,7 @@ pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
         main_packages: Vec::new(),
         bound_files: Vec::new(),
         go_modules: Vec::new(),
+        limitations: Vec::new(),
     };
     let mut graph = RawGraph {
         imports: dump.import_records,

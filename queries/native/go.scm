@@ -1,0 +1,14 @@
+(package_clause) @package
+(import_spec) @import
+(function_declaration) @function
+(type_spec) @type
+(type_alias) @type
+(var_spec) @variable
+(const_spec) @variable
+(selector_expression) @selector
+(qualified_type) @qualified
+(identifier) @identifier
+(type_identifier) @identifier
+(short_var_declaration) @binding
+(parameter_declaration) @binding
+(range_clause) @binding
