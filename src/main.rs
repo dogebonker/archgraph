@@ -635,17 +635,10 @@ fn history(mut args: HistoryArgs) -> Result<()> {
     let html = history::render(&history)?;
     let json = out_dir.join("history.json");
     let page = out_dir.join("history.html");
-    for path in [&out_dir, &json, &page] {
-        if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()) {
-            bail!(
-                "{} is a symbolic link; refusing to write through it",
-                path.display()
-            );
-        }
-    }
+    history::refuse_symlink(&out_dir)?;
     fs::create_dir_all(&out_dir).with_context(|| format!("creating {}", out_dir.display()))?;
     write(Some(&json), &history)?;
-    fs::write(&page, html).with_context(|| format!("writing {}", page.display()))?;
+    write_file(&page, html.as_bytes())?;
     println!("commit       files modules cycles  % in cycles  cycles/100");
     for point in &history.snapshots {
         let s = &point.summary;
@@ -1116,18 +1109,10 @@ fn report(args: Report) -> Result<ExitCode> {
     // The default folder lives in the scanned repository, which may ship it (or the files in it)
     // as links that would make this write land outside it.
     // ponytail: checked, not opened with O_NOFOLLOW; a link swapped in during the scan still wins.
-    for path in [&out_dir, &json, &html] {
-        if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()) {
-            bail!(
-                "{} is a symbolic link; refusing to write through it (pass --out-dir)",
-                path.display()
-            );
-        }
-    }
+    history::refuse_symlink(&out_dir).context("pass --out-dir to write elsewhere")?;
     fs::create_dir_all(&out_dir).with_context(|| format!("creating {}", out_dir.display()))?;
     write(Some(&json), &doc)?;
-    fs::write(&html, render::render(&doc)?)
-        .with_context(|| format!("writing {}", html.display()))?;
+    write_file(&html, render::render(&doc)?.as_bytes())?;
 
     let bold = std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none();
     let heading = |text: &str| {
@@ -1532,7 +1517,7 @@ fn simulate(args: Simulate) -> Result<()> {
 fn render(args: Render) -> Result<()> {
     let html = render::render(&recompute(&args.graph, args.rules.as_deref())?)?;
     match &args.output {
-        Some(path) => fs::write(path, html).with_context(|| format!("writing {}", path.display())),
+        Some(path) => write_file(path, html.as_bytes()),
         None => {
             print!("{html}");
             Ok(())
@@ -1650,12 +1635,17 @@ fn write(output: Option<&Path>, value: &impl serde::Serialize) -> Result<()> {
     }
     let json = serde_json::to_string_pretty(&value)? + "\n";
     match output {
-        Some(path) => fs::write(path, json).with_context(|| format!("writing {}", path.display())),
+        Some(path) => write_file(path, json.as_bytes()),
         None => {
             print!("{json}");
             Ok(())
         }
     }
+}
+
+/// Replaces `path` atomically, so an interrupted run never leaves a truncated output.
+fn write_file(path: &Path, bytes: &[u8]) -> Result<()> {
+    history::write_atomic(path, bytes).with_context(|| format!("writing {}", path.display()))
 }
 
 fn git_scan_root(root: &Path) -> Option<String> {

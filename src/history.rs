@@ -359,13 +359,24 @@ fn digest(bytes: &[u8]) -> String {
 }
 
 fn cache_file(path: &Path) -> Result<()> {
+    refuse_symlink(path).context("refusing symlink history cache")
+}
+
+/// Refuses a symbolic link at `path`, which would redirect a write outside its folder.
+pub fn refuse_symlink(path: &Path) -> Result<()> {
     if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()) {
-        bail!("refusing symlink history cache {}", path.display());
+        bail!(
+            "{} is a symbolic link; refusing to write through it",
+            path.display()
+        );
     }
     Ok(())
 }
-fn write_cache(path: &Path, value: &impl Serialize) -> Result<()> {
-    cache_file(path)?;
+
+/// Replaces `path` through a temporary file and a rename, so an interrupted write never leaves
+/// it truncated.
+pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
+    refuse_symlink(path)?;
     let temporary = path.with_extension(format!(
         "{}-{}.tmp",
         std::process::id(),
@@ -377,7 +388,7 @@ fn write_cache(path: &Path, value: &impl Serialize) -> Result<()> {
             .write(true)
             .create_new(true)
             .open(&temporary)?;
-        file.write_all(&serde_json::to_vec(value)?)?;
+        file.write_all(bytes)?;
         file.sync_all()?;
         fs::rename(&temporary, path)?;
         Ok(())
@@ -433,7 +444,10 @@ pub fn persist_context(root: &Path, options: &HistoryOptions, graph: &Document) 
     }
     let cache =
         cache_namespace(root, options)?.context("history context requires a cache directory")?;
-    write_cache(&cache.join(format!("{}.json", commit.commit)), graph)
+    write_atomic(
+        &cache.join(format!("{}.json", commit.commit)),
+        &serde_json::to_vec(graph)?,
+    )
 }
 
 /// Sampled drift scans skip failures and cache complete scan documents under a context hash.
@@ -533,7 +547,7 @@ pub fn collect_with_options(
                 dirty: false,
             });
             if let Some(path) = &path {
-                write_cache(path, &graph)?;
+                write_atomic(path, &serde_json::to_vec(&graph)?)?;
             }
             Ok(graph)
         })();
@@ -559,9 +573,9 @@ pub fn collect_with_options(
         );
     }
     if let Some(cache) = cache {
-        write_cache(
+        write_atomic(
             &cache.join(index),
-            &snapshots.iter().map(|s| &s.commit).collect::<Vec<_>>(),
+            &serde_json::to_vec(&snapshots.iter().map(|s| &s.commit).collect::<Vec<_>>())?,
         )?;
     }
     Ok(History {

@@ -1638,6 +1638,26 @@ fn report_refuses_to_write_through_symlinks_the_scanned_repository_planted() {
         fs::read_to_string(victim.join("keep.txt")).unwrap(),
         "untouched"
     );
+
+    // Outputs are replaced, never truncated in place: a hard link to the old file keeps it.
+    let root = base.join("hard-link");
+    fs::create_dir_all(root.join(".archgraph")).unwrap();
+    fs::hard_link(
+        victim.join("keep.txt"),
+        root.join(".archgraph/archgraph.json"),
+    )
+    .unwrap();
+    let (_, stderr, code) = run(&root);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert!(
+        fs::read_to_string(root.join(".archgraph/archgraph.json"))
+            .unwrap()
+            .contains("\"scan\"")
+    );
+    assert_eq!(
+        fs::read_to_string(victim.join("keep.txt")).unwrap(),
+        "untouched"
+    );
 }
 
 #[test]

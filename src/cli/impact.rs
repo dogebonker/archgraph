@@ -421,15 +421,15 @@ fn export_lines(path: &Path, lines: &[String]) -> Result<()> {
     if lines.iter().any(|line| line.contains(['\n', '\r'])) {
         bail!("cannot export newline-containing test paths as a line list; use JSON");
     }
-    fs::write(
+    write_file(
         path,
         if lines.is_empty() {
             String::new()
         } else {
             lines.join("\n") + "\n"
-        },
+        }
+        .as_bytes(),
     )
-    .with_context(|| format!("writing {}", path.display()))
 }
 
 fn code(text: &str) -> String {
