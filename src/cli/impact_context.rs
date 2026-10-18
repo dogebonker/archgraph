@@ -6,24 +6,8 @@ use std::process::Command;
 use anyhow::{Context, Result, bail};
 use archgraph::impact::{Impact, Reviewer};
 use archgraph::model::Document;
-use archgraph::{collect, modules};
+use archgraph::{collect, git, modules};
 use serde::Deserialize;
-
-fn git(root: &Path, args: &[&str]) -> Result<Vec<u8>> {
-    let out = Command::new("git")
-        .args(["-c", "core.fsmonitor=false", "-C"])
-        .arg(root)
-        .args(args)
-        .output()
-        .context("running Git for impact reviewers")?;
-    if !out.status.success() {
-        bail!(
-            "Git reviewer history failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-    Ok(out.stdout)
-}
 
 #[derive(Debug)]
 struct Commit {
@@ -105,19 +89,19 @@ pub(super) fn reviewers(
     if unowned.is_empty() {
         return Ok(());
     }
-    if git(root, &["rev-parse", "--is-shallow-repository"])? == b"true\n" {
+    if git::is_shallow(root)? {
         report
             .limitations
             .push("Reviewer history is incomplete in this shallow clone.".into());
     }
-    let timestamp = String::from_utf8(git(root, &["show", "-s", "--format=%ct", head])?)?;
+    let timestamp = git::text(root, &["show", "-s", "--format=%ct", head])?;
     let end: i64 = timestamp
         .trim()
         .parse()
         .context("reading head commit date")?;
     let since = format!("--since-as-filter=@{}", end.saturating_sub(365 * 86400));
     let until = format!("--until=@{end}");
-    let log = git(
+    let log = git::run(
         root,
         &[
             "log",

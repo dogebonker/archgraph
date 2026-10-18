@@ -1,7 +1,6 @@
 //! Complete import-statement accounting and bounded source/config resolution.
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -231,25 +230,8 @@ pub(crate) fn package_name(specifier: &str) -> Option<String> {
 impl Resolver {
     fn new(root: &Path) -> Result<Self> {
         let root = root.canonicalize().context("resolving TypeScript root")?;
-        let repo = Command::new("git")
-            .arg("-C")
-            .arg(&root)
-            .args([
-                "-c",
-                "core.fsmonitor=false",
-                "-c",
-                "core.hooksPath=/dev/null",
-                "rev-parse",
-                "--show-toplevel",
-            ])
-            .output()
+        let repo = crate::git::toplevel(&root)
             .ok()
-            .filter(|output| output.status.success())
-            .and_then(|output| {
-                PathBuf::from(String::from_utf8_lossy(&output.stdout).trim())
-                    .canonicalize()
-                    .ok()
-            })
             .filter(|repo| root.starts_with(repo))
             .unwrap_or_else(|| root.clone());
         let mut resolver = Self {

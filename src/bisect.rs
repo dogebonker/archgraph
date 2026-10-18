@@ -2,12 +2,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
-use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
+use crate::git;
 use crate::model::{CycleLevel, Document, Evidence, Language, Link, Verdict};
 
 #[derive(Debug, Clone, Serialize)]
@@ -246,46 +246,8 @@ struct Probe {
     edges: BTreeSet<(String, String)>,
 }
 
-fn git(root: &Path, args: &[&str]) -> Result<String> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args([
-            "-c",
-            "core.fsmonitor=false",
-            "-c",
-            "core.hooksPath=/dev/null",
-            "--literal-pathspecs",
-        ])
-        .args(args)
-        .output()
-        .context("running provenance git command")?;
-    if !output.status.success() {
-        bail!(
-            "git {}: {}",
-            args[0],
-            String::from_utf8_lossy(&output.stderr).trim()
-        );
-    }
-    String::from_utf8(output.stdout).context("provenance git output is not UTF-8")
-}
-
-fn resolve(root: &Path, revision: &str) -> Result<String> {
-    Ok(git(
-        root,
-        &[
-            "rev-parse",
-            "--verify",
-            "--end-of-options",
-            &format!("{revision}^{{commit}}"),
-        ],
-    )?
-    .trim()
-    .into())
-}
-
 fn metadata(root: &Path, commit: &str) -> Result<Commit> {
-    let value = git(
+    let value = git::text(
         root,
         &[
             "show",
@@ -334,7 +296,7 @@ fn pull_request(message: &str) -> Option<u64> {
 
 /// Date filtering can omit interior commits; list neighbors are not necessarily Git parents.
 fn verify_adjacent(root: &Path, previous: &str, current: &str) -> Result<()> {
-    let parents = git(root, &["show", "-s", "--format=%P", current])?;
+    let parents = git::text(root, &["show", "-s", "--format=%P", current])?;
     if parents.split_whitespace().next() != Some(previous) {
         bail!(
             "date-filtered history has a gap: {previous} is not the first parent of {current}; no adjacent transition was verified within the selected window"
@@ -350,7 +312,7 @@ fn renamed_target(
     current: &str,
     paths: &BTreeSet<String>,
 ) -> Result<bool> {
-    let changes = git(
+    let changes = git::text(
         root,
         &[
             "diff",
@@ -463,14 +425,14 @@ pub fn investigate(
     if options.max_commits == 0 || options.max_scans < 2 {
         bail!("provenance needs positive commit limit and at least two scans");
     }
-    let to = resolve(
+    let to = git::resolve(
         root,
         graph.source.git.as_ref().map_or("HEAD", |git| &git.commit),
     )?;
     let lower = options
         .from
         .as_deref()
-        .map(|rev| resolve(root, rev))
+        .map(|rev| git::resolve(root, rev))
         .transpose()?;
     let limit = format!("--max-count={}", options.max_commits);
     let since = format!("--since-as-filter={}", options.since);
@@ -479,7 +441,7 @@ pub fn investigate(
         args.push(&since);
     }
     args.extend(["--end-of-options", &to, "--"]);
-    let history = git(root, &args)?;
+    let history = git::text(root, &args)?;
     let mut commits: Vec<String> = history.lines().map(str::to_owned).collect();
     if let Some(lower) = &lower {
         let index = commits
@@ -502,7 +464,7 @@ pub fn investigate(
             options.since, options.max_commits
         ));
     }
-    if git(root, &["rev-parse", "--is-shallow-repository"])?.trim() == "true" {
+    if git::is_shallow(root)? {
         result
             .limitations
             .push("Shallow clone: earlier history is unavailable.".into());
@@ -545,20 +507,23 @@ pub fn investigate(
             result.status = "not-present";
             return Ok(());
         }
-        let repo = git(root, &["rev-parse", "--show-toplevel"])?;
+        let repo = git::toplevel(root)?;
         let root = std::fs::canonicalize(root)?;
-        let canonical_repo = std::fs::canonicalize(repo.trim())?;
         let prefix = root
-            .strip_prefix(&canonical_repo)
+            .strip_prefix(&repo)
             .context("scan root outside repository")?;
         let mut candidates: BTreeMap<usize, Link> = BTreeMap::new();
         for edge in result.target.edges(graph) {
             let file = prefix.join(&edge.from).to_string_lossy().replace('\\', "/");
-            let source =
-                git(Path::new(repo.trim()), &["show", &format!("{to}:{file}")]).unwrap_or_default();
+            let source = git::text(
+                &repo,
+                &["--literal-pathspecs", "show", &format!("{to}:{file}")],
+            )
+            .unwrap_or_default();
             for token in import_tokens(&source, &edge.to, graph.source.language) {
                 let pickaxe = format!("-S{token}");
                 let mut args = vec![
+                    "--literal-pathspecs",
                     "log",
                     "--first-parent",
                     "--follow",
@@ -572,7 +537,7 @@ pub fn investigate(
                     args.push(&since);
                 }
                 args.extend(["--end-of-options", &to, "--", &file]);
-                let changes = git(Path::new(repo.trim()), &args)?;
+                let changes = git::text(&repo, &args)?;
                 for changed in changes.lines() {
                     if let Some(index) = commits.iter().position(|commit| commit == changed)
                         && index + 1 < commits.len()

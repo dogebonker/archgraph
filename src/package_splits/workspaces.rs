@@ -2,7 +2,6 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
 
 use anyhow::{Context, Result, bail};
 use globset::GlobSet;
@@ -20,25 +19,8 @@ pub fn discover(root: &Path) -> Result<WorkspaceInventory> {
     let root = root
         .canonicalize()
         .context("resolving workspace inspection root")?;
-    let repo = Command::new("git")
-        .arg("-C")
-        .arg(&root)
-        .args([
-            "-c",
-            "core.fsmonitor=false",
-            "-c",
-            "core.hooksPath=/dev/null",
-            "rev-parse",
-            "--show-toplevel",
-        ])
-        .output()
+    let repo = crate::git::toplevel(&root)
         .ok()
-        .filter(|output| output.status.success())
-        .and_then(|output| {
-            PathBuf::from(String::from_utf8_lossy(&output.stdout).trim())
-                .canonicalize()
-                .ok()
-        })
         .filter(|repo| root.starts_with(repo))
         .unwrap_or_else(|| root.clone());
     let mut result = WorkspaceInventory {

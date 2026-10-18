@@ -461,26 +461,9 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         )
     };
     if let [old, new] = args.diff.as_slice() {
-        let resolve = |rev: &str| -> Result<String> {
-            let out = Command::new("git")
-                .arg("-C")
-                .arg(&args.root)
-                .args([
-                    "-c",
-                    "core.fsmonitor=false",
-                    "rev-parse",
-                    "--verify",
-                    "--end-of-options",
-                ])
-                .arg(format!("{rev}^{{commit}}"))
-                .output()?;
-            if !out.status.success() {
-                bail!(
-                    "unknown release ref {rev}: {}",
-                    String::from_utf8_lossy(&out.stderr)
-                );
-            }
-            Ok(String::from_utf8(out.stdout)?.trim().to_owned())
+        let resolve = |rev: &str| {
+            archgraph::git::resolve(&args.root, rev)
+                .with_context(|| format!("unknown release ref {rev}"))
         };
         let checkout = history::Checkout::new(&args.root)?;
         let old = scan(&checkout.at(&resolve(old)?)?)?;
@@ -1689,16 +1672,7 @@ fn scanned_checkout(source: &Source, root: &Path, outputs: &[&Path]) -> Result<b
 }
 
 fn git_scan_root(root: &Path) -> Option<String> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(["-c", "core.fsmonitor=false", "rev-parse", "--show-prefix"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let prefix = String::from_utf8(output.stdout).ok()?;
+    let prefix = archgraph::git::text(root, &["rev-parse", "--show-prefix"]).ok()?;
     let prefix = prefix.trim_end_matches('\n').trim_end_matches('/');
     Some(if prefix.is_empty() { "." } else { prefix }.to_owned())
 }
@@ -1722,22 +1696,16 @@ fn git(root: &Path, outputs: &[&Path]) -> Option<Git> {
         let relative = path.strip_prefix(&canonical_root).ok()?.to_str()?;
         Some(format!(":(exclude,literal){relative}"))
     }));
-    let run = |args: &[&str]| {
-        // A repository's core.fsmonitor names a program `git status` would run.
-        let out = Command::new("git")
-            .arg("-C")
-            .arg(root)
-            .args(["-c", "core.fsmonitor=false"])
-            .args(args)
-            .output()
-            .ok()?;
-        out.status
-            .success()
-            .then(|| String::from_utf8_lossy(&out.stdout).trim().to_owned())
-    };
+    let status: Vec<_> = status.iter().map(String::as_str).collect();
     Some(Git {
-        commit: run(&["rev-parse", "HEAD"])?,
-        dirty: !run(&status.iter().map(String::as_str).collect::<Vec<_>>())?.is_empty(),
+        commit: archgraph::git::text(root, &["rev-parse", "HEAD"])
+            .ok()?
+            .trim()
+            .to_owned(),
+        dirty: !archgraph::git::run(root, &status)
+            .ok()?
+            .trim_ascii()
+            .is_empty(),
     })
 }
 

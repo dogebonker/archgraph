@@ -3,7 +3,6 @@
 use std::fs::{self, File};
 use std::io::Read;
 use std::path::Path;
-use std::process::Command;
 
 use anyhow::{Context, Result, bail};
 use globset::{GlobBuilder, GlobMatcher};
@@ -35,18 +34,7 @@ pub struct OwnerWarning {
 /// First existing CODEOWNERS location wins, including when it cannot be read.
 pub fn load(root: &Path) -> Result<Option<Codeowners>> {
     let root = fs::canonicalize(root).context("resolving CODEOWNERS scan root")?;
-    let git = Command::new("git")
-        .args(["-c", "core.fsmonitor=false", "-C"])
-        .arg(&root)
-        .args(["rev-parse", "--show-toplevel"])
-        .output();
-    let repo = match git {
-        Ok(out) if out.status.success() => {
-            let path = String::from_utf8(out.stdout).context("Git root is not UTF-8")?;
-            fs::canonicalize(path.trim_end_matches(['\n', '\r']))?
-        }
-        _ => root.clone(),
-    };
+    let repo = crate::git::toplevel(&root).unwrap_or_else(|_| root.clone());
     let prefix = root
         .strip_prefix(&repo)
         .context("scan root outside Git root")?;
@@ -319,6 +307,7 @@ impl Compiled {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::process::Command;
 
     #[test]
     fn literal_final_segments_own_descendants_after_wildcard_directories() {

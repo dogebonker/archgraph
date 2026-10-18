@@ -1,4 +1,5 @@
 use super::*;
+use archgraph::git;
 use archgraph::impact::{self, Impact};
 use std::collections::BTreeSet;
 
@@ -46,37 +47,6 @@ pub(super) struct ImpactArgs {
     hotspots: HotspotOpts,
     #[command(flatten)]
     collector: CollectorOpts,
-}
-
-fn git_output(root: &Path, args: &[&str]) -> Result<Vec<u8>> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(["-c", "core.fsmonitor=false"])
-        .args(args)
-        .output()
-        .context("running Git for impact")?;
-    if !output.status.success() {
-        bail!(
-            "impact Git: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        );
-    }
-    Ok(output.stdout)
-}
-
-fn resolve(root: &Path, rev: &str) -> Result<String> {
-    Ok(String::from_utf8(git_output(
-        root,
-        &[
-            "rev-parse",
-            "--verify",
-            "--end-of-options",
-            &format!("{rev}^{{commit}}"),
-        ],
-    )?)?
-    .trim()
-    .into())
 }
 
 fn check_graph(doc: &Document, commit: &str) -> Result<()> {
@@ -151,9 +121,9 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
         bail!("impact expects two explicit endpoints: BASE..HEAD (not a three-dot range)");
     }
     let root = fs::canonicalize(&args.root)?;
-    let base = resolve(&root, base)?;
-    let head = resolve(&root, head)?;
-    let changed: Vec<String> = std::str::from_utf8(&git_output(
+    let base = git::resolve(&root, base)?;
+    let head = git::resolve(&root, head)?;
+    let changed: Vec<String> = git::text(
         &root,
         &[
             "diff",
@@ -168,7 +138,7 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
             "--",
             ".",
         ],
-    )?)?
+    )?
     .split('\0')
     .filter(|p| !p.is_empty())
     .map(str::to_owned)

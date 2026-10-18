@@ -2,11 +2,11 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
-use std::process::Command;
 
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
+use crate::git;
 use crate::model::{CycleLevel, Document, Evidence};
 
 #[derive(Debug, Clone)]
@@ -102,23 +102,6 @@ pub(crate) struct Commit {
 
 /// The `git log --numstat -z` header that `parse_log` reads.
 pub(crate) const LOG_FORMAT: &str = "--format=%x00ARCHGRAPH%x00%H%x00%aE%x00%B%x00";
-
-fn git(root: &Path, args: &[&str]) -> Result<Vec<u8>> {
-    let out = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(["-c", "core.fsmonitor=false"])
-        .args(args)
-        .output()
-        .context("running Git for hotspots")?;
-    if !out.status.success() {
-        bail!(
-            "hotspots needs Git history: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-    Ok(out.stdout)
-}
 
 /// Seconds at 00:00 UTC of a strict `YYYY-MM-DD` calendar date. Computed here rather than by
 /// Git, whose lenient parser accepts invalid dates and misreads years before 1970 or after 2099.
@@ -290,7 +273,7 @@ pub fn collect(root: &Path, graph: &Document, options: &Options) -> Result<Hotsp
         .git
         .as_ref()
         .map_or("HEAD", |g| g.commit.as_str());
-    let header = String::from_utf8(git(
+    let header = git::text(
         root,
         &[
             "show",
@@ -299,20 +282,21 @@ pub fn collect(root: &Path, graph: &Document, options: &Options) -> Result<Hotsp
             "--end-of-options",
             revision,
         ],
-    )?)?;
+    )
+    .context("hotspots needs Git history")?;
     let (as_of, timestamp) = header
         .trim()
         .split_once(' ')
         .context("missing hotspot commit timestamp")?;
     let since_timestamp = since_timestamp(&options.since, timestamp.parse()?)?;
-    let shallow = git(root, &["rev-parse", "--is-shallow-repository"])? == b"true\n";
-    let prefix = String::from_utf8(git(root, &["rev-parse", "--show-prefix"])?)?;
+    let shallow = git::is_shallow(root)?;
+    let prefix = git::text(root, &["rev-parse", "--show-prefix"])?;
     let prefix = prefix.trim_end_matches('\n');
     let scanned: HashSet<_> = graph.files.iter().map(|f| f.path.as_str()).collect();
     let mut stats: HashMap<String, Changes> = HashMap::new();
     let (mut count, mut skipped) = (0, 0);
     if !shallow {
-        let bytes = git(
+        let text = git::text(
             root,
             &[
                 "log",
@@ -330,8 +314,7 @@ pub fn collect(root: &Path, graph: &Document, options: &Options) -> Result<Hotsp
                 "--",
             ],
         )?;
-        let text = std::str::from_utf8(&bytes).context("Git hotspot paths must be UTF-8")?;
-        let (commits, sweeps) = follow_renames(parse_log(text)?, options.max_files);
+        let (commits, sweeps) = follow_renames(parse_log(&text)?, options.max_files);
         skipped = sweeps;
         for commit in commits {
             if !commit.changes.is_empty() {

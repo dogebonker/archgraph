@@ -9,6 +9,7 @@ pub mod context;
 pub mod diff;
 pub mod exposure;
 pub mod findings;
+pub mod git;
 pub mod grabbag;
 pub mod graph;
 pub mod history;

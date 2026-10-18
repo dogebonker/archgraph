@@ -11,7 +11,7 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 
 use crate::model::{CycleLevel, Diff, Document, Git, SCHEMA};
-use crate::{diff, render};
+use crate::{diff, git, render};
 
 #[derive(Serialize)]
 pub struct History {
@@ -161,29 +161,6 @@ impl Drop for Temp {
     }
 }
 
-fn git(root: &Path, args: &[&str]) -> Result<String> {
-    let out = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args([
-            "-c",
-            "core.fsmonitor=false",
-            "-c",
-            "core.hooksPath=/dev/null",
-        ])
-        .args(args)
-        .output()
-        .context("running git")?;
-    if !out.status.success() {
-        bail!(
-            "git {}: {}",
-            args[0],
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-    String::from_utf8(out.stdout).context("git output is not UTF-8")
-}
-
 /// A single disposable clone shared by probes; never mutates the caller's worktree registry.
 pub struct Checkout {
     temp: Temp,
@@ -192,9 +169,7 @@ pub struct Checkout {
 impl Checkout {
     pub fn new(root: &Path) -> Result<Self> {
         let root = fs::canonicalize(root).context("resolving history root")?;
-        let repo = fs::canonicalize(
-            git(&root, &["rev-parse", "--show-toplevel"])?.trim_end_matches(['\n', '\r']),
-        )?;
+        let repo = git::toplevel(&root)?;
         let relative = root
             .strip_prefix(&repo)
             .context("scan root is outside the repository")?
@@ -210,7 +185,7 @@ impl Checkout {
         let temp = Temp(path);
         #[cfg(unix)]
         remove_stale(&temp.0);
-        git(
+        git::run(
             &temp.0,
             &[
                 "clone",
@@ -224,15 +199,15 @@ impl Checkout {
         Ok(Self { temp, relative })
     }
     pub fn at(&self, commit: &str) -> Result<PathBuf> {
-        if !matches!(commit.len(), 40 | 64) || !commit.bytes().all(|c| c.is_ascii_hexdigit()) {
+        if !git::is_full_hash(commit) {
             bail!("history checkout requires a full commit hash");
         }
         let checkout = self.temp.0.join("repo");
-        git(
+        git::run(
             &checkout,
             &["checkout", "--quiet", "--detach", "--force", commit],
         )?;
-        git(&checkout, &["clean", "-ffdqx"])?;
+        git::run(&checkout, &["clean", "-ffdqx"])?;
         Ok(checkout.join(&self.relative))
     }
 }
@@ -289,7 +264,7 @@ struct Commit {
     timestamp: i64,
 }
 fn commits(root: &Path, rev: &str) -> Result<Vec<Commit>> {
-    git(
+    git::text(
         root,
         &[
             "log",
@@ -317,7 +292,7 @@ fn commits(root: &Path, rev: &str) -> Result<Vec<Commit>> {
 }
 fn tags(root: &Path) -> Result<BTreeMap<String, Vec<String>>> {
     let mut tags: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    for line in git(
+    for line in git::text(
         root,
         &[
             "for-each-ref",
@@ -452,9 +427,7 @@ pub fn persist_context(root: &Path, options: &HistoryOptions, graph: &Document) 
         .git
         .as_ref()
         .context("history context requires a snapshot commit")?;
-    if !matches!(commit.commit.len(), 40 | 64)
-        || !commit.commit.bytes().all(|c| c.is_ascii_hexdigit())
-    {
+    if !git::is_full_hash(&commit.commit) {
         bail!("history context requires a full commit hash");
     }
     if commit.dirty {

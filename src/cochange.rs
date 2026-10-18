@@ -2,12 +2,11 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::Path;
-use std::process::Command;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 
-use crate::hotspots;
 use crate::model::{Cochange, CochangePair};
+use crate::{git, hotspots};
 
 /// A commit touching more files is a sweep (formatting, renames, vendoring) and says nothing
 /// about which files belong together.
@@ -19,13 +18,9 @@ const MIN_COMMITS: usize = 3;
 pub fn collect(root: &Path, limit: usize, files: &[String]) -> Result<Cochange> {
     // `--relative` and the `.` pathspec limit the log to commits touching the scanned root and
     // make their paths relative to it; `-z` leaves paths unquoted, so they match the scanned names.
-    let out = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        // core.fsmonitor=false: never run a program the repository's config names.
-        .args([
-            "-c",
-            "core.fsmonitor=false",
+    let out = git::run(
+        root,
+        &[
             "log",
             "--numstat",
             "-z",
@@ -35,19 +30,14 @@ pub fn collect(root: &Path, limit: usize, files: &[String]) -> Result<Cochange> 
             "--no-textconv",
             "--relative",
             hotspots::LOG_FORMAT,
-        ])
-        .arg(format!("-n{limit}"))
-        .args(["--", "."])
-        .output()
-        .context("running git (is it installed?)")?;
-    if !out.status.success() {
-        bail!(
-            "--cochange needs git history: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
+            &format!("-n{limit}"),
+            "--",
+            ".",
+        ],
+    )
+    .context("--cochange needs git history")?;
     let scanned: HashSet<&str> = files.iter().map(String::as_str).collect();
-    let log = hotspots::parse_log(&String::from_utf8_lossy(&out.stdout))?;
+    let log = hotspots::parse_log(&String::from_utf8_lossy(&out))?;
     let (commits, skipped) = hotspots::follow_renames(log, MAX_FILES);
     let mut counts: BTreeMap<(&str, &str), usize> = BTreeMap::new();
     for commit in &commits {

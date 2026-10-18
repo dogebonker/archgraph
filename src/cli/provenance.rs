@@ -326,15 +326,9 @@ fn repository(url: &str) -> Option<&str> {
 }
 
 fn github_pr(root: &Path, commit: &str) -> Result<Option<u64>> {
-    let origin = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(["remote", "get-url", "origin"])
-        .output()?;
-    if !origin.status.success() {
-        bail!("no origin remote");
-    }
-    let origin = String::from_utf8(origin.stdout)?;
+    let origin = archgraph::git::text(root, &["remote", "get-url", "origin"])
+        .ok()
+        .context("no origin remote")?;
     let repository =
         repository(&origin).context("origin is not a supported github.com repository URL")?;
     let output = Command::new("gh")
