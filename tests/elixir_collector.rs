@@ -276,7 +276,13 @@ fn elixir_live_never_evaluates_project_code_and_keeps_unparsable_files_with_a_wa
     )
     .unwrap();
     let (doc, _, stderr) = common::scan(&[root.to_str().unwrap(), "--language", "elixir"]);
-    assert!(stderr.contains("warning: lib/broken.ex:2: "), "{stderr}");
+    // Elixir versions point at either the unclosed call or its terminating `end`.
+    assert!(
+        ["warning: lib/broken.ex:2: ", "warning: lib/broken.ex:3: "]
+            .iter()
+            .any(|warning| stderr.contains(warning)),
+        "{stderr}"
+    );
     assert!(stderr.contains("warning: lib/template.exs:1: "), "{stderr}");
     let files: Vec<_> = doc["files"]
         .as_array()
