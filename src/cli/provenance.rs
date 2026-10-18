@@ -144,7 +144,8 @@ pub(super) fn probe(
         cochange: original.cochange.as_ref().map(|cochange| cochange.limit),
         symbols: false,
     };
-    let collected = super::scan_doc(root, &opts, &HotspotOpts::default(), &collector, None, &[])?;
+    let collected =
+        super::scan_cli::scan_doc(root, &opts, &HotspotOpts::default(), &collector, None, &[])?;
     let mut config = original.config.clone();
     config.file_metadata = collected.config.file_metadata;
     config.import_records = collected.imports;

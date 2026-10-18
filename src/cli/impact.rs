@@ -179,7 +179,7 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
         Some(doc) => doc,
         None => {
             let local_rules = head_root.join("layout.yaml");
-            scan_doc(
+            scan_cli::scan_doc(
                 &head_root,
                 &args.opts,
                 &args.hotspots,
