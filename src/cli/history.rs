@@ -171,13 +171,15 @@ fn cache_identity(args: &HistoryArgs, language: Language, rules: Option<&Path>) 
     if let Some(path) = rules {
         key.extend_from_slice(&fs::read(path)?);
     }
-    if args.opts.engine == collect::Engine::Native && language == Language::Go {
-        let output = collect::run(
+    if args.opts.engine == collect::Engine::Native
+        && language == Language::Go
+        && let Ok(output) = collect::run(
             Command::new(&args.collector.go)
                 .arg("version")
                 .current_dir(std::env::temp_dir())
                 .env("GOTOOLCHAIN", "local"),
-        )?;
+        )
+    {
         key.extend_from_slice(&output.stdout);
     }
     if args.opts.engine != collect::Engine::Native {
