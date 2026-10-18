@@ -450,11 +450,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
                 version: Some("0.3.5".into()),
                 cruised: files.len(),
                 unresolved: Some(unresolved),
-                type_marking: None,
-                main_packages: Vec::new(),
-                bound_files: Vec::new(),
-                go_modules: Vec::new(),
-                limitations: Vec::new(),
+                ..Default::default()
             },
         },
     })

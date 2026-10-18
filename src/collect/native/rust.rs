@@ -598,14 +598,9 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
         imports: Some(Vec::new()),
         metadata: BTreeMap::new(),
         collector: Collector {
-            limitations: Vec::new(),
             name: "tree-sitter-rust".into(),
             version: Some("tree-sitter 0.27.1".into()),
             cruised: parsed.len(),
-            unresolved: None,
-            type_marking: None,
-            main_packages: Vec::new(),
-            bound_files: Vec::new(),
             go_modules: packages
                 .iter()
                 .map(|p| {
@@ -616,6 +611,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
                     }
                 })
                 .collect(),
+            ..Default::default()
         },
     };
     let mut symbols = Symbols {

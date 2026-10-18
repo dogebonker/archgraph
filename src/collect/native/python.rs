@@ -208,12 +208,7 @@ pub fn collect(
             name: "tree-sitter-python".into(),
             version: Some("0.25.0".into()),
             cruised: files.len(),
-            unresolved: None,
-            type_marking: None,
-            main_packages: Vec::new(),
-            bound_files: Vec::new(),
-            go_modules: Vec::new(),
-            limitations: Vec::new(),
+            ..Default::default()
         },
     };
     let mut symbols = Symbols {

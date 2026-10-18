@@ -312,11 +312,10 @@ pub fn collect(root: &Path, go: &str, policy: &Policy) -> Result<super::Output> 
                 version: Some("0.25.0".into()),
                 cruised: all_files.len(),
                 unresolved: Some(unresolved),
-                type_marking: None,
                 main_packages,
                 bound_files: files.clone(),
                 go_modules: dirs,
-                limitations: Vec::new(),
+                ..Default::default()
             },
             files: all_files,
             edges: edges.into_values().collect(),

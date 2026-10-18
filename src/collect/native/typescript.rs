@@ -606,12 +606,8 @@ pub fn collect(
             name: "tree-sitter-typescript".into(),
             version: Some("tree-sitter 0.27.1; oxc_resolver 11.24.3".into()),
             cruised: 0,
-            unresolved: None,
             type_marking: Some("unavailable".into()),
-            main_packages: Vec::new(),
-            bound_files: Vec::new(),
-            go_modules: Vec::new(),
-            limitations: Vec::new(),
+            ..Default::default()
         },
     };
     let mut symbols = Symbols {

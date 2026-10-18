@@ -76,12 +76,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
             name: "tree-sitter-java".into(),
             version: Some("0.23.5".into()),
             cruised: files.len(),
-            unresolved: None,
-            type_marking: None,
-            main_packages: Vec::new(),
-            bound_files: Vec::new(),
-            go_modules: Vec::new(),
-            limitations: Vec::new(),
+            ..Default::default()
         },
     };
     let mut symbols = Symbols { complete: false, limitations: vec!["Java syntax evidence does not replace javac type attribution: inherited members, overloads, classpath libraries and reflection may be incomplete.".into()], ..Symbols::default() };
