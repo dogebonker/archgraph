@@ -13,12 +13,10 @@ pub(super) struct ServicesArgs {
 }
 
 pub(super) fn run(args: ServicesArgs) -> Result<()> {
-    if LEGACY_V1.load(Ordering::Relaxed)
-        && (matches!(args.format, Format::Json) || args.output.is_some())
-    {
+    if globals().legacy_v1 && (matches!(args.format, Format::Json) || args.output.is_some()) {
         bail!("services JSON requires archgraph/v1.1; omit --legacy-v1");
     }
-    if GRANULARITY.load(Ordering::Relaxed) != 0 {
+    if globals().granularity.is_some() {
         bail!("services use explicit service IDs; --granularity applies to import scans");
     }
     let text = fs::read_to_string(&args.manifest)

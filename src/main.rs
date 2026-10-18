@@ -3,12 +3,21 @@ use std::fs;
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
-use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-static ALL_KINDS: AtomicBool = AtomicBool::new(false);
-static LEGACY_V1: AtomicBool = AtomicBool::new(false);
-static GRANULARITY: AtomicU8 = AtomicU8::new(0);
+/// The global flags, set once in `main`; defaults elsewhere, as in unit tests.
+#[derive(Default)]
+struct Globals {
+    all_kinds: bool,
+    legacy_v1: bool,
+    granularity: Option<Granularity>,
+}
+static GLOBALS: OnceLock<Globals> = OnceLock::new();
+
+fn globals() -> &'static Globals {
+    GLOBALS.get_or_init(Globals::default)
+}
 
 use anyhow::{Context, Result, bail};
 use archgraph::collect::{self, depcruise, elixir, go, grimp, java, rust};
@@ -345,16 +354,11 @@ struct Simulate {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    ALL_KINDS.store(cli.all_kinds, Ordering::Relaxed);
-    GRANULARITY.store(
-        match cli.granularity {
-            None => 0,
-            Some(Granularity::Folder) => 1,
-            Some(Granularity::File) => 2,
-        },
-        Ordering::Relaxed,
-    );
-    LEGACY_V1.store(cli.legacy_v1, Ordering::Relaxed);
+    GLOBALS.get_or_init(|| Globals {
+        all_kinds: cli.all_kinds,
+        legacy_v1: cli.legacy_v1,
+        granularity: cli.granularity,
+    });
     let result = match cli.command {
         Cmd::Scan(args) => scan(args).map(|()| ExitCode::SUCCESS),
         Cmd::Report(args) => report(args),
@@ -489,8 +493,8 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         .clone()
         .unwrap_or_else(|| args.root.join(".archgraph"));
     let mut key = serde_json::to_vec(&(&args.opts, &args.hotspots, &args.collector))?;
-    key.push(u8::from(ALL_KINDS.load(Ordering::Relaxed)));
-    key.push(GRANULARITY.load(Ordering::Relaxed));
+    key.push(u8::from(globals().all_kinds));
+    key.extend_from_slice(&serde_json::to_vec(&globals().granularity)?);
     key.extend_from_slice(env!("CARGO_PKG_VERSION").as_bytes());
     key.extend_from_slice(include_bytes!("../Cargo.lock"));
     key.extend_from_slice(&sha2::Sha256::digest(fs::read(std::env::current_exe()?)?));
@@ -1026,11 +1030,7 @@ fn scan_doc(
     let package_modules = matches!(language, Language::Go | Language::Java) && args.depth.is_none();
     let config = Config {
         depth: args.depth.unwrap_or(if package_modules { 0 } else { 2 }),
-        granularity: if GRANULARITY.load(Ordering::Relaxed) == 2 {
-            Granularity::File
-        } else {
-            Granularity::Folder
-        },
+        granularity: globals().granularity.unwrap_or_default(),
         package_modules,
         source_root,
         excludes,
@@ -1041,7 +1041,7 @@ fn scan_doc(
         includes,
         excluded_files,
         explicit_excludes: Some(args.exclude.clone()),
-        all_kinds: ALL_KINDS.load(Ordering::Relaxed),
+        all_kinds: globals().all_kinds,
         no_default_excludes: args.no_default_excludes,
         rules: loaded_rules,
         codeowners: codeowners::load(root)?,
@@ -1629,15 +1629,11 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
             input.kind
         );
     }
-    input.config.all_kinds |= ALL_KINDS.load(Ordering::Relaxed);
+    input.config.all_kinds |= globals().all_kinds;
     archgraph::validate_scan(&input)
         .with_context(|| format!("inconsistent scan document {}", path.display()))?;
-    if GRANULARITY.load(Ordering::Relaxed) != 0 {
-        input.config.granularity = if GRANULARITY.load(Ordering::Relaxed) == 2 {
-            Granularity::File
-        } else {
-            Granularity::Folder
-        };
+    if let Some(granularity) = globals().granularity {
+        input.config.granularity = granularity;
         reassign(&mut input)?;
     }
 
@@ -1647,7 +1643,7 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
 /// Pretty JSON to `output`, or stdout.
 fn write(output: Option<&Path>, value: &impl serde::Serialize) -> Result<()> {
     let mut value = serde_json::to_value(value)?;
-    if LEGACY_V1.load(Ordering::Relaxed) {
+    if globals().legacy_v1 {
         archgraph::compat::v1(&mut value)?;
     }
     let json = serde_json::to_string_pretty(&value)? + "\n";

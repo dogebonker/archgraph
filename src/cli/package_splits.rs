@@ -25,7 +25,7 @@ pub(super) struct PackageSplitsArgs {
 }
 
 pub(super) fn run(args: PackageSplitsArgs) -> Result<()> {
-    if matches!(args.format, Format::Json) && LEGACY_V1.load(Ordering::Relaxed) {
+    if matches!(args.format, Format::Json) && globals().legacy_v1 {
         bail!("standalone package-splits JSON requires archgraph/v1.1; omit --legacy-v1");
     }
     let mut doc = recompute(&args.graph, None)?;

@@ -44,7 +44,7 @@ fn budget(value: &str) -> std::result::Result<usize, String> {
 }
 
 pub(super) fn run(args: ContextArgs) -> Result<()> {
-    if matches!(args.format, Format::Json) && LEGACY_V1.load(Ordering::Relaxed) {
+    if matches!(args.format, Format::Json) && globals().legacy_v1 {
         bail!("context JSON requires archgraph/v1.1; omit --legacy-v1");
     }
     let root = args
