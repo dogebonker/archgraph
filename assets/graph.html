@@ -374,6 +374,23 @@ p { margin: 6px 0; }
 .whatif-actions { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
 .whatif-actions button { padding: 8px 12px; background: var(--surface); border: 1px solid var(--sep); border-radius: 8px; color: var(--label); min-height: 36px; }
 .whatif-panel ul { padding-left: 18px; overflow-wrap: anywhere; }
+.whatif-panel h3 { font-size: 13px; margin: 16px 0 6px; }
+.whatif-panel details { margin: 10px 0; }
+.whatif-panel summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.whatif-panel details.warn > summary { color: var(--orange); }
+.verdict { margin: 10px 0 6px; padding: 10px 12px; border-radius: var(--r); border-left: 3px solid var(--label3); background: rgba(118, 118, 128, .14); }
+.verdict strong { font-size: 15px; }
+.verdict.good { border-color: var(--green-s); background: rgba(48, 209, 88, .12); } .verdict.good strong { color: var(--green-s); }
+.verdict.bad { border-color: var(--red-s); background: rgba(255, 69, 58, .12); } .verdict.bad strong { color: var(--red-s); }
+.verdict.warn { border-color: var(--orange); background: rgba(255, 159, 10, .12); } .verdict.warn strong { color: var(--orange); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+.chip.good { color: var(--green-s); background: rgba(48, 209, 88, .16); } .chip.bad { color: var(--red-s); background: rgba(255, 69, 58, .16); }
+table.sim tr.same td, table.sim tr.same th { color: var(--label3); }
+ul.wi-findings { list-style: none; padding: 0; margin: 4px 0; }
+ul.wi-findings li { padding: 6px 0 6px 10px; border-left: 2px solid var(--sep); margin-bottom: 4px; }
+ul.wi-findings.bad li { border-color: var(--red-s); } ul.wi-findings.good li { border-color: var(--green-s); }
+ul.wi-findings .path { color: var(--label2); margin-top: 2px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
@@ -601,8 +618,7 @@ p { margin: 6px 0; }
   </div>
   <section id="whatif-panel" class="whatif-panel" aria-label="File move preview" hidden>
     <h2>What-if move</h2>
-    <p>Drag a file into another module, or choose its destination folder below. One move at a time, always from the original graph.</p>
-    <p class="note">Preview only. Rust <code>archgraph simulate</code> is authoritative. Only cycle and rule findings update here; builds and import rewriting are unverified. View filters are disabled; the preview shows all imports.</p>
+    <p class="muted">Drag a file into another module, or pick a folder below. Estimates cycles and rules only, not builds or imports.</p>
     <form id="whatif-form">
       <label>File to move<input id="whatif-file" list="whatif-files" required autocomplete="off" spellcheck="false"></label>
       <datalist id="whatif-files"></datalist>
@@ -613,12 +629,12 @@ p { margin: 6px 0; }
     <p id="whatif-status" role="status" aria-live="polite"></p>
     <div id="whatif-result"></div>
     <div id="whatif-commands" hidden>
-      <label>Graph JSON path for CLI<input id="whatif-graph" value="graph.json" autocomplete="off" spellcheck="false"></label>
-      <p>Run from the scanned root. Review the result before moving files.</p>
-      <label>Authoritative simulation<textarea id="whatif-cli" readonly rows="3"></textarea></label>
+      <h3>Next steps, from the scanned root</h3>
+      <label>1. Confirm with the CLI<textarea id="whatif-cli" readonly rows="3"></textarea></label>
       <div class="whatif-actions"><button type="button" id="whatif-copy-cli">Copy simulate command</button></div>
-      <label>Git move snippet<textarea id="whatif-git" readonly rows="3"></textarea></label>
+      <label>2. Apply the move<textarea id="whatif-git" readonly rows="3"></textarea></label>
       <div class="whatif-actions"><button type="button" id="whatif-copy-git">Copy git mv snippet</button></div>
+      <details><summary>Graph JSON path</summary><input id="whatif-graph" value="graph.json" aria-label="Graph JSON path for CLI" autocomplete="off" spellcheck="false"></details>
     </div>
   </section>
   <div id="panel"></div>

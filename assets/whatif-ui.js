@@ -85,23 +85,71 @@ function whatifDrop(i, x, y, originalLocal) {
   whatifUI.folder.value = whatifFolder(target);
   runWhatif([x, y]);
 }
-function whatifTable(rows) {
+/* Every counted metric here is lower-is-better, so a rise is red and a drop is green. */
+function whatifTable(rows, scored) {
   const table = el("table", { class: "sim" });
   const heading = el("tr");
-  for (const text of ["Preview", "Before", "After"]) heading.append(el("th", { scope: "col" }, text));
+  for (const text of ["", "Before", "After"]) heading.append(el("th", { scope: "col" }, text));
   table.append(heading);
   for (const [label, before, after] of rows) {
-    const row = el("tr"); row.append(el("th", { scope: "row" }, label), el("td", {}, fmt(before)), el("td", {}, fmt(after))); table.append(row);
+    const tone = !scored || before === after ? "" : after > before ? "worse" : "better";
+    const row = el("tr", before === after ? { class: "same" } : {});
+    row.append(el("th", { scope: "row" }, label), el("td", {}, fmt(before)), el("td", tone ? { class: tone } : {}, fmt(after))); table.append(row);
   }
   return table;
 }
-function whatifFindings(result) {
-  const list = el("ul"), findings = [];
-  for (const cycle of result.after.cycles) findings.push(`${cycle.level} cycle: ${cycle.members.join(" ↔ ")}`);
-  for (const edge of result.after.verdicts) if (edge.verdict === "forbidden") findings.push(`Forbidden: ${edge.from} → ${edge.to} (${edge.rule || "rule"})`);
-  for (const text of findings.slice(0, 12)) list.append(el("li", {}, text));
-  if (!findings.length) list.append(el("li", {}, "No cycle or forbidden-import findings in this preview."));
-  if (findings.length > 12) list.append(el("li", {}, `${findings.length - 12} more; run the CLI for the full report.`));
+function whatifVerdict(result) {
+  const { before, after } = result, good = [], bad = [];
+  const pairKey = pair => JSON.stringify(pair), was = new Set(before.two_way_pairs.map(pairKey)), now = new Set(after.two_way_pairs.map(pairKey));
+  const removed = before.two_way_pairs.filter(p => !now.has(pairKey(p))).length, added = after.two_way_pairs.filter(p => !was.has(pairKey(p))).length;
+  if (result.new_cycles.length) bad.push(count(result.new_cycles.length, "new or expanded cycle", "new or expanded cycles"));
+  if (result.new_forbidden.length) bad.push(count(result.new_forbidden.length, "new forbidden import", "new forbidden imports"));
+  if (added) bad.push(count(added, "new two-way pair", "new two-way pairs"));
+  if (result.removed_cycles.length) good.push(count(result.removed_cycles.length, "cycle", "cycles") + " broken");
+  if (result.removed_forbidden.length) good.push(count(result.removed_forbidden.length, "forbidden import", "forbidden imports") + " fixed");
+  if (removed) good.push(count(removed, "two-way pair", "two-way pairs") + " removed");
+  if (after.largest_cycle !== before.largest_cycle) (after.largest_cycle > before.largest_cycle ? bad : good).push(`largest module cycle ${before.largest_cycle} → ${after.largest_cycle}`);
+  if (after.unplanned !== before.unplanned) (after.unplanned > before.unplanned ? bad : good).push(`unplanned imports ${before.unplanned} → ${after.unplanned}`);
+  const [tone, title] = bad.length && good.length ? ["warn", "Mixed: some better, some worse"] : bad.length ? ["bad", "Makes the structure worse"]
+    : good.length ? ["good", "Improves the structure"] : ["same", "No structural change"];
+  return { tone: result.partial && tone !== "bad" ? "warn" : tone, title: title + (result.partial ? " (unverified)" : ""), good, bad };
+}
+/* "packages/common/{decorators, utils}" reads faster than repeating the shared prefix on every member. */
+function whatifCycle(cycle) {
+  const parts = cycle.members.map(m => m.split("/")), keep = cycle.level === "file" ? 1 : 0;
+  let n = 0;
+  while (parts.every(p => n < p.length - keep && p[n] === parts[0][n])) n++;
+  const prefix = parts[0].slice(0, n).join("/");
+  const item = el("li");
+  item.append(el("b", {}, `${cycle.level === "file" ? "File" : "Module"} cycle · ${cycle.members.length}`),
+    el("span", { class: "muted" }, prefix ? ` in ${prefix}/` : ""),
+    el("div", { class: "path" }, parts.map(p => p.slice(n).join("/") || "(root)").join(" · ")));
+  return item;
+}
+function whatifForbidden(edge) {
+  const item = el("li");
+  item.append(el("b", {}, `Forbidden · ${edge.rule || "rule"}`), el("div", { class: "path" }, `${edge.from} → ${edge.to}`));
+  return item;
+}
+function whatifList(cycles, forbidden, tone) {
+  const list = el("ul", { class: "wi-findings " + tone });
+  for (const cycle of cycles) list.append(whatifCycle(cycle));
+  for (const edge of forbidden) list.append(whatifForbidden(edge));
+  return list;
+}
+function whatifDetails(summary, tone, ...body) {
+  const box = el("details", tone ? { class: tone } : {});
+  box.append(el("summary", {}, summary), ...body);
+  return box;
+}
+/* The engine reports one grab-bag warning per module; one line naming them all is enough. */
+function whatifWarnings(warnings) {
+  const list = el("ul"), grabbag = [];
+  for (const text of warnings) {
+    const hit = /^Grab-bag refinement required for (.+); raw cycle preview only\.$/.exec(text);
+    if (hit) grabbag.push(hit[1]); else list.append(el("li", {}, text));
+  }
+  if (grabbag.length) list.append(el("li", {}, `Grab-bag refinement skipped, raw cycles only: ${grabbag.join(", ")}`));
   return list;
 }
 function runWhatif(at) {
@@ -126,27 +174,38 @@ function runWhatif(at) {
     lx[i] = point[0] - mx[files[i].mod]; ly[i] = point[1] - my[files[i].mod];
     fileEdges(i, new Set());
     whatifBuildDrawing(result);
-    const before = result.before, after = result.after;
-    const pairKeys = new Set(after.two_way_pairs.map(pair => JSON.stringify(pair)));
-    const removed = before.two_way_pairs.filter(pair => !pairKeys.has(JSON.stringify(pair))).length;
-    const headline = `${count(removed, "two-way pair", "two-way pairs")} removed · largest module cycle ${before.largest_cycle} → ${after.largest_cycle} · ` +
-      (result.partial ? "limited preview: verify cycles in Rust" : result.new_cycles.length ? `${count(result.new_cycles.length, "new or expanded cycle", "new or expanded cycles")}` : "no new cycle membership");
-    whatifUI.result.append(el("h3", {}, headline), el("p", { class: "path" }, `${file} → ${to}`), el("p", {}, `Destination module: ${result.move.module}`));
-    for (const warning of result.warnings) whatifUI.result.append(el("p", { class: "note" }, warning));
-    if (m === undefined) whatifUI.result.append(el("p", { class: "note" }, "New module: results include it; the map retains its original module positions."));
+    const before = result.before, after = result.after, verdict = whatifVerdict(result);
+    const banner = el("div", { class: "verdict " + verdict.tone });
+    banner.append(el("strong", {}, verdict.title));
+    const chips = el("div", { class: "chips" });
+    for (const text of verdict.bad) chips.append(el("span", { class: "chip bad" }, text));
+    for (const text of verdict.good) chips.append(el("span", { class: "chip good" }, text));
+    if (verdict.bad.length || verdict.good.length) banner.append(chips);
+    whatifUI.result.append(banner, el("p", { class: "path muted" }, `${file} → ${to}` + (result.move.module === dirname(to) ? "" : `  (module ${result.move.module})`)));
+    if (result.partial) whatifUI.result.append(whatifDetails("⚠ Estimate only: confirm with the CLI", "warn", whatifWarnings(result.warnings)));
+    if (m === undefined) whatifUI.result.append(el("p", { class: "muted" }, "Creates a new module. The map keeps the original module positions."));
     whatifUI.result.append(whatifTable([
       ["Cycles", before.cycles.length, after.cycles.length], ["Largest module cycle", before.largest_cycle, after.largest_cycle],
       ["Two-way pairs", before.two_way_pairs.length, after.two_way_pairs.length], ["Forbidden imports", before.forbidden, after.forbidden], ["Unplanned imports", before.unplanned, after.unplanned]
-    ]));
+    ], true));
+    const fresh = new Set([...result.new_cycles, ...result.new_forbidden]);
+    if (fresh.size) whatifUI.result.append(el("h3", { class: "worse" }, "New problems"), whatifList(result.new_cycles, result.new_forbidden, "bad"));
+    if (result.removed_cycles.length || result.removed_forbidden.length) whatifUI.result.append(el("h3", { class: "better" }, "Resolved"), whatifList(result.removed_cycles, result.removed_forbidden, "good"));
+    const cycles = after.cycles.filter(c => !fresh.has(c)), forbidden = after.verdicts.filter(v => v.verdict === "forbidden" && !fresh.has(v));
+    const rest = cycles.length + forbidden.length;
+    if (rest) {
+      const shown = cycles.slice(0, 12), list = whatifList(shown, forbidden.slice(0, 12 - shown.length), "");
+      if (rest > 12) list.append(el("li", { class: "muted" }, `${rest - 12} more in the CLI report.`));
+      whatifUI.result.append(whatifDetails(`Unchanged findings · ${rest}`, "", list));
+    } else if (!fresh.size) whatifUI.result.append(el("p", { class: "muted" }, "No cycle or forbidden-import findings after this move."));
     const changed = [...new Set([...Object.keys(before.modules), ...Object.keys(after.modules)])].filter(id => JSON.stringify(before.modules[id]) !== JSON.stringify(after.modules[id]));
-    const metrics = changed.slice(0, 12).map(id => [`${id} instability`, before.modules[id]?.instability ?? null, after.modules[id]?.instability ?? null]);
-    if (metrics.length) whatifUI.result.append(whatifTable(metrics));
-    whatifUI.result.append(el("h3", {}, "Preview cycle and rule findings"), whatifFindings(result));
+    const metrics = changed.slice(0, 12).map(id => [id, before.modules[id]?.instability ?? null, after.modules[id]?.instability ?? null]);
+    if (metrics.length) whatifUI.result.append(whatifDetails(`Instability · ${count(changed.length, "module", "modules")} changed`, "", whatifTable(metrics, false)));
     whatifUI.commands.hidden = false; whatifCommands();
     const text = `Preview: ${count(after.cycles.length, "cycle", "cycles")}, ${count(after.forbidden, "forbidden import", "forbidden imports")}. Original report retained; Rust verification required.`;
     $("stats").replaceChildren(el("span", {}, text)); $("stats-text").textContent = text;
-    whatifUI.status.textContent = result.partial ? "Limited preview. Review the warnings and verify with Rust." : "Preview ready. The original graph is retained.";
-    $("announce").textContent = headline;
+    whatifUI.status.textContent = "";
+    $("announce").textContent = [verdict.title, ...verdict.bad, ...verdict.good].join(". ");
     buildGrid(); applyFocus(); redraw();
   } catch (error) {
     clearWhatif(); whatifUI.status.textContent = "Cannot preview: " + error.message;

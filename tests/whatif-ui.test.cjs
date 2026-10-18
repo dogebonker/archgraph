@@ -56,8 +56,8 @@ test('preview updates findings and commands; clear restores the immutable graph 
   assert(s.$('reset').disabled);
   s.$('whatif-file').value = 'a/three.ts'; s.$('whatif-folder').value = 'b';
   s.run('runWhatif()');
-  assert.match(s.$('whatif-result').textContent, /largest module cycle 2 → 0/);
-  assert.match(s.$('whatif-result').textContent, /Preview cycle and rule findings/);
+  assert.match(s.$('whatif-result').textContent, /Improves the structure[\s\S]*largest module cycle 2 → 0/);
+  assert.match(s.$('whatif-result').textContent, /Resolved[\s\S]*Module cycle · 2/);
   assert.equal(s.files[i].path, 'b/three.ts');
   assert.equal(s.$('whatif-cli').value, "archgraph simulate 'graph.json' --move 'a/three.ts' 'b/three.ts'");
   assert.equal(JSON.stringify(s.doc), before);
