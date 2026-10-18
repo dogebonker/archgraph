@@ -86,10 +86,10 @@ set -f
 # shellcheck disable=SC2206 # word splitting is intended; globbing is off
 extra=(${ARCHGRAPH_SCAN_ARGS:-})
 set +f
-args=("${extra[@]}")
+args=(${extra[@]+"${extra[@]}"})
 [[ -z $rules ]] || args+=(--rules "$rules")
 # The base worktree has no node_modules: run the repository's own dependency-cruiser by path.
-if [[ " ${extra[*]} " != *" --depcruise "* && -x $dir/node_modules/.bin/depcruise ]]; then
+if [[ " ${extra[*]-} " != *" --depcruise "* && -x $dir/node_modules/.bin/depcruise ]]; then
   args+=(--depcruise "$dir/node_modules/.bin/depcruise")
 fi
 
@@ -107,9 +107,9 @@ if [[ -d $dir/node_modules && ! -e $tmp/base/${prefix}node_modules ]]; then
   ln -s "$dir/node_modules" "$tmp/base/${prefix}node_modules"
 fi
 
-"$archgraph" scan "$dir" "${args[@]}" -o "$tmp/head.json" 2>"$tmp/head.err" \
+"$archgraph" scan "$dir" ${args[@]+"${args[@]}"} -o "$tmp/head.json" 2>"$tmp/head.err" \
   || fail "scanning the working tree failed: $(cat "$tmp/head.err")"
-"$archgraph" scan "$tmp/base/$project" "${args[@]}" -o "$tmp/base.json" 2>"$tmp/base.err" \
+"$archgraph" scan "$tmp/base/$project" ${args[@]+"${args[@]}"} -o "$tmp/base.json" 2>"$tmp/base.err" \
   || fail "scanning the base commit $short failed: $(cat "$tmp/base.err")"
 
 status=0
@@ -125,7 +125,7 @@ header="archgraph guard: $files files scanned against $short${rules:+ with rules
 out=1
 if [[ -n $hook && $status -eq 1 ]]; then out=2; fi
 {
-  for n in "${notes[@]}"; do echo "$n"; done
+  for n in ${notes[@]+"${notes[@]}"}; do echo "$n"; done
   echo "$header"
   cat "$tmp/diff.md"
 } >&"$out" || true # a reader that closes the pipe early (| head) is not a guard failure
