@@ -156,15 +156,15 @@ pub struct Parsed {
     pub test_support: Vec<String>,
     /// Pairs of files that cannot be split across packages, for `bound_files` once excludes ran.
     pub bound: Vec<(String, String)>,
-    /// The test support left out, sorted: `dir/` for a package left out whole, else each file.
+    /// The test support left out without --include-tests, sorted: `dir/` for a package left out
+    /// whole, else each file.
     pub left_out: Vec<String>,
 }
 
-/// Files and file references; generated files (a `Code generated ... DO NOT EDIT.` header) only
-/// with `keep_generated`, test support (see the helper's `testSupport`) only with `keep_tests`.
-/// Every edge is `static`: Go has no load order, and the edges are references, not import
-/// statements.
-pub fn parse(json: &[u8], keep_generated: bool, keep_tests: bool) -> Result<Parsed> {
+/// Files and file references, generated files (a `Code generated ... DO NOT EDIT.` header) and
+/// test support (see the helper's `testSupport`) included. Every edge is `static`: Go has no
+/// load order, and the edges are references, not import statements.
+pub fn parse(json: &[u8]) -> Result<Parsed> {
     let dump: Dump = serde_json::from_slice(json).context("reading Go helper JSON")?;
     let generated = dump
         .files
@@ -185,7 +185,7 @@ pub fn parse(json: &[u8], keep_generated: bool, keep_tests: bool) -> Result<Pars
             .entry(f.path.rsplit_once('/').map_or(".", |(d, _)| d))
             .or_default();
         dir.0 += 1;
-        if f.test_support && !keep_tests {
+        if f.test_support {
             dir.1.push(&f.path);
         }
     }
@@ -211,11 +211,9 @@ pub fn parse(json: &[u8], keep_generated: bool, keep_tests: bool) -> Result<Pars
         version: Some(dump.go_version),
         cruised: dump.files.len(),
         unresolved: Some(dump.unresolved),
-        type_marking: None,
         main_packages,
-        bound_files: Vec::new(),
         go_modules: dump.modules,
-        limitations: Vec::new(),
+        ..Default::default()
     };
     let edges = dump
         .edges
@@ -224,9 +222,6 @@ pub fn parse(json: &[u8], keep_generated: bool, keep_tests: bool) -> Result<Pars
             from: e.from,
             to: e.to,
             kind: EdgeKind::Static,
-            verdict: None,
-            rule: None,
-            reach: None,
             ..crate::model::Edge::default()
         })
         .collect();
@@ -245,12 +240,7 @@ pub fn parse(json: &[u8], keep_generated: bool, keep_tests: bool) -> Result<Pars
                 )
             })
             .collect(),
-        files: dump
-            .files
-            .into_iter()
-            .filter(|f| (keep_generated || !f.generated) && (keep_tests || !f.test_support))
-            .map(|f| f.path)
-            .collect(),
+        files: dump.files.into_iter().map(|f| f.path).collect(),
         edges,
         collector,
     };

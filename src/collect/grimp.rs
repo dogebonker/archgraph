@@ -178,9 +178,6 @@ pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
                 from: path(&i.importer)?,
                 to: path(&i.imported)?,
                 kind: i.kind,
-                verdict: None,
-                rule: None,
-                reach: None,
                 ..crate::model::Edge::default()
             })
         })
@@ -215,12 +212,7 @@ pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
         name: "grimp".to_owned(),
         version: Some(dump.grimp_version),
         cruised: files.len(),
-        unresolved: None,
-        type_marking: None,
-        main_packages: Vec::new(),
-        bound_files: Vec::new(),
-        go_modules: Vec::new(),
-        limitations: Vec::new(),
+        ..Default::default()
     };
     let mut graph = RawGraph {
         imports: dump.import_records,

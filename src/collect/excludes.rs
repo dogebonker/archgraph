@@ -89,17 +89,20 @@ fn active_defaults(
     }
     if !include_generated {
         patterns.extend(GENERATED_EXCLUDES.iter().map(|s| (*s).to_owned()));
-        if matches!(language, Language::Rust | Language::Java) {
-            patterns.push("**/target/**".into());
-        }
-        if language == Language::Java {
-            patterns.push("**/out/**".into());
-        }
-        if language == Language::Elixir {
-            patterns.extend(["**/_build/**".into(), "**/deps/**".into()]);
-        }
+        patterns.extend(output_globs(language));
     }
     patterns
+}
+
+/// The build output directories of `language` beyond the generated excludes.
+pub fn output_globs(language: Language) -> Vec<String> {
+    let globs: &[&str] = match language {
+        Language::Rust => &["**/target/**"],
+        Language::Java => &["**/target/**", "**/out/**"],
+        Language::Elixir => &["**/_build/**", "**/deps/**"],
+        Language::Typescript | Language::Python | Language::Go => &[],
+    };
+    globs.iter().map(|glob| (*glob).to_owned()).collect()
 }
 
 pub fn is_test(path: &str) -> bool {

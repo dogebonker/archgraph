@@ -5,7 +5,7 @@ fn old_go_recordings_do_not_fabricate_import_coverage() {
     let mut legacy: serde_json::Value =
         serde_json::from_slice(include_bytes!("fixtures/go-resolve/go.json")).unwrap();
     legacy.as_object_mut().unwrap().remove("imports");
-    let parsed = go::parse(&serde_json::to_vec(&legacy).unwrap(), true, true).unwrap();
+    let parsed = go::parse(&serde_json::to_vec(&legacy).unwrap()).unwrap();
     assert!(parsed.raw.imports.is_none());
 }
 #[test]
@@ -25,7 +25,7 @@ fn go_import_ledger_separates_packages_from_symbol_references() {
     )
     .unwrap();
     let dump = go::run(&root, "go", &[".".into()]).unwrap();
-    let parsed = go::parse(&dump, true, true).unwrap();
+    let parsed = go::parse(&dump).unwrap();
     let records = parsed.raw.imports.unwrap();
     assert_eq!(records.len(), 4);
     assert_eq!(

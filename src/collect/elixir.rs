@@ -212,11 +212,7 @@ pub fn parse(bytes: &[u8]) -> Result<RawGraph> {
             version: Some(dump.elixir_version),
             cruised: dump.files.len(),
             unresolved: Some(unresolved),
-            type_marking: None,
-            main_packages: Vec::new(),
-            bound_files: Vec::new(),
-            go_modules: Vec::new(),
-            limitations: Vec::new(),
+            ..Default::default()
         },
         files: dump.files.into_iter().chain(dump.excluded_files).collect(),
         edges: dump.edges,

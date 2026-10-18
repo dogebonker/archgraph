@@ -287,9 +287,6 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
             from: from.to_owned(),
             to: to.to_owned(),
             kind,
-            verdict: None,
-            rule: None,
-            reach: None,
             ..crate::model::Edge::default()
         })
         .collect();
@@ -298,11 +295,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
         version: out.summary.environment.map(|e| e.version),
         cruised: out.summary.total_cruised,
         unresolved: Some(unresolved),
-        type_marking: None,
-        main_packages: Vec::new(),
-        bound_files: Vec::new(),
-        go_modules: Vec::new(),
-        limitations: Vec::new(),
+        ..Default::default()
     };
     Ok(RawGraph {
         imports: None,
@@ -314,7 +307,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
 }
 
 /// Build output folders a package.json points into; the sources sit without them.
-const OUTPUT_DIRS: &[&str] = &["dist", "build", "lib", "out", "esm", "cjs"];
+pub(super) const OUTPUT_DIRS: &[&str] = &["dist", "build", "lib", "out", "esm", "cjs"];
 /// Output extensions, longest first, stripped to find the source a package.json path is built
 /// from.
 const OUTPUT_EXTENSIONS: &[&str] = &[

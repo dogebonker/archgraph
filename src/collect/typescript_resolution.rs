@@ -650,7 +650,7 @@ impl Resolver {
         }
         let target = target.trim_start_matches("./");
         let (directory, rest) = target.split_once('/')?;
-        if !matches!(directory, "dist" | "build" | "lib" | "out" | "esm" | "cjs") {
+        if !super::depcruise::OUTPUT_DIRS.contains(&directory) {
             return None;
         }
         for prefix in ["src/", ""] {

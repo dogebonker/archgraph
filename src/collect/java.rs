@@ -115,11 +115,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
             version: Some(dump.java_version),
             cruised: dump.files.len(),
             unresolved: Some(dump.unresolved),
-            type_marking: None,
-            main_packages: Vec::new(),
-            bound_files: Vec::new(),
-            go_modules: Vec::new(),
-            limitations: Vec::new(),
+            ..Default::default()
         },
         files: dump.files,
         edges: dump
@@ -129,9 +125,6 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
                 from: e.from,
                 to: e.to,
                 kind: EdgeKind::Static,
-                verdict: None,
-                rule: None,
-                reach: None,
                 ..crate::model::Edge::default()
             })
             .collect(),

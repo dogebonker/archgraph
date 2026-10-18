@@ -120,9 +120,9 @@ pub fn detect_language_with_options(
 ) -> Result<Language> {
     let generated = options.no_defaults || options.include_generated;
     let has_includes = !options.includes.is_empty();
-    let java_output = globset(&["**/target/**".into(), "**/out/**".into()])?;
-    let rust_output = globset(&["**/target/**".into()])?;
-    let elixir_output = globset(&["**/_build/**".into(), "**/deps/**".into()])?;
+    let java_output = globset(&excludes::output_globs(Language::Java))?;
+    let rust_output = globset(&excludes::output_globs(Language::Rust))?;
+    let elixir_output = globset(&excludes::output_globs(Language::Elixir))?;
     let policy = excludes::Policy::new(root, Language::Typescript, options)?;
     let discovery_excludes = globset(policy.patterns())?;
     let cargo = root.join("Cargo.toml").is_file();

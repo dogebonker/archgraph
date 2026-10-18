@@ -936,16 +936,17 @@ fn scan_doc(
                         go::run(root, &collector.go, &dirs)?
                     }
                 };
-                if !args.include_tests && !args.no_default_excludes && includes.is_empty() {
-                    let omitted = go::parse(&json, true, false)?.left_out;
-                    if !omitted.is_empty() {
-                        eprintln!(
-                            "warning: left out as test support (--include-tests keeps them): {}",
-                            omitted.join(", ")
-                        );
-                    }
+                let parsed = go::parse(&json)?;
+                if !args.include_tests
+                    && !args.no_default_excludes
+                    && includes.is_empty()
+                    && !parsed.left_out.is_empty()
+                {
+                    eprintln!(
+                        "warning: left out as test support (--include-tests keeps them): {}",
+                        parsed.left_out.join(", ")
+                    );
                 }
-                let parsed = go::parse(&json, true, true)?;
                 generated = parsed.generated;
                 test_support = parsed.test_support;
                 bound = parsed.bound;

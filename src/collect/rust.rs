@@ -891,9 +891,6 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
             from: from.to_owned(),
             to: to.to_owned(),
             kind: EdgeKind::Static,
-            verdict: None,
-            rule: None,
-            reach: None,
             ..crate::model::Edge::default()
         })
         .collect();
@@ -901,12 +898,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
         name: "rust-analyzer".to_owned(),
         version: Some(dump.rust_analyzer),
         cruised: dump.documents.len(),
-        unresolved: None,
-        type_marking: None,
-        main_packages: Vec::new(),
-        bound_files: Vec::new(),
-        go_modules: Vec::new(),
-        limitations: Vec::new(),
+        ..Default::default()
     };
     Ok(RawGraph {
         imports: dump.imports,

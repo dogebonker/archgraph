@@ -252,12 +252,7 @@ mod tests {
                 name: "test".into(),
                 version: None,
                 cruised: 3,
-                unresolved: None,
-                type_marking: None,
-                main_packages: Vec::new(),
-                bound_files: Vec::new(),
-                go_modules: Vec::new(),
-                limitations: Vec::new(),
+                ..Default::default()
             },
             git: None,
             generated_at: String::new(),

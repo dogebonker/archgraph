@@ -133,7 +133,7 @@ pub enum Language {
     Elixir,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Collector {
     pub name: String,
     pub version: Option<String>,
