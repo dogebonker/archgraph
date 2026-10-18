@@ -322,6 +322,26 @@ fn options_are_validated_and_absolute_start_dates_work() {
         )
         .is_err()
     );
+    for since in [
+        "2024-13-45",
+        "2024-01-01xyzzy",
+        "2023-02-29",
+        "24-01-01",
+        "+202-01-01",
+    ] {
+        assert!(
+            hotspots::collect(
+                &repo.0,
+                &graph,
+                &Options {
+                    since: since.into(),
+                    ..Options::default()
+                }
+            )
+            .is_err(),
+            "{since}"
+        );
+    }
     let report = hotspots::collect(
         &repo.0,
         &graph,
@@ -332,6 +352,20 @@ fn options_are_validated_and_absolute_start_dates_work() {
     )
     .unwrap();
     assert_eq!(report.commits, 0);
+    // Explicit dates start at 00:00 UTC, whatever the time of day and however far out.
+    assert_eq!(report.since_timestamp, 1_577_923_200);
+    for (since, timestamp) in [("2024-02-29", 1_709_164_800), ("2100-03-01", 4_107_542_400)] {
+        let report = hotspots::collect(
+            &repo.0,
+            &graph,
+            &Options {
+                since: since.into(),
+                ..Options::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(report.since_timestamp, timestamp, "{since}");
+    }
 }
 
 #[test]

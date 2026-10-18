@@ -120,9 +120,49 @@ fn git(root: &Path, args: &[&str]) -> Result<Vec<u8>> {
     Ok(out.stdout)
 }
 
+/// Seconds at 00:00 UTC of a strict `YYYY-MM-DD` calendar date. Computed here rather than by
+/// Git, whose lenient parser accepts invalid dates and misreads years before 1970 or after 2099.
+pub(crate) fn utc_midnight(date: &str) -> Result<i64> {
+    if date.len() != 10
+        || !date.bytes().enumerate().all(|(i, b)| {
+            if matches!(i, 4 | 7) {
+                b == b'-'
+            } else {
+                b.is_ascii_digit()
+            }
+        })
+    {
+        bail!("invalid date {date:?}: expected YYYY-MM-DD");
+    }
+    let field = |from: usize, to: usize| {
+        date.as_bytes()[from..to]
+            .iter()
+            .fold(0_i64, |n, b| n * 10 + i64::from(b - b'0'))
+    };
+    let (year, month, day) = (field(0, 4), field(5, 7), field(8, 10));
+    let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+    let days_in_month = match month {
+        2 if leap => 29,
+        2 => 28,
+        4 | 6 | 9 | 11 => 30,
+        1..=12 => 31,
+        _ => 0,
+    };
+    if !(1..=days_in_month).contains(&day) {
+        bail!("invalid date {date:?}: no such calendar day");
+    }
+    // Days since 1970-01-01, after Howard Hinnant's days_from_civil.
+    let year = if month <= 2 { year - 1 } else { year };
+    let era = year.div_euclid(400);
+    let year_of_era = year - era * 400;
+    let day_of_year = (153 * ((month + 9) % 12) + 2) / 5 + day - 1;
+    let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+    Ok((era * 146_097 + day_of_era - 719_468) * 86_400)
+}
+
 /// Relative windows end at the graph's commit, so historical snapshots remain reproducible.
-/// Months use 365/12 days and years use 365 days; explicit dates use Git's date parser.
-fn since_timestamp(root: &Path, since: &str, end: i64) -> Result<i64> {
+/// Months use 365/12 days and years use 365 days; explicit dates start at 00:00 UTC.
+fn since_timestamp(since: &str, end: i64) -> Result<i64> {
     let words: Vec<_> = since.split_whitespace().collect();
     if let [count, unit, "ago"] = words.as_slice() {
         let count: i64 = count
@@ -150,16 +190,8 @@ fn since_timestamp(root: &Path, since: &str, end: i64) -> Result<i64> {
             .context("hotspot window is too large");
     }
     // Reject ambiguous relative strings instead of silently anchoring them to today's date.
-    if !since.bytes().take(4).all(|c| c.is_ascii_digit()) || since.len() < 10 {
-        bail!("hotspot --since must be an absolute date or '<N> days/weeks/months/years ago'");
-    }
-    let out = git(root, &["rev-parse", &format!("--since={since}")])?;
-    String::from_utf8(out)?
-        .trim()
-        .strip_prefix("--max-age=")
-        .context("Git did not return a hotspot start date")?
-        .parse()
-        .context("invalid Git start date")
+    utc_midnight(since)
+        .context("hotspot --since must be YYYY-MM-DD or '<N> days/weeks/months/years ago'")
 }
 
 /// One NUL-delimited numstat pass; rename records carry separate old/new path tokens.
@@ -275,7 +307,7 @@ pub fn collect(root: &Path, graph: &Document, options: &Options) -> Result<Hotsp
         .trim()
         .split_once(' ')
         .context("missing hotspot commit timestamp")?;
-    let since_timestamp = since_timestamp(root, &options.since, timestamp.parse()?)?;
+    let since_timestamp = since_timestamp(&options.since, timestamp.parse()?)?;
     let shallow = git(root, &["rev-parse", "--is-shallow-repository"])? == b"true\n";
     let prefix = String::from_utf8(git(root, &["rev-parse", "--show-prefix"])?)?;
     let prefix = prefix.trim_end_matches('\n');

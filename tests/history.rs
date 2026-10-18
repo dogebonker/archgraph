@@ -516,6 +516,29 @@ fn drift_sampling_selects_first_monthly_commits_intervals_and_releases() {
         tags.snapshots.iter().map(|s| &s.commit).collect::<Vec<_>>(),
         vec![&commits[1], &commits[2]]
     );
+    let since = |since: &str| {
+        collect_with_options(
+            &root,
+            "HEAD",
+            &HistoryOptions {
+                since: Some(since.into()),
+                ..HistoryOptions::default()
+            },
+            drift_graph,
+        )
+    };
+    assert_eq!(
+        since("2020-01-20")
+            .unwrap()
+            .snapshots
+            .iter()
+            .map(|s| &s.commit)
+            .collect::<Vec<_>>(),
+        vec![&commits[1], &commits[2], &commits[3]]
+    );
+    for invalid in ["2020-02-30", "2020-01-20xyzzy", "1 year ago"] {
+        assert!(since(invalid).is_err(), "{invalid}");
+    }
 }
 
 #[test]

@@ -131,7 +131,7 @@ struct HistoryArgs {
     sample: history::Sampling,
     #[arg(long, default_value_t = 1, value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..))]
     every: usize,
-    /// Start date (default: two years before the selected endpoint)
+    /// Start date as YYYY-MM-DD, from 00:00 UTC (default: two years before the selected endpoint)
     #[arg(long)]
     since: Option<String>,
     /// Keep cached points and scan only missing samples

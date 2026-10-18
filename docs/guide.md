@@ -493,7 +493,7 @@ archgraph hotspots graph.json --root . --format json -o enriched.json
 archgraph render enriched.json -o hotspots.html
 ```
 
-The Git pass records per-file commits, added/deleted lines, distinct mailmapped author emails and fix-message commits, following detected renames. Only files in the scan participate in normalization; excluded generated/vendored files cannot dominate the score. The default window ends at the graph's commit, not today's date, so historical scans remain reproducible. Relative windows accept `<N> days/weeks/months/years ago`; twelve months is 365 days. ISO dates are also accepted.
+The Git pass records per-file commits, added/deleted lines, distinct mailmapped author emails and fix-message commits, following detected renames. Only files in the scan participate in normalization; excluded generated/vendored files cannot dominate the score. The default window ends at the graph's commit, not today's date, so historical scans remain reproducible. Relative windows accept `<N> days/weeks/months/years ago`; twelve months is 365 days. `YYYY-MM-DD` dates are also accepted and start at 00:00 UTC.
 
 ```text
 churn = ln(1 + file commits) / ln(1 + maximum scanned-file commits)
