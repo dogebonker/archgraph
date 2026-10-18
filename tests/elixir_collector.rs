@@ -247,7 +247,7 @@ fn elixir_live_reports_missing_and_dynamic_without_guessing_or_scanning_quotes()
 }
 
 #[test]
-fn elixir_live_never_evaluates_project_code_and_errors_include_file_line() {
+fn elixir_live_never_evaluates_project_code_and_keeps_unparsable_files_with_a_warning() {
     if !runtime_available() {
         eprintln!("Elixir unavailable; live check skipped");
         return;
@@ -269,10 +269,31 @@ fn elixir_live_never_evaluates_project_code_and_errors_include_file_line() {
         "defmodule Broken do\n  def run(\nend",
     )
     .unwrap();
-    let error = elixir::run(&root, "elixir", &policy(&root))
-        .unwrap_err()
-        .to_string();
-    assert!(error.contains("lib/broken.ex:"), "{error}");
+    // Mix templates (`<%= %>`) are not Elixir syntax either: one such file cannot abort a scan.
+    std::fs::write(
+        root.join("lib/template.exs"),
+        "defmodule <%= @module %>.Repo do end",
+    )
+    .unwrap();
+    let (doc, _, stderr) = common::scan(&[root.to_str().unwrap(), "--language", "elixir"]);
+    assert!(stderr.contains("warning: lib/broken.ex:2: "), "{stderr}");
+    assert!(stderr.contains("warning: lib/template.exs:1: "), "{stderr}");
+    let files: Vec<_> = doc["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|file| file["path"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        files,
+        [
+            ".iex.exs",
+            "lib/broken.ex",
+            "lib/source.ex",
+            "lib/template.exs",
+            "mix.exs"
+        ]
+    );
 }
 
 #[test]
@@ -287,6 +308,7 @@ fn elixir_live_discovery_applies_excludes_and_does_not_follow_symlinks() {
             ("lib/source.ex", "defmodule Source do end"),
             ("deps/bad.ex", "invalid source !!!"),
             (".git/bad.ex", "invalid source !!!"),
+            ("node_modules/pkg/bad.ex", "invalid source !!!"),
             ("nested/test.exs", "defmodule Nested do Source.run() end"),
         ],
     );
@@ -333,7 +355,8 @@ fn elixir_live_selection_precedes_parsing_ignored_tests_and_generated_sources() 
         },
     ] {
         let selected = Policy::new(&root, Language::Elixir, options).unwrap();
-        assert!(elixir::run(&root, "elixir", &selected).is_err());
+        let raw = elixir::parse(&elixir::run(&root, "elixir", &selected).unwrap()).unwrap();
+        assert_eq!(raw.collector.cruised, 2);
     }
 }
 

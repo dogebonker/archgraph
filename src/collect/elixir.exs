@@ -15,7 +15,21 @@ defmodule ArchgraphElixir do
       Enum.map(files, fn file ->
         source = File.read!(Path.join(root, file))
 
-        {file, Code.string_to_quoted!(source, file: file, columns: true)}
+        # Templates such as priv/templates/*.exs are not Elixir syntax: keep the file, unreferenced.
+        case Code.string_to_quoted(source, file: file, columns: true) do
+          {:ok, tree} ->
+            {file, tree}
+
+          {:error, {meta, _, _}} ->
+            line = if is_list(meta), do: Keyword.get(meta, :line, 1), else: meta
+
+            IO.puts(
+              :stderr,
+              "warning: #{file}:#{line}: Elixir syntax errors; kept without references"
+            )
+
+            {file, nil}
+        end
       end)
 
     initial = %{modules: %{}, records: []}

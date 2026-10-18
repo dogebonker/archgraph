@@ -24,32 +24,7 @@ pub fn run(root: &Path, elixir: &str, policy: &Policy) -> Result<Vec<u8>> {
     } else {
         elixir.to_owned()
     };
-    let mut dirs = vec![root.clone()];
-    let mut files = Vec::new();
-    while let Some(dir) = dirs.pop() {
-        for entry in fs::read_dir(&dir).with_context(|| format!("reading {}", dir.display()))? {
-            let entry = entry?;
-            let path = entry.path();
-            let rel = path
-                .strip_prefix(&root)?
-                .to_string_lossy()
-                .replace('\\', "/");
-            let kind = entry.file_type()?;
-            if kind.is_dir() {
-                if entry.file_name() != ".git" {
-                    dirs.push(path);
-                }
-            } else if kind.is_file()
-                && matches!(
-                    path.extension().and_then(|s| s.to_str()),
-                    Some("ex" | "exs")
-                )
-            {
-                files.push(rel);
-            }
-        }
-    }
-    files.sort();
+    let mut files = super::native::source_files(&root, &["ex", "exs"])?;
     let selected = policy.select(&files)?;
     let kept: HashSet<_> = selected.iter().collect();
     let excluded: Vec<_> = files
@@ -93,6 +68,12 @@ pub fn run(root: &Path, elixir: &str, policy: &Policy) -> Result<Vec<u8>> {
                 "Elixir helper failed: {}",
                 String::from_utf8_lossy(&out.stderr).trim()
             );
+        }
+        for line in String::from_utf8_lossy(&out.stderr)
+            .lines()
+            .filter(|line| line.starts_with("warning:"))
+        {
+            eprintln!("{line}");
         }
         let mut value: serde_json::Value =
             serde_json::from_slice(&out.stdout).context("reading Elixir helper JSON")?;
