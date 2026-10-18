@@ -466,6 +466,20 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
         .map(|f| f.score)
         .filter(|s| s.is_finite())
         .fold(0.0_f64, f64::max);
+    let hotspots: BTreeMap<&str, f64> = input
+        .hotspots
+        .as_ref()
+        .into_iter()
+        .flat_map(|h| &h.files)
+        .map(|f| {
+            let score = if max_hotspot > 0.0 && f.score.is_finite() {
+                f.score / max_hotspot
+            } else {
+                0.0
+            };
+            (f.path.as_str(), score)
+        })
+        .collect();
     let mut cochange = BTreeMap::new();
     if let Some(history) = &input.cochange {
         for pair in &history.pairs {
@@ -493,17 +507,7 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
         } else {
             "skim"
         };
-        let hotspot = input
-            .hotspots
-            .as_ref()
-            .and_then(|h| h.files.iter().find(|f| f.path == path))
-            .map_or(0.0, |f| {
-                if max_hotspot > 0.0 && f.score.is_finite() {
-                    f.score / max_hotspot
-                } else {
-                    0.0
-                }
-            });
+        let hotspot = hotspots.get(path.as_str()).copied().unwrap_or(0.0);
         let co = cochange.get(path.as_str()).copied().unwrap_or(0) as f64 / max_cochange;
         let mut score = 1.0 / depth.max(1) as f64
             + if same_module { 0.5 } else { 0.0 }
