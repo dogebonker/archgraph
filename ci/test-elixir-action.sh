@@ -19,6 +19,11 @@ with tempfile.TemporaryDirectory(prefix="archgraph-elixir-action-") as temp:
 import json, os, pathlib, sys
 if "--version" in sys.argv:
     print("archgraph test")
+elif sys.argv[1] == "scan":
+    pathlib.Path(os.environ["BASE_SCAN"]).write_text(json.dumps(os.listdir(sys.argv[2])))
+    pathlib.Path(sys.argv[sys.argv.index("-o") + 1]).write_text('{"summary":{"forbidden":0}}')
+elif sys.argv[1] == "diff":
+    print("no changes" if "--format" in sys.argv else '{"new_forbidden":[],"new_cycles":[]}')
 else:
     pathlib.Path(os.environ["CAPTURE"]).write_text(json.dumps(sys.argv[1:]))
     output = pathlib.Path(sys.argv[sys.argv.index("--out-dir") + 1])
@@ -63,5 +68,27 @@ else:
     assert "--language" not in arguments
     assert arguments[arguments.index("--elixir") + 1] == env["ARCHGRAPH_ELIXIR"]
 
-print("Elixir action forwarding, runtime errors, detection and summary fences passed")
+    # A pull request that deletes the rules file; the base scan sees the project's node_modules.
+    repo = root / "repo"
+    (repo / "node_modules").mkdir(parents=True)
+    (repo / ".gitignore").write_text("node_modules/\n")
+    (repo / "mix.exs").write_text("")
+    (repo / "layout.yaml").write_text("version: 1\n")
+    git = ["git", "-C", str(repo), "-c", "user.name=ci", "-c", "user.email=ci@example.invalid",
+           "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null"]
+    subprocess.run(git + ["init", "-q"], check=True)
+    subprocess.run(git + ["add", "-A"], check=True)
+    subprocess.run(git + ["commit", "-qm", "base"], check=True)
+    base = subprocess.run(git + ["rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
+    subprocess.run(git + ["rm", "-q", "layout.yaml"], check=True)
+    subprocess.run(git + ["commit", "-qm", "head"], check=True)
+    env.update(INPUT_PATH=str(repo), INPUT_BASE_REF=base, BASE_SCAN=str(root / "base-scan"))
+    (root / "summary").write_text("")
+    run(0)
+    summary = (root / "summary").read_text()
+    assert "deletes the rules file `layout.yaml`" in summary, summary
+    assert "| forbidden imports |" not in summary, summary
+    assert "node_modules" in json.loads((root / "base-scan").read_text())
+
+print("Elixir action forwarding, runtime errors, detection, summary fences and base comparisons passed")
 PY

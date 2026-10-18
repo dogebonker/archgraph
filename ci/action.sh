@@ -13,6 +13,8 @@
 # the same rules file and options, then `diff --fail-on` in markdown into the job summary, exit 1
 # when the diff has a --fail-on condition. Exit 2 on errors.
 set -euo pipefail
+# A failed setup step (install, npm ci, venv, pip) is a failure to run, not a gate result.
+trap 'exit 2' ERR
 
 # Everything printed below may hold text from the scanned repository (paths, collector and git
 # messages), which must not run as workflow commands: one stream, commands off until exit.
@@ -233,8 +235,12 @@ if ! base=$(git -C "$repo" rev-parse --verify --quiet "$base_ref^{commit}"); the
 fi
 worktree=$RUNNER_TEMP/base
 git -C "$repo" worktree remove --force "$worktree" >/dev/null 2>&1 || rm -rf "$worktree"
-git -C "$repo" worktree add --force --detach "$worktree" "$base"
+git -C "$repo" -c core.hooksPath=/dev/null worktree add --force --detach "$worktree" "$base"
 worktree_added=1
+# tsconfig `extends` and path aliases may point into node_modules.
+if [[ -d $repo/${prefix}node_modules && ! -e $worktree/${prefix}node_modules ]]; then
+  ln -s "$repo/${prefix}node_modules" "$worktree/${prefix}node_modules"
+fi
 "$archgraph" scan "$worktree${prefix:+/${prefix%/}}" ${opts[@]+"${opts[@]}"} -o "$work/base.json" ||
   die "scanning the base commit $base failed"
 
@@ -266,6 +272,8 @@ fi
     echo "> [!WARNING]"
     if [[ ! -f $base_rules ]]; then
       echo "> **This pull request adds the rules file \`$rules_rel\`.** The base commit had none."
+    elif [[ -z $rules ]]; then
+      echo "> **This pull request deletes the rules file \`$rules_rel\`.** Nothing checks the rules any more."
     else
       echo "> **This pull request changes the rules file \`$rules_rel\`.** The diff below judges both commits by HEAD's rules, so imports that a removed or loosened rule forbade do not show as new."
       echo

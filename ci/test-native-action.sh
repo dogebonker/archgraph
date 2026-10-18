@@ -72,6 +72,15 @@ echo 'native report'
     env["INPUT_ENGINE"] = "unknown"
     result = subprocess.run(["bash", "ci/action.sh"], env=env, capture_output=True, text=True)
     assert result.returncode == 2 and "engine must be" in result.stdout, result.stdout
+    # A setup command that exits 1 is a failure to run (2), not a gate result (1).
+    failing = root / "failing-tools"
+    failing.mkdir()
+    (failing / "python3").write_text("#!/bin/sh\nexit 1\n")
+    (failing / "python3").chmod(0o755)
+    env.update(INPUT_ENGINE="reference", INPUT_LANGUAGE="python",
+               PATH=str(failing) + os.pathsep + os.environ["PATH"])
+    result = subprocess.run(["bash", "ci/action.sh"], env=env, capture_output=True, text=True)
+    assert result.returncode == 2 and "::error::archgraph:" in result.stdout, result.stdout
 
-print("Native Action forwards its engine, skips external setup and rejects unknown engines")
+print("Native Action forwards its engine, skips external setup, rejects unknown engines and fails setup errors")
 PY
