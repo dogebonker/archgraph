@@ -70,17 +70,26 @@ fn cycle_cuts_are_measured_verifiable_and_ids_stable_for_all_languages() {
             .unwrap();
         let id = finding.finding_id.clone();
         let recipe = finding.recipe.clone().unwrap();
+        let supported = matches!(
+            language,
+            Language::Typescript | Language::Python | Language::Go
+        );
         assert!(
             recipe
                 .steps
                 .iter()
-                .all(|s| s.kind == StepKind::CutImport && s.mechanical)
+                .all(|s| s.kind == StepKind::CutImport && s.mechanical == supported)
         );
-        assert_eq!(recipe.expected.pairs_removed, Some(1));
-        assert_eq!(recipe.expected.cycle_size_after, Some(0));
-        let projected = recipes::project(&doc, &recipe).unwrap();
-        assert!(recipes::check(&doc, &projected, &recipe).pass);
-        assert!(!recipes::check(&doc, &doc, &recipe).pass);
+        if supported {
+            assert_eq!(recipe.expected.pairs_removed, Some(1));
+            assert_eq!(recipe.expected.cycle_size_after, Some(0));
+            let projected = recipes::project(&doc, &recipe).unwrap();
+            assert!(recipes::check(&doc, &projected, &recipe).pass);
+            assert!(!recipes::check(&doc, &doc, &recipe).pass);
+        } else {
+            assert_eq!(recipe.expected.pairs_removed, None);
+            assert!(recipes::project(&doc, &recipe).is_err());
+        }
         doc.source.generated_at = "tomorrow".into();
         recipes::attach(&mut doc).unwrap();
         assert!(doc.findings.iter().any(|f| f.finding_id == id));
@@ -568,4 +577,77 @@ fn diagnostic_provenance_survives_saved_scan_restore_and_render() {
         finding.provenance.as_ref().unwrap().status,
         "verified-transition"
     );
+}
+
+#[test]
+fn unsupported_language_cuts_are_agent_steps_at_proposal_time() {
+    for (language, ext) in [
+        (Language::Rust, "rs"),
+        (Language::Java, "java"),
+        (Language::Elixir, "ex"),
+    ] {
+        let a = format!("app/a.{ext}");
+        let b = format!("domain/b.{ext}");
+        let doc = document(language, &[&a, &b], &[(&a, &b), (&b, &a)]);
+        let recipe = doc
+            .findings
+            .iter()
+            .find(|f| f.kind == FindingKind::Cycle)
+            .unwrap()
+            .recipe
+            .as_ref()
+            .unwrap();
+        assert!(recipe.steps.iter().all(|s| !s.mechanical));
+        assert_eq!(recipe.expected.pairs_removed, None);
+    }
+}
+
+#[test]
+fn cycle_recipes_do_not_cut_structural_reexports_or_test_edges() {
+    let mut doc = document(
+        Language::Rust,
+        &["app/a.rs", "domain/b.rs"],
+        &[("app/a.rs", "domain/b.rs"), ("domain/b.rs", "app/a.rs")],
+    );
+    for edge in &mut doc.edges {
+        edge.kind = EdgeKind::Reexport;
+    }
+    recipes::attach(&mut doc).unwrap();
+    assert!(doc.findings.iter().all(|f| f.kind != FindingKind::Cycle));
+    assert!(
+        doc.diagnostics
+            .iter()
+            .any(|d| d.finding.kind == FindingKind::Cycle)
+    );
+
+    for file in &mut doc.files {
+        file.class = Some(archgraph::model::ModuleClass::Tests);
+    }
+    for edge in &mut doc.edges {
+        edge.kind = EdgeKind::Static;
+    }
+    recipes::attach(&mut doc).unwrap();
+    assert!(doc.findings.iter().all(|f| f.kind != FindingKind::Cycle));
+    assert!(
+        doc.diagnostics
+            .iter()
+            .any(|d| d.finding.kind == FindingKind::Cycle)
+    );
+}
+
+#[test]
+fn reattaching_recipes_keeps_expected_deltas_ids_and_ranking_identical() {
+    let mut doc = document(
+        Language::Typescript,
+        &["a/a.ts", "b/b.ts", "c/c.ts", "d/d.ts"],
+        &[
+            ("a/a.ts", "b/b.ts"),
+            ("b/b.ts", "a/a.ts"),
+            ("c/c.ts", "d/d.ts"),
+            ("d/d.ts", "c/c.ts"),
+        ],
+    );
+    let before = serde_json::to_value(&doc).unwrap();
+    recipes::attach(&mut doc).unwrap();
+    assert_eq!(before, serde_json::to_value(&doc).unwrap());
 }

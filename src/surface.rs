@@ -272,6 +272,14 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
                     .filter(|p| files.get(p.as_str()) == Some(&module.id.as_str()))
                     .cloned(),
             );
+            // A Python package marker alone does not declare a public facade.
+            if doc.source.language == Language::Python {
+                entries.retain(|path| {
+                    exports_of.get(path.as_str()).is_some_and(|exports| {
+                        exports.iter().any(|e| !e.name.is_empty() && e.name != "*")
+                    })
+                });
+            }
         }
         // Without a declared facade, direct file exports remain the observable public API.
         let all_exports = doc.source.language == Language::Go || entries.is_empty() && !explicit;

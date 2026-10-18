@@ -241,20 +241,24 @@ pub fn attach(doc: &mut Document) -> Result<()> {
     }
     findings.sort_by(|a, b| (a.kind, &a.subject).cmp(&(b.kind, &b.subject)));
     findings.dedup_by(|a, b| stable_id(a) == stable_id(b));
+    let mut generated = Vec::new();
+    let mut diagnostics = Vec::new();
     for mut f in findings {
         f.finding_id = stable_id(&f);
         match generate(doc, &f)? {
             Some(mut recipe) => {
                 forecast(doc, &mut recipe)?;
                 f.recipe = Some(recipe);
-                doc.findings.push(f);
+                generated.push(f);
             }
             None => {
                 f.recipe = None;
-                doc.diagnostics.push(Diagnostic{finding:f,reason:"Evidence does not determine a safe, concrete graph edit; inspect its evidence before changing architecture.".into()});
+                diagnostics.push(Diagnostic{finding:f,reason:"Evidence does not determine a safe, concrete graph edit; inspect its evidence before changing architecture.".into()});
             }
         }
     }
+    doc.findings = generated;
+    doc.diagnostics = diagnostics;
     rank(doc, Rank::Recipe);
     Ok(())
 }
@@ -334,9 +338,30 @@ fn cut_step(doc: &Document, e: &Edge) -> Step {
         from: e.from.clone(),
         to: e.to.clone(),
         detail: json!({"operation":"remove_import","target":e.to,"specifier":e.specifier.as_ref().or_else(||record.map(|i|&i.specifier)),"edge_kind":e.kind,"original_to":e.original_to}),
-        mechanical: unique,
+        mechanical: unique
+            && matches!(
+                doc.source.language,
+                crate::model::Language::Typescript
+                    | crate::model::Language::Python
+                    | crate::model::Language::Go
+            ),
     }
 }
+fn cycle_cuttable(doc: &Document, edge: &Edge) -> bool {
+    !edge.is_reexport
+        && !matches!(
+            edge.kind,
+            crate::model::EdgeKind::Reexport | crate::model::EdgeKind::TypeReexport
+        )
+        && [&edge.from, &edge.to].into_iter().all(|path| {
+            !crate::modules::is_test(path, &doc.config)
+                && !doc
+                    .files
+                    .iter()
+                    .any(|f| f.path == *path && f.class == Some(crate::model::ModuleClass::Tests))
+        })
+}
+
 fn cut_recipe(doc: &Document, edges: Vec<&Edge>, scope: Vec<String>) -> Option<Recipe> {
     if edges.is_empty() {
         return None;
@@ -371,6 +396,7 @@ fn generate(doc: &Document, f: &Finding) -> Result<Option<Recipe>> {
                 module(&e.from) == Some(from)
                     && module(&e.to) == Some(to)
                     && (doc.config.all_kinds || e.kind.is_runtime())
+                    && cycle_cuttable(doc, e)
             })
             .collect::<Vec<_>>()
     };
@@ -380,6 +406,7 @@ fn generate(doc: &Document, f: &Finding) -> Result<Option<Recipe>> {
                 pairs
                     .iter()
                     .filter(|p| !p.registry && !p.entry && !p.resolved_by_move)
+                    .filter(|p| !edges_between(&p.from, &p.to).is_empty())
                     .min_by_key(|p| (p.imports, &p.from, &p.to))
             });
             if let Some(m) = c
@@ -415,7 +442,8 @@ fn generate(doc: &Document, f: &Finding) -> Result<Option<Recipe>> {
                         }
                     })
                     .filter(|e| {
-                        !e.is_reexport && !doc.files.iter().any(|f| f.path == e.from && f.barrel)
+                        cycle_cuttable(doc, e)
+                            && !doc.files.iter().any(|f| f.path == e.from && f.barrel)
                     })
                     .collect();
                 cut_recipe(doc, selected, c.members.clone())

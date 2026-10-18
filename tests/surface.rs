@@ -104,7 +104,7 @@ fn inferred_entries_respect_extension_specific_module_rules() {
             "path":"layout.yaml", "sha256":"0".repeat(64),
             "doc":{"version":1,"modules":[{"id":"payments","path":format!("src/billing/**/*.{extension}")}]}
         })).unwrap());
-        let doc = archgraph::analyze(
+        let mut doc = archgraph::analyze(
             doc.source,
             config,
             doc.files.into_iter().map(|f| f.path).collect(),
@@ -113,6 +113,10 @@ fn inferred_entries_respect_extension_specific_module_rules() {
             None,
         )
         .unwrap();
+        doc.symbols = Some(symbols(
+            vec![export(&facade, "Public", &implementation, "Public")],
+            vec![],
+        ));
         let report = surface::analyze(&doc, 50).unwrap();
         let payments = module(&report, "payments");
         assert_eq!(payments.entrypoints, [facade]);
@@ -582,4 +586,52 @@ fn cli_surface_enrichment_survives_rules_check_schema_and_render() {
     let rendered: serde_json::Value = serde_json::from_str(embedded).unwrap();
     assert_eq!(rendered["surface"], saved["surface"]);
     assert_eq!(rendered["symbols"], saved["symbols"]);
+}
+
+#[test]
+fn python_infers_facades_from_exports_not_package_markers() {
+    let init = "src/billing/__init__.py";
+    let implementation = "src/billing/internal.py";
+    let caller = "src/app/main.py";
+    for has_exports in [false, true] {
+        let mut doc = document(&[init, implementation, caller], &[(caller, implementation)]);
+        doc.source.language = archgraph::model::Language::Python;
+        let exports = if has_exports {
+            vec![export(init, "Public", implementation, "Public")]
+        } else {
+            vec![export(implementation, "Public", implementation, "Public")]
+        };
+        surface::attach(&mut doc, symbols(exports, vec![]), 50).unwrap();
+        let billing = module(doc.surface.as_ref().unwrap(), "billing");
+        assert_eq!(billing.entrypoints.is_empty(), !has_exports);
+        assert_eq!(billing.deep_imports.len(), usize::from(has_exports));
+    }
+}
+
+#[test]
+fn python_explicit_empty_facades_still_enforce_policy() {
+    for boundary in [
+        json!({"entrypoints":{"src/billing/**":"src/billing/__init__.py"}}),
+        json!({"public":[{"module":"src/billing/**","entries":["src/billing/__init__.py"]}]}),
+    ] {
+        let mut doc = document(
+            &[
+                "src/billing/__init__.py",
+                "src/billing/internal.py",
+                "src/app/main.py",
+            ],
+            &[("src/app/main.py", "src/billing/internal.py")],
+        );
+        doc.source.language = archgraph::model::Language::Python;
+        let mut rules = boundary;
+        rules["version"] = json!(1);
+        doc.config.rules = Some(
+            serde_json::from_value(json!({"path":"layout.yaml","sha256":"fixture","doc":rules}))
+                .unwrap(),
+        );
+        surface::attach(&mut doc, symbols(vec![], vec![]), 50).unwrap();
+        let billing = module(doc.surface.as_ref().unwrap(), "billing");
+        assert_eq!(billing.entrypoints, ["src/billing/__init__.py"]);
+        assert_eq!(billing.deep_imports.len(), 1);
+    }
 }
