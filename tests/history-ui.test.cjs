@@ -15,7 +15,8 @@ test('timeline navigation renders the selected graph and preserves literal repla
     modules: [], edges: [], summary: { cycles: index, forbidden: 0 },
   }));
   const history = { snapshots: graphs.map((graph, i) => ({
-    commit: String(i).repeat(40), committed_at: '2026-10-16', subject: '<script>text</script>',
+    commit: String(i).repeat(40), committed_at: '2026-10-16', subject: '<script>text</script>', tags: [],
+    summary: { cycles: i, forbidden: 0, modules_in_cycles_percent: 0, cycles_per_100_modules: 0 },
     graph, diff: i ? { added_modules: ['module'] } : null,
   })) };
   const elements = Object.fromEntries(['data', 'commit', 'previous', 'next', 'graph', 'summary', 'changes'].map((id) => [id, {
