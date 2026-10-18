@@ -86,8 +86,6 @@ fn native_impact_and_saved_native_graph_never_run_node_or_prepare_unused_collect
             "HEAD~1..HEAD",
             "--root",
             root.to_str().unwrap(),
-            "--language",
-            "typescript",
             "--depcruise",
             "/nonexistent/unused-depcruise",
             "--rust-analyzer",
@@ -102,7 +100,7 @@ fn native_impact_and_saved_native_graph_never_run_node_or_prepare_unused_collect
         if saved {
             command.args(["--graph", &graph]);
         } else {
-            command.args(["--engine", "native"]);
+            command.args(["--engine", "native", "--language", "typescript"]);
         }
         let output = command
             .env("PATH", &path)

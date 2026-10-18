@@ -136,6 +136,10 @@ struct HistoryArgs {
     annotate: bool,
     #[command(flatten)]
     opts: ScanOpts,
+    #[command(flatten)]
+    hotspots: HotspotOpts,
+    #[command(flatten)]
+    collector: CollectorOpts,
     /// Directory for history.json and history.html [default: <root>/.archgraph]
     #[arg(long)]
     out_dir: Option<PathBuf>,
@@ -147,6 +151,10 @@ struct Scan {
     root: PathBuf,
     #[command(flatten)]
     opts: ScanOpts,
+    #[command(flatten)]
+    hotspots: HotspotOpts,
+    #[command(flatten)]
+    collector: CollectorOpts,
     /// Write the document here instead of stdout
     #[arg(short, long)]
     output: Option<PathBuf>,
@@ -159,6 +167,10 @@ struct Report {
     root: PathBuf,
     #[command(flatten)]
     opts: ScanOpts,
+    #[command(flatten)]
+    hotspots: HotspotOpts,
+    #[command(flatten)]
+    collector: CollectorOpts,
     /// Directory for archgraph.json and archgraph.html [default: <root>/.archgraph]
     #[arg(long)]
     out_dir: Option<PathBuf>,
@@ -167,7 +179,7 @@ struct Report {
     no_provenance: bool,
 }
 
-/// What `scan`, `report` and `history` share.
+/// What `scan`, `report`, `history` and `impact` collect: these change the graph itself.
 #[derive(Args, Clone, serde::Serialize)]
 struct ScanOpts {
     /// Collector engine; native uses tree-sitter and source-level resolution
@@ -197,18 +209,50 @@ struct ScanOpts {
     /// Read recorded collector JSON instead of running the collector
     #[arg(long)]
     collector_input: Option<PathBuf>,
-    /// dependency-cruiser executable to run instead of `npx --no-install depcruise`
-    #[arg(long)]
-    depcruise: Option<PathBuf>,
-    /// Python interpreter with grimp 3.17
-    #[arg(long, default_value = "python3")]
-    python: String,
     /// Python package to scan (default: the single package under the source root)
     #[arg(long)]
     package: Option<String>,
     /// Additional Python import search root (repeatable)
     #[arg(long)]
     python_path: Vec<PathBuf>,
+    /// Cargo features rust-analyzer enables
+    #[arg(long, value_enum, default_value_t = rust::Features::All)]
+    rust_features: rust::Features,
+    /// layout.yaml with modules, layers, public entries and forbid/allow rules
+    #[arg(long)]
+    rules: Option<PathBuf>,
+    /// Read the last N commits (default 300) for files that change together
+    #[arg(long, value_name = "N", num_args = 0..=1, require_equals = true, default_missing_value = "300",
+          value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..))]
+    cochange: Option<usize>,
+    /// Collect symbol-level public API evidence (TypeScript, Python and Go)
+    #[arg(long)]
+    symbols: bool,
+}
+
+/// Churn evidence read from commit history after collection.
+#[derive(Args, Clone, Default, serde::Serialize)]
+struct HotspotOpts {
+    /// Collect explainable churn factors [default window: 12 months ago]
+    #[arg(long, num_args = 0..=1, require_equals = true, default_missing_value = "12 months ago")]
+    hotspots: Option<String>,
+    /// Include the distinct-author coordination factor in hotspot scores
+    #[arg(long)]
+    hotspot_authors: bool,
+    /// Ignore commits touching more than this many repository files
+    #[arg(long, default_value_t = 30, value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..))]
+    hotspot_max_files: usize,
+}
+
+/// Collector executables and their execution mode: how to collect, not what.
+#[derive(Args, Clone, serde::Serialize)]
+struct CollectorOpts {
+    /// dependency-cruiser executable to run instead of `npx --no-install depcruise`
+    #[arg(long)]
+    depcruise: Option<PathBuf>,
+    /// Python interpreter with grimp 3.17
+    #[arg(long, default_value = "python3")]
+    python: String,
     /// Go toolchain (1.21 or later) that runs the Go helper
     #[arg(long, default_value = "go")]
     go: String,
@@ -221,32 +265,10 @@ struct ScanOpts {
     /// rust-analyzer to run instead of the active rustup toolchain's
     #[arg(long)]
     rust_analyzer: Option<PathBuf>,
-    /// Cargo features rust-analyzer enables
-    #[arg(long, value_enum, default_value_t = rust::Features::All)]
-    rust_features: rust::Features,
     /// Run build scripts and proc macros, as rust-analyzer does in an editor. This compiles
     /// and runs code from the scanned repository with your permissions
     #[arg(long)]
     rust_build_scripts: bool,
-    /// layout.yaml with modules, layers, public entries and forbid/allow rules
-    #[arg(long)]
-    rules: Option<PathBuf>,
-    /// Read the last N commits (default 300) for files that change together
-    #[arg(long, value_name = "N", num_args = 0..=1, require_equals = true, default_missing_value = "300",
-          value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..))]
-    cochange: Option<usize>,
-    /// Collect explainable churn factors [default window: 12 months ago]
-    #[arg(long, num_args = 0..=1, require_equals = true, default_missing_value = "12 months ago")]
-    hotspots: Option<String>,
-    /// Include the distinct-author coordination factor in hotspot scores
-    #[arg(long)]
-    hotspot_authors: bool,
-    /// Ignore commits touching more than this many repository files
-    #[arg(long, default_value_t = 30, value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..))]
-    hotspot_max_files: usize,
-    /// Collect symbol-level public API evidence (TypeScript, Python and Go)
-    #[arg(long)]
-    symbols: bool,
 }
 
 #[derive(Args)]
@@ -361,7 +383,14 @@ fn main() -> ExitCode {
 
 fn scan(args: Scan) -> Result<()> {
     let outputs: Vec<&Path> = args.output.as_deref().into_iter().collect();
-    let doc = scan_doc(&args.root, &args.opts, args.opts.rules.as_deref(), &outputs)?;
+    let doc = scan_doc(
+        &args.root,
+        &args.opts,
+        &args.hotspots,
+        &args.collector,
+        args.opts.rules.as_deref(),
+        &outputs,
+    )?;
     write(args.output.as_deref(), &doc)
 }
 
@@ -377,10 +406,10 @@ fn history(mut args: HistoryArgs) -> Result<()> {
     };
     args.opts.language = Some(language);
     let program = match language {
-        Language::Python => Some(&mut args.opts.python),
-        Language::Go => Some(&mut args.opts.go),
-        Language::Java => Some(&mut args.opts.java),
-        Language::Elixir => Some(&mut args.opts.elixir),
+        Language::Python => Some(&mut args.collector.python),
+        Language::Go => Some(&mut args.collector.go),
+        Language::Java => Some(&mut args.collector.java),
+        Language::Elixir => Some(&mut args.collector.elixir),
         _ => None,
     };
     if let Some(program) = program
@@ -392,16 +421,16 @@ fn history(mut args: HistoryArgs) -> Result<()> {
     // Ignored node_modules are absent from snapshots; reuse the installed collector.
     if args.opts.engine != collect::Engine::Native
         && language == Language::Typescript
-        && args.opts.depcruise.is_none()
+        && args.collector.depcruise.is_none()
     {
-        args.opts.depcruise = fs::canonicalize(&args.root)?
+        args.collector.depcruise = fs::canonicalize(&args.root)?
             .ancestors()
             .map(|dir| dir.join("node_modules/.bin/depcruise"))
             .find(|path| path.is_file());
     }
     if args.opts.engine != collect::Engine::Native && language == Language::Typescript {
-        args.opts.depcruise = args
-            .opts
+        args.collector.depcruise = args
+            .collector
             .depcruise
             .as_ref()
             .map(fs::canonicalize)
@@ -419,6 +448,8 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         scan_doc(
             root,
             &args.opts,
+            &args.hotspots,
+            &args.collector,
             rules
                 .as_deref()
                 .or_else(|| local.is_file().then_some(local.as_path())),
@@ -457,7 +488,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         .out_dir
         .clone()
         .unwrap_or_else(|| args.root.join(".archgraph"));
-    let mut key = serde_json::to_vec(&args.opts)?;
+    let mut key = serde_json::to_vec(&(&args.opts, &args.hotspots, &args.collector))?;
     key.push(u8::from(ALL_KINDS.load(Ordering::Relaxed)));
     key.push(GRANULARITY.load(Ordering::Relaxed));
     key.extend_from_slice(env!("CARGO_PKG_VERSION").as_bytes());
@@ -467,7 +498,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         key.extend_from_slice(&fs::read(path)?);
     }
     if args.opts.engine == collect::Engine::Native && language == Language::Go {
-        let output = Command::new(&args.opts.go)
+        let output = Command::new(&args.collector.go)
             .arg("version")
             .current_dir(std::env::temp_dir())
             .env("GOTOOLCHAIN", "local")
@@ -477,8 +508,8 @@ fn history(mut args: HistoryArgs) -> Result<()> {
     if args.opts.engine != collect::Engine::Native {
         // A caller-supplied collector may change in place without its path changing.
         let executable = match language {
-            Language::Typescript => args.opts.depcruise.as_ref(),
-            Language::Rust => args.opts.rust_analyzer.as_ref(),
+            Language::Typescript => args.collector.depcruise.as_ref(),
+            Language::Rust => args.collector.rust_analyzer.as_ref(),
             _ => None,
         };
         if let Some(executable) = executable {
@@ -486,10 +517,10 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         }
         let runtime = match language {
             Language::Typescript => ("node", vec!["--version"]),
-            Language::Python => (args.opts.python.as_str(), vec!["--version"]),
-            Language::Go => (args.opts.go.as_str(), vec!["version"]),
-            Language::Java => (args.opts.java.as_str(), vec!["-version"]),
-            Language::Elixir => (args.opts.elixir.as_str(), vec!["--version"]),
+            Language::Python => (args.collector.python.as_str(), vec!["--version"]),
+            Language::Go => (args.collector.go.as_str(), vec!["version"]),
+            Language::Java => (args.collector.java.as_str(), vec!["-version"]),
+            Language::Elixir => (args.collector.elixir.as_str(), vec!["--version"]),
             Language::Rust => ("rustup", vec!["show", "active-toolchain"]),
         };
         {
@@ -511,7 +542,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         for (query_language, program, version_args, cwd) in [
             (
                 Language::Python,
-                args.opts.python.clone(),
+                args.collector.python.clone(),
                 vec![
                     "-I".to_owned(),
                     "-c".to_owned(),
@@ -522,11 +553,11 @@ fn history(mut args: HistoryArgs) -> Result<()> {
             ),
             (
                 Language::Typescript,
-                args.opts
+                args.collector
                     .depcruise
                     .as_ref()
                     .map_or_else(|| "npx".to_owned(), |p| p.to_string_lossy().into_owned()),
-                if args.opts.depcruise.is_some() {
+                if args.collector.depcruise.is_some() {
                     vec!["--version".to_owned()]
                 } else {
                     vec![
@@ -552,7 +583,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         }
         let analyzer = (language == Language::Rust)
             .then(|| {
-                args.opts.rust_analyzer.clone().or_else(|| {
+                args.collector.rust_analyzer.clone().or_else(|| {
                     let output = Command::new("rustup")
                         .args(["which", "rust-analyzer"])
                         .current_dir(std::env::temp_dir())
@@ -579,7 +610,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
         if language == Language::Typescript {
             package_roots.push(fs::canonicalize(&args.root)?);
         }
-        if let Some(executable) = &args.opts.depcruise {
+        if let Some(executable) = &args.collector.depcruise {
             package_roots.push(fs::canonicalize(executable)?);
         }
         for root in package_roots {
@@ -624,7 +655,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
             {
                 provenance_cli::enrich_from(
                     &args.root,
-                    &args.opts,
+                    &args.collector,
                     &mut current.graph,
                     Some(previous.commit.clone()),
                 )?;
@@ -713,13 +744,15 @@ fn show_excludes() -> Result<()> {
 fn scan_doc(
     root: &Path,
     args: &ScanOpts,
+    hotspots: &HotspotOpts,
+    collector: &CollectorOpts,
     rules: Option<&Path>,
     outputs: &[&Path],
 ) -> Result<Document> {
     // Resolved here: a relative program path is not reliably resolved against the child's
     // working directory.
     let depcruise = (args.engine != collect::Engine::Native)
-        .then_some(args.depcruise.as_ref())
+        .then_some(collector.depcruise.as_ref())
         .flatten()
         .map(|p| {
             fs::canonicalize(p)
@@ -804,7 +837,7 @@ fn scan_doc(
                 );
                 output
             }
-            Language::Go => collect::native::go::collect(root, &args.go, &policy)?,
+            Language::Go => collect::native::go::collect(root, &collector.go, &policy)?,
             Language::Rust => collect::native::rust::collect(root, &policy)?,
             Language::Java => collect::native::java::collect(root, &policy)?,
             Language::Elixir => collect::native::elixir::collect(root, &policy)?,
@@ -868,7 +901,7 @@ fn scan_doc(
                         root,
                         source_dir,
                         &package,
-                        &args.python,
+                        &collector.python,
                         args.include_tests || args.no_default_excludes || !includes.is_empty(),
                         &args.python_path,
                     )?,
@@ -890,7 +923,7 @@ fn scan_doc(
                         if dirs.is_empty() {
                             bail!("no go.mod with a module line under {}", root.display());
                         }
-                        go::run(root, &args.go, &dirs)?
+                        go::run(root, &collector.go, &dirs)?
                     }
                 };
                 if !args.include_tests && !args.no_default_excludes && includes.is_empty() {
@@ -914,9 +947,9 @@ fn scan_doc(
                     None => rust::run(
                         root,
                         &rust::Options {
-                            rust_analyzer: args.rust_analyzer.as_deref(),
+                            rust_analyzer: collector.rust_analyzer.as_deref(),
                             features: args.rust_features,
-                            build_scripts: args.rust_build_scripts,
+                            build_scripts: collector.rust_build_scripts,
                         },
                     )?,
                 };
@@ -925,14 +958,14 @@ fn scan_doc(
             Language::Elixir => {
                 let json = match input {
                     Some(json) => json,
-                    None => elixir::run(root, &args.elixir, &policy)?,
+                    None => elixir::run(root, &collector.elixir, &policy)?,
                 };
                 (elixir::parse(&json)?, ".".to_owned())
             }
             Language::Java => {
                 let json = match input {
                     Some(json) => json,
-                    None => java::run(root, &args.java, &excludes_set)?,
+                    None => java::run(root, &collector.java, &excludes_set)?,
                 };
                 (java::parse(&json)?, ".".to_owned())
             }
@@ -1026,7 +1059,7 @@ fn scan_doc(
                 .then_some(args.rust_features),
             rust_build_scripts: language == Language::Rust
                 && args.engine != collect::Engine::Native
-                && args.rust_build_scripts,
+                && collector.rust_build_scripts,
         }),
         file_metadata: raw.metadata,
         legacy_module_classes: false,
@@ -1073,21 +1106,21 @@ fn scan_doc(
                 &doc,
                 archgraph::symbols::Options {
                     depcruise: depcruise.as_deref(),
-                    python: &args.python,
-                    go: &args.go,
+                    python: &collector.python,
+                    go: &collector.go,
                 },
             )?
         };
         archgraph::surface::attach(&mut doc, symbols, archgraph::surface::DEFAULT_MAX_SYMBOLS)?;
     }
-    if let Some(since) = &args.hotspots {
+    if let Some(since) = &hotspots.hotspots {
         let report = archgraph::hotspots::collect(
             root,
             &doc,
             &archgraph::hotspots::Options {
                 since: since.clone(),
-                max_files: args.hotspot_max_files,
-                authors: args.hotspot_authors,
+                max_files: hotspots.hotspot_max_files,
+                authors: hotspots.hotspot_authors,
             },
         )?;
         archgraph::apply_hotspots(&mut doc, report);
@@ -1102,9 +1135,16 @@ fn report(args: Report) -> Result<ExitCode> {
         found.is_file().then_some(found)
     });
     let out_dir = args.out_dir.unwrap_or_else(|| root.join(".archgraph"));
-    let mut doc = scan_doc(root, &args.opts, rules.as_deref(), &[&out_dir])?;
+    let mut doc = scan_doc(
+        root,
+        &args.opts,
+        &args.hotspots,
+        &args.collector,
+        rules.as_deref(),
+        &[&out_dir],
+    )?;
     if !args.no_provenance && args.opts.collector_input.is_none() && doc.source.git.is_some() {
-        provenance_cli::enrich(root, &args.opts, &mut doc)?;
+        provenance_cli::enrich(root, &args.collector, &mut doc)?;
     }
     let (json, html) = (
         out_dir.join("archgraph.json"),

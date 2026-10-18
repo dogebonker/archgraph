@@ -32,17 +32,25 @@ pub(super) struct BisectArgs {
     #[arg(long, value_enum, default_value_t = Format::Json)]
     format: Format,
     #[command(flatten)]
-    opts: ScanOpts,
+    collector: CollectorOpts,
 }
 
-fn collector_opts(root: &Path, options: &ScanOpts, language: Language) -> Result<ScanOpts> {
+/// The engine `doc` was collected with.
+fn engine(doc: &Document) -> collect::Engine {
+    doc.config
+        .collection
+        .as_ref()
+        .map_or(collect::Engine::Reference, |collection| collection.engine)
+}
+
+fn collector_opts(
+    root: &Path,
+    options: &CollectorOpts,
+    engine: collect::Engine,
+    language: Language,
+) -> Result<CollectorOpts> {
     let mut options = options.clone();
-    if options.collector_input.is_some() {
-        bail!(
-            "provenance needs live collectors; --collector-input cannot describe historical commits"
-        );
-    }
-    if options.engine == collect::Engine::Native {
+    if engine == collect::Engine::Native {
         if language == Language::Go && options.go.contains(['/', '\\']) {
             options.go = fs::canonicalize(&options.go)?
                 .to_string_lossy()
@@ -69,48 +77,53 @@ fn collector_opts(root: &Path, options: &ScanOpts, language: Language) -> Result
     Ok(options)
 }
 
-/// Probe with the original graph's semantics, while collecting the selected commit's files.
-/// Collector options only select executables, package and Rust execution/features settings.
-pub(super) fn probe(root: &Path, original: &Document, opts: &ScanOpts) -> Result<Document> {
-    let mut opts = opts.clone();
-    opts.language = Some(original.source.language);
-    opts.engine = original
-        .config
-        .collection
-        .as_ref()
-        .map_or(collect::Engine::Reference, |collection| collection.engine);
-    opts.depth = (!original.config.package_modules).then_some(original.config.depth);
-    opts.exclude = original
-        .config
-        .explicit_excludes
-        .clone()
-        .unwrap_or_else(|| original.config.excludes.clone());
-    if let Some(rules) = &original.config.rules {
-        opts.exclude.extend(rules.doc.exclude.iter().cloned());
-    }
-    opts.collection_includes = original.config.includes.clone();
-    opts.no_default_excludes = original.config.no_default_excludes;
-    opts.include_tests = original.config.include_tests;
-    opts.include_generated = original.config.include_generated;
-    if let Some(collection) = &original.config.collection {
-        if collection.rust_build_scripts && !opts.rust_build_scripts {
+/// Probe with the original graph's selection and semantics, while collecting the selected
+/// commit's files with `collector`'s executables.
+pub(super) fn probe(
+    root: &Path,
+    original: &Document,
+    collector: &CollectorOpts,
+) -> Result<Document> {
+    let config = &original.config;
+    let collection = config.collection.as_ref();
+    let mut collector = collector.clone();
+    if let Some(collection) = collection {
+        if collection.rust_build_scripts && !collector.rust_build_scripts {
             bail!(
                 "graph used Rust build scripts; pass --rust-build-scripts explicitly to reproduce that execution mode"
             );
         }
-        opts.package = collection.python_package.clone();
-        opts.python_path = collection.python_paths.iter().map(PathBuf::from).collect();
-        if let Some(features) = collection.rust_features {
-            opts.rust_features = features;
-        }
-        opts.rust_build_scripts = collection.rust_build_scripts;
+        collector.rust_build_scripts = collection.rust_build_scripts;
     }
-    opts.rules = None;
-    opts.collector_input = None;
-    opts.cochange = original.cochange.as_ref().map(|cochange| cochange.limit);
-    opts.hotspots = None;
-    opts.symbols = false;
-    let collected = super::scan_doc(root, &opts, None, &[])?;
+    let mut exclude = config
+        .explicit_excludes
+        .clone()
+        .unwrap_or_else(|| config.excludes.clone());
+    if let Some(rules) = &config.rules {
+        exclude.extend(rules.doc.exclude.iter().cloned());
+    }
+    let opts = ScanOpts {
+        engine: engine(original),
+        depth: (!config.package_modules).then_some(config.depth),
+        exclude,
+        no_default_excludes: config.no_default_excludes,
+        include_tests: config.include_tests,
+        include_generated: config.include_generated,
+        collection_includes: config.includes.clone(),
+        language: Some(original.source.language),
+        collector_input: None,
+        package: collection.and_then(|c| c.python_package.clone()),
+        python_path: collection
+            .map(|c| c.python_paths.iter().map(PathBuf::from).collect())
+            .unwrap_or_default(),
+        rust_features: collection
+            .and_then(|c| c.rust_features)
+            .unwrap_or(rust::Features::All),
+        rules: None,
+        cochange: original.cochange.as_ref().map(|cochange| cochange.limit),
+        symbols: false,
+    };
+    let collected = super::scan_doc(root, &opts, &HotspotOpts::default(), &collector, None, &[])?;
     let mut config = original.config.clone();
     config.file_metadata = collected.config.file_metadata;
     config.import_records = collected.imports;
@@ -125,9 +138,6 @@ pub(super) fn probe(root: &Path, original: &Document, opts: &ScanOpts) -> Result
 }
 
 pub(super) fn run(args: BisectArgs) -> Result<()> {
-    if args.opts.rules.is_some() {
-        bail!("bisect uses the rules embedded in graph.json; rescan the graph to change rules");
-    }
     let doc = super::recompute(&args.graph, None)?;
     let target = if args.edge.is_empty() {
         let index = args
@@ -152,13 +162,12 @@ pub(super) fn run(args: BisectArgs) -> Result<()> {
             to: to.clone(),
         }
     };
-    let mut requested = args.opts.clone();
-    requested.engine = doc
-        .config
-        .collection
-        .as_ref()
-        .map_or(collect::Engine::Reference, |collection| collection.engine);
-    let options = collector_opts(&args.root, &requested, doc.source.language)?;
+    let options = collector_opts(
+        &args.root,
+        &args.collector,
+        engine(&doc),
+        doc.source.language,
+    )?;
     let checkout = history::Checkout::new(&args.root)?;
     let mut result = bisect::investigate(
         &args.root,
@@ -228,13 +237,13 @@ fn unavailable(doc: &Document, status: &str, limitation: &str) -> Provenance {
 
 /// A report has one disposable checkout and a shared 64-scan budget across all findings.
 /// Cached collector results can be reused by subsequent finding investigations.
-pub(super) fn enrich(root: &Path, opts: &ScanOpts, doc: &mut Document) -> Result<()> {
+pub(super) fn enrich(root: &Path, opts: &CollectorOpts, doc: &mut Document) -> Result<()> {
     enrich_from(root, opts, doc, None)
 }
 
 pub(super) fn enrich_from(
     root: &Path,
-    opts: &ScanOpts,
+    opts: &CollectorOpts,
     doc: &mut Document,
     from: Option<String>,
 ) -> Result<()> {
@@ -243,7 +252,7 @@ pub(super) fn enrich_from(
     let setup = std::cell::OnceCell::new();
     for index in 0..doc.findings.len() {
         let result = match setup.get_or_init(|| {
-            collector_opts(root, opts, doc.source.language)
+            collector_opts(root, opts, engine(doc), doc.source.language)
                 .and_then(|options| Ok((options, history::Checkout::new(root)?)))
         }) {
             Err(error) => Err(anyhow::anyhow!(
@@ -432,7 +441,8 @@ mod tests {
         };
         let options = super::collector_opts(
             std::path::Path::new("/nonexistent/historical-root"),
-            &args.opts,
+            &args.collector,
+            args.opts.engine,
             archgraph::model::Language::Go,
         )
         .unwrap();
@@ -442,7 +452,8 @@ mod tests {
         );
         let options = super::collector_opts(
             std::path::Path::new("/nonexistent/historical-root"),
-            &args.opts,
+            &args.collector,
+            args.opts.engine,
             archgraph::model::Language::Typescript,
         )
         .unwrap();
@@ -470,12 +481,82 @@ mod tests {
         else {
             unreachable!()
         };
-        let error = super::probe(std::path::Path::new("."), &graph, &args.opts).unwrap_err();
+        let error = super::probe(std::path::Path::new("."), &graph, &args.collector).unwrap_err();
         assert!(
             error
                 .to_string()
                 .contains("pass --rust-build-scripts explicitly")
         );
+    }
+
+    #[test]
+    fn bisect_and_impact_graphs_reject_options_they_would_ignore() {
+        use clap::{Parser, error::ErrorKind};
+        let parse = |args: &[&str]| super::super::Cli::try_parse_from(args).map(|_| ());
+        let error = |args: &[&str]| parse(args).unwrap_err().kind();
+        // Bisect reproduces the saved graph's selection; only collector executables apply.
+        for flag in [
+            "--depth=1",
+            "--include-tests",
+            "--rules=x",
+            "--engine=native",
+        ] {
+            assert_eq!(
+                error(&["archgraph", "bisect", "g.json", flag]),
+                ErrorKind::UnknownArgument
+            );
+        }
+        parse(&["archgraph", "bisect", "g.json", "--go=go", "--depcruise=d"]).unwrap();
+        // Impact with --graph reuses its selection; hotspots and collectors still apply.
+        for flag in ["--depth=1", "--include-tests", "--language=go", "--symbols"] {
+            assert_eq!(
+                error(&["archgraph", "impact", "a..b", "--graph=g.json", flag]),
+                ErrorKind::ArgumentConflict
+            );
+        }
+        parse(&[
+            "archgraph",
+            "impact",
+            "a..b",
+            "--graph=g.json",
+            "--hotspots",
+            "--go=go",
+        ])
+        .unwrap();
+        parse(&["archgraph", "impact", "a..b", "--depth=1"]).unwrap();
+        // Scans accept every option.
+        for command in ["scan", "report", "history"] {
+            parse(&[
+                "archgraph",
+                command,
+                ".",
+                "--engine=native",
+                "--depth=1",
+                "--exclude=x",
+                "--no-default-excludes",
+                "--include-tests",
+                "--include-generated",
+                "--language=go",
+                "--collector-input=x",
+                "--package=p",
+                "--python-path=p",
+                "--rust-features=default",
+                "--rules=x",
+                "--cochange",
+                "--symbols",
+                "--hotspots",
+                "--hotspot-authors",
+                "--hotspot-max-files=5",
+                "--depcruise=d",
+                "--python=p",
+                "--go=g",
+                "--java=j",
+                "--elixir=e",
+                "--rust-analyzer=r",
+                "--rust-build-scripts",
+            ])
+            .unwrap();
+        }
     }
 
     #[test]

@@ -8,8 +8,8 @@ pub(super) struct ImpactArgs {
     range: String,
     #[arg(long, default_value = ".")]
     root: PathBuf,
-    /// Reuse a scan of the head commit (include tests when collecting it)
-    #[arg(long)]
+    /// Reuse a scan of the head commit (include tests when collecting it); its options apply
+    #[arg(long, conflicts_with = "ScanOpts")]
     graph: Option<PathBuf>,
     /// Also traverse a scan of the base commit, including removed imports
     #[arg(long, requires = "graph")]
@@ -42,6 +42,10 @@ pub(super) struct ImpactArgs {
     pr: Option<u64>,
     #[command(flatten)]
     opts: ScanOpts,
+    #[command(flatten)]
+    hotspots: HotspotOpts,
+    #[command(flatten)]
+    collector: CollectorOpts,
 }
 
 fn git_output(root: &Path, args: &[&str]) -> Result<Vec<u8>> {
@@ -99,33 +103,34 @@ fn check_graph(doc: &Document, commit: &str) -> Result<()> {
     Ok(())
 }
 
-fn enrich(root: &Path, doc: &mut Document, opts: &ScanOpts, changed: &[String]) -> Vec<String> {
+fn enrich(root: &Path, doc: &mut Document, args: &ImpactArgs, changed: &[String]) -> Vec<String> {
     let mut limitations = Vec::new();
     if doc.hotspots.is_none() {
         match archgraph::hotspots::collect(
             root,
             doc,
             &archgraph::hotspots::Options {
-                since: opts
+                since: args
+                    .hotspots
                     .hotspots
                     .clone()
                     .unwrap_or_else(|| "12 months ago".into()),
-                max_files: opts.hotspot_max_files,
-                authors: opts.hotspot_authors,
+                max_files: args.hotspots.hotspot_max_files,
+                authors: args.hotspots.hotspot_authors,
             },
         ) {
             Ok(report) => archgraph::apply_hotspots(doc, report),
             Err(error) => limitations.push(format!("Hotspot history unavailable: {error:#}")),
         }
     }
-    let native = opts.engine == collect::Engine::Native
+    let native = args.opts.engine == collect::Engine::Native
         || doc
             .config
             .collection
             .as_ref()
             .is_some_and(|collection| collection.engine == collect::Engine::Native);
     if doc.source.language == Language::Typescript && !native {
-        match super::impact_typescript::resolve_barrels(root, opts.depcruise.as_deref(), doc, changed) {
+        match super::impact_typescript::resolve_barrels(root, args.collector.depcruise.as_deref(), doc, changed) {
             Ok(count) if count > 0 => limitations.push(format!("Resolved {count} barrel import edges to their source declarations using TypeScript.")),
             Ok(_) => {},
             Err(error) => limitations.push(format!("Barrel symbol resolution unavailable; retaining conservative imports: {error:#}")),
@@ -190,29 +195,29 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
         .map(fs::canonicalize)
         .transpose()?;
     if args.opts.engine != collect::Engine::Native {
-        args.opts.depcruise = args
-            .opts
+        args.collector.depcruise = args
+            .collector
             .depcruise
             .as_deref()
             .map(fs::canonicalize)
             .transpose()?;
-        args.opts.rust_analyzer = args
-            .opts
+        args.collector.rust_analyzer = args
+            .collector
             .rust_analyzer
             .as_deref()
             .map(fs::canonicalize)
             .transpose()?;
         for program in [
-            &mut args.opts.python,
-            &mut args.opts.go,
-            &mut args.opts.java,
+            &mut args.collector.python,
+            &mut args.collector.go,
+            &mut args.collector.java,
         ] {
             if program.contains(['/', '\\']) {
                 *program = fs::canonicalize(&*program)?.to_string_lossy().into_owned();
             }
         }
-        if args.opts.depcruise.is_none() {
-            args.opts.depcruise = root
+        if args.collector.depcruise.is_none() {
+            args.collector.depcruise = root
                 .ancestors()
                 .map(|p| p.join("node_modules/.bin/depcruise"))
                 .find(|p| p.is_file());
@@ -227,6 +232,8 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
             scan_doc(
                 &head_root,
                 &args.opts,
+                &args.hotspots,
+                &args.collector,
                 args.opts
                     .rules
                     .as_deref()
@@ -236,12 +243,12 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
         }
     };
     check_graph(&doc, &head)?;
-    if doc.source.language == Language::Go && args.opts.go.contains(['/', '\\']) {
-        args.opts.go = fs::canonicalize(&args.opts.go)?
+    if doc.source.language == Language::Go && args.collector.go.contains(['/', '\\']) {
+        args.collector.go = fs::canonicalize(&args.collector.go)?
             .to_string_lossy()
             .into_owned();
     }
-    let context_limitations = enrich(&head_root, &mut doc, &args.opts, &changed);
+    let context_limitations = enrich(&head_root, &mut doc, &args, &changed);
     let mut result = impact::analyze(&doc, changed.clone(), args.max_depth, &args.tests)?;
     if !doc.config.include_tests {
         result.limitations.push(
@@ -252,7 +259,7 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
     if doc.source.language == Language::Go {
         match super::impact_context::go_tests(
             &head_root,
-            &args.opts.go,
+            &args.collector.go,
             &changed,
             &doc,
             &args.tests,
@@ -275,18 +282,18 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
                 check_graph(&graph, &base)?;
                 graph
             } else if args.graph.is_none() {
-                provenance_cli::probe(&base_root, &doc, &args.opts)?
+                provenance_cli::probe(&base_root, &doc, &args.collector)?
             } else {
                 bail!("supply --base-graph for removed files when reusing --graph");
             };
-            let limitations = enrich(&base_root, &mut base_doc, &args.opts, &changed);
+            let limitations = enrich(&base_root, &mut base_doc, &args, &changed);
             let mut base_result =
                 impact::analyze(&base_doc, changed.clone(), args.max_depth, &args.tests)?;
             base_result.limitations.extend(limitations);
             if base_doc.source.language == Language::Go {
                 match super::impact_context::go_tests(
                     &base_root,
-                    &args.opts.go,
+                    &args.collector.go,
                     &changed,
                     &base_doc,
                     &args.tests,
