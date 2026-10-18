@@ -109,6 +109,7 @@ pub(super) fn probe(root: &Path, original: &Document, opts: &ScanOpts) -> Result
     opts.collector_input = None;
     opts.cochange = original.cochange.as_ref().map(|cochange| cochange.limit);
     opts.hotspots = None;
+    opts.symbols = false;
     let collected = super::scan_doc(root, &opts, None, &[])?;
     let mut config = original.config.clone();
     config.file_metadata = collected.config.file_metadata;
