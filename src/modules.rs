@@ -41,6 +41,21 @@ pub fn assigned(
     }
 }
 
+/// `assigned` for a scanned file, with test files in their own `tests::` module.
+pub fn assigned_file(
+    file: &crate::model::File,
+    config: &Config,
+    language: Language,
+    rules: Option<&crate::rules::Compiled>,
+) -> String {
+    let module = assigned(&file.path, config, language, rules);
+    if file.class == Some(crate::model::ModuleClass::Tests) {
+        format!("tests::{module}")
+    } else {
+        module
+    }
+}
+
 /// Folder policy boundaries remain independent of graph granularity and test classes.
 pub fn folder_of(path: &str, config: &Config, language: Language) -> String {
     let source_root = config.source_root.as_str();

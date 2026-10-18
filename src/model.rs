@@ -85,6 +85,26 @@ pub struct ScanInput {
     pub package_splits: Option<crate::package_splits::Report>,
 }
 
+impl ScanInput {
+    /// Carries the persisted import records and file attributes into `config` for analysis.
+    pub fn hydrate_config(&mut self) {
+        self.config.import_records = self.imports.clone();
+        self.config.file_metadata = self
+            .files
+            .iter()
+            .map(|f| {
+                (
+                    f.path.clone(),
+                    NodeMetadata {
+                        barrel: f.barrel,
+                        test: f.class == Some(ModuleClass::Tests),
+                    },
+                )
+            })
+            .collect();
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct Tool {
     pub name: &'static str,

@@ -37,20 +37,7 @@ use rules::Compiled;
 /// Rebuild a persisted scan, retaining its optional historical context.
 pub fn restore_scan(mut input: model::ScanInput) -> Result<Document> {
     validate_scan(&input)?;
-    input.config.import_records = input.imports.clone();
-    input.config.file_metadata = input
-        .files
-        .iter()
-        .map(|f| {
-            (
-                f.path.clone(),
-                model::NodeMetadata {
-                    barrel: f.barrel,
-                    test: f.class == Some(crate::model::ModuleClass::Tests),
-                },
-            )
-        })
-        .collect();
+    input.hydrate_config();
     let mut doc = analyze(
         input.source,
         input.config,
@@ -113,26 +100,16 @@ pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
         .as_ref()
         .map(codeowners::compile)
         .transpose()?;
+    let mut config = input.config.clone();
+    config.import_records = input.imports.clone();
+    // Saved modules follow the document's own granularity, also when exported as legacy v1.
+    config.legacy_module_classes = false;
     let mut paths = BTreeSet::new();
     for file in &input.files {
         if !paths.insert(file.path.as_str()) {
             bail!("{} is listed twice", file.path);
         }
-        let module = if input.config.granularity == model::Granularity::File {
-            file.path.clone()
-        } else {
-            rules
-                .as_ref()
-                .and_then(|r| r.module_of(&file.path))
-                .unwrap_or_else(|| {
-                    modules::folder_of(&file.path, &input.config, input.source.language)
-                })
-        };
-        let module = if file.class == Some(model::ModuleClass::Tests) {
-            format!("tests::{module}")
-        } else {
-            module
-        };
+        let module = modules::assigned_file(file, &config, input.source.language, rules.as_ref());
         if file.module != module {
             bail!(
                 "{} has module `{}`, its config gives `{module}`",
@@ -171,8 +148,6 @@ pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
         input.imports.as_deref(),
         &input.files,
     )?;
-    let mut config = input.config.clone();
-    config.import_records = input.imports.clone();
     resolution::require_policy_accounting(&config)?;
     Ok(())
 }

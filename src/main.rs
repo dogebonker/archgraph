@@ -1528,7 +1528,8 @@ fn simulate(args: Simulate) -> Result<()> {
     let [file, to] = args.moves.as_slice() else {
         bail!("--move takes one file and one destination");
     };
-    let input = read_scan(&args.graph)?;
+    let mut input = read_scan(&args.graph)?;
+    input.hydrate_config();
     let mut config = input.config;
     if let Some(path) = &args.rules {
         config.rules = Some(rules::load(path)?);
@@ -1594,23 +1595,26 @@ fn recompute(path: &Path, rules: Option<&Path>) -> Result<Document> {
     let mut input = read_scan(path)?;
     if let Some(path) = rules {
         input.config.rules = Some(rules::load(path)?);
-        let compiled = rules::compile(&input.config)?;
-        for file in &mut input.files {
-            file.module = modules::assigned(
-                &file.path,
-                &input.config,
-                input.source.language,
-                compiled.as_ref(),
-            );
-            if file.class == Some(archgraph::model::ModuleClass::Tests) {
-                file.module = format!("tests::{}", file.module);
-            }
-        }
-        // Scores and introductions were judged under the old module/rule configuration.
-        input.findings.clear();
-        input.hotspots = None;
+        reassign(&mut input)?;
     }
     archgraph::restore_scan(input)
+}
+
+/// Reassigns modules under `input.config`. Scores and introductions were judged under the old
+/// module/rule configuration, so they are dropped.
+fn reassign(input: &mut ScanInput) -> Result<()> {
+    let compiled = rules::compile(&input.config)?;
+    for file in &mut input.files {
+        file.module = modules::assigned_file(
+            file,
+            &input.config,
+            input.source.language,
+            compiled.as_ref(),
+        );
+    }
+    input.findings.clear();
+    input.hotspots = None;
+    Ok(())
 }
 
 fn read_scan(path: &Path) -> Result<ScanInput> {
@@ -1626,20 +1630,6 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
         );
     }
     input.config.all_kinds |= ALL_KINDS.load(Ordering::Relaxed);
-    input.config.import_records = input.imports.clone();
-    input.config.file_metadata = input
-        .files
-        .iter()
-        .map(|f| {
-            (
-                f.path.clone(),
-                archgraph::model::NodeMetadata {
-                    barrel: f.barrel,
-                    test: f.class == Some(archgraph::model::ModuleClass::Tests),
-                },
-            )
-        })
-        .collect();
     archgraph::validate_scan(&input)
         .with_context(|| format!("inconsistent scan document {}", path.display()))?;
     if GRANULARITY.load(Ordering::Relaxed) != 0 {
@@ -1648,20 +1638,7 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
         } else {
             Granularity::Folder
         };
-        let compiled = rules::compile(&input.config)?;
-        for file in &mut input.files {
-            file.module = modules::assigned(
-                &file.path,
-                &input.config,
-                input.source.language,
-                compiled.as_ref(),
-            );
-            if file.class == Some(archgraph::model::ModuleClass::Tests) {
-                file.module = format!("tests::{}", file.module);
-            }
-        }
-        input.findings.clear();
-        input.hotspots = None;
+        reassign(&mut input)?;
     }
 
     Ok(input)
