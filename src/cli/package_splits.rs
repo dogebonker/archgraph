@@ -30,27 +30,10 @@ pub(super) fn run(args: PackageSplitsArgs) -> Result<()> {
     }
     let mut doc = recompute(&args.graph, None)?;
     let workspace = if let Some(root) = &args.root {
-        let mut verified_root = false;
-        if let Some(expected) = &doc.source.git {
-            let outputs: Vec<&Path> = std::iter::once(args.graph.as_path())
-                .chain(args.output.as_deref())
-                .collect();
-            let actual =
-                git(root, &outputs).context("cannot verify the workspace root's Git revision")?;
-            if actual.commit != expected.commit {
-                bail!(
-                    "workspace root does not match the graph's Git revision; use its scanned checkout or rescan"
-                );
-            }
-            if let Some(expected_root) = &doc.source.scan_root {
-                if git_scan_root(root).as_ref() != Some(expected_root) {
-                    bail!(
-                        "workspace root differs from the directory recorded by the scan; use its scanned root"
-                    );
-                }
-                verified_root = !actual.dirty && !expected.dirty;
-            }
-        }
+        let outputs: Vec<&Path> = std::iter::once(args.graph.as_path())
+            .chain(args.output.as_deref())
+            .collect();
+        let verified_root = scanned_checkout(&doc.source, root, &outputs)?;
         let mut inventory = package_splits::workspaces::discover(root)?;
         if !verified_root {
             inventory.checked = false;

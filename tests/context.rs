@@ -110,6 +110,14 @@ fn json_and_markdown_put_constraints_first_within_budget() {
     .unwrap();
     common::validate(&value);
     assert_eq!(value["kind"], "context");
+    // The fixture graph records no Git provenance, so --root cannot be shown to match it.
+    assert!(
+        value["limitations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|l| l.as_str().unwrap().starts_with("Source root is unverified"))
+    );
     assert_eq!(value["entries"][0]["path"], "layout.yaml");
     assert_eq!(value["entries"][0]["mode"], "rules");
     let entries = value["entries"].as_array().unwrap();

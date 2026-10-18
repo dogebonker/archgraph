@@ -1652,6 +1652,26 @@ fn write_file(path: &Path, bytes: &[u8]) -> Result<()> {
     history::write_atomic(path, bytes).with_context(|| format!("writing {}", path.display()))
 }
 
+/// Whether `root` is the clean checkout and directory `source` was scanned from. Errors when it
+/// is at another commit or directory; `false` when the scan recorded neither or a checkout is
+/// dirty. `outputs` are the caller's own files in `root`.
+fn scanned_checkout(source: &Source, root: &Path, outputs: &[&Path]) -> Result<bool> {
+    let Some(expected) = &source.git else {
+        return Ok(false);
+    };
+    let actual = git(root, outputs).context("cannot verify the --root Git revision")?;
+    if actual.commit != expected.commit {
+        bail!("--root does not match the graph's Git revision; use its scanned checkout or rescan");
+    }
+    let Some(expected_root) = &source.scan_root else {
+        return Ok(false);
+    };
+    if git_scan_root(root).as_ref() != Some(expected_root) {
+        bail!("--root differs from the directory recorded by the scan; use its scanned root");
+    }
+    Ok(!actual.dirty && !expected.dirty)
+}
+
 fn git_scan_root(root: &Path) -> Option<String> {
     let output = Command::new("git")
         .arg("-C")

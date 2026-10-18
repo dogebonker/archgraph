@@ -70,7 +70,8 @@ pub(super) fn run(args: ContextArgs) -> Result<()> {
         }
     }
     let input = read_scan(&args.graph)?;
-    let report = context::select(
+    let verified = scanned_checkout(&input.source, &root, &[&args.graph]);
+    let mut report = context::select(
         &input,
         &root,
         &Options {
@@ -81,6 +82,12 @@ pub(super) fn run(args: ContextArgs) -> Result<()> {
             depth: args.depth,
         },
     )?;
+    // Unlike package-splits, a stale checkout still yields useful context, so it is not an error.
+    match verified {
+        Ok(true) => {}
+        Ok(false) => report.limitations.push("Source root is unverified: the graph lacks Git or scan-root provenance, or the scanned/current checkout is dirty; source text may differ from the graph.".into()),
+        Err(error) => report.limitations.push(format!("Source text may differ from the graph: {error:#}")),
+    }
     match args.format {
         Format::Json => write(None, &report),
         Format::Markdown => {
