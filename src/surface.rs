@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
-use crate::model::{Document, Language, SCHEMA};
+use crate::model::{Document, Edge, Language, SCHEMA};
 
 pub const DEFAULT_MAX_SYMBOLS: usize = 50;
 
@@ -132,6 +132,7 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
         bail!("surface size threshold must be positive");
     }
     let rules = crate::rules::compile(&doc.config)?;
+    let rules = rules.as_ref();
     let files: BTreeMap<_, _> = doc
         .files
         .iter()
@@ -148,31 +149,88 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
             "Symbol coverage is incomplete; could-be-internal suggestions are withheld.".into(),
         );
     }
+    let (exports, imports) = symbols.map_or((&[][..], &[][..]), |s| {
+        (s.exports.as_slice(), s.imports.as_slice())
+    });
+    let mut members_of: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for f in &doc.files {
+        members_of.entry(&f.module).or_default().push(&f.path);
+    }
+    let mut exports_of: BTreeMap<&str, Vec<&SymbolExport>> = BTreeMap::new();
+    for export in exports {
+        exports_of.entry(&export.file).or_default().push(export);
+    }
+    let mut imports_from: BTreeMap<&str, Vec<&SymbolImport>> = BTreeMap::new();
+    for import in imports {
+        imports_from.entry(&import.from).or_default().push(import);
+    }
+    let mut edges_into: BTreeMap<&str, Vec<&Edge>> = BTreeMap::new();
+    for edge in &doc.edges {
+        if let Some(&module) = files.get(edge.to.as_str()) {
+            edges_into.entry(module).or_default().push(edge);
+        }
+    }
+    // Per module: each of its symbols imported from another module, with the importing files.
+    let mut used_in: BTreeMap<&str, BTreeMap<SymbolTarget, BTreeSet<String>>> = BTreeMap::new();
+    for import in imports {
+        let targets: Vec<&SymbolTarget> = match &import.target {
+            Some(target) => vec![target],
+            None if import.wildcard => exports_of
+                .get(import.to.as_str())
+                .into_iter()
+                .flatten()
+                .map(|e| &e.target)
+                .collect(),
+            None => Vec::new(),
+        };
+        let from = files.get(import.from.as_str());
+        for target in targets {
+            let modules: BTreeSet<&str> = [import.to.as_str(), target.file.as_str()]
+                .into_iter()
+                .filter_map(|file| files.get(file).copied())
+                .filter(|module| Some(module) != from)
+                .collect();
+            for module in modules {
+                used_in
+                    .entry(module)
+                    .or_default()
+                    .entry(target.clone())
+                    .or_default()
+                    .insert(import.from.clone());
+            }
+        }
+    }
     let mut modules = Vec::new();
     for module in &doc.modules {
-        let members: Vec<_> = doc.files.iter().filter(|f| f.module == module.id).collect();
+        let members = members_of
+            .get(module.id.as_str())
+            .map_or(&[][..], Vec::as_slice);
         let mut entries = BTreeSet::new();
         let mut explicit = false;
-        for file in &members {
-            let Some(rules) = &rules else { break };
-            if let (Some((_, declared)), Some((_, globs))) =
-                (rules.public_for(&file.path), rules.public_globs(&file.path))
-            {
-                explicit = true;
-                for (entry, glob) in declared.into_iter().zip(globs) {
-                    let matches: Vec<_> = doc
-                        .files
-                        .iter()
-                        .filter(|f| rules.bound_match(&glob, &f.path))
-                        .collect();
-                    if matches.is_empty() {
-                        limitations.push(format!(
-                            "Module {} declares entrypoint {entry}, which is absent from the scan.",
-                            module.id
-                        ));
-                    }
-                    entries.extend(matches.into_iter().map(|f| f.path.clone()));
+        if let Some(rules) = rules {
+            // Each declared entry once, as glob and as written.
+            let mut declared: BTreeMap<String, String> = BTreeMap::new();
+            for path in members {
+                if let (Some((_, written)), Some((_, globs))) =
+                    (rules.public_for(path), rules.public_globs(path))
+                {
+                    explicit = true;
+                    declared.extend(globs.into_iter().zip(written));
                 }
+            }
+            for (glob, entry) in declared {
+                let matches: Vec<_> = doc
+                    .files
+                    .iter()
+                    .filter(|f| rules.bound_match(&glob, &f.path))
+                    .collect();
+                if matches.is_empty() {
+                    limitations.push(format!(
+                        "Module {} declares entrypoint {entry}, which is absent from the scan.",
+                        module.id
+                    ));
+                }
+                entries.extend(matches.into_iter().map(|f| f.path.clone()));
             }
         }
         if !explicit && doc.source.language != Language::Go {
@@ -180,19 +238,13 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
             // when all real files happen to live in nested folders.
             let mut root = None;
             if let Some(file) = members.first() {
-                let mut dir = file.path.rsplit_once('/').map_or("", |(dir, _)| dir);
+                let mut dir = crate::modules::dir_of(file);
                 loop {
-                    let extension = file.path.rsplit_once('.').map_or("ts", |(_, ext)| ext);
+                    let extension = file.rsplit_once('.').map_or("ts", |(_, ext)| ext);
                     let probe =
-                        crate::collect::join(dir, &format!("__archgraph_surface__.{extension}"))
-                            .trim_start_matches('/')
-                            .to_owned();
-                    let assigned = crate::modules::assigned(
-                        &probe,
-                        &doc.config,
-                        doc.source.language,
-                        rules.as_ref(),
-                    );
+                        crate::modules::join(dir, &format!("__archgraph_surface__.{extension}"));
+                    let assigned =
+                        crate::modules::assigned(&probe, &doc.config, doc.source.language, rules);
                     if assigned != module.id {
                         break;
                     }
@@ -200,19 +252,18 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
                     if dir.is_empty() {
                         break;
                     }
-                    dir = dir.rsplit_once('/').map_or("", |(parent, _)| parent);
+                    dir = crate::modules::dir_of(dir);
                 }
             }
             entries.extend(
                 members
                     .iter()
-                    .filter(|f| {
-                        let name = f.path.rsplit('/').next().unwrap_or(&f.path);
-                        let parent = f.path.rsplit_once('/').map_or("", |(dir, _)| dir);
-                        root.as_deref() == Some(parent)
-                            && (name == "__init__.py" || crate::modules::TS_INDEX.contains(&name))
+                    .filter(|path| {
+                        let name = path.rsplit('/').next().unwrap_or(path);
+                        root.as_deref() == Some(crate::modules::dir_of(path))
+                            && crate::modules::is_index(name)
                     })
-                    .map(|f| f.path.clone()),
+                    .map(|path| path.to_string()),
             );
             entries.extend(
                 doc.package_entries
@@ -223,45 +274,19 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
         }
         // Without a declared facade, direct file exports remain the observable public API.
         let all_exports = doc.source.language == Language::Go || entries.is_empty() && !explicit;
-        let exported: Vec<_> = symbols
+        let sources: Vec<&str> = if all_exports {
+            members.to_vec()
+        } else {
+            entries.iter().map(String::as_str).collect()
+        };
+        let exported: Vec<_> = sources
             .into_iter()
-            .flat_map(|s| &s.exports)
-            .filter(|e| {
-                if all_exports {
-                    files.get(e.file.as_str()) == Some(&module.id.as_str())
-                } else {
-                    entries.contains(&e.file)
-                }
-            })
-            .cloned()
+            .flat_map(|file| exports_of.get(file).into_iter().flatten())
+            .map(|&e| e.clone())
             .collect::<BTreeSet<_>>()
             .into_iter()
             .collect();
-        let mut used: BTreeMap<SymbolTarget, BTreeSet<String>> = BTreeMap::new();
-        for import in symbols.into_iter().flat_map(|s| &s.imports) {
-            if files.get(import.from.as_str()) == Some(&module.id.as_str()) {
-                continue;
-            }
-            let targets: Vec<_> = if let Some(target) = &import.target {
-                vec![target.clone()]
-            } else if import.wildcard {
-                symbols
-                    .into_iter()
-                    .flat_map(|s| &s.exports)
-                    .filter(|e| e.file == import.to)
-                    .map(|e| e.target.clone())
-                    .collect()
-            } else {
-                Vec::new()
-            };
-            for target in targets {
-                if files.get(import.to.as_str()) == Some(&module.id.as_str())
-                    || files.get(target.file.as_str()) == Some(&module.id.as_str())
-                {
-                    used.entry(target).or_default().insert(import.from.clone());
-                }
-            }
-        }
+        let used = used_in.remove(module.id.as_str()).unwrap_or_default();
         let could_be_internal = if complete {
             exported
                 .iter()
@@ -272,14 +297,10 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
             Vec::new()
         };
         let mut deep_imports = Vec::new();
-        for edge in &doc.edges {
-            if files.get(edge.to.as_str()) != Some(&module.id.as_str()) {
-                continue;
-            }
+        for edge in edges_into.get(module.id.as_str()).into_iter().flatten() {
             let written = edge.original_to.as_deref().unwrap_or(&edge.to);
-            let boundary = rules
-                .as_ref()
-                .and_then(|r| Some((r, r.public_for(written)?, r.public_globs(written)?)));
+            let boundary =
+                rules.and_then(|r| Some((r, r.public_for(written)?, r.public_globs(written)?)));
             let (outside, bypass, expected) =
                 if let Some((rules, (_, entries), (pattern, globs))) = boundary {
                     let inside = rules.bound_match(&pattern, &edge.from);
@@ -293,10 +314,11 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
                     )
                 };
             if outside && bypass {
-                let names = symbols
+                let names = imports_from
+                    .get(edge.from.as_str())
                     .into_iter()
-                    .flat_map(|s| &s.imports)
-                    .filter(|i| i.from == edge.from && (i.to == edge.to || i.to == written))
+                    .flatten()
+                    .filter(|i| i.to == edge.to || i.to == written)
                     .map(|i| i.name.clone())
                     .collect::<BTreeSet<_>>()
                     .into_iter()
