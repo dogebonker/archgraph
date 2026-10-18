@@ -32,7 +32,7 @@
         if (end < 0) throw Error('unbalanced glob class');
         let cls = raw.slice(i+1,end);
         if (!cls || cls.includes('/') || cls.includes('[')) throw Error('unsupported glob class');
-        if (cls[0] === '!' || cls[0] === '^') cls = '^/' + cls.slice(1);
+        if (cls[0] === '!' || cls[0] === '^') cls = '^' + cls.slice(1);
         out += '['+cls+']'; i = end;
       } else out += c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
@@ -114,7 +114,7 @@
     try {
       if (rules) {
         if (rules.version !== 1) throw Error('unsupported layout version');
-        const known = ['version','exclude','include','edge_weights','grabbag','modules','layers','public','entrypoints','forbid','allow','default'];
+        const known = ['version','exclude','include','edge_weights','pkg-category','external_exposure','grabbag','modules','layers','public','entrypoints','forbid','allow','default'];
         if (Object.keys(rules).some(k=>!known.includes(k))) throw Error('unknown layout fields');
         const checkFields = (rows, known) => { if (rows.some(row=>Object.keys(row).some(k=>!known.includes(k)))) throw Error('unknown layout rule fields'); };
         checkFields(rules.modules || [],['id','path']);
@@ -152,9 +152,9 @@
     const adjacency = new Map();
     for (const e of edges) { if (!adjacency.has(e.from)) adjacency.set(e.from,[]); adjacency.get(e.from).push(e); }
     const verdict = e => {
-      if (!rules || !compiled) return {from:e.from,to:e.to,verdict:null,rule:null};
+      if (!rules || !compiled) return {from:e.from,to:e.to,verdict:null,rule:null,kind:kind(e)};
       const written = e.original_to || e.to;
-      const answer = (v,r)=>({from:e.from,to:e.to,verdict:v,rule:r});
+      const answer = (v,r)=>({from:e.from,to:e.to,verdict:v,rule:r,kind:kind(e)});
       for (const r of compiled.forbid) {
         if (!includes(r,e)) continue; const v = r.p.bind(e.from); if (v === undefined) continue;
         if (r.p.matches(r.to,v,written)) return answer('forbidden',r.id);
@@ -220,7 +220,7 @@
     const afterKeys=new Set(after.projection.cycles.map(identity));
     const covered = cycle => { const [level,members]=JSON.parse(identity(cycle)); return before.projection.cycles.some(old=>{ const [oldLevel,oldMembers]=JSON.parse(identity(old));return level===oldLevel && members.every(member=>oldMembers.includes(member)); }); }; 
     const was=before.projection.verdicts.filter(v=>v.verdict==='forbidden'),now=after.projection.verdicts.filter(v=>v.verdict==='forbidden');
-    const pair=(v,norm)=>key([norm(v.from),norm(v.to)]);
+    const pair=(v,norm)=>key([norm(v.from),norm(v.to),v.kind]);
     const wasKeys=new Set(was.map(v=>pair(v,p=>p))),nowKeys=new Set(now.map(v=>pair(v,normalize)));
     const warnings=sorted(new Set([...before.warnings,...after.warnings]));
     return {move:{file:move.file,to:move.to,module:after.moduleOf.get(move.to)},before:before.projection,after:after.projection,

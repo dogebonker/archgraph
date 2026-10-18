@@ -90,3 +90,23 @@ test('external dependencies and package/category rules explicitly limit previews
     assert.ok(result.warnings.some(warning => /Internal-only preview: external dependency policy verdicts and exposure/.test(warning)));
   }
 });
+
+test('pkg-category and external_exposure layout fields keep internal rule verdicts', () => {
+  const fixture = fixtures.find(f => f.name === 'forbid-before-allow-kind-filter'), doc = structuredClone(fixture.document);
+  Object.assign(doc.config.rules.doc, { 'pkg-category': { orm: ['typeorm'] }, external_exposure: { max_percent: 70 } });
+  const result = preview.analyze(doc);
+  assert.equal(result.forbidden, fixture.before.forbidden);
+  assert.ok(!result.warnings.some(w => /Rules preview incomplete/.test(w)), result.warnings.join(' '));
+});
+
+test('a move that clears one kind of a forbidden pair reports that import as fixed', () => {
+  const doc = { schema: 'archgraph/v1.1', source: { language: 'typescript' },
+    config: { depth: 1, source_root: '.', rules: { doc: { version: 1, forbid: [
+      { id: 'no-store-types', from: 'app/**', to: 'store/**', kinds: ['type'] },
+      { id: 'no-runtime-b', from: 'app/**', to: '**/b.ts', kinds: ['runtime'] }] } } },
+    files: [{ path: 'app/a.ts', barrel: false }, { path: 'store/b.ts', barrel: false }],
+    edges: [{ from: 'app/a.ts', to: 'store/b.ts', kind: 'runtime' }, { from: 'app/a.ts', to: 'store/b.ts', kind: 'type' }] };
+  const result = preview.simulate(doc, { file: 'store/b.ts', to: 'lib/b.ts' });
+  assert.deepEqual(result.removed_forbidden.map(v => [v.kind, v.rule]), [['type', 'no-store-types']]);
+  assert.deepEqual(result.new_forbidden, []);
+});

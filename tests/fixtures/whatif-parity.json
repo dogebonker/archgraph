@@ -27,12 +27,14 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/three.ts",
           "verdict": null
@@ -79,12 +81,14 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "a/three.ts",
           "verdict": null
@@ -342,12 +346,14 @@
       "verdicts": [
         {
           "from": "b/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/one.ts",
           "verdict": null
@@ -394,12 +400,14 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "a/one.ts",
           "verdict": null
@@ -665,12 +673,14 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "a/three.ts",
           "verdict": null
@@ -712,12 +722,14 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "c/three.ts",
           "verdict": null
@@ -944,18 +956,21 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "type",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "c/three.ts",
           "verdict": null
         },
         {
           "from": "b/two.ts",
+          "kind": "lazy",
           "rule": null,
           "to": "c/three.ts",
           "verdict": null
@@ -989,18 +1004,21 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "a/three.ts",
           "verdict": null
         },
         {
           "from": "a/one.ts",
+          "kind": "type",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.ts",
+          "kind": "lazy",
           "rule": null,
           "to": "a/three.ts",
           "verdict": null
@@ -1216,12 +1234,14 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "type",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.ts",
+          "kind": "lazy",
           "rule": null,
           "to": "b/three.ts",
           "verdict": null
@@ -1268,12 +1288,14 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "type",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.ts",
+          "kind": "lazy",
           "rule": null,
           "to": "a/three.ts",
           "verdict": null
@@ -1553,18 +1575,21 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "type",
           "rule": "none",
           "to": "b/two.ts",
           "verdict": "unplanned"
         },
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "c/three.ts",
           "verdict": "unplanned"
         },
         {
           "from": "c/three.ts",
+          "kind": "lazy",
           "rule": "none",
           "to": "b/two.ts",
           "verdict": "unplanned"
@@ -1598,18 +1623,21 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": "same-module",
           "to": "a/three.ts",
           "verdict": "allowed"
         },
         {
           "from": "a/one.ts",
+          "kind": "type",
           "rule": "none",
           "to": "b/two.ts",
           "verdict": "unplanned"
         },
         {
           "from": "a/three.ts",
+          "kind": "lazy",
           "rule": "none",
           "to": "b/two.ts",
           "verdict": "unplanned"
@@ -1811,6 +1839,7 @@
       "verdicts": [
         {
           "from": "src/domains/cart/a.ts",
+          "kind": "runtime",
           "rule": "same-module",
           "to": "src/domains/cart/b.ts",
           "verdict": "allowed"
@@ -1844,6 +1873,7 @@
       "verdicts": [
         {
           "from": "src/domains/cart/a.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "src/domains/pay/b.ts",
           "verdict": "unplanned"
@@ -2023,6 +2053,7 @@
       "verdicts": [
         {
           "from": "src/a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "src/a/two.ts",
           "verdict": null
@@ -2056,6 +2087,7 @@
       "verdicts": [
         {
           "from": "src/a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "lib/two.ts",
           "verdict": null
@@ -2227,12 +2259,14 @@
       "verdicts": [
         {
           "from": "cmd/tool/main.go",
+          "kind": "runtime",
           "rule": null,
           "to": "internal/deep/a.go",
           "verdict": null
         },
         {
           "from": "internal/deep/a.go",
+          "kind": "runtime",
           "rule": null,
           "to": "internal/deep/b.go",
           "verdict": null
@@ -2274,12 +2308,14 @@
       "verdicts": [
         {
           "from": "cmd/tool/main.go",
+          "kind": "runtime",
           "rule": null,
           "to": "internal/deep/a.go",
           "verdict": null
         },
         {
           "from": "internal/deep/a.go",
+          "kind": "runtime",
           "rule": null,
           "to": "internal/other/b.go",
           "verdict": null
@@ -2499,12 +2535,14 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "a/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.test.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "a/one.ts",
           "verdict": null
@@ -2546,12 +2584,14 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.test.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "a/one.ts",
           "verdict": null
@@ -2792,12 +2832,14 @@
       "verdicts": [
         {
           "from": "b/two.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "c/one.ts",
           "verdict": null
         },
         {
           "from": "c/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
@@ -2844,12 +2886,14 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "a/one.ts",
           "verdict": null
@@ -3111,18 +3155,21 @@
       "verdicts": [
         {
           "from": "domain/model.ts",
+          "kind": "runtime",
           "rule": "layers",
           "to": "domain/helper.ts",
           "verdict": "allowed"
         },
         {
           "from": "ui/view.ts",
+          "kind": "runtime",
           "rule": "layers",
           "to": "domain/model.ts",
           "verdict": "forbidden"
         },
         {
           "from": "ui/view.ts",
+          "kind": "runtime",
           "rule": "default",
           "to": "misc/other.ts",
           "verdict": "forbidden"
@@ -3177,18 +3224,21 @@
       "verdicts": [
         {
           "from": "domain/model.ts",
+          "kind": "runtime",
           "rule": "layers",
           "to": "ui/helper.ts",
           "verdict": "allowed"
         },
         {
           "from": "ui/view.ts",
+          "kind": "runtime",
           "rule": "layers",
           "to": "domain/model.ts",
           "verdict": "forbidden"
         },
         {
           "from": "ui/view.ts",
+          "kind": "runtime",
           "rule": "default",
           "to": "misc/other.ts",
           "verdict": "forbidden"
@@ -3530,12 +3580,14 @@
       "verdicts": [
         {
           "from": "app/a.ts",
+          "kind": "runtime",
           "rule": "app-imports",
           "to": "app/b.ts",
           "verdict": "allowed"
         },
         {
           "from": "app/c.ts",
+          "kind": "type",
           "rule": "app-imports",
           "to": "app/b.ts",
           "verdict": "allowed"
@@ -3569,12 +3621,14 @@
       "verdicts": [
         {
           "from": "app/a.ts",
+          "kind": "runtime",
           "rule": "runtime-store",
           "to": "store/b.ts",
           "verdict": "forbidden"
         },
         {
           "from": "app/c.ts",
+          "kind": "type",
           "rule": "app-imports",
           "to": "store/b.ts",
           "verdict": "allowed"
@@ -3788,12 +3842,14 @@
       "verdicts": [
         {
           "from": "app/a.ts",
+          "kind": "runtime",
           "rule": "same-module",
           "to": "app/internal.ts",
           "verdict": "allowed"
         },
         {
           "from": "app/a.ts",
+          "kind": "runtime",
           "rule": "entrypoints",
           "to": "billing/index.ts",
           "verdict": "allowed"
@@ -3827,12 +3883,14 @@
       "verdicts": [
         {
           "from": "app/a.ts",
+          "kind": "runtime",
           "rule": "entrypoints",
           "to": "billing/index.ts",
           "verdict": "allowed"
         },
         {
           "from": "app/a.ts",
+          "kind": "runtime",
           "rule": "entrypoints",
           "to": "billing/internal.ts",
           "verdict": "forbidden"
@@ -4042,12 +4100,14 @@
       "verdicts": [
         {
           "from": "domains/a/a.ts",
+          "kind": "runtime",
           "rule": "same-module",
           "to": "domains/a/internal.ts",
           "verdict": "allowed"
         },
         {
           "from": "domains/a/a.ts",
+          "kind": "runtime",
           "rule": "same-module",
           "to": "domains/b/index.ts",
           "verdict": "allowed"
@@ -4073,12 +4133,14 @@
       "verdicts": [
         {
           "from": "domains/a/a.ts",
+          "kind": "runtime",
           "rule": "same-module",
           "to": "domains/b/index.ts",
           "verdict": "allowed"
         },
         {
           "from": "domains/a/a.ts",
+          "kind": "runtime",
           "rule": "public",
           "to": "domains/b/internal.ts",
           "verdict": "forbidden"
@@ -4265,12 +4327,14 @@
       "verdicts": [
         {
           "from": "app/client.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "shared/bridge.ts",
           "verdict": "unplanned"
         },
         {
           "from": "shared/bridge.ts",
+          "kind": "runtime",
           "rule": "same-module",
           "to": "shared/private.ts",
           "verdict": "allowed"
@@ -4312,12 +4376,14 @@
       "verdicts": [
         {
           "from": "app/client.ts",
+          "kind": "runtime",
           "rule": "no-server",
           "to": "shared/bridge.ts",
           "verdict": "forbidden"
         },
         {
           "from": "shared/bridge.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "server/private.ts",
           "verdict": "unplanned"
@@ -4555,12 +4621,14 @@
       "verdicts": [
         {
           "from": "service/a.ex",
+          "kind": "runtime",
           "rule": null,
           "to": "service/b.ex",
           "verdict": null
         },
         {
           "from": "service/b_test.exs",
+          "kind": "runtime",
           "rule": null,
           "to": "service/a.ex",
           "verdict": null
@@ -4602,12 +4670,14 @@
       "verdicts": [
         {
           "from": "lib/a.ex",
+          "kind": "runtime",
           "rule": null,
           "to": "service/b.ex",
           "verdict": null
         },
         {
           "from": "service/b_test.exs",
+          "kind": "runtime",
           "rule": null,
           "to": "lib/a.ex",
           "verdict": null
@@ -4835,18 +4905,21 @@
       "verdicts": [
         {
           "from": "src/app/a.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "lib/other.ts",
           "verdict": "unplanned"
         },
         {
           "from": "src/app/long.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "lib/other.ts",
           "verdict": "unplanned"
         },
         {
           "from": "src/ui/b.ts",
+          "kind": "runtime",
           "rule": "brace-question",
           "to": "lib/safe.ts",
           "verdict": "forbidden"
@@ -4880,18 +4953,21 @@
       "verdicts": [
         {
           "from": "src/app/a.ts",
+          "kind": "runtime",
           "rule": "brace-question",
           "to": "lib/core.ts",
           "verdict": "forbidden"
         },
         {
           "from": "src/app/long.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "lib/core.ts",
           "verdict": "unplanned"
         },
         {
           "from": "src/ui/b.ts",
+          "kind": "runtime",
           "rule": "brace-question",
           "to": "lib/safe.ts",
           "verdict": "forbidden"
@@ -5146,18 +5222,21 @@
       "verdicts": [
         {
           "from": "src/alpha.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "data/xvalue.ts",
           "verdict": "unplanned"
         },
         {
           "from": "src/beta.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "data/xray.ts",
           "verdict": "unplanned"
         },
         {
           "from": "src/beta.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "data/xvalue.ts",
           "verdict": "unplanned"
@@ -5191,18 +5270,21 @@
       "verdicts": [
         {
           "from": "src/alpha.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "data/value.ts",
           "verdict": "unplanned"
         },
         {
           "from": "src/beta.ts",
+          "kind": "runtime",
           "rule": "negated-classes",
           "to": "data/value.ts",
           "verdict": "forbidden"
         },
         {
           "from": "src/beta.ts",
+          "kind": "runtime",
           "rule": "none",
           "to": "data/xray.ts",
           "verdict": "unplanned"
@@ -5463,6 +5545,231 @@
       "forbidden": 0,
       "largest_cycle": 0,
       "modules": {
+        "lib": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "src": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 1,
+      "verdicts": [
+        {
+          "from": "src/beta.ts",
+          "kind": "runtime",
+          "rule": "none",
+          "to": "lib/value.ts",
+          "verdict": "unplanned"
+        }
+      ]
+    },
+    "before": {
+      "cycles": [],
+      "forbidden": 1,
+      "largest_cycle": 0,
+      "modules": {
+        "data": {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "instability": 0.0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0
+        },
+        "src": {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "instability": 1.0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0
+        }
+      },
+      "two_way_pairs": [],
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "src/beta.ts",
+          "kind": "runtime",
+          "rule": "negated-separator",
+          "to": "data/value.ts",
+          "verdict": "forbidden"
+        }
+      ]
+    },
+    "document": {
+      "cochange": null,
+      "config": {
+        "depth": 1,
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "doc": {
+            "allow": [],
+            "forbid": [
+              {
+                "from": "src[!a]*.ts",
+                "id": "negated-separator",
+                "reachable": false,
+                "reason": null,
+                "to": "data/**"
+              }
+            ],
+            "layers": [],
+            "modules": [],
+            "public": [],
+            "version": 1
+          },
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "source_root": "."
+      },
+      "cycles": [],
+      "edges": [
+        {
+          "from": "src/beta.ts",
+          "kind": "runtime",
+          "rule": "negated-separator",
+          "to": "data/value.ts",
+          "verdict": "forbidden",
+          "weight": 1.0
+        }
+      ],
+      "files": [
+        {
+          "barrel": false,
+          "module": "data",
+          "path": "data/value.ts"
+        },
+        {
+          "barrel": false,
+          "module": "src",
+          "path": "src/beta.ts"
+        }
+      ],
+      "findings": [
+        {
+          "evidence": {
+            "files": 2,
+            "modules": 2
+          },
+          "kind": "small-repo",
+          "subject": "."
+        }
+      ],
+      "kind": "scan",
+      "module_edges": [
+        {
+          "forbidden": 1,
+          "from": "src",
+          "imports": 1,
+          "to": "data"
+        }
+      ],
+      "modules": [
+        {
+          "ca": 1,
+          "ce": 0,
+          "cohesion": null,
+          "files": 1,
+          "id": "data",
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        },
+        {
+          "ca": 0,
+          "ce": 1,
+          "cohesion": 0.0,
+          "files": 1,
+          "id": "src",
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "outgoing_to": {
+            "data": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "data": 1.0
+          }
+        }
+      ],
+      "package_entries": [],
+      "schema": "archgraph/v1.1",
+      "source": {
+        "collector": {
+          "cruised": 0,
+          "name": "fixture",
+          "version": null
+        },
+        "generated_at": "2026-10-18T00:00:00Z",
+        "git": null,
+        "language": "typescript"
+      },
+      "summary": {
+        "cycles": 0,
+        "forbidden": 1,
+        "modules": {
+          "data": {
+            "ca": 1,
+            "ce": 0,
+            "cohesion": null,
+            "instability": 0.0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0
+          },
+          "src": {
+            "ca": 0,
+            "ce": 1,
+            "cohesion": 0.0,
+            "instability": 1.0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0
+          }
+        },
+        "type_only_cycles": 0,
+        "unplanned": 0
+      },
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "type_only_cycles": []
+    },
+    "move": {
+      "file": "data/value.ts",
+      "to": "lib/value.ts"
+    },
+    "name": "glob-negated-class-matches-separator"
+  },
+  {
+    "after": {
+      "cycles": [],
+      "forbidden": 0,
+      "largest_cycle": 0,
+      "modules": {
         "a": {
           "ca": 1,
           "ce": 1,
@@ -5493,12 +5800,14 @@
       "verdicts": [
         {
           "from": "a/helper.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "a/one.ts",
           "verdict": null
         },
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
@@ -5540,12 +5849,14 @@
       "verdicts": [
         {
           "from": "a/one.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "b/two.ts",
           "verdict": null
         },
         {
           "from": "b/two.test.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "a/one.ts",
           "verdict": null
@@ -5773,12 +6084,14 @@
       "verdicts": [
         {
           "from": "app/a.ts",
+          "kind": "runtime",
           "rule": "entrypoints",
           "to": "billing/internal.ts",
           "verdict": "forbidden"
         },
         {
           "from": "billing/public.ts",
+          "kind": "reexport",
           "rule": "same-module",
           "to": "billing/internal.ts",
           "verdict": "allowed"
@@ -5812,12 +6125,14 @@
       "verdicts": [
         {
           "from": "app/a.ts",
+          "kind": "runtime",
           "rule": "entrypoints",
           "to": "billing/internal.ts",
           "verdict": "allowed"
         },
         {
           "from": "billing/index.ts",
+          "kind": "reexport",
           "rule": "same-module",
           "to": "billing/internal.ts",
           "verdict": "allowed"
@@ -6057,42 +6372,49 @@
       "verdicts": [
         {
           "from": "app/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
         },
         {
           "from": "app/work.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "app/a.ts",
           "verdict": null
         },
         {
           "from": "c1/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
         },
         {
           "from": "c2/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
         },
         {
           "from": "c3/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
         },
         {
           "from": "c4/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
         },
         {
           "from": "c5/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
@@ -6171,42 +6493,49 @@
       "verdicts": [
         {
           "from": "app/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
         },
         {
           "from": "c1/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
         },
         {
           "from": "c2/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
         },
         {
           "from": "c3/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
         },
         {
           "from": "c4/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
         },
         {
           "from": "c5/a.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "utils/date.ts",
           "verdict": null
         },
         {
           "from": "utils/work.ts",
+          "kind": "runtime",
           "rule": null,
           "to": "app/a.ts",
           "verdict": null

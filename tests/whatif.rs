@@ -56,7 +56,7 @@ fn projection(doc: &Document) -> Value {
     let mut verdicts: Vec<Value> = doc
         .edges
         .iter()
-        .map(|e| json!({"from":e.from,"to":e.to,"verdict":e.verdict,"rule":e.rule}))
+        .map(|e| json!({"from":e.from,"to":e.to,"verdict":e.verdict,"rule":e.rule,"kind":e.kind}))
         .collect();
     verdicts.sort_by_key(|v| {
         (
@@ -64,6 +64,7 @@ fn projection(doc: &Document) -> Value {
             v["to"].to_string(),
             v["verdict"].to_string(),
             v["rule"].to_string(),
+            v["kind"].to_string(),
         )
     });
     json!({"cycles":cycles,"two_way_pairs":pairs,
@@ -345,6 +346,15 @@ fn fixtures() -> Value {
         Ts,
     ));
     cases.push(case(
+        "glob-negated-class-matches-separator",
+        &[("src/beta.ts", "data/value.ts", V)],
+        "data/value.ts",
+        "lib/value.ts",
+        json!({}),
+        Some(json!({"version":1,"forbid":[{"id":"negated-separator","from":"src[!a]*.ts","to":"data/**"}]})),
+        Ts,
+    ));
+    cases.push(case(
         "test-class-survives-rename",
         &[
             ("a/one.ts", "b/two.ts", V),
@@ -432,6 +442,7 @@ fn map_preview_fixtures_match_rust() {
     for (name, before, after) in [
         ("glob-braces-and-question-mark", 2, 1),
         ("glob-negated-character-classes", 1, 0),
+        ("glob-negated-class-matches-separator", 1, 0),
     ] {
         let case = actual
             .as_array()
