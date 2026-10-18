@@ -54,11 +54,7 @@ pub fn discover(root: &Path) -> Result<WorkspaceInventory> {
         let mut patterns = None;
         if let Some(package) = read(ancestor, "package.json", false)? {
             if result.enclosing_package.is_none() {
-                result.enclosing_package = package
-                    .get("name")
-                    .map(|name| name.as_str().context("package.json name must be a string"))
-                    .transpose()?
-                    .map(str::to_owned);
+                result.enclosing_package = name(&package, "package.json")?;
             }
             if let Some(value) = package.get("workspaces") {
                 let value = value
@@ -152,17 +148,33 @@ pub fn discover(root: &Path) -> Result<WorkspaceInventory> {
     let mut visited = 0;
     while let Some((directory, depth)) = pending.pop() {
         let path = relative(&root, &directory);
-        if let Some(package) = read(&directory, "package.json", false)? {
-            if directory != root && package.get("workspaces").is_some() {
+        let nested = directory != root;
+        let package = read(&directory, "package.json", false).and_then(|package| {
+            package
+                .map(|package| -> Result<_> {
+                    let nx = package
+                        .get("nx")
+                        .map(|nx| {
+                            nx.is_object()
+                                .then(|| nx.get("name").and_then(Value::as_str).map(str::to_owned))
+                                .context("package.json nx metadata must be an object")
+                        })
+                        .transpose()?;
+                    Ok((
+                        package.get("workspaces").is_some(),
+                        name(&package, "package.json")?,
+                        nx,
+                    ))
+                })
+                .transpose()
+        });
+        let package = skip_unreadable(package, nested, &path, "package.json", &mut result)?;
+        if let Some((nested_workspaces, name, nx)) = package {
+            if nested && nested_workspaces {
                 result.limitations.push(
                     "Nested workspace declarations were not expanded; inspect their package boundaries separately".into(),
                 );
             }
-            let name = package
-                .get("name")
-                .map(|name| name.as_str().context("package.json name must be a string"))
-                .transpose()?
-                .map(str::to_owned);
             let declared = workspaces.iter().any(|workspace| {
                 let Ok(relative) = directory.strip_prefix(&workspace.root) else {
                     return false;
@@ -178,33 +190,21 @@ pub fn discover(root: &Path) -> Result<WorkspaceInventory> {
                     "Named manifests outside declared workspace membership are existing projects, not proven workspace package dependencies".into(),
                 );
             }
-            if let Some(nx) = package.get("nx") {
-                if !nx.is_object() {
-                    bail!("package.json nx metadata must be an object");
-                }
-                projects.insert(
-                    path.clone(),
-                    nx.get("name")
-                        .and_then(Value::as_str)
-                        .map(str::to_owned)
-                        .or(name),
-                );
+            if let Some(nx) = nx {
+                projects.insert(path.clone(), nx.or(name));
             }
         }
-        if let Some(project) = read(&directory, "project.json", false)? {
-            let name = project
-                .get("name")
-                .map(|name| name.as_str().context("project.json name must be a string"))
-                .transpose()?
-                .map(str::to_owned);
+        let project = read(&directory, "project.json", false)
+            .and_then(|project| project.map(|p| name(&p, "project.json")).transpose());
+        if let Some(name) = skip_unreadable(project, nested, &path, "project.json", &mut result)? {
             projects.insert(path.clone(), name);
         }
-        if directory != root && directory.join("pnpm-workspace.yaml").exists() {
+        if nested && directory.join("pnpm-workspace.yaml").exists() {
             result.limitations.push(
                 "Nested workspace declarations were not expanded; inspect their package boundaries separately".into(),
             );
         }
-        if directory != root && directory.join("nx.json").exists() {
+        if nested && directory.join("nx.json").exists() {
             result.limitations.push(
                 "Nested Nx workspaces were not expanded; explicit project.json files are listed only".into(),
             );
@@ -279,6 +279,36 @@ fn read(directory: &Path, name: &str, yaml: bool) -> Result<Option<Value>> {
         bail!("workspace metadata {name} must be an object");
     }
     Ok(Some(value))
+}
+
+fn name(manifest: &Value, file: &str) -> Result<Option<String>> {
+    manifest
+        .get("name")
+        .map(|name| {
+            name.as_str()
+                .map(str::to_owned)
+                .with_context(|| format!("{file} name must be a string"))
+        })
+        .transpose()
+}
+
+/// Below the scan root a broken manifest leaves the inventory unchecked instead of failing it.
+fn skip_unreadable<T>(
+    manifest: Result<Option<T>>,
+    nested: bool,
+    directory: &str,
+    file: &str,
+    inventory: &mut WorkspaceInventory,
+) -> Result<Option<T>> {
+    match manifest {
+        Err(_) if nested => {
+            inventory.limitations.push(format!(
+                "Unreadable manifest at {directory}/{file} was skipped"
+            ));
+            Ok(None)
+        }
+        manifest => manifest,
+    }
 }
 
 fn strings(values: &[Value], source: &str) -> Result<Vec<String>> {

@@ -185,6 +185,42 @@ fn malformed_metadata_and_escaping_paths_are_not_silent_proof() {
     }
 }
 
+#[test]
+fn broken_nested_manifests_are_skipped_as_limitations() {
+    for (file, text) in [
+        ("package.json", "{"),
+        ("package.json", "[]"),
+        ("package.json", r#"{"name":3}"#),
+        ("package.json", r#"{"name":"broken","nx":true}"#),
+        ("project.json", "{"),
+        ("project.json", r#"{"name":false}"#),
+    ] {
+        let root = Scratch::new();
+        root.write("package.json", r#"{"name":"root"}"#);
+        root.write("packages/one/package.json", r#"{"name":"one"}"#);
+        root.write(&format!("test/fixtures/broken/{file}"), text);
+        let inventory = discover(&root.0).unwrap();
+        assert!(!inventory.checked, "{file}: {text}");
+        assert_eq!(
+            inventory.limitations,
+            [format!(
+                "Unreadable manifest at test/fixtures/broken/{file} was skipped"
+            )]
+        );
+        assert_eq!(
+            inventory
+                .packages
+                .iter()
+                .map(|p| p.root.as_str())
+                .collect::<Vec<_>>(),
+            [".", "packages/one"]
+        );
+        assert!(inventory.projects.is_empty());
+        // The scan root's own manifests still fail.
+        assert!(discover(&root.0.join("test/fixtures/broken")).is_err());
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn symlinked_directories_are_never_followed() {
@@ -196,6 +232,18 @@ fn symlinked_directories_are_never_followed() {
     let inventory = discover(&root.0).unwrap();
     assert!(!inventory.checked);
     assert!(inventory.packages.is_empty());
+    fs::create_dir(root.0.join("nested")).unwrap();
+    symlink(
+        outside.0.join("package.json"),
+        root.0.join("nested/package.json"),
+    )
+    .unwrap();
+    let inventory = discover(&root.0).unwrap();
+    assert!(
+        inventory
+            .limitations
+            .contains(&"Unreadable manifest at nested/package.json was skipped".to_owned())
+    );
     symlink(outside.0.join("package.json"), root.0.join("package.json")).unwrap();
     assert!(discover(&root.0).is_err());
 }
