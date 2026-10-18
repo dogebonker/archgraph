@@ -1418,16 +1418,12 @@ fn report(args: Report) -> Result<ExitCode> {
         }
     }
     out += &format!("\n{}\n", heading("Findings"));
-    let mut by_kind: BTreeMap<String, Vec<&str>> = BTreeMap::new();
+    let mut by_kind: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     for f in &doc.findings {
-        let kind = serde_json::to_value(f.kind)?
-            .as_str()
-            .unwrap_or_default()
-            .to_owned();
-        by_kind.entry(kind).or_default().push(&f.subject);
+        by_kind.entry(f.kind.as_str()).or_default().push(&f.subject);
     }
     let mut by_kind: Vec<_> = by_kind.into_iter().collect();
-    by_kind.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
+    by_kind.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(b.0)));
     if by_kind.is_empty() {
         out += "  none\n";
     }
@@ -1435,7 +1431,7 @@ fn report(args: Report) -> Result<ExitCode> {
         out += &format!("  {kind} ({})\n", subjects.len());
         for subject in subjects.iter().take(3) {
             // Whole-tree findings have subject `.`: name what they are about.
-            let subject = match (kind.as_str(), *subject) {
+            let subject = match (*kind, *subject) {
                 ("seam", ".") => "clusters across folders",
                 ("small-repo", ".") => "the whole source tree",
                 (_, s) => s,

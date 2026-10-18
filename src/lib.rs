@@ -69,14 +69,11 @@ pub fn restore_scan(mut input: model::ScanInput) -> Result<Document> {
         doc.surface = Some(surface::analyze(&doc, threshold)?);
     }
     for saved in input.findings {
-        if let Some(finding) = doc.findings.iter_mut().find(|f| {
-            f.subject == saved.subject
-                && serde_json::to_value(f.kind)
-                    .ok()
-                    .and_then(|v| v.as_str().map(str::to_owned))
-                    .as_deref()
-                    == Some(saved.kind.as_str())
-        }) {
+        if let Some(finding) = doc
+            .findings
+            .iter_mut()
+            .find(|f| f.subject == saved.subject && f.kind.as_str() == saved.kind)
+        {
             finding.age_days = saved.age_days;
             finding.introduced_by = saved.introduced_by;
             finding.provenance = saved.provenance;

@@ -77,9 +77,7 @@ pub(super) fn run(args: HotspotsArgs) -> Result<()> {
                     let finding = &doc.findings[index];
                     println!(
                         "  finding {index}: {} — {}",
-                        serde_json::to_value(finding.kind)?
-                            .as_str()
-                            .unwrap_or("finding"),
+                        finding.kind.as_str(),
                         finding.subject
                     );
                 }

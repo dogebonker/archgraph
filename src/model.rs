@@ -543,8 +543,7 @@ pub struct Link {
 }
 
 /// Declared alphabetically, so the derived `Ord` sorts findings by kind name.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum FindingKind {
     Cycle,
     CycleViaGrabbag,
@@ -556,6 +555,29 @@ pub enum FindingKind {
     SinkSplit,
     SmallRepo,
     UnstableDependency,
+}
+
+impl FindingKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Cycle => "cycle",
+            Self::CycleViaGrabbag => "cycle-via-grabbag",
+            Self::HiddenCoupling => "hidden-coupling",
+            Self::InternalsReach => "internals-reach",
+            Self::MisplacedFile => "misplaced-file",
+            Self::ReexportCycle => "reexport-cycle",
+            Self::Seam => "seam",
+            Self::SinkSplit => "sink-split",
+            Self::SmallRepo => "small-repo",
+            Self::UnstableDependency => "unstable-dependency",
+        }
+    }
+}
+
+impl Serialize for FindingKind {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
+    }
 }
 
 #[derive(Debug, Serialize)]

@@ -40,10 +40,7 @@ impl Target {
             })
         } else {
             Ok(Self::Finding {
-                finding_kind: serde_json::to_value(finding.kind)?
-                    .as_str()
-                    .context("finding kind is not a string")?
-                    .to_owned(),
+                finding_kind: finding.kind.as_str().to_owned(),
                 subject: finding.subject.clone(),
             })
         }
@@ -55,9 +52,7 @@ impl Target {
                 finding_kind,
                 subject,
             } => graph.findings.iter().any(|finding| {
-                finding.subject == *subject
-                    && serde_json::to_value(finding.kind)
-                        .is_ok_and(|kind| kind.as_str() == Some(finding_kind.as_str()))
+                finding.subject == *subject && finding.kind.as_str() == finding_kind
             }),
             Self::Cycle { level, members } => graph.cycles.iter().any(|cycle| {
                 cycle.level == *level && members.iter().all(|member| cycle.members.contains(member))
@@ -83,9 +78,7 @@ impl Target {
                     .map(|file| file.path.clone())
                     .collect();
                 if let Some(finding) = graph.findings.iter().find(|finding| {
-                    finding.subject == *subject
-                        && serde_json::to_value(finding.kind)
-                            .is_ok_and(|kind| kind.as_str() == Some(finding_kind.as_str()))
+                    finding.subject == *subject && finding.kind.as_str() == finding_kind
                 }) {
                     match &finding.evidence {
                         Evidence::SinkSplit { components, .. } => paths.extend(
