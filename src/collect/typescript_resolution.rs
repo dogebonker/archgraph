@@ -82,7 +82,9 @@ pub fn enrich(
             .as_array()
             .cloned()
             .unwrap_or_default();
-        let source = safe_relative(&file).then(|| sources.get(&file)).flatten();
+        let source = super::is_relative_path(&file, false)
+            .then(|| sources.get(&file))
+            .flatten();
         if source.is_none() {
             complete = false;
         }
