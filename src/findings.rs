@@ -2,6 +2,7 @@
 
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::ops::Bound;
 
 use crate::model::{
     Cluster, Component, Document, Edge, EdgeKind, Evidence, Finding, FindingKind, Language, Link,
@@ -77,14 +78,17 @@ struct Graph<'a> {
     owners: Option<&'a crate::codeowners::Compiled>,
     module_of: BTreeMap<&'a str, &'a str>,
     /// Barrel-attributed file pairs.
-    pairs: BTreeSet<(String, String)>,
+    pairs: &'a BTreeSet<(String, String)>,
+    /// `pairs` by importing file and by imported file.
+    outgoing: BTreeMap<&'a str, Vec<&'a (String, String)>>,
+    incoming: BTreeMap<&'a str, Vec<&'a (String, String)>>,
     raw: HashSet<(&'a str, &'a str)>,
     /// Longest common directory of each module's files: where a file moved into it goes.
     dirs: BTreeMap<&'a str, String>,
     /// Modules named by their one file (`main.ts`, `../tool.ts`): files directly in a root.
     root_files: HashSet<&'a str>,
-    /// Files that import at least one other file.
-    importing: HashSet<&'a str>,
+    /// Each importing file's imports.
+    imports: BTreeMap<&'a str, Vec<&'a Edge>>,
     /// Each module's public entries: its barrels and the files a package.json publishes in it.
     entries: BTreeMap<&'a str, BTreeSet<&'a str>>,
     /// Each module's files its entries re-export, directly or through other re-exports.
@@ -99,10 +103,10 @@ struct Graph<'a> {
     /// Imports from composition roots and registrars (`graph::wiring`).
     wiring: BTreeSet<(&'a str, &'a str)>,
     /// `pairs` over runtime imports that are not wiring: who really consumes a file.
-    consuming: BTreeSet<(String, String)>,
+    consuming: &'a BTreeSet<(String, String)>,
 }
 
-impl Graph<'_> {
+impl<'a> Graph<'a> {
     fn via_barrel<'p>(&self, mut used: impl Iterator<Item = &'p (String, String)>) -> bool {
         used.any(|(a, b)| !self.raw.contains(&(a.as_str(), b.as_str())))
     }
@@ -110,7 +114,7 @@ impl Graph<'_> {
     /// The move of `file` into `module`, unless a file of that name is there or the destination
     /// falls in another module (a file directly in the source root is a module of its own).
     fn move_into(&self, file: &str, module: &str) -> Option<Move> {
-        let to = self.path_in(
+        let to = modules::join(
             self.dest_dir(file, module),
             file.rsplit('/').next().unwrap_or(file),
         );
@@ -132,13 +136,13 @@ impl Graph<'_> {
         let mut name = file.rsplit('/').next().unwrap_or(file).to_owned();
         while self
             .module_of
-            .contains_key(self.path_in(dir, &name).as_str())
+            .contains_key(modules::join(dir, &name).as_str())
         {
             name = format!("moved-{name}");
         }
         Move {
             file: file.to_owned(),
-            to: self.path_in(dir, &name),
+            to: modules::join(dir, &name),
         }
     }
 
@@ -147,7 +151,7 @@ impl Graph<'_> {
     /// when that folder does not exist there.
     fn dest_dir(&self, file: &str, module: &str) -> &str {
         let own = self.dirs[self.module_of[file]].as_str();
-        let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
+        let dir = modules::dir_of(file);
         let sub = match own {
             "" => dir,
             _ => dir
@@ -159,15 +163,13 @@ impl Graph<'_> {
         if sub.is_empty() {
             return root;
         }
-        let candidate = self.path_in(root, sub);
+        let candidate = modules::join(root, sub);
         // The folder must hold a file of `module`: under nested modules it may be another one's.
+        let folder = format!("{candidate}/");
         self.module_of
-            .iter()
-            .find(|(p, m)| {
-                **m == module
-                    && p.strip_prefix(candidate.as_str())
-                        .is_some_and(|r| r.starts_with('/'))
-            })
+            .range::<str, _>((Bound::Included(folder.as_str()), Bound::Unbounded))
+            .take_while(|(p, _)| p.starts_with(&folder))
+            .find(|(_, m)| **m == module)
             .map_or(root, |(p, _)| &p[..candidate.len()])
     }
 
@@ -189,13 +191,6 @@ impl Graph<'_> {
         go_module(file, &self.doc.source.collector.go_modules)
             != go_module(to, &self.doc.source.collector.go_modules)
     }
-
-    fn path_in(&self, dir: &str, name: &str) -> String {
-        match dir {
-            "" => name.to_owned(),
-            dir => format!("{dir}/{name}"),
-        }
-    }
 }
 
 pub fn find(
@@ -216,7 +211,7 @@ pub fn find(
         .collect();
     let mut dirs: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     for f in &doc.files {
-        let dir = f.path.rsplit_once('/').map_or("", |(d, _)| d);
+        let dir = modules::dir_of(&f.path);
         let common = dirs
             .entry(&f.module)
             .or_insert_with(|| dir.split('/').collect());
@@ -283,17 +278,29 @@ pub fn find(
         Language::Rust | Language::Java | Language::Elixir => Default::default(),
     };
     let wiring = graph::wiring(|p| module_of[p], &doc.edges);
-    let consumed: Vec<Edge> = doc
+    let consumed = doc
         .edges
         .iter()
-        .filter(|e| e.kind.is_runtime() && !wiring.contains(&(e.from.as_str(), e.to.as_str())))
-        .cloned()
-        .collect();
+        .filter(|e| e.kind.is_runtime() && !wiring.contains(&(e.from.as_str(), e.to.as_str())));
+    let consuming = modules::attribute(consumed, &barrels);
+    let pairs = modules::attribute(&doc.edges, &barrels);
+    let (mut outgoing, mut incoming): (BTreeMap<&str, Vec<_>>, BTreeMap<&str, Vec<_>>) =
+        Default::default();
+    for pair in &pairs {
+        outgoing.entry(pair.0.as_str()).or_default().push(pair);
+        incoming.entry(pair.1.as_str()).or_default().push(pair);
+    }
+    let mut imports: BTreeMap<&str, Vec<&Edge>> = BTreeMap::new();
+    for e in &doc.edges {
+        imports.entry(&e.from).or_default().push(e);
+    }
     let g = Graph {
         owners,
         doc,
         rules,
-        pairs: modules::attribute(&doc.edges, &barrels),
+        pairs: &pairs,
+        outgoing,
+        incoming,
         raw: doc
             .edges
             .iter()
@@ -306,11 +313,11 @@ pub fn find(
             .filter(|f| f.module.rsplit('/').next() == f.path.rsplit('/').next())
             .map(|f| f.module.as_str())
             .collect(),
-        importing: doc.edges.iter().map(|e| e.from.as_str()).collect(),
+        imports,
         entries,
         offered,
         public,
-        consuming: modules::attribute(&consumed, &barrels),
+        consuming: &consuming,
         bound: doc
             .source
             .collector
@@ -357,19 +364,13 @@ pub fn find(
                 || matches!(e.kind, EdgeKind::Reexport | EdgeKind::TypeReexport)
                     && e.confidence != Some(crate::model::Confidence::Low)
         })
-        .map(|e| {
-            (
-                e.from.as_str(),
-                e.original_to.as_deref().unwrap_or(&e.to),
-                e,
-            )
-        })
+        .map(|e| (e.from.as_str(), e.original_to.as_deref().unwrap_or(&e.to)))
         .collect();
-    for members in crate::quality::components(&reexports) {
+    for members in graph::components(&reexports) {
         let edges = reexports
             .iter()
-            .filter(|(a, b, _)| members.contains(a) && members.contains(b))
-            .map(|(from, to, _)| crate::model::Link {
+            .filter(|(a, b)| members.contains(a) && members.contains(b))
+            .map(|(from, to)| crate::model::Link {
                 from: (*from).into(),
                 to: (*to).into(),
             })
@@ -430,10 +431,11 @@ fn sink_split(g: &Graph, out: &mut Vec<Finding>) {
         // the sink's entry or index of it: both register the sink rather than use its files.
         let registers = |file: &str| {
             g.fanout.get(file).copied().unwrap_or(0) >= graph::ROOT_MIN_MODULES
-                && g.doc
-                    .edges
-                    .iter()
-                    .filter(|e| e.from == file && g.module_of[e.to.as_str()] == sink)
+                && g.imports
+                    .get(file)
+                    .into_iter()
+                    .flatten()
+                    .filter(|e| g.module_of[e.to.as_str()] == sink)
                     .all(|e| g.is_entry_or_index(sink, &e.to))
         };
         let into: Vec<&(String, String)> = g
@@ -592,8 +594,12 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
             continue;
         }
         let (path, module) = (file.path.as_str(), file.module.as_str());
+        let (outgoing, incoming) = (
+            g.outgoing.get(path).map_or(&[][..], Vec::as_slice),
+            g.incoming.get(path).map_or(&[][..], Vec::as_slice),
+        );
         let mut imports_from: BTreeMap<&str, Vec<&(String, String)>> = BTreeMap::new();
-        for pair in g.pairs.iter().filter(|(_, b)| b == path) {
+        for &pair in incoming {
             let from = g.module_of[pair.0.as_str()];
             if from != module {
                 imports_from.entry(from).or_default().push(pair);
@@ -602,14 +608,14 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
         if imports_from.len() > MISPLACED_MAX_IMPORTER_MODULES {
             continue;
         }
-        let own = g
-            .pairs
+        let own = outgoing
             .iter()
-            .filter(|(a, b)| {
-                (a == path && g.module_of[b.as_str()] == module)
-                    || (b == path && g.module_of[a.as_str()] == module)
-            })
-            .count();
+            .filter(|(_, b)| g.module_of[b.as_str()] == module)
+            .count()
+            + incoming
+                .iter()
+                .filter(|(a, _)| g.module_of[a.as_str()] == module)
+                .count();
         let Some((&target, used)) = imports_from
             .iter()
             .filter(|(_, used)| {
@@ -623,21 +629,19 @@ fn misplaced_file(g: &Graph, out: &mut Vec<Finding>) {
         // whoever uses it now: it is misplaced only when it uses the target itself or nothing
         // of its own package.
         if g.doc.source.language == Language::Go {
-            let dir = |p: &str| p.rsplit_once('/').map_or("", |(d, _)| d).to_owned();
-            let uses_target = g
-                .pairs
+            let dir = modules::dir_of(path);
+            let uses_target = outgoing
                 .iter()
-                .any(|(a, b)| a == path && g.module_of[b.as_str()] == target);
-            let in_package = g.pairs.iter().any(|(a, b)| {
-                (a == path && dir(b) == dir(path)) || (b == path && dir(a) == dir(path))
-            });
+                .any(|(_, b)| g.module_of[b.as_str()] == target);
+            let in_package = outgoing.iter().any(|(_, b)| modules::dir_of(b) == dir)
+                || incoming.iter().any(|(a, _)| modules::dir_of(a) == dir);
             if !uses_target && in_package {
                 continue;
             }
         }
         // Between a module and its own subfolder the move only changes the folder's depth.
         // A leaf utility (it imports nothing) belongs with the shared helpers, whoever uses it.
-        let leaf_utility = !g.importing.contains(path)
+        let leaf_utility = !g.imports.contains_key(path)
             && LEAF_UTILITY_FOLDERS.split_whitespace().any(|f| {
                 module
                     .rsplit('/')
@@ -893,7 +897,7 @@ fn internals_reach(g: &Graph, out: &mut Vec<Finding>) {
                 if share < BARREL_MIN_SHARE - EPSILON {
                     continue;
                 }
-                (module.to_owned(), b, Some(round(share)))
+                (module.to_owned(), b, Some(crate::quality::round4(share)))
             }
             _ => continue,
         };
@@ -1018,7 +1022,7 @@ fn seam(g: &Graph, out: &mut Vec<Finding>) {
         .iter()
         .map(|f| (f.path.as_str(), BTreeSet::new()))
         .collect();
-    for (a, b) in &g.pairs {
+    for (a, b) in g.pairs {
         neighbours.get_mut(a.as_str()).unwrap().insert(b);
         neighbours.get_mut(b.as_str()).unwrap().insert(a);
     }
@@ -1153,17 +1157,13 @@ fn seam(g: &Graph, out: &mut Vec<Finding>) {
         FindingKind::Seam,
         ".".into(),
         Evidence::Seam {
-            modularity: round(clustered),
-            folder_modularity: round(folders),
+            modularity: crate::quality::round4(clustered),
+            folder_modularity: crate::quality::round4(folders),
             clusters,
             hubs: hubs.iter().map(|h| h.to_string()).collect(),
             via_barrel: g.via_barrel(used),
         },
     ));
-}
-
-fn round(x: f64) -> f64 {
-    (x * 10_000.0).round() / 10_000.0
 }
 
 /// Gives each registrar move of `doc`'s cycles a destination, simulated: a new folder named
@@ -1213,16 +1213,8 @@ pub fn place_registrars(
             let stem = name.split('.').next().unwrap_or(name);
             let folder = kebab(stem);
             let mut candidates: Vec<String> = Vec::new();
-            let join = |d: &str, rest: &str| {
-                if d.is_empty() {
-                    rest.to_owned()
-                } else {
-                    format!("{d}/{rest}")
-                }
-            };
-            let parent = dir.rsplit_once('/').map_or("", |(p, _)| p);
-            for base in [dir, parent] {
-                let to = join(base, &format!("{folder}/{name}"));
+            for base in [dir, modules::dir_of(dir)] {
+                let to = modules::join(base, &format!("{folder}/{name}"));
                 let lands = module_of(&to);
                 if lands != r.module
                     && !modules.contains(lands.as_str())
@@ -1240,7 +1232,7 @@ pub fn place_registrars(
                 .map(|e| e.from.as_str())
                 .collect();
             if let [only] = importers.into_iter().collect::<Vec<_>>().as_slice() {
-                let to = join(only.rsplit_once('/').map_or("", |(d, _)| d), name);
+                let to = modules::join(modules::dir_of(only), name);
                 if module_of(&to) != r.module
                     && !exists.contains(to.as_str())
                     && !other_module(&r.file, &to)

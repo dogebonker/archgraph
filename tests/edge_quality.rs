@@ -144,9 +144,9 @@ fn weighted_metrics_use_strongest_pair_and_neighbour_and_preserve_counts() {
         edge("b/one", "c/one", EdgeKind::Dynamic, 0.3),
         edge("a/one", "a/two", EdgeKind::Type, 0.1),
     ];
-    let pairs = archgraph::modules::attribute(&edges, &BTreeSet::new());
-    let mut report = graph::modules(&modules, &pairs);
-    quality::metrics(&mut report, &modules, &edges, &BTreeSet::new());
+    let pairs = archgraph::modules::weighted(&edges, &BTreeSet::new());
+    let mut report = graph::modules(&modules, pairs.keys());
+    quality::metrics(&mut report, &modules, &pairs);
     let a = &report[0];
     assert_eq!(
         (a.ca, a.ce, a.internal_edges, a.outgoing_edges),
@@ -175,8 +175,9 @@ fn barrel_wiring_inherits_consumers_weight_through_chains() {
         edge("api/nested", "api/real", EdgeKind::Reexport, 0.0),
     ];
     let barrels = BTreeSet::from(["api/index".into(), "api/nested".into()]);
-    let mut report = graph::modules(&modules, &archgraph::modules::attribute(&edges, &barrels));
-    quality::metrics(&mut report, &modules, &edges, &barrels);
+    let pairs = archgraph::modules::weighted(&edges, &barrels);
+    let mut report = graph::modules(&modules, pairs.keys());
+    quality::metrics(&mut report, &modules, &pairs);
     assert_eq!(
         report
             .iter()

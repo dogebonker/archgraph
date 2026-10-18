@@ -27,10 +27,11 @@ const EVEN_MAX_IMPORTS: usize = 2;
 const REGISTRAR_MOVE_MIN_PAIRS: usize = 3;
 const EVEN_MAX_RATIO: usize = 2;
 
-/// Ca, Ce, instability and cohesion from barrel-attributed file pairs.
-pub fn modules(
+/// Ca, Ce and edge counts from barrel-attributed file pairs; `quality::metrics` adds the
+/// weighted fields, instability and cohesion.
+pub fn modules<'a>(
     module_of: &BTreeMap<String, String>,
-    pairs: &BTreeSet<(String, String)>,
+    pairs: impl IntoIterator<Item = &'a (String, String)>,
 ) -> Vec<Module> {
     #[derive(Default)]
     struct Acc<'a> {
@@ -64,27 +65,26 @@ pub fn modules(
             files: a.files,
             ca: a.ca.len(),
             ce: a.ce.len(),
-            instability: ratio(a.ce.len(), a.ca.len() + a.ce.len()),
+            instability: None,
             internal_edges: a.internal,
             outgoing_edges: a.outgoing,
-            cohesion: ratio(a.internal, a.internal + a.outgoing),
+            cohesion: None,
             outgoing_to: a.outgoing_to,
-            weighted_ca: a.ca.len() as f64,
-            weighted_ce: a.ce.len() as f64,
-            weighted_internal_edges: a.internal as f64,
-            weighted_outgoing_edges: a.outgoing as f64,
+            weighted_ca: 0.0,
+            weighted_ce: 0.0,
+            weighted_internal_edges: 0.0,
+            weighted_outgoing_edges: 0.0,
             weighted_outgoing_to: BTreeMap::new(),
             ownership: None,
         })
         .collect()
 }
 
-fn ratio(part: usize, whole: usize) -> Option<f64> {
-    (whole > 0).then(|| (part as f64 / whole as f64 * 10_000.0).round() / 10_000.0)
-}
-
 /// Cross-module import and forbidden-import counts from the raw file edges.
-pub fn module_edges(module_of: &BTreeMap<String, String>, edges: &[Edge]) -> Vec<ModuleEdge> {
+pub fn module_edges<'a>(
+    module_of: &BTreeMap<String, String>,
+    edges: impl IntoIterator<Item = &'a Edge>,
+) -> Vec<ModuleEdge> {
     let mut counts: BTreeMap<(&str, &str), (usize, usize)> = BTreeMap::new();
     for e in edges {
         let (mf, mt) = (module_of[&e.from].as_str(), module_of[&e.to].as_str());
@@ -113,22 +113,19 @@ pub fn module_edges(module_of: &BTreeMap<String, String>, edges: &[Edge]) -> Vec
 /// last. A re-export by another of the `barrels` is internal: the side to cut first. With
 /// `directory_units` (Go, where a directory's files are one package, compiled as a unit) files of
 /// one directory form no file cycle with each other.
-pub fn cycles(
+pub fn cycles<'a>(
     module_of: &BTreeMap<String, String>,
-    edges: &[Edge],
+    edges: impl IntoIterator<Item = &'a Edge>,
     entries: &BTreeSet<String>,
     barrels: &BTreeSet<String>,
     directory_units: bool,
 ) -> Vec<Cycle> {
-    let wiring = wiring(|p| module_of[p].as_str(), edges);
+    let all: Vec<&Edge> = edges.into_iter().collect();
+    let wiring = wiring(|p| module_of[p].as_str(), all.iter().copied());
     // A file nobody imports is an entry point build config names, and an index is its module's
     // entry: neither is a move to propose.
-    let imported: BTreeSet<&str> = edges.iter().map(|e| e.to.as_str()).collect();
-    let edges: Vec<Edge> = edges
-        .iter()
-        .filter(|e| e.kind.is_runtime())
-        .cloned()
-        .collect();
+    let imported: BTreeSet<&str> = all.iter().map(|e| e.to.as_str()).collect();
+    let edges: Vec<&Edge> = all.into_iter().filter(|e| e.kind.is_runtime()).collect();
     let edges = edges.as_slice();
     let public = |e: &Edge| {
         entries.contains(&e.from)
@@ -140,7 +137,7 @@ pub fn cycles(
     };
     // Heavier than every cuttable import together.
     let keep = edges.len() + 1;
-    let module_edges = module_edges(module_of, edges);
+    let module_edges = module_edges(module_of, edges.iter().copied());
     let mut by_side: BTreeMap<(&str, &str), Vec<&Edge>> = BTreeMap::new();
     for e in edges {
         let key = (module_of[&e.from].as_str(), module_of[&e.to].as_str());
@@ -208,7 +205,7 @@ pub fn cycles(
                 files.into_iter().collect::<Vec<_>>().as_slice(),
                 sides[&back],
             ) && imported.contains(file)
-                && !is_index(file)
+                && !crate::modules::is_index(file.rsplit('/').next().unwrap_or(file))
             {
                 by_registrar.entry(file).or_default().push(p.from.clone());
             }
@@ -240,9 +237,7 @@ pub fn cycles(
         });
     }
 
-    fn dir(p: &str) -> &str {
-        p.rsplit_once('/').map_or("", |(d, _)| d)
-    }
+    let dir = crate::modules::dir_of;
     let weighted: Vec<_> = edges
         .iter()
         .filter(|e| e.from != e.to && module_of[&e.from] == module_of[&e.to])
@@ -277,12 +272,6 @@ pub fn cycles(
     cycles
 }
 
-/// A module's index (`index.ts`, `__init__.py`): its entry, which moves only with the module.
-fn is_index(file: &str) -> bool {
-    let name = file.rsplit('/').next().unwrap_or(file);
-    name == "__init__.py" || crate::modules::TS_INDEX.contains(&name)
-}
-
 /// What cutting one direction of a module pair would cut.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Side {
@@ -303,11 +292,11 @@ enum Side {
 /// (code picking one of many drivers).
 pub fn wiring<'a, 'm>(
     module_of: impl Fn(&str) -> &'m str,
-    edges: &'a [Edge],
+    edges: impl IntoIterator<Item = &'a Edge> + Clone,
 ) -> BTreeSet<(&'a str, &'a str)> {
-    let imported: BTreeSet<&str> = edges.iter().map(|e| e.to.as_str()).collect();
+    let imported: BTreeSet<&str> = edges.clone().into_iter().map(|e| e.to.as_str()).collect();
     let mut into: BTreeMap<&str, BTreeMap<&str, usize>> = BTreeMap::new();
-    for e in edges.iter().filter(|e| e.kind.is_runtime()) {
+    for e in edges.clone().into_iter().filter(|e| e.kind.is_runtime()) {
         let (mf, mt) = (module_of(&e.from), module_of(&e.to));
         if mf != mt {
             *into.entry(&e.from).or_default().entry(mt).or_default() += 1;
@@ -335,7 +324,7 @@ pub fn wiring<'a, 'm>(
         })
         .collect();
     edges
-        .iter()
+        .into_iter()
         .filter(|e| {
             let Some(counts) = into.get(e.from.as_str()) else {
                 return false;
@@ -356,7 +345,7 @@ pub fn wiring<'a, 'm>(
 /// first, then even, registry and entry pairs, each by imports, then names.
 fn two_way(
     module_of: &BTreeMap<String, String>,
-    edges: &[Edge],
+    edges: &[&Edge],
     imports: &BTreeMap<(&str, &str), usize>,
     sides: &BTreeMap<(&str, &str), Side>,
     members: &[&str],
@@ -433,46 +422,95 @@ fn owned(names: &[&str]) -> Vec<String> {
 
 /// Every SCC with two or more nodes, as (sorted members, indices into `edges` to remove, exact).
 fn cyclic_parts<'a>(edges: &[(&'a str, &'a str, usize)]) -> Vec<(Vec<&'a str>, Vec<usize>, bool)> {
-    let nodes: Vec<&str> = edges
-        .iter()
-        .flat_map(|e| [e.0, e.1])
-        .collect::<BTreeSet<_>>()
-        .into_iter()
-        .collect();
-    let index: BTreeMap<&str, usize> = nodes.iter().enumerate().map(|(i, n)| (*n, i)).collect();
-    let mut adjacency = vec![Vec::new(); nodes.len()];
-    for e in edges {
-        adjacency[index[e.0]].push(index[e.1]);
-    }
+    let pairs: Vec<_> = edges.iter().map(|e| (e.0, e.1)).collect();
     let mut parts = Vec::new();
-    for mut component in sccs(&adjacency).into_iter().filter(|c| c.len() >= 2) {
-        component.sort();
-        let members: Vec<&str> = component.iter().map(|&g| nodes[g]).collect();
-        let local: BTreeMap<usize, usize> =
-            component.iter().enumerate().map(|(l, &g)| (g, l)).collect();
+    for members in components(&pairs).into_iter().filter(|c| c.len() >= 2) {
+        let local: BTreeMap<&str, usize> =
+            members.iter().enumerate().map(|(l, &m)| (m, l)).collect();
         let inside: Vec<usize> = (0..edges.len())
-            .filter(|&i| {
-                local.contains_key(&index[edges[i].0]) && local.contains_key(&index[edges[i].1])
-            })
+            .filter(|&i| local.contains_key(edges[i].0) && local.contains_key(edges[i].1))
             .collect();
         let local_edges: Vec<_> = inside
             .iter()
-            .map(|&i| {
-                (
-                    local[&index[edges[i].0]],
-                    local[&index[edges[i].1]],
-                    edges[i].2,
-                )
-            })
+            .map(|&i| (local[edges[i].0], local[edges[i].1], edges[i].2))
             .collect();
-        let (removed, exact) = break_set(component.len(), &local_edges);
+        let (removed, exact) = break_set(members.len(), &local_edges);
         parts.push((
-            members,
+            members.into_iter().collect(),
             removed.into_iter().map(|k| inside[k]).collect(),
             exact,
         ));
     }
     parts
+}
+
+/// The SCCs over named nodes that hold a cycle: two or more nodes, or one importing itself.
+pub(crate) fn components<'a>(pairs: &[(&'a str, &'a str)]) -> Vec<BTreeSet<&'a str>> {
+    let names: Vec<&str> = pairs
+        .iter()
+        .flat_map(|&(from, to)| [from, to])
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    let index: BTreeMap<&str, usize> = names.iter().enumerate().map(|(i, &n)| (n, i)).collect();
+    let mut adjacency = vec![Vec::new(); names.len()];
+    for (from, to) in pairs {
+        adjacency[index[from]].push(index[to]);
+    }
+    sccs(&adjacency)
+        .into_iter()
+        .filter(|component| {
+            component.len() > 1
+                || component
+                    .first()
+                    .is_some_and(|&i| pairs.contains(&(names[i], names[i])))
+        })
+        .map(|component| component.into_iter().map(|i| names[i]).collect())
+        .collect()
+}
+
+/// The condensation of `adjacency`: its SCCs, each node's SCC, and the acyclic graph between
+/// SCCs.
+pub(crate) fn condense(
+    adjacency: &[Vec<usize>],
+) -> (Vec<Vec<usize>>, Vec<usize>, Vec<BTreeSet<usize>>) {
+    let components = sccs(adjacency);
+    let mut component_of = vec![0; adjacency.len()];
+    for (i, component) in components.iter().enumerate() {
+        for &node in component {
+            component_of[node] = i;
+        }
+    }
+    let mut dag = vec![BTreeSet::new(); components.len()];
+    for (from, targets) in adjacency.iter().enumerate() {
+        for &to in targets {
+            let (from, to) = (component_of[from], component_of[to]);
+            if from != to {
+                dag[from].insert(to);
+            }
+        }
+    }
+    (components, component_of, dag)
+}
+
+/// Each node's longest path from a node with no incoming edge in the acyclic `dag`.
+pub(crate) fn depths(dag: &[BTreeSet<usize>]) -> Vec<usize> {
+    let mut indegree = vec![0; dag.len()];
+    for &to in dag.iter().flatten() {
+        indegree[to] += 1;
+    }
+    let mut ready: Vec<usize> = (0..dag.len()).filter(|&v| indegree[v] == 0).collect();
+    let mut depth = vec![0; dag.len()];
+    while let Some(from) = ready.pop() {
+        for &to in &dag[from] {
+            depth[to] = depth[to].max(depth[from] + 1);
+            indegree[to] -= 1;
+            if indegree[to] == 0 {
+                ready.push(to);
+            }
+        }
+    }
+    depth
 }
 
 /// Tarjan's algorithm with an explicit call stack, so import chains of any depth fit.

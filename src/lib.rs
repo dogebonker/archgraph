@@ -246,10 +246,7 @@ pub fn build(
     });
     let tests: BTreeSet<_> = files
         .iter()
-        .filter(|path| {
-            config.file_metadata.get(*path).is_some_and(|m| m.test)
-                || collect::excludes::is_test(path)
-        })
+        .filter(|path| modules::is_test(path, &config))
         .cloned()
         .collect();
     let module_of: BTreeMap<String, String> = files
@@ -312,38 +309,22 @@ pub fn build(
         })
         .cloned()
         .collect();
-    let pairs = modules::attribute(&edges, &barrels);
-    // Public entries for cycle cuts: what a package.json publishes and the source root's index
-    // (`index.ts`, a Python package's `__init__.py`). Other barrels are internal.
-    let root_index = |f: &str| {
-        let name = match config.source_root.as_str() {
-            "." => Some(f),
-            root => f.strip_prefix(root).and_then(|r| r.strip_prefix('/')),
-        };
-        name.is_some_and(|n| n == "__init__.py" || modules::TS_INDEX.contains(&n))
-    };
-    let entries: BTreeSet<String> = module_of
-        .keys()
-        .filter(|f| root_index(f))
-        .chain(&package_entries)
-        .cloned()
-        .collect();
+    let pairs = modules::weighted(&edges, &barrels);
+    let entries = modules::cycle_entries(module_of.keys(), &config.source_root, &package_entries);
     let module_edges = graph::module_edges(&module_of, &edges);
-    let production_edges: Vec<_> = edges
+    let production_edges = edges
         .iter()
-        .filter(|e| !tests.contains(&e.from) && !tests.contains(&e.to))
-        .cloned()
-        .collect();
+        .filter(|e| !tests.contains(&e.from) && !tests.contains(&e.to));
     let (cycles, type_only_cycles) = quality::cycles(
         &module_of,
-        &production_edges,
+        production_edges,
         &entries,
         &barrels,
         source.language == model::Language::Go,
         config.all_kinds,
     );
-    let mut metrics = graph::modules(&module_of, &pairs);
-    quality::metrics(&mut metrics, &module_of, &edges, &barrels);
+    let mut metrics = graph::modules(&module_of, pairs.keys());
+    quality::metrics(&mut metrics, &module_of, &pairs);
     for module in &mut metrics {
         if !config.legacy_module_classes
             && module_of

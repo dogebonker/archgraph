@@ -67,7 +67,7 @@ fn included_tests_never_close_cycles_and_report_direct_import_coverage() {
             assert_eq!(file.class, None);
             assert_eq!(
                 file.module,
-                archgraph::modules::module_of(&file.path, &legacy_input.config, language)
+                archgraph::modules::assigned(&file.path, &legacy_input.config, language, None)
             );
         }
         let migrated = archgraph::restore_scan(legacy_input).unwrap();

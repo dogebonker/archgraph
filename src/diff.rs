@@ -170,7 +170,8 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
     out
 }
 
-fn count(n: usize, noun: &str) -> String {
+/// `n` and `noun`, plural unless `n` is 1.
+pub fn count(n: usize, noun: &str) -> String {
     format!("{n} {noun}{}", if n == 1 { "" } else { "s" })
 }
 

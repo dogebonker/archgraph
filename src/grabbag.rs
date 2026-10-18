@@ -115,13 +115,7 @@ pub fn classify(doc: &mut Document) {
         .files
         .iter()
         .filter(|f| {
-            f.class == Some(ModuleClass::Tests)
-                || crate::collect::excludes::is_test(&f.path)
-                || doc
-                    .config
-                    .file_metadata
-                    .get(&f.path)
-                    .is_some_and(|metadata| metadata.test)
+            f.class == Some(ModuleClass::Tests) || crate::modules::is_test(&f.path, &doc.config)
         })
         .map(|f| f.path.as_str())
         .collect();
@@ -131,22 +125,11 @@ pub fn classify(doc: &mut Document) {
         .filter(|f| f.barrel)
         .map(|f| f.path.clone())
         .collect();
-    let root_index = |f: &str| {
-        let name = if doc.config.source_root == "." {
-            Some(f)
-        } else {
-            f.strip_prefix(&doc.config.source_root)
-                .and_then(|p| p.strip_prefix('/'))
-        };
-        name.is_some_and(|n| n == "__init__.py" || crate::modules::TS_INDEX.contains(&n))
-    };
-    let entries = doc
-        .files
-        .iter()
-        .filter(|f| root_index(&f.path))
-        .map(|f| f.path.clone())
-        .chain(doc.package_entries.iter().cloned())
-        .collect();
+    let entries = crate::modules::cycle_entries(
+        doc.files.iter().map(|f| &f.path),
+        &doc.config.source_root,
+        &doc.package_entries,
+    );
     let directory_units = doc.source.language == crate::model::Language::Go;
     let mut cycles = Vec::new();
     for original in std::mem::take(&mut doc.cycles) {
@@ -170,7 +153,6 @@ pub fn classify(doc: &mut Document) {
                     && members.contains(&module_of[&e.from])
                     && members.contains(&module_of[&e.to])
             })
-            .cloned()
             .collect();
         let split: BTreeMap<_, _> = module_of
             .iter()
@@ -186,33 +168,24 @@ pub fn classify(doc: &mut Document) {
                 )
             })
             .collect();
-        let (split_cycles, _) = crate::quality::cycles(
-            &split,
-            &edges,
-            &entries,
-            &barrels,
-            directory_units,
-            doc.config.all_kinds,
-        );
-        let split_components: Vec<BTreeSet<_>> = split_cycles
+        let split_pairs: Vec<_> = edges
             .iter()
-            .filter(|c| c.level == CycleLevel::Module)
-            .map(|c| c.members.iter().collect())
+            .filter(|e| doc.config.all_kinds || e.kind.is_runtime())
+            .map(|e| (split[&e.from].as_str(), split[&e.to].as_str()))
+            .filter(|(from, to)| from != to)
             .collect();
-        let witnesses: Vec<_> = edges
-            .iter()
-            .filter(|e| {
-                (doc.config.all_kinds || e.kind.is_runtime())
-                    && split_components.iter().any(|members| {
-                        members.contains(&split[&e.from]) && members.contains(&split[&e.to])
-                    })
-            })
-            .cloned()
-            .collect();
+        let split_components = crate::graph::components(&split_pairs);
+        let witnesses = edges.iter().copied().filter(|e| {
+            (doc.config.all_kinds || e.kind.is_runtime())
+                && split_components.iter().any(|members| {
+                    members.contains(split[&e.from].as_str())
+                        && members.contains(split[&e.to].as_str())
+                })
+        });
         // Recompute cuts using real module IDs and only edges proven to belong to a split SCC.
         let (remaining, _) = crate::quality::cycles(
             &module_of,
-            &witnesses,
+            witnesses,
             &entries,
             &barrels,
             directory_units,
@@ -263,15 +236,13 @@ pub fn classify(doc: &mut Document) {
     let verified_runtime = if doc.config.all_kinds {
         let selected_cycles = std::mem::take(&mut doc.cycles);
         let selected_grabbags = std::mem::take(&mut doc.grabbags);
-        let production_edges: Vec<_> = doc
+        let production_edges = doc
             .edges
             .iter()
-            .filter(|e| !tests.contains(e.from.as_str()) && !tests.contains(e.to.as_str()))
-            .cloned()
-            .collect();
+            .filter(|e| !tests.contains(e.from.as_str()) && !tests.contains(e.to.as_str()));
         doc.cycles = crate::quality::cycles(
             &module_of,
-            &production_edges,
+            production_edges,
             &entries,
             &barrels,
             directory_units,

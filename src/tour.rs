@@ -1,10 +1,11 @@
 //! Reading order over the semantic module graph; source bodies are never opened.
 use std::cmp::Reverse;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
 
 use anyhow::Result;
 
+use crate::diff::count;
 use crate::model::{ModuleClass, ScanInput};
 
 #[derive(Default)]
@@ -18,10 +19,6 @@ fn code(text: &str) -> String {
     let width = text.split(|ch| ch != '`').map(str::len).max().unwrap_or(0) + 1;
     let fence = "`".repeat(width);
     format!("{fence} {text} {fence}")
-}
-
-fn module_count(n: usize) -> String {
-    format!("{n} module{}", if n == 1 { "" } else { "s" })
 }
 
 pub fn markdown(input: &ScanInput, options: &Options) -> Result<String> {
@@ -61,47 +58,29 @@ pub fn markdown(input: &ScanInput, options: &Options) -> Result<String> {
         .iter()
         .map(|links| links.iter().copied().collect())
         .collect();
-    let mut components = crate::graph::sccs(&adjacency);
+    let (mut components, component_of, dependencies) = crate::graph::condense(&adjacency);
     for component in &mut components {
         component.sort_by_key(|&module| (outbound[module].len(), names[module]));
     }
-    let mut component_of = vec![0; names.len()];
-    for (id, component) in components.iter().enumerate() {
-        for &module in component {
-            component_of[module] = id;
+    let mut importers = vec![BTreeSet::new(); components.len()];
+    for (source, targets) in dependencies.iter().enumerate() {
+        for &target in targets {
+            importers[target].insert(source);
         }
     }
-    let mut dependencies = vec![BTreeSet::new(); components.len()];
-    let mut importers = dependencies.clone();
     let mut fan_in = vec![BTreeSet::new(); components.len()];
     let mut fan_out = fan_in.clone();
     for (from, links) in outbound.iter().enumerate() {
         for &to in links {
             let (source, target) = (component_of[from], component_of[to]);
             if source != target {
-                dependencies[source].insert(target);
-                importers[target].insert(source);
                 fan_in[target].insert(from);
                 fan_out[source].insert(to);
             }
         }
     }
-    let mut remaining: Vec<_> = dependencies.iter().map(BTreeSet::len).collect();
-    let mut ready: VecDeque<_> = remaining
-        .iter()
-        .enumerate()
-        .filter_map(|(i, &n)| (n == 0).then_some(i))
-        .collect();
-    let mut depths = vec![0; components.len()];
-    while let Some(to) = ready.pop_front() {
-        for &from in &importers[to] {
-            depths[from] = depths[from].max(depths[to] + 1);
-            remaining[from] -= 1;
-            if remaining[from] == 0 {
-                ready.push_back(from);
-            }
-        }
-    }
+    // Leaves first: a component's depth is its longest chain of dependencies.
+    let depths = crate::graph::depths(&importers);
     let mut layers: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
     for (id, &depth) in depths.iter().enumerate() {
         layers.entry(depth).or_default().push(id);
@@ -188,12 +167,12 @@ pub fn markdown(input: &ScanInput, options: &Options) -> Result<String> {
             let reason = if fan_out[id].is_empty() {
                 "imports nothing".into()
             } else {
-                format!("imports {}", module_count(fan_out[id].len()))
+                format!("imports {}", count(fan_out[id].len(), "module"))
             };
             let _ = writeln!(
                 out,
                 "{indent}Why here: imported by {}, {reason} outside this stop.",
-                module_count(fan_in[id].len())
+                count(fan_in[id].len(), "module")
             );
             if component.len() > 1 {
                 let first = component[0];
@@ -202,7 +181,7 @@ pub fn markdown(input: &ScanInput, options: &Options) -> Result<String> {
                     "{indent}Cycle: these {} modules read together; start at {} (lowest outbound: {}, including cycle peers).",
                     component.len(),
                     code(names[first]),
-                    module_count(outbound[first].len())
+                    count(outbound[first].len(), "module")
                 );
             }
             if options.agent {

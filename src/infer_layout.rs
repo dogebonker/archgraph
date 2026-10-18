@@ -148,36 +148,8 @@ pub fn infer(input: &ScanInput, options: Options) -> Result<String> {
     for &(from, to) in links.keys() {
         adjacency[from].push(to);
     }
-    let components = crate::graph::sccs(&adjacency);
-    let mut component_of = vec![0; names.len()];
-    for (i, component) in components.iter().enumerate() {
-        for &module in component {
-            component_of[module] = i;
-        }
-    }
-    let mut dag = vec![BTreeSet::new(); components.len()];
-    let mut indegree = vec![0; components.len()];
-    for &(from, to) in links.keys() {
-        let (from, to) = (component_of[from], component_of[to]);
-        if from != to && dag[from].insert(to) {
-            indegree[to] += 1;
-        }
-    }
-    let mut ready: BTreeSet<usize> = indegree
-        .iter()
-        .enumerate()
-        .filter_map(|(i, &n)| (n == 0).then_some(i))
-        .collect();
-    let mut depth = vec![0; components.len()];
-    while let Some(from) = ready.pop_first() {
-        for &to in &dag[from] {
-            depth[to] = depth[to].max(depth[from] + 1);
-            indegree[to] -= 1;
-            if indegree[to] == 0 {
-                ready.insert(to);
-            }
-        }
-    }
+    let (components, component_of, dag) = crate::graph::condense(&adjacency);
+    let depth = crate::graph::depths(&dag);
     let cyclic: BTreeSet<usize> = components
         .iter()
         .filter(|c| c.len() > 1)

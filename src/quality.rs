@@ -5,42 +5,17 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::graph;
 use crate::model::{Cycle, CycleLevel, DeferredCycle, Edge, EdgeKind, Module};
 
-/// Preserve raw import counts while weighting actual dependencies rather than barrel wiring.
+/// Preserve raw import counts while weighting actual dependencies rather than barrel wiring:
+/// `pairs` are `modules::weighted`'s.
 pub fn metrics(
     modules: &mut [Module],
     module_of: &BTreeMap<String, String>,
-    edges: &[Edge],
-    barrels: &BTreeSet<String>,
+    pairs: &BTreeMap<(String, String), f64>,
 ) {
-    let mut targets: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
-    for edge in edges.iter().filter(|e| barrels.contains(&e.from)) {
-        targets.entry(&edge.from).or_default().push(&edge.to);
-    }
-    let mut pairs: BTreeMap<(&str, &str), f64> = BTreeMap::new();
-    for edge in edges.iter().filter(|e| !barrels.contains(&e.from)) {
-        let weight = edge
-            .weight
-            .unwrap_or_else(|| crate::rules::EdgeWeights::default().weight(edge.kind));
-        let mut stack = vec![edge.to.as_str()];
-        let mut seen = BTreeSet::new();
-        while let Some(file) = stack.pop() {
-            if !seen.insert(file) {
-                continue;
-            }
-            match targets.get(file) {
-                Some(next) => stack.extend(next),
-                None if file != edge.from => {
-                    let pair = pairs.entry((&edge.from, file)).or_default();
-                    *pair = pair.max(weight);
-                }
-                None => {}
-            }
-        }
-    }
     let mut internal: BTreeMap<&str, f64> = BTreeMap::new();
     let mut outgoing: BTreeMap<&str, BTreeMap<String, f64>> = BTreeMap::new();
     let mut neighbours: BTreeMap<(&str, &str), f64> = BTreeMap::new();
-    for ((from, to), weight) in pairs {
+    for ((from, to), &weight) in pairs {
         let (Some(from), Some(to)) = (module_of.get(from), module_of.get(to)) else {
             continue;
         };
@@ -76,17 +51,19 @@ pub fn metrics(
             module.weighted_internal_edges,
             module.weighted_internal_edges + module.weighted_outgoing_edges,
         );
-        module.weighted_ca = rounded(module.weighted_ca);
-        module.weighted_ce = rounded(module.weighted_ce);
-        module.weighted_internal_edges = rounded(module.weighted_internal_edges);
-        module.weighted_outgoing_edges = rounded(module.weighted_outgoing_edges);
+        module.weighted_ca = round4(module.weighted_ca);
+        module.weighted_ce = round4(module.weighted_ce);
+        module.weighted_internal_edges = round4(module.weighted_internal_edges);
+        module.weighted_outgoing_edges = round4(module.weighted_outgoing_edges);
         for weight in module.weighted_outgoing_to.values_mut() {
-            *weight = rounded(*weight);
+            *weight = round4(*weight);
         }
     }
 }
 
-fn rounded(value: f64) -> f64 {
+/// Rounded to four decimals, as every ratio and weight in the output; zero is never `-0.0`
+/// (an empty `f64` sum is).
+pub(crate) fn round4(value: f64) -> f64 {
     if value == 0.0 {
         0.0
     } else {
@@ -94,20 +71,27 @@ fn rounded(value: f64) -> f64 {
     }
 }
 
-fn ratio(part: f64, whole: f64) -> Option<f64> {
-    (whole > 0.0).then(|| (part / whole * 10_000.0).round() / 10_000.0)
+pub(crate) fn ratio(part: f64, whole: f64) -> Option<f64> {
+    (whole > 0.0).then(|| round4(part / whole))
 }
 
 /// Use ordinary graph findings for the selected kinds; account for deferred SCCs cheaply.
-pub fn cycles(
+pub fn cycles<'a>(
     module_of: &BTreeMap<String, String>,
-    edges: &[Edge],
+    edges: impl IntoIterator<Item = &'a Edge>,
     entries: &BTreeSet<String>,
     barrels: &BTreeSet<String>,
     directory_units: bool,
     all_kinds: bool,
 ) -> (Vec<Cycle>, Vec<DeferredCycle>) {
-    let runtime = graph::cycles(module_of, edges, entries, barrels, directory_units);
+    let edges: Vec<&Edge> = edges.into_iter().collect();
+    let runtime = graph::cycles(
+        module_of,
+        edges.iter().copied(),
+        entries,
+        barrels,
+        directory_units,
+    );
     let mut deferred = Vec::new();
     for level in [CycleLevel::Module, CycleLevel::File] {
         let pairs: Vec<_> = edges
@@ -121,7 +105,8 @@ pub fn cycles(
                         if from == to
                             && edge.from != edge.to
                             && (!directory_units
-                                || directory(&edge.from) != directory(&edge.to)) =>
+                                || crate::modules::dir_of(&edge.from)
+                                    != crate::modules::dir_of(&edge.to)) =>
                     {
                         Some((edge.from.as_str(), edge.to.as_str(), edge))
                     }
@@ -129,7 +114,8 @@ pub fn cycles(
                 }
             })
             .collect();
-        for members in components(&pairs) {
+        let named: Vec<_> = pairs.iter().map(|&(from, to, _)| (from, to)).collect();
+        for members in graph::components(&named) {
             if runtime.iter().any(|cycle| {
                 cycle.level == level
                     && cycle
@@ -143,15 +129,7 @@ pub fn cycles(
             let kinds: BTreeSet<_> = pairs
                 .iter()
                 .filter(|(from, to, _)| members.contains(from) && members.contains(to))
-                .map(|(_, _, edge)| {
-                    match edge.kind {
-                        EdgeKind::Static => "runtime",
-                        EdgeKind::Dynamic => "lazy",
-                        EdgeKind::Type | EdgeKind::TypeReexport => "type",
-                        EdgeKind::Reexport => "reexport",
-                    }
-                    .to_owned()
-                })
+                .map(|(_, _, edge)| edge.kind.as_str().to_owned())
                 .collect();
             let contains_runtime_cycle = runtime.iter().any(|cycle| {
                 cycle.level == level
@@ -169,10 +147,11 @@ pub fn cycles(
         }
     }
     if all_kinds {
+        // Every kind counts as a runtime import; the clones carry the rewritten kinds.
         let all: Vec<_> = edges
             .iter()
-            .cloned()
-            .map(|mut edge| {
+            .map(|&edge| {
+                let mut edge = edge.clone();
                 edge.is_reexport |=
                     matches!(edge.kind, EdgeKind::Reexport | EdgeKind::TypeReexport);
                 edge.kind = EdgeKind::Static;
@@ -186,35 +165,4 @@ pub fn cycles(
     } else {
         (runtime, deferred)
     }
-}
-
-fn directory(file: &str) -> &str {
-    file.rsplit_once('/').map_or("", |(directory, _)| directory)
-}
-
-pub(crate) fn components<'a>(pairs: &[(&'a str, &'a str, &Edge)]) -> Vec<BTreeSet<&'a str>> {
-    let files: BTreeSet<_> = pairs
-        .iter()
-        .flat_map(|(from, to, _)| [*from, *to])
-        .collect();
-    let indexes: BTreeMap<_, _> = files
-        .iter()
-        .enumerate()
-        .map(|(i, file)| (*file, i))
-        .collect();
-    let files: Vec<_> = files.into_iter().collect();
-    let mut adjacency = vec![Vec::new(); files.len()];
-    for (from, to, _) in pairs {
-        adjacency[indexes[from]].push(indexes[to]);
-    }
-    graph::sccs(&adjacency)
-        .into_iter()
-        .filter(|component| {
-            component.len() > 1
-                || component
-                    .first()
-                    .is_some_and(|&i| pairs.iter().any(|(a, b, _)| a == b && *a == files[i]))
-        })
-        .map(|component| component.into_iter().map(|i| files[i]).collect())
-        .collect()
 }

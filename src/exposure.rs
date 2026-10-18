@@ -103,7 +103,7 @@ pub fn report(doc: &Document) -> Option<Report> {
             .push(package);
     }
     let percent = |numerator: f64, denominator: f64| {
-        (denominator > 0.0).then(|| (numerator / denominator * 1_000_000.0).round() / 10_000.0)
+        (denominator > 0.0).then(|| crate::quality::round4(numerator / denominator * 100.0))
     };
     for row in rows.values_mut() {
         row.external_packages = row.packages.len();

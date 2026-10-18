@@ -18,19 +18,54 @@ pub fn is_index(name: &str) -> bool {
     name == "__init__.py" || TS_INDEX.contains(&name)
 }
 
+/// Whether `path` is a test file, by the collector's metadata or by its path.
+pub fn is_test(path: &str, config: &Config) -> bool {
+    config.file_metadata.get(path).is_some_and(|m| m.test)
+        || crate::collect::excludes::is_test(path)
+}
+
+/// Public entries for cycle cuts: what a package.json publishes and the source root's index
+/// (`index.ts`, a Python package's `__init__.py`). Other barrels are internal.
+pub fn cycle_entries<'a>(
+    paths: impl IntoIterator<Item = &'a String>,
+    source_root: &str,
+    package_entries: &'a [String],
+) -> BTreeSet<String> {
+    let root_index = |f: &str| {
+        let name = match source_root {
+            "." => Some(f),
+            root => f.strip_prefix(root).and_then(|r| r.strip_prefix('/')),
+        };
+        name.is_some_and(is_index)
+    };
+    paths
+        .into_iter()
+        .filter(|f| root_index(f))
+        .chain(package_entries)
+        .cloned()
+        .collect()
+}
+
+/// The directory of `path`, `""` for a file in the scan root.
+pub fn dir_of(path: &str) -> &str {
+    path.rsplit_once('/').map_or("", |(dir, _)| dir)
+}
+
+/// `name` in `dir`, where `""` and `.` both mean the scan root.
+pub fn join(dir: &str, name: &str) -> String {
+    match dir {
+        "" | "." => name.to_owned(),
+        dir => format!("{dir}/{name}"),
+    }
+}
+
 /// The file's directory below `source_root`, truncated to `depth` segments. A file directly in
 /// the source root is its own module, named by its file name with extension (`main.ts`), so it
 /// never merges with another root file or with a directory module; in Go the root's files are
 /// one package, module `.`. Files outside the source root count from the scan root and are
 /// prefixed `../` (`../lib`, `../tool.ts`), so they never merge with a module inside it.
 /// With `config.package_modules` the directory is not truncated: each package is a module.
-pub fn module_of(path: &str, config: &Config, language: Language) -> String {
-    if !config.legacy_module_classes && config.granularity == crate::model::Granularity::File {
-        return path.to_owned();
-    }
-    folder_of(path, config, language)
-}
-
+/// File granularity makes each file its module, and `rules` modules take precedence.
 pub fn assigned(
     path: &str,
     config: &Config,
@@ -118,13 +153,29 @@ pub fn barrels(edges: &[Edge]) -> BTreeSet<String> {
 
 /// File pairs for metrics: an import of a barrel counts as an import of everything it
 /// re-exports (through nested barrels), and the barrels' own imports are dropped.
-pub fn attribute(edges: &[Edge], barrels: &BTreeSet<String>) -> BTreeSet<(String, String)> {
+pub fn attribute<'a>(
+    edges: impl IntoIterator<Item = &'a Edge>,
+    barrels: &BTreeSet<String>,
+) -> BTreeSet<(String, String)> {
+    weighted(edges, barrels).into_keys().collect()
+}
+
+/// `attribute`'s pairs, each with the heaviest weight of the imports it stands for.
+pub fn weighted<'a>(
+    edges: impl IntoIterator<Item = &'a Edge>,
+    barrels: &BTreeSet<String>,
+) -> BTreeMap<(String, String), f64> {
+    let (from_barrels, others): (Vec<&Edge>, Vec<&Edge>) =
+        edges.into_iter().partition(|e| barrels.contains(&e.from));
     let mut targets: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
-    for e in edges.iter().filter(|e| barrels.contains(&e.from)) {
+    for e in from_barrels {
         targets.entry(&e.from).or_default().push(&e.to);
     }
-    let mut pairs = BTreeSet::new();
-    for e in edges.iter().filter(|e| !barrels.contains(&e.from)) {
+    let mut pairs: BTreeMap<(String, String), f64> = BTreeMap::new();
+    for e in others {
+        let weight = e
+            .weight
+            .unwrap_or_else(|| crate::rules::EdgeWeights::default().weight(e.kind));
         let mut stack = vec![e.to.as_str()];
         let mut seen = BTreeSet::new();
         while let Some(file) = stack.pop() {
@@ -134,7 +185,8 @@ pub fn attribute(edges: &[Edge], barrels: &BTreeSet<String>) -> BTreeSet<(String
             match targets.get(file) {
                 Some(next) => stack.extend(next),
                 None if file != e.from => {
-                    pairs.insert((e.from.clone(), file.to_owned()));
+                    let pair = pairs.entry((e.from.clone(), file.to_owned())).or_default();
+                    *pair = pair.max(weight);
                 }
                 None => {}
             }
