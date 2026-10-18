@@ -105,6 +105,15 @@ pub(super) fn probe(
     original: &Document,
     collector: &CollectorOpts,
 ) -> Result<Document> {
+    probe_with_symbols(root, original, collector, false)
+}
+
+pub(super) fn probe_with_symbols(
+    root: &Path,
+    original: &Document,
+    collector: &CollectorOpts,
+    symbols: bool,
+) -> Result<Document> {
     let config = &original.config;
     let collection = config.collection.as_ref();
     let mut collector = collector.clone();
@@ -142,21 +151,33 @@ pub(super) fn probe(
             .unwrap_or(rust::Features::All),
         rules: None,
         cochange: original.cochange.as_ref().map(|cochange| cochange.limit),
-        symbols: false,
+        symbols,
     };
     let collected =
         super::scan_cli::scan_doc(root, &opts, &HotspotOpts::default(), &collector, None, &[])?;
     let mut config = original.config.clone();
     config.file_metadata = collected.config.file_metadata;
     config.import_records = collected.imports;
-    archgraph::analyze(
+    let saved_symbols = collected.symbols.clone();
+    let mut doc = archgraph::analyze(
         collected.source,
         config,
         collected.files.into_iter().map(|file| file.path).collect(),
         collected.edges,
         collected.package_entries,
         collected.cochange,
-    )
+    )?;
+    if let Some(symbols) = saved_symbols {
+        archgraph::surface::attach(
+            &mut doc,
+            symbols,
+            original
+                .surface
+                .as_ref()
+                .map_or(archgraph::surface::DEFAULT_MAX_SYMBOLS, |s| s.max_symbols),
+        )?;
+    }
+    Ok(doc)
 }
 
 pub(super) fn run(args: BisectArgs) -> Result<()> {
@@ -274,7 +295,7 @@ pub(super) fn enrich_from(
 ) -> Result<()> {
     let mut cached: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut scans = 0;
-    for index in 0..doc.findings.len() {
+    for index in 0..doc.findings.len() + doc.diagnostics.len() {
         let result = match setup.get_or_init(|| {
             collector_opts(root, opts, engine(doc), Some(doc.source.language))
                 .and_then(|options| Ok((options, history::Checkout::new(root)?)))
@@ -319,9 +340,19 @@ pub(super) fn enrich_from(
                 ),
             ),
         };
-        doc.findings[index].age_days = introduced.as_ref().map(|commit| commit.age_days);
-        doc.findings[index].introduced_by = introduced;
-        doc.findings[index].provenance = Some(details);
+        let finding = doc
+            .findings
+            .iter_mut()
+            .chain(
+                doc.diagnostics
+                    .iter_mut()
+                    .map(|diagnostic| &mut diagnostic.finding),
+            )
+            .nth(index)
+            .expect("provenance index is in the combined finding/diagnostic range");
+        finding.age_days = introduced.as_ref().map(|commit| commit.age_days);
+        finding.introduced_by = introduced;
+        finding.provenance = Some(details);
     }
     Ok(())
 }

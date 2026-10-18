@@ -139,6 +139,7 @@ fn boundary_finding_names_the_written_facade_when_definition_is_elsewhere() {
     let finding = restored
         .findings
         .iter()
+        .chain(restored.diagnostics.iter().map(|d| &d.finding))
         .find(|f| f.kind == archgraph::model::FindingKind::InternalsReach)
         .unwrap();
     assert_eq!(finding.subject, "api/**");

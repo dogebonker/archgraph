@@ -44,7 +44,9 @@ pub fn scan_recorded(name: &str, extra: &[&str]) -> (Value, String, String) {
 }
 
 pub fn validate(doc: &Value) {
-    let schema: Value = serde_json::from_str(if doc["schema"] == "archgraph/v1.1" {
+    let schema: Value = serde_json::from_str(if doc["schema"] == "archgraph/v1.2" {
+        include_str!("../../schema/archgraph.v1.2.schema.json")
+    } else if doc["schema"] == "archgraph/v1.1" {
         include_str!("../../schema/archgraph.v1.1.schema.json")
     } else {
         include_str!("../../schema/archgraph.v1.schema.json")
@@ -155,6 +157,13 @@ pub fn finding<'a>(doc: &'a Value, kind: &str, subject: &str) -> &'a Value {
         .as_array()
         .unwrap()
         .iter()
+        .chain(
+            doc["diagnostics"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|d| &d["finding"]),
+        )
         .find(|f| f["kind"] == kind && f["subject"] == subject)
         .unwrap_or_else(|| panic!("no {kind} finding for {subject}: {:#}", doc["findings"]))
 }
@@ -201,4 +210,27 @@ pub fn synthetic_typed(
         dir.to_str().unwrap().to_owned(),
         input.to_str().unwrap().to_owned(),
     )
+}
+
+/// Legacy evidence goldens stay independent of recipe attachment and advisory classification.
+/// Call only after validating the complete current-schema output.
+pub fn evidence_contract(mut doc: Value) -> Value {
+    if let Some(diagnostics) = doc.get("diagnostics").and_then(Value::as_array).cloned()
+        && let Some(findings) = doc.get_mut("findings").and_then(Value::as_array_mut)
+    {
+        findings.extend(diagnostics.into_iter().map(|d| d["finding"].clone()));
+    }
+    if let Some(findings) = doc.get_mut("findings").and_then(Value::as_array_mut) {
+        findings.retain(|f| !matches!(f["kind"].as_str(), Some("forbidden-edge" | "deep-import")));
+        for finding in findings.iter_mut() {
+            let fields = finding.as_object_mut().unwrap();
+            fields.remove("finding_id");
+            fields.remove("recipe");
+        }
+        findings.sort_by(|a, b| {
+            (a["kind"].as_str(), a["subject"].as_str())
+                .cmp(&(b["kind"].as_str(), b["subject"].as_str()))
+        });
+    }
+    doc
 }

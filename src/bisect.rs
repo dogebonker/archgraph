@@ -8,7 +8,7 @@ use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
 use crate::git;
-use crate::model::{CycleLevel, Document, Evidence, Language, Link, Verdict};
+use crate::model::{CycleLevel, Document, Evidence, Finding, Language, Link, Verdict};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
@@ -27,12 +27,18 @@ pub enum Target {
     },
 }
 
+fn findings(graph: &Document) -> impl Iterator<Item = &Finding> {
+    graph
+        .findings
+        .iter()
+        .chain(graph.diagnostics.iter().map(|d| &d.finding))
+}
+
 impl Target {
     pub fn finding(graph: &Document, index: usize) -> Result<Self> {
-        let finding = graph
-            .findings
-            .get(index)
-            .with_context(|| format!("finding index {index} is out of range"))?;
+        let finding = findings(graph)
+            .nth(index)
+            .with_context(|| format!("finding/diagnostic index {index} is out of range"))?;
         if let Evidence::Cycle(cycle) = &finding.evidence {
             Ok(Self::Cycle {
                 level: cycle.level.clone(),
@@ -51,7 +57,7 @@ impl Target {
             Self::Finding {
                 finding_kind,
                 subject,
-            } => graph.findings.iter().any(|finding| {
+            } => findings(graph).any(|finding| {
                 finding.subject == *subject && finding.kind.as_str() == finding_kind
             }),
             Self::Cycle { level, members } => graph.cycles.iter().any(|cycle| {
@@ -77,7 +83,7 @@ impl Target {
                     .filter(|file| file.path == *subject || file.module == *subject)
                     .map(|file| file.path.clone())
                     .collect();
-                if let Some(finding) = graph.findings.iter().find(|finding| {
+                if let Some(finding) = findings(graph).find(|finding| {
                     finding.subject == *subject && finding.kind.as_str() == finding_kind
                 }) {
                     match &finding.evidence {

@@ -49,7 +49,7 @@ impl Drop for Scratch {
 
 fn validate(report: &Value) {
     let schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.1.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json")).unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
     let errors: Vec<_> = validator
         .iter_errors(report)
@@ -81,7 +81,7 @@ fn module<'a>(report: &'a Value, name: &str) -> &'a Value {
 fn mixed_transports_preserve_evidence_and_group_the_service_cycle() {
     let scratch = Scratch::new();
     let report = scratch.report(&fixture());
-    assert_eq!(report["schema"], "archgraph/v1.1");
+    assert_eq!(report["schema"], "archgraph/v1.2");
     assert_eq!(report["kind"], "services");
     assert_eq!(report["source"]["collector"], "declarative");
     assert_eq!(report["source"]["complete"], false);
@@ -331,7 +331,7 @@ fn manifest_and_report_schemas_reject_blank_policy_globs() {
     let manifest_schema: Value =
         serde_json::from_str(include_str!("../schema/services.v1.schema.json")).unwrap();
     let report_schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.1.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json")).unwrap();
     jsonschema::draft202012::meta::validate(&manifest_schema).unwrap();
     let manifest_validator = jsonschema::validator_for(&manifest_schema).unwrap();
     let report_validator = jsonschema::validator_for(&report_schema).unwrap();

@@ -29,11 +29,11 @@ fn erased_reexports_still_define_the_public_boundary() {
     assert_eq!(edge["kind"], "type");
     assert_eq!(edge["is_reexport"], true);
     assert!(
-        doc["findings"]
+        doc["diagnostics"]
             .as_array()
             .unwrap()
             .iter()
-            .any(|f| f["kind"] == "internals-reach")
+            .any(|d| d["finding"]["kind"] == "internals-reach")
     );
 }
 

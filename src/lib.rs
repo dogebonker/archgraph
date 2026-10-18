@@ -1,6 +1,7 @@
 macro_rules! eprintln { ($($arg:tt)*) => { $crate::output::stderr(format_args!("{}\n", format_args!($($arg)*))) }; }
 // Library half of the CLI and daemon, shared with integration tests.
 
+pub mod apply;
 pub mod bisect;
 pub mod cochange;
 pub mod codeowners;
@@ -24,8 +25,10 @@ pub mod modules;
 pub mod output;
 pub mod package_splits;
 pub mod quality;
+pub mod recipes;
 pub mod render;
 pub mod resolution;
+pub mod rewrite;
 pub mod rules;
 pub mod services;
 pub mod simulate;
@@ -60,10 +63,16 @@ pub fn restore_scan(mut input: model::ScanInput) -> Result<Document> {
     } else if input.surface.is_some() {
         doc.surface = Some(surface::analyze(&doc, threshold)?);
     }
-    for saved in input.findings {
+    recipes::attach(&mut doc)?;
+    for saved in input
+        .findings
+        .into_iter()
+        .chain(input.diagnostics.into_iter().map(|d| d.finding))
+    {
         if let Some(finding) = doc
             .findings
             .iter_mut()
+            .chain(doc.diagnostics.iter_mut().map(|d| &mut d.finding))
             .find(|f| f.subject == saved.subject && f.kind.as_str() == saved.kind)
         {
             finding.age_days = saved.age_days;
@@ -163,11 +172,7 @@ pub fn apply_hotspots(doc: &mut Document, mut report: hotspots::Hotspots) {
     for (finding, priority) in doc.findings.iter_mut().zip(priorities) {
         finding.hotspot_priority = Some(priority);
     }
-    doc.findings.sort_by(|a, b| {
-        b.hotspot_priority
-            .unwrap_or(0.0)
-            .total_cmp(&a.hotspot_priority.unwrap_or(0.0))
-    });
+    recipes::rank(doc, recipes::Rank::Recipe);
     hotspots::attach_findings(&mut report, doc);
     doc.hotspots = Some(report);
 }
@@ -261,6 +266,7 @@ fn analyze_inner(
     doc.cochange = cochange;
     doc.findings = findings::find(&doc, rules.as_ref(), owners.as_ref());
     resolution::attach(&mut doc);
+    recipes::attach(&mut doc)?;
     Ok(doc)
 }
 
@@ -480,6 +486,7 @@ fn build_inner(
         module_edges,
         summary: Summary::default(),
         findings: Vec::new(),
+        diagnostics: Vec::new(),
         cochange: None,
         hotspots: None,
         symbols: None,

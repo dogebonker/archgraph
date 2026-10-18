@@ -531,6 +531,12 @@ pub fn attach_findings(report: &mut Hotspots, graph: &Document) {
                                 c.members.contains(&file.module)
                             }
                         }
+                        Evidence::ForbiddenEdge { edge } => {
+                            edge.from == file.path || edge.to == file.path
+                        }
+                        Evidence::DeepImport { from, to, .. } => {
+                            from == &file.path || to == &file.path
+                        }
                         Evidence::HiddenCoupling { files, .. } => files.contains(&file.path),
                         Evidence::ReexportCycle { members, .. } => members.contains(&file.path),
                         Evidence::Grabbag(e) => e.members.contains(&file.module),

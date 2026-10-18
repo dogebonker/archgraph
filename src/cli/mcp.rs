@@ -307,6 +307,9 @@ fn brief_payload(value: &mut Value) -> usize {
                     .is_some_and(|e| !e.is_empty()),
             );
             finding["evidence"] = json!({});
+            if let Some(map) = finding.as_object_mut() {
+                omitted += usize::from(map.remove("recipe").is_some());
+            }
         }
     }
     if let Some(edges) = value.get_mut("new_forbidden").and_then(Value::as_array_mut) {
@@ -318,16 +321,6 @@ fn brief_payload(value: &mut Value) -> usize {
     if let Some(limits) = value.get_mut("limitations").and_then(Value::as_array_mut) {
         omitted += limits.len();
         limits.clear();
-    }
-    if let Some(findings) = value.get_mut("findings").and_then(Value::as_array_mut) {
-        findings.sort_by_key(|f| {
-            (
-                f["kind"] != "cycle",
-                f["kind"] == "small-repo",
-                f["kind"].to_string(),
-                f["finding_id"].to_string(),
-            )
-        });
     }
     for key in ["new_cycles", "grown_cycles"] {
         if let Some(cycles) = value.get_mut(key).and_then(Value::as_array_mut) {
@@ -418,7 +411,11 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
     }
     let mut value = json!({"data":data,"truncated":projected>0,"omitted":projected});
     if projected > 0 {
-        value["hint"] = json!("Use brief:false or narrower inputs; cap still applies.");
+        value["hint"] = json!(if name == "propose" {
+            "Full recipe: archgraph propose <finding_id>; MCP cap still applies."
+        } else {
+            "Use brief:false or narrower inputs; cap still applies."
+        });
     }
     if !explain && !counts.is_empty() {
         value["counts"] = Value::Object(counts);
@@ -427,7 +424,16 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
         value["error"] = json!(error);
     }
     loop {
-        let out = result(value.clone(), error.is_some(), explain);
+        let mut out = result(value.clone(), error.is_some(), explain);
+        if name == "propose" && error.is_none() {
+            // A recipe must fit once; duplicating its JSON can discard executable steps.
+            out.content = vec![ContentBlock::text(format!(
+                "Recipe in structuredContent.data. Full CLI JSON: archgraph propose {}",
+                value["data"]["finding_id"]
+                    .as_str()
+                    .unwrap_or("<finding_id>")
+            ))];
+        }
         if size(&out) <= cap {
             return out;
         }
@@ -435,7 +441,11 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
         value["hint"] = if explain {
             json!("Use rules/context.")
         } else {
-            json!("Use brief:false or narrower inputs; cap still applies.")
+            json!(if name == "propose" {
+                "Full recipe: archgraph propose <finding_id>; MCP cap still applies."
+            } else {
+                "Use brief:false or narrower inputs; cap still applies."
+            })
         };
         value["omitted"] = json!(value["omitted"].as_u64().unwrap() + 1);
         if let Some(fallback) = &explain_fallback

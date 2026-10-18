@@ -106,10 +106,7 @@ fn py_cycles_mapping_barrels_and_cycle() {
         .collect();
     // repo.py imports core/__init__.py, but only service.py of core imports it: not misplaced.
     // core/__init__.py cannot move without its package, and cli.py is alone in its module.
-    assert_eq!(
-        kinds,
-        [("cycle", "core, db"), ("seam", "."), ("small-repo", ".")]
-    );
+    assert_eq!(kinds, [("cycle", "core, db"), ("seam", ".")]);
     assert_eq!(findings[0]["evidence"], doc["cycles"][0]);
     // repo.py has degree 3, above the 90th percentile (2), so it is a hub and left out.
     // Q(clusters) = 3/4 - (6/8)^2 + 1/4 - (2/8)^2; Q(folders) = -18/64. The clusters hold 6 of
@@ -124,7 +121,7 @@ fn py_cycles_mapping_barrels_and_cycle() {
                       "modules": ["core", "db"] } ] })
     );
     assert_eq!(
-        findings[2]["evidence"],
+        common::finding(&doc, "small-repo", ".")["evidence"],
         json!({ "files": 10, "modules": 5 })
     );
 }

@@ -403,6 +403,8 @@ pub fn find(
 
 fn finding(kind: FindingKind, subject: String, evidence: Evidence) -> Finding {
     Finding {
+        finding_id: String::new(),
+        recipe: None,
         kind,
         subject,
         evidence,

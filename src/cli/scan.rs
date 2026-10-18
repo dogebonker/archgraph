@@ -41,7 +41,9 @@ pub(super) fn scan_doc(
     rules: Option<&Path>,
     outputs: &[&Path],
 ) -> Result<Document> {
-    if let Some(doc) = daemon_cli::cached_scan(root, args, hotspots, collector, rules, outputs) {
+    if let Some(mut doc) = daemon_cli::cached_scan(root, args, hotspots, collector, rules, outputs)
+    {
+        archgraph::recipes::rank(&mut doc, globals().rank);
         return Ok(doc);
     }
     // Resolved here: a relative program path is not reliably resolved against the child's
@@ -419,6 +421,7 @@ pub(super) fn scan_doc(
         )?;
         archgraph::apply_hotspots(&mut doc, report);
     }
+    archgraph::recipes::rank(&mut doc, globals().rank);
     Ok(doc)
 }
 

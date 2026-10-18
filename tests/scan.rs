@@ -2,7 +2,7 @@ mod common;
 
 use std::fs;
 
-use common::{archgraph, fixture, layout, scan, scan_recorded, stable, synthetic, validate};
+use common::{archgraph, fixture, layout, stable, synthetic, validate};
 use serde_json::{Value, json};
 
 fn files(doc: &Value) -> Vec<&str> {
@@ -17,7 +17,7 @@ fn files(doc: &Value) -> Vec<&str> {
 #[test]
 fn ts_basic_metrics_by_hand() {
     let (doc, _, stderr) = scan_recorded("ts-basic", &[]);
-    assert_eq!(doc["schema"], "archgraph/v1.1");
+    assert_eq!(doc["schema"], "archgraph/v1.2");
     assert_eq!(doc["kind"], "scan");
     assert_eq!(doc["source"]["language"], "typescript");
     assert_eq!(
@@ -119,7 +119,7 @@ fn summary(cycles: usize, modules: Value) -> Value {
 #[test]
 fn schema_is_valid_draft_2020_12() {
     let schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.1.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json")).unwrap();
     assert_eq!(
         schema["$schema"],
         "https://json-schema.org/draft/2020-12/schema"
@@ -1561,9 +1561,9 @@ fn git_runs_without_the_repository_fsmonitor_hook() {
 #[test]
 fn schema_accepts_unknown_finding_kinds_and_types_known_ones() {
     let schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.1.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json")).unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
-    let (doc, _, _) = scan_recorded("ts-basic", &[]);
+    let (doc, _, _) = common::scan_recorded("ts-basic", &[]);
     let with = |finding: Value| {
         let mut d = doc.clone();
         d["findings"].as_array_mut().unwrap().push(finding);
@@ -1655,7 +1655,7 @@ fn report_without_rules_exits_0_and_writes_into_the_root_by_default() {
         "11 files, 6 modules, 12 imports",
         "2 module cycles, largest 3 modules",
         "no lighter side to cut: the two-way pairs are even or wiring",
-        "cycle (3)",
+        "cycle (2)",
         "src/a, src/b, src/c",
         "misplaced-file (1)",
         "seam (1)\n    clusters across folders\n",
@@ -1766,4 +1766,13 @@ fn depcruise_path_that_does_not_exist_is_a_usage_error() {
         stderr.contains("--depcruise /nonexistent/depcruise"),
         "{stderr}"
     );
+}
+
+fn scan(args: &[&str]) -> (Value, String, String) {
+    let (doc, out, err) = common::scan(args);
+    (common::evidence_contract(doc), out, err)
+}
+fn scan_recorded(name: &str, args: &[&str]) -> (Value, String, String) {
+    let (doc, out, err) = common::scan_recorded(name, args);
+    (common::evidence_contract(doc), out, err)
 }

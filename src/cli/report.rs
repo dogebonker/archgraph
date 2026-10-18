@@ -58,7 +58,7 @@ pub(super) fn run(args: Report) -> Result<ExitCode> {
                 "schema": SCHEMA, "kind": "report", "summary": doc.summary,
                 "counts": {"files": doc.files.len(), "modules": doc.modules.len(), "imports": doc.edges.len()},
                 "import_resolution": doc.import_resolution,
-                "findings": doc.findings, "cycles": doc.cycles,
+                "findings": doc.findings, "diagnostics": doc.diagnostics, "cycles": doc.cycles,
                 "limitations": doc.source.collector.limitations,
                 "artifacts": {"json": json, "html": html},
             }),
@@ -367,6 +367,22 @@ fn summary(
         }
         if subjects.len() > 3 {
             out += &format!("    and {} more\n", subjects.len() - 3);
+        }
+    }
+    if !doc.diagnostics.is_empty() {
+        out += &format!("\n{}\n", heading("Diagnostics"));
+        let mut grouped: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+        for diagnostic in &doc.diagnostics {
+            grouped
+                .entry(diagnostic.finding.kind.as_str())
+                .or_default()
+                .push(&diagnostic.finding.subject);
+        }
+        for (kind, subjects) in grouped {
+            out += &format!("  {kind} ({})\n", subjects.len());
+            for subject in subjects.iter().take(3) {
+                out += &format!("    {subject}\n");
+            }
         }
     }
     out += &format!(

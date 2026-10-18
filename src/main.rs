@@ -17,6 +17,7 @@ struct Globals {
     brief: bool,
     tty: bool,
     tool_timeout: u64,
+    rank: archgraph::recipes::Rank,
 }
 thread_local! { static GLOBALS: RefCell<Globals> = RefCell::new(Globals::default()); }
 fn globals() -> Globals {
@@ -57,6 +58,8 @@ mod mcp_cli;
 mod package_splits_cli;
 #[path = "cli/provenance.rs"]
 mod provenance_cli;
+#[path = "cli/recipes.rs"]
+mod recipes_cli;
 #[path = "cli/report.rs"]
 mod report_cli;
 #[path = "cli/scan.rs"]
@@ -77,6 +80,9 @@ struct Cli {
     /// Bypass a running daemon and collect independently
     #[arg(long, global = true)]
     no_daemon: bool,
+    /// Finding ordering: hotspot × recipe confidence × pairs removed, or legacy
+    #[arg(long, global = true, value_enum, default_value_t = archgraph::recipes::Rank::Recipe)]
+    rank: archgraph::recipes::Rank,
     /// Include every import kind in cycle detection, for comparison
     #[arg(long, global = true)]
     all_kinds: bool,
@@ -96,6 +102,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Return a typed fix recipe and its verification predicates
+    Propose(recipes_cli::Target),
+    /// Preview or execute the mechanical steps of a finding's recipe
+    Apply(recipes_cli::Apply),
+    /// Rescan and verify a previously proposed or applied finding
+    Verify(recipes_cli::Verify),
     /// Expose architecture tools to MCP clients over stdio
     Mcp(mcp_cli::Mcp),
     #[command(hide = true)]
@@ -321,6 +333,7 @@ fn main() -> ExitCode {
             brief: cli.brief,
             tty: false,
             tool_timeout: cli.tool_timeout,
+            rank: cli.rank,
         }
     });
     collect::request_timeout(
@@ -397,12 +410,16 @@ fn execute_inner(cli: Cli) -> ExitCode {
             brief: cli.brief,
             tty: daemon_cli::caller_tty().unwrap_or_else(|| std::io::stdout().is_terminal()),
             tool_timeout: cli.tool_timeout,
+            rank: cli.rank,
         }
     });
     collect::request_timeout(
         (cli.tool_timeout > 0).then(|| std::time::Duration::from_secs(cli.tool_timeout)),
     );
     let result = match cli.command {
+        Cmd::Propose(args) => recipes_cli::propose(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Apply(args) => recipes_cli::apply(args),
+        Cmd::Verify(args) => recipes_cli::verify(args),
         Cmd::Serve(_) => unreachable!("serve is dispatched before request execution"),
         Cmd::Mcp(_) => unreachable!("MCP is dispatched before request execution"),
         Cmd::McpCall(args) => mcp_cli::call(args)
@@ -554,8 +571,9 @@ fn diff(args: DiffArgs) -> Result<ExitCode> {
 /// embedded ones.
 fn recompute(path: &Path, rules: Option<&Path>) -> Result<Document> {
     if rules.is_none()
-        && let Some(doc) = daemon_cli::cached_graph(path)
+        && let Some(mut doc) = daemon_cli::cached_graph(path)
     {
+        archgraph::recipes::rank(&mut doc, globals().rank);
         return Ok(doc);
     }
     let mut input = read_scan(path)?;
@@ -563,7 +581,9 @@ fn recompute(path: &Path, rules: Option<&Path>) -> Result<Document> {
         input.config.rules = Some(rules::load(path)?);
         reassign(&mut input)?;
     }
-    archgraph::restore_scan(input)
+    let mut doc = archgraph::restore_scan(input)?;
+    archgraph::recipes::rank(&mut doc, globals().rank);
+    Ok(doc)
 }
 
 /// Reassigns modules under `input.config`. Scores and introductions were judged under the old

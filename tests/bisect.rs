@@ -499,6 +499,8 @@ fn generic_misplaced_finding_has_a_verified_introduction() {
         let mut doc = graph(oid, false, "rust");
         if oid != absent {
             doc.findings.push(Finding {
+                finding_id: String::new(),
+                recipe: None,
                 kind: FindingKind::MisplacedFile,
                 subject: "src/a/a.ts".into(),
                 evidence: Evidence::MisplacedFile {
@@ -585,10 +587,11 @@ fn report_dates_hidden_coupling_with_the_original_cochange_window() {
     let doc: serde_json::Value =
         serde_json::from_slice(&fs::read(repo.0.join(".archgraph/archgraph.json")).unwrap())
             .unwrap();
-    let finding = doc["findings"]
+    let finding = doc["diagnostics"]
         .as_array()
         .unwrap()
         .iter()
+        .map(|diagnostic| &diagnostic["finding"])
         .find(|finding| finding["kind"] == "hidden-coupling")
         .unwrap();
     assert_eq!(finding["provenance"]["status"], "verified-transition");

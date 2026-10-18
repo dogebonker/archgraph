@@ -493,154 +493,271 @@
           "then": {
             "properties": {
               "data": {
+                "additionalProperties": false,
                 "properties": {
-                  "finding_id": {
-                    "type": "string"
+                  "confidence": {
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low"
+                    ]
                   },
-                  "steps": {
-                    "items": {
-                      "properties": {
-                        "action": {
-                          "enum": [
-                            "cut_import",
-                            "move_file",
-                            "review"
+                  "expected": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cycle_size_after": {
+                        "minimum": 0,
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "instability_delta": {
+                        "additionalProperties": {
+                          "maximum": 1,
+                          "minimum": -1,
+                          "type": [
+                            "number",
+                            "null"
                           ]
                         },
-                        "expected_delta": {
-                          "type": "object"
-                        },
-                        "verification": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "absent_edges": {
-                              "items": {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "from": {
-                                    "type": "string"
-                                  },
-                                  "to": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "from",
-                                  "to"
-                                ],
-                                "type": "object"
-                              },
-                              "type": "array"
-                            },
-                            "cycles_in": {
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array"
-                            },
-                            "equals": {
-                              "minimum": 0,
-                              "type": "integer"
-                            },
-                            "files_absent": {
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array"
-                            },
-                            "files_present": {
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array"
-                            },
-                            "findings_absent": {
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array"
-                            },
-                            "forbidden": {
-                              "minimum": 0,
-                              "type": "integer"
-                            }
-                          },
-                          "required": [],
-                          "type": "object"
-                        }
+                        "type": "object"
                       },
-                      "required": [
-                        "action",
-                        "expected_delta",
-                        "verification"
-                      ],
-                      "type": "object"
+                      "new_cycles": {
+                        "minimum": 0,
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "pairs_removed": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "pairs_removed",
+                      "cycle_size_after",
+                      "new_cycles",
+                      "instability_delta"
+                    ],
+                    "type": "object"
+                  },
+                  "finding_id": {
+                    "pattern": "^ag-[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "risk_notes": {
+                    "items": {
+                      "type": "string"
                     },
                     "type": "array"
                   },
-                  "verification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "absent_edges": {
-                        "items": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "from": {
-                              "type": "string"
-                            },
-                            "to": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "from",
-                            "to"
-                          ],
+                  "steps": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "detail": {
                           "type": "object"
                         },
-                        "type": "array"
-                      },
-                      "cycles_in": {
-                        "items": {
+                        "file": {
                           "type": "string"
                         },
-                        "type": "array"
-                      },
-                      "equals": {
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "files_absent": {
-                        "items": {
+                        "from": {
                           "type": "string"
                         },
-                        "type": "array"
-                      },
-                      "files_present": {
-                        "items": {
-                          "type": "string"
+                        "kind": {
+                          "enum": [
+                            "cut_import",
+                            "move_file",
+                            "add_reexport",
+                            "extract_interface",
+                            "split_module"
+                          ]
                         },
-                        "type": "array"
-                      },
-                      "findings_absent": {
-                        "items": {
-                          "type": "string"
+                        "line": {
+                          "minimum": 1,
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
                         },
-                        "type": "array"
+                        "mechanical": {
+                          "type": "boolean"
+                        },
+                        "to": {
+                          "type": "string"
+                        }
                       },
-                      "forbidden": {
-                        "minimum": 0,
-                        "type": "integer"
+                      "required": [
+                        "kind",
+                        "file",
+                        "from",
+                        "to",
+                        "detail",
+                        "mechanical"
+                      ],
+                      "type": "object"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "verify": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "predicate": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "structured": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "absent_edges": {
+                            "items": {
+                              "properties": {
+                                "from": {
+                                  "minLength": 1,
+                                  "not": {
+                                    "pattern": "^/"
+                                  },
+                                  "type": "string"
+                                },
+                                "to": {
+                                  "minLength": 1,
+                                  "not": {
+                                    "pattern": "^/"
+                                  },
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "from",
+                                "to"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "baseline_id": {
+                            "pattern": "^ag-[0-9a-f]{64}$",
+                            "type": "string"
+                          },
+                          "cycles_in": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "equals": {
+                            "minimum": 0,
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "expected": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "cycle_size_after": {
+                                    "minimum": 0,
+                                    "type": [
+                                      "integer",
+                                      "null"
+                                    ]
+                                  },
+                                  "instability_delta": {
+                                    "additionalProperties": {
+                                      "maximum": 1,
+                                      "minimum": -1,
+                                      "type": [
+                                        "number",
+                                        "null"
+                                      ]
+                                    },
+                                    "type": "object"
+                                  },
+                                  "new_cycles": {
+                                    "minimum": 0,
+                                    "type": [
+                                      "integer",
+                                      "null"
+                                    ]
+                                  },
+                                  "pairs_removed": {
+                                    "type": [
+                                      "integer",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "pairs_removed",
+                                  "cycle_size_after",
+                                  "new_cycles",
+                                  "instability_delta"
+                                ],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "files_absent": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "files_present": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "findings_absent": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "forbidden": {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "scope": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "type": "object"
                       }
                     },
-                    "required": [],
+                    "required": [
+                      "predicate",
+                      "structured"
+                    ],
                     "type": "object"
                   }
                 },
                 "required": [
-                  "finding_id",
                   "steps",
-                  "verification"
+                  "expected",
+                  "verify",
+                  "confidence",
+                  "risk_notes",
+                  "finding_id"
                 ],
                 "type": "object"
               }
@@ -1034,12 +1151,19 @@
           "properties": {
             "absent_edges": {
               "items": {
-                "additionalProperties": false,
                 "properties": {
                   "from": {
+                    "minLength": 1,
+                    "not": {
+                      "pattern": "^/"
+                    },
                     "type": "string"
                   },
                   "to": {
+                    "minLength": 1,
+                    "not": {
+                      "pattern": "^/"
+                    },
                     "type": "string"
                   }
                 },
@@ -1051,30 +1175,91 @@
               },
               "type": "array"
             },
+            "baseline_id": {
+              "pattern": "^ag-[0-9a-f]{64}$",
+              "type": "string"
+            },
             "cycles_in": {
               "items": {
+                "minLength": 1,
                 "type": "string"
               },
               "type": "array"
             },
             "equals": {
               "minimum": 0,
-              "type": "integer"
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "expected": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cycle_size_after": {
+                      "minimum": 0,
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "instability_delta": {
+                      "additionalProperties": {
+                        "maximum": 1,
+                        "minimum": -1,
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "type": "object"
+                    },
+                    "new_cycles": {
+                      "minimum": 0,
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "pairs_removed": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "pairs_removed",
+                    "cycle_size_after",
+                    "new_cycles",
+                    "instability_delta"
+                  ],
+                  "type": "object"
+                }
+              ]
             },
             "files_absent": {
               "items": {
+                "minLength": 1,
                 "type": "string"
               },
               "type": "array"
             },
             "files_present": {
               "items": {
+                "minLength": 1,
                 "type": "string"
               },
               "type": "array"
             },
             "findings_absent": {
               "items": {
+                "minLength": 1,
                 "type": "string"
               },
               "type": "array"
@@ -1082,9 +1267,15 @@
             "forbidden": {
               "minimum": 0,
               "type": "integer"
+            },
+            "scope": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
             }
           },
-          "required": [],
           "type": "object"
         }
       },

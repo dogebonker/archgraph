@@ -14,7 +14,7 @@ pub(super) struct ServicesArgs {
 
 pub(super) fn run(args: ServicesArgs) -> Result<()> {
     if globals().legacy_v1 && (matches!(args.format, Format::Json) || args.output.is_some()) {
-        bail!("services JSON requires archgraph/v1.1; omit --legacy-v1");
+        bail!("services JSON requires the current schema; omit --legacy-v1");
     }
     if globals().granularity.is_some() {
         bail!("services use explicit service IDs; --granularity applies to import scans");

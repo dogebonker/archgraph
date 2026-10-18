@@ -18,9 +18,35 @@ pub fn v1(value: &mut serde_json::Value) -> anyhow::Result<()> {
 
     match value {
         serde_json::Value::Object(object) => {
-            if object.get("schema").and_then(|v| v.as_str()) == Some(crate::model::SCHEMA) {
+            if matches!(
+                object.get("schema").and_then(|v| v.as_str()),
+                Some("archgraph/v1.1" | "archgraph/v1.2")
+            ) {
                 object.insert("schema".into(), "archgraph/v1".into());
             }
+            if let Some(serde_json::Value::Array(diagnostics)) = object.remove("diagnostics")
+                && let Some(findings) = object.get_mut("findings").and_then(|v| v.as_array_mut())
+            {
+                findings.extend(
+                    diagnostics
+                        .into_iter()
+                        .filter_map(|mut diagnostic| diagnostic.as_object_mut()?.remove("finding")),
+                );
+            }
+            if let Some(findings) = object.get_mut("findings").and_then(|v| v.as_array_mut()) {
+                findings.retain(|finding| {
+                    !matches!(
+                        finding["kind"].as_str(),
+                        Some("forbidden-edge" | "deep-import")
+                    )
+                });
+                findings.sort_by(|a, b| {
+                    (a["kind"].as_str(), a["subject"].as_str())
+                        .cmp(&(b["kind"].as_str(), b["subject"].as_str()))
+                });
+            }
+            object.remove("recipe");
+            object.remove("finding_id");
             if object.contains_key("from") && object.contains_key("to") {
                 let legacy = match object.get("kind").and_then(|v| v.as_str()) {
                     Some("runtime") => Some("static"),

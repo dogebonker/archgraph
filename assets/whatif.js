@@ -153,7 +153,7 @@
       else if (!Object.hasOwn(f,'barrel') && /(?:^|\/)(?:index\.(?:ts|tsx|js|jsx|mjs|cjs)|__init__\.py)$/.test(path)) warnings.push('Missing barrel metadata: '+path);
     }
     for (const e of edges) if (e.original_to && !policyOf.has(e.original_to)) policyOf.set(e.original_to,policy(e.original_to));
-    if (!['archgraph/v1','archgraph/v1.1'].includes(doc.schema)) warnings.push('Unknown graph schema; preview may be incomplete.');
+    if (!['archgraph/v1','archgraph/v1.1','archgraph/v1.2'].includes(doc.schema)) warnings.push('Unknown graph schema; preview may be incomplete.');
     const includes = (r,e) => !r.kinds || r.kinds.some(k=>kind({kind:k}) === kind(e));
     const adjacency = new Map();
     for (const e of edges) { if (!adjacency.has(e.from)) adjacency.set(e.from,[]); adjacency.get(e.from).push(e); }

@@ -5,9 +5,8 @@ use std::path::Path;
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 
-use crate::model::{Cycle, Document, Evidence, Finding, Move};
+use crate::model::{Cycle, Document, Finding, Move};
 
 pub struct ToolSchema {
     pub name: &'static str,
@@ -65,6 +64,12 @@ struct Expect {
     cycles_in: Option<Vec<String>>,
     #[serde(default)]
     equals: usize,
+    #[serde(default)]
+    scope: Vec<String>,
+    #[serde(default)]
+    expected: Option<crate::recipes::Expected>,
+    #[serde(default)]
+    baseline_id: Option<String>,
     #[serde(default)]
     forbidden: Option<usize>,
     #[serde(default)]
@@ -158,24 +163,9 @@ pub fn is_brief(arguments: &Value) -> bool {
 
 /// Identity excludes rankings, provenance and measurements; collections are canonicalized.
 pub fn finding_id(finding: &Finding) -> String {
-    let identity = match &finding.evidence {
-        Evidence::Cycle(c) => json!({"level": c.level, "members": sorted(&c.members)}),
-        Evidence::ReexportCycle { members, .. } => json!({"members": sorted(members)}),
-        Evidence::MisplacedFile { target_module, .. } => json!({"target":target_module}),
-        Evidence::HiddenCoupling { files, .. } => json!({"files":sorted(files)}),
-        Evidence::UnstableDependency { from, to, .. } => json!({"from":from,"to":to}),
-        _ => Value::Null,
-    };
-    let bytes = serde_json::to_vec(&json!([finding.kind.as_str(), finding.subject, identity]))
-        .expect("JSON values serialize");
-    format!(
-        "ag-{}",
-        Sha256::digest(bytes)
-            .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect::<String>()
-    )
+    crate::recipes::stable_id(finding)
 }
+
 fn sorted(values: &[String]) -> Vec<&str> {
     values
         .iter()
@@ -185,10 +175,9 @@ fn sorted(values: &[String]) -> Vec<&str> {
         .collect()
 }
 fn findings(doc: &Document) -> Vec<Value> {
-    let mut out:Vec<_> = doc.findings.iter().map(|f| json!({"finding_id":finding_id(f),"kind":f.kind,"subject":f.subject,"evidence":f.evidence,"suggestion":f.suggestion})).collect();
-    out.sort_by(|a, b| a["finding_id"].as_str().cmp(&b["finding_id"].as_str()));
-    out
+    doc.findings.iter().map(|f| json!({"finding_id":finding_id(f),"kind":f.kind,"subject":f.subject,"evidence":f.evidence,"suggestion":f.suggestion,"recipe":f.recipe})).collect()
 }
+
 fn cycle_key(c: &Cycle) -> String {
     format!("{:?}:{}", c.level, sorted(&c.members).join("\0"))
 }
@@ -300,22 +289,12 @@ pub fn call(
         "propose" => {
             let a: ProposeArgs = parse(arguments)?;
             let _ = a.brief;
-            let f=doc.findings.iter().find(|f|finding_id(f)==a.finding_id).context("unknown finding_id: call check_diff or verify again and use a returned finding_id")?;
-            let mut steps = Vec::new();
-            if let Some(s) = &f.suggestion {
-                steps.push(move_step(doc, &s.move_to)?);
-            }
-            if let Evidence::Cycle(cycle) = &f.evidence {
-                for link in &cycle.break_set {
-                    steps.push(json!({"action":"cut_import","from":link.from,"to":link.to,"expected_delta":{"status":"unmeasured","reason":"Removing an import may require replacing its use; rescan after editing."},"verification":{"absent_edges":[{"from":link.from,"to":link.to}]}}));
-                }
-            }
-            if steps.is_empty() {
-                steps.push(json!({"action":"review","subject":f.subject,"reason":"This finding has no concrete validated move or cut; inspect its evidence before editing.","expected_delta":{"status":"unmeasured"},"verification":{"findings_absent":[a.finding_id]}}));
-            }
-            Ok(
-                json!({"finding_id":a.finding_id,"steps":steps,"verification":{"findings_absent":[finding_id(f)]},"limitations":["Steps are proposals, not automatic edits. Import cuts have no promised numerical delta."]}),
-            )
+            let mut recipe = crate::recipes::recipe_for(doc, &a.finding_id)?.clone();
+            recipe.verify.structured.baseline_id = Some(a.finding_id.clone());
+            crate::apply::remember_proposal(root, doc, &a.finding_id, &recipe)?;
+            let mut result = serde_json::to_value(recipe)?;
+            result["finding_id"] = json!(a.finding_id);
+            Ok(result)
         }
         "simulate" => {
             let a: SimulateArgs = parse(arguments)?;
@@ -338,10 +317,10 @@ pub fn call(
         "verify" => {
             let a: VerifyArgs = parse(arguments)?;
             let _ = a.brief;
-            let checks = verify(doc, a.expect.as_ref())?;
+            let checks = verify(doc, root, a.expect.as_ref())?;
             let passed = checks.iter().all(|c| c["pass"] == true);
             Ok(
-                json!({"pass":passed,"expectations_supplied":a.expect.is_some(),"checks":checks,"summary":{"cycles":doc.cycles.len(),"forbidden":doc.summary.forbidden},"findings":findings(doc)}),
+                json!({"pass":passed,"expectations_supplied":a.expect.is_some(),"checks":checks,"summary":{"cycles":doc.cycles.len(),"forbidden":doc.summary.forbidden},"findings":findings(doc),"diagnostics":doc.diagnostics}),
             )
         }
         "explain" => {
@@ -438,18 +417,36 @@ pub fn call(
 fn simulation(before: &Document, after: &Document, moves: &[Move]) -> Value {
     json!({"before":{"cycles":before.cycles.len(),"forbidden":before.summary.forbidden,"two_way_pairs":pairs(before)},"after":{"cycles":after.cycles.len(),"forbidden":after.summary.forbidden,"two_way_pairs":pairs(after)},"pairs_removed":pairs(before) as i64-pairs(after) as i64,"new_cycles":new_cycles(before,after,moves),"limitations":["Import-level simulation does not rewrite imports, build configuration or runtime assumptions."]})
 }
-fn move_step(doc: &Document, m: &Move) -> Result<Value> {
-    let compiled = crate::rules::compile(&doc.config)?;
-    let after = crate::simulate::apply(doc, compiled.as_ref(), std::slice::from_ref(m))?;
-    Ok(
-        json!({"action":"move_file","from":m.file,"to":m.to,"expected_delta":simulation(doc,&after,std::slice::from_ref(m)),"verification":{"files_present":[m.to],"files_absent":[m.file]}}),
-    )
-}
-fn verify(doc: &Document, expect: Option<&Expect>) -> Result<Vec<Value>> {
+
+fn verify(doc: &Document, root: &Path, expect: Option<&Expect>) -> Result<Vec<Value>> {
     let mut checks = Vec::new();
     let Some(e) = expect else {
         return Ok(checks);
     };
+    if e.expected.is_some() || e.baseline_id.is_some() {
+        let id=e.baseline_id.as_deref().context("expected deltas need baseline_id: call propose before editing and pass recipe.verify.structured")?;
+        let predicate = crate::recipes::Predicate {
+            findings_absent: e.findings_absent.clone().unwrap_or_default(),
+            absent_edges: e
+                .absent_edges
+                .iter()
+                .flatten()
+                .map(|edge| crate::model::Link {
+                    from: edge.from.clone(),
+                    to: edge.to.clone(),
+                })
+                .collect(),
+            files_present: e.files_present.clone().unwrap_or_default(),
+            files_absent: e.files_absent.clone().unwrap_or_default(),
+            cycles_in: e.cycles_in.clone().unwrap_or_default(),
+            scope: e.scope.clone(),
+            equals: e.cycles_in.as_ref().map(|_| e.equals),
+            forbidden: e.forbidden,
+            baseline_id: Some(id.into()),
+            expected: e.expected.clone(),
+        };
+        return Ok(crate::apply::verify_predicate(root,id,doc,&predicate)?.checks.iter().map(|check|json!({"predicate":check.predicate,"pass":check.pass,"expected":check.expected,"actual":check.actual})).collect());
+    }
     if e.cycles_in.is_none()
         && e.forbidden.is_none()
         && e.findings_absent.is_none()
@@ -567,9 +564,12 @@ pub fn schemas() -> Vec<ToolSchema> {
     );
     let cycle = json!({"type":"object","required":["level","members"],"properties":{"level":{"enum":["file","module"]},"members":strings()}});
     let finding = json!({"type":"object","required":["finding_id","kind","subject","evidence"],"properties":{"finding_id":{"type":"string","pattern":"^ag-[0-9a-f]{64}$"},"kind":{"type":"string"},"subject":{"type":"string"},"evidence":{"type":"object"},"suggestion":{"type":["object","null"]}}});
-    let expect = object(
-        json!({"cycles_in":strings(),"equals":number(),"forbidden":number(),"findings_absent":strings(),"absent_edges":array(edge.clone()),"files_present":strings(),"files_absent":strings()}),
-        &[],
+    let graph_schema: Value =
+        serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json"))
+            .expect("recipe schema");
+    let expect = inline_schema(
+        &graph_schema["$defs"]["recipe-predicate"],
+        &graph_schema["$defs"],
     );
     let counts = object(
         json!({"cycles":number(),"forbidden":number(),"two_way_pairs":number()}),
@@ -595,7 +595,17 @@ pub fn schemas() -> Vec<ToolSchema> {
             "Return evidence-backed ordered move/cut proposals with explicit expected deltas and verify expectations.",
             json!({"finding_id":{"type":"string","pattern":"^ag-[0-9a-f]{64}$"}}),
             &["finding_id"],
-            json!({"type":"object","required":["finding_id","steps","verification"],"properties":{"finding_id":{"type":"string"},"steps":array(json!({"type":"object","required":["action","expected_delta","verification"],"properties":{"action":{"enum":["cut_import","move_file","review"]},"expected_delta":{"type":"object"},"verification":expect.clone()}})),"verification":expect.clone()}}),
+            {
+                let mut schema =
+                    inline_schema(&graph_schema["$defs"]["recipe"], &graph_schema["$defs"]);
+                schema["properties"]["finding_id"] =
+                    json!({"type":"string","pattern":"^ag-[0-9a-f]{64}$"});
+                schema["required"]
+                    .as_array_mut()
+                    .expect("recipe required")
+                    .push(json!("finding_id"));
+                schema
+            },
         ),
         schema(
             "simulate",
@@ -648,4 +658,28 @@ pub fn schemas() -> Vec<ToolSchema> {
         "properties":{"version":{"type":"integer"},"modules":{"type":"array","items":{"type":"object"}},"layers":{"type":"array","items":{"type":"object"}},"public":{"type":"array","items":{"type":"object"}},"entrypoints":{"type":"array","items":{"type":"object"}},"forbid":{"type":"array","items":{"type":"object"}},"allow":{"type":"array","items":{"type":"object"}},"configured":{"const":false},"paths":strings(),"hint":{"type":"string"}}
     });
     tools
+}
+
+fn inline_schema(value: &Value, defs: &Value) -> Value {
+    if let Some(reference) = value
+        .get("$ref")
+        .and_then(Value::as_str)
+        .and_then(|s| s.strip_prefix("#/$defs/"))
+    {
+        return inline_schema(&defs[reference], defs);
+    }
+    match value {
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .map(|(key, value)| (key.clone(), inline_schema(value, defs)))
+                .collect(),
+        ),
+        Value::Array(items) => Value::Array(
+            items
+                .iter()
+                .map(|value| inline_schema(value, defs))
+                .collect(),
+        ),
+        _ => value.clone(),
+    }
 }

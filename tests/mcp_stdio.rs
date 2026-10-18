@@ -366,7 +366,7 @@ fn stdio_tools_conform_fix_cycle_and_keep_deterministic_bounded_results() {
         .clone();
     let recipe = c.ok("propose", json!({"finding_id":id}));
     assert!(!recipe["steps"].as_array().unwrap().is_empty(), "{recipe}");
-    assert_eq!(recipe["steps"][0]["action"], "cut_import");
+    assert_eq!(recipe["steps"][0]["kind"], "cut_import");
     let failed = c.ok(
         "verify",
         json!({"expect":{"cycles_in":["a","b"],"equals":0}}),

@@ -1,4 +1,4 @@
-//! Schema `archgraph/v1.1`; v1 remains readable. See schema/archgraph.v1.1.schema.json.
+//! Schema `archgraph/v1.2`; v1/v1.1 remain readable. See schema/archgraph.v1.2.schema.json.
 
 use std::collections::BTreeMap;
 
@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::rules::Rules;
 
-pub const SCHEMA: &str = "archgraph/v1.1";
+pub const SCHEMA: &str = "archgraph/v1.2";
 pub fn supported_schema(schema: &str) -> bool {
-    matches!(schema, "archgraph/v1" | SCHEMA)
+    matches!(schema, "archgraph/v1" | "archgraph/v1.1" | SCHEMA)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -46,6 +46,8 @@ pub struct Document {
     /// The counts and module metrics that finding simulations and `simulate` compare.
     pub summary: Summary,
     pub findings: Vec<Finding>,
+    /// Evidence without a defensible edit remains visible, outside actionable findings.
+    pub diagnostics: Vec<crate::recipes::Diagnostic>,
     /// `null` unless scanned with `--cochange`.
     pub cochange: Option<Cochange>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -77,6 +79,8 @@ pub struct ScanInput {
     pub hotspots: Option<crate::hotspots::Hotspots>,
     #[serde(default)]
     pub findings: Vec<FindingContext>,
+    #[serde(default)]
+    pub diagnostics: Vec<DiagnosticContext>,
     #[serde(default)]
     pub symbols: Option<crate::surface::Symbols>,
     #[serde(default)]
@@ -567,6 +571,8 @@ pub struct Link {
 pub enum FindingKind {
     Cycle,
     CycleViaGrabbag,
+    DeepImport,
+    ForbiddenEdge,
     HiddenCoupling,
     InternalsReach,
     MisplacedFile,
@@ -582,6 +588,8 @@ impl FindingKind {
         match self {
             Self::Cycle => "cycle",
             Self::CycleViaGrabbag => "cycle-via-grabbag",
+            Self::DeepImport => "deep-import",
+            Self::ForbiddenEdge => "forbidden-edge",
             Self::HiddenCoupling => "hidden-coupling",
             Self::InternalsReach => "internals-reach",
             Self::MisplacedFile => "misplaced-file",
@@ -602,6 +610,9 @@ impl Serialize for FindingKind {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Finding {
+    pub finding_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recipe: Option<crate::recipes::Recipe>,
     pub kind: FindingKind,
     pub subject: String,
     pub evidence: Evidence,
@@ -643,10 +654,25 @@ pub struct FindingContext {
     pub provenance: Option<Provenance>,
 }
 
+/// Persist only historical context; current analysis rebuilds diagnostic evidence and reasons.
+#[derive(Debug, Deserialize)]
+pub struct DiagnosticContext {
+    pub finding: FindingContext,
+}
+
 /// One shape per finding kind, each named in the schema's `$defs`.
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
 pub enum Evidence {
+    ForbiddenEdge {
+        edge: Edge,
+    },
+    DeepImport {
+        from: String,
+        to: String,
+        entrypoint: String,
+        symbols: Vec<String>,
+    },
     Grabbag(crate::grabbag::Evidence),
     ReexportCycle {
         members: Vec<String>,

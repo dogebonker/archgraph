@@ -27,7 +27,7 @@ fn diff_shows_a_resolved_cycle() {
     let (old, new) = before_after("ts-cycles", &[], "src/c/z.ts", "src/a/x.ts");
     let (diff, code) = run_json(&["diff", &old, &new]);
     assert_eq!(code, Some(0));
-    assert_eq!(diff["schema"], "archgraph/v1.1");
+    assert_eq!(diff["schema"], "archgraph/v1.2");
     assert_eq!(diff["kind"], "diff");
     // The commit of the checkout holding the fixtures, or null outside a git repository.
     let scanned: Value = serde_json::from_str(&std::fs::read_to_string(&old).unwrap()).unwrap();

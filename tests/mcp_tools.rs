@@ -34,7 +34,16 @@ fn document(edges: &[(&str, &str)]) -> Document {
     .unwrap()
 }
 fn tool(doc: &Document, name: &str, args: Value) -> Value {
-    call(doc, Path::new("."), name, args, None).unwrap()
+    static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let root = std::env::temp_dir().join(format!(
+        "archgraph-mcp-unit-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
+    std::fs::create_dir_all(&root).unwrap();
+    let result = call(doc, &root, name, args, None);
+    std::fs::remove_dir_all(root).unwrap();
+    result.unwrap()
 }
 fn cycle() -> Document {
     document(&[("src/a/a.ts", "src/b/b.ts"), ("src/b/b.ts", "src/a/a.ts")])
@@ -66,6 +75,18 @@ fn stable_ids_exclude_timing_priority_and_member_order() {
     assert_eq!(finding_id(f), finding_id(&other));
     let out = tool(&doc, "verify", json!({}));
     validate("verify", &out);
+    assert_eq!(
+        out["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["finding_id"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        doc.findings
+            .iter()
+            .map(|f| f.finding_id.as_str())
+            .collect::<Vec<_>>()
+    );
 }
 #[test]
 fn cycle_recipe_contains_executable_predicate_and_no_invented_cut_delta() {
@@ -81,15 +102,15 @@ fn cycle_recipe_contains_executable_predicate_and_no_invented_cut_delta() {
     let recipe = tool(&doc, "propose", json!({"finding_id":id}));
     validate("propose", &recipe);
     let step = &recipe["steps"][0];
-    assert_eq!(step["action"], "cut_import");
-    assert_eq!(step["expected_delta"]["status"], "unmeasured");
-    let failed = tool(&doc, "verify", json!({"expect":step["verification"]}));
+    assert_eq!(step["kind"], "cut_import");
+    // The graph fixture has no source import ledger: never invent mechanical deltas.
+    assert!(recipe["expected"]["pairs_removed"].is_null());
+    let predicate = json!({"findings_absent":[id]});
+    let failed = tool(&doc, "verify", json!({"expect":predicate}));
     assert_eq!(failed["pass"], false);
     let clean = document(&[]);
-    let passed = tool(&clean, "verify", json!({"expect":step["verification"]}));
+    let passed = tool(&clean, "verify", json!({"expect":predicate}));
     assert_eq!(passed["pass"], true);
-    let absent = tool(&clean, "verify", json!({"expect":recipe["verification"]}));
-    assert_eq!(absent["pass"], true);
 }
 #[test]
 fn diff_distinguishes_grown_cycles_and_schemas_validate() {

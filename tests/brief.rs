@@ -437,5 +437,5 @@ fn brief_services_captures_markdown_but_preserves_complete_report_export() {
     let full: Value = serde_json::from_slice(&std::fs::read(report).unwrap()).unwrap();
     assert_eq!(full["kind"], "services");
     assert_eq!(full["edges"].as_array().unwrap().len(), 1);
-    assert_eq!(full["schema"], "archgraph/v1.1");
+    assert_eq!(full["schema"], "archgraph/v1.2");
 }

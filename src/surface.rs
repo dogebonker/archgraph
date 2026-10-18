@@ -124,6 +124,7 @@ pub fn attach(doc: &mut Document, symbols: Symbols, max_symbols: usize) -> Resul
     validate(doc, &symbols)?;
     doc.symbols = Some(symbols);
     doc.surface = Some(analyze(doc, max_symbols)?);
+    crate::recipes::attach(doc)?;
     Ok(())
 }
 

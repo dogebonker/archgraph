@@ -1,6 +1,6 @@
 mod common;
 
-use common::{archgraph, layout, run_json, scan_file, scan_recorded};
+use common::{archgraph, layout, scan_file};
 use serde_json::{Value, json};
 
 /// `{ cohesion, ca, ce, instability }` of one module in a Summary.
@@ -153,7 +153,7 @@ fn simulate_cli_destination_decides_layer() {
     assert_eq!(
         common::without_import_metadata(&sim),
         json!({
-            "schema": "archgraph/v1.1",
+            "schema": "archgraph/v1.2",
             "kind": "simulation",
             "move": { "file": "src/adapters/out/queue.ts", "to": "src/adapters/in/queue.ts",
                       "module": "adapters/in" },
@@ -225,7 +225,7 @@ fn sink_split_skips_moves_that_collide() {
         .map(|(f, t)| (f.to_owned(), t.to_owned())),
     );
     std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -330,7 +330,7 @@ fn sink_split_counts_runtime_consumers_only() {
         ],
     );
     std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -372,7 +372,7 @@ fn sink_split_never_moves_public_api() {
         r#"{ "main": "./dist/index.js" }"#,
     )
     .unwrap();
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -513,7 +513,7 @@ fn sink_split_ignores_a_wiring_file_that_imports_only_the_entry() {
         ],
     );
     std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -637,7 +637,7 @@ fn unstable(name: &str, extra: &[(&str, &str, &[&str])]) -> Vec<Value> {
     ];
     edges.extend_from_slice(extra);
     let (dir, input) = common::synthetic_typed(name, edges.len() + 1, &edges);
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -727,7 +727,7 @@ fn unstable_dependency_skips_a_module_and_its_own_subfolder() {
         ("core/plugins/loader.ts", "w/d.ts", import),
     ];
     let (dir, input) = common::synthetic_typed("sdp-subfolder", 8, &edges);
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -767,7 +767,7 @@ fn unstable_dependency_skips_a_module_and_its_own_subfolder() {
         ("core/loader.ts", "w/d.ts", import),
     ];
     let (dir, input) = common::synthetic_typed("sdp-parent", 8, &edges);
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -833,7 +833,7 @@ fn internals_reach_counts_only_imports_the_entry_re_exports() {
         ],
     );
     std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -878,7 +878,7 @@ fn internals_reach_treats_package_entries_as_public() {
         r#"{ "exports": { "./internal": "./dist/b/internal.js" } }"#,
     )
     .unwrap();
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -922,7 +922,7 @@ fn internals_reach_is_one_finding_per_module_listing_at_most_twenty_imports() {
     }
     let (dir, input) = common::synthetic_typed("reach-grouped", edges.len() + 1, &edges);
     std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -953,7 +953,7 @@ fn reach_with_rules(name: &str, rules: &str, edges: &[(&str, &str, &[&str])]) ->
     let rules = common::write_tmp(&format!("rules/{name}.yaml"), rules);
     let (dir, input) = common::synthetic_typed(name, edges.len() + 1, edges);
     std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -1053,7 +1053,7 @@ fn internals_reach_skips_imports_from_a_subfolder_of_the_module() {
         ],
     );
     std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
-    let (doc, _, _) = common::scan(&[
+    let (doc, _, _) = scan(&[
         &dir,
         "--collector-input",
         &input,
@@ -1094,7 +1094,7 @@ fn scan_edges(name: &str, edges: &[(&str, &str)], extra: &[&str]) -> Value {
         "--language",
         "typescript",
     ];
-    common::scan(&[&args[..], extra].concat()).0
+    scan(&[&args[..], extra].concat()).0
 }
 
 fn misplaced(doc: &Value) -> Vec<&Value> {
@@ -1607,7 +1607,7 @@ fn seam_needs_clusters_holding_half_the_files() {
         }
         let (dir, input) = common::synthetic(&format!("seam-coverage-{lone}"), 20, &edges);
         std::fs::create_dir_all(std::path::Path::new(&dir).join("src")).unwrap();
-        let (doc, _, _) = common::scan(&[
+        let (doc, _, _) = scan(&[
             &dir,
             "--collector-input",
             &input,
@@ -1621,4 +1621,18 @@ fn seam_needs_clusters_holding_half_the_files() {
             .any(|f| f["kind"] == "seam");
         assert_eq!(seam, reported, "6 clustered of {} files", 6 + lone);
     }
+}
+
+fn run_json(args: &[&str]) -> (Value, Option<i32>) {
+    let (doc, code) = common::run_json(args);
+    (common::evidence_contract(doc), code)
+}
+
+fn scan(args: &[&str]) -> (Value, String, String) {
+    let (doc, out, err) = common::scan(args);
+    (common::evidence_contract(doc), out, err)
+}
+fn scan_recorded(name: &str, args: &[&str]) -> (Value, String, String) {
+    let (doc, out, err) = common::scan_recorded(name, args);
+    (common::evidence_contract(doc), out, err)
 }

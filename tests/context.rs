@@ -180,11 +180,12 @@ fn reads_legacy_graph_but_rejects_legacy_context_json_output() {
     )
     .unwrap();
     let value: Value = serde_json::from_str(&success(fixture.run(&["--files", "a.ts"]))).unwrap();
-    assert_eq!(value["schema"], "archgraph/v1.1");
+    assert_eq!(value["schema"], "archgraph/v1.2");
     let output = fixture.run(&["--files", "a.ts", "--legacy-v1"]);
     assert!(!output.status.success());
     assert!(output.stdout.is_empty());
     assert!(
-        String::from_utf8_lossy(&output.stderr).contains("context JSON requires archgraph/v1.1")
+        String::from_utf8_lossy(&output.stderr)
+            .contains("context JSON requires the current schema")
     );
 }
