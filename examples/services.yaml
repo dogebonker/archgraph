@@ -1,0 +1,44 @@
+# Declarative, unverified call inventory: confidence describes your evidence,
+# not automatic verification. Queue direction is publisher -> consumer.
+version: 1
+services:
+  - frontend-bff
+  - billing
+  - notifications
+  - db-service
+edges:
+  - from: frontend-bff
+    to: billing
+    kind: http
+    confidence: high
+    operation: POST /invoices
+    source: { file: apps/frontend/src/invoices.ts, line: 18 }
+  - from: billing
+    to: frontend-bff
+    kind: grpc
+    confidence: high
+    operation: Frontend.GetCustomer
+    source: { file: services/billing/customer.go, line: 42 }
+  - from: billing
+    to: notifications
+    kind: queue
+    confidence: medium
+    operation: invoice.created
+    source: { file: services/billing/events.py, line: 27 }
+  - from: frontend-bff
+    to: db-service
+    kind: http
+    confidence: high
+    operation: GET /customers
+    source: { file: apps/frontend/src/customer.ts, line: 9 }
+  - from: billing
+    to: db-service
+    kind: grpc
+    confidence: high
+    operation: Database.GetCustomer
+    source: { file: services/billing/database.go, line: 14 }
+forbid:
+  - id: bff-must-use-service-api
+    from: frontend-*
+    to: db-service
+    reason: Use the billing service API instead of accessing storage directly.

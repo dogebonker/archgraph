@@ -21,6 +21,7 @@ pub mod quality;
 pub mod render;
 pub mod resolution;
 pub mod rules;
+pub mod services;
 pub mod simulate;
 pub mod surface;
 pub mod symbols;

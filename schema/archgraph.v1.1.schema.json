@@ -21,7 +21,8 @@
         "impact",
         "surface",
         "package-splits",
-        "context"
+        "context",
+        "services"
       ]
     }
   },
@@ -144,6 +145,18 @@
       },
       "then": {
         "$ref": "#/$defs/context"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "services"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/services"
       }
     }
   ],
@@ -3686,6 +3699,469 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        }
+      }
+    },
+    "services": {
+      "type": "object",
+      "required": [
+        "schema",
+        "kind",
+        "source",
+        "services",
+        "edges",
+        "forbid",
+        "modules",
+        "cycles",
+        "hubs",
+        "forbidden_calls",
+        "summary",
+        "caveats"
+      ],
+      "properties": {
+        "schema": {
+          "const": "archgraph/v1.1"
+        },
+        "kind": {
+          "const": "services"
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "collector",
+            "path",
+            "complete"
+          ],
+          "properties": {
+            "collector": {
+              "const": "declarative"
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+              "minLength": 1
+            },
+            "complete": {
+              "const": false
+            }
+          }
+        },
+        "services": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+            "minLength": 1,
+            "not": {
+              "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+            },
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "[\\s*?\\[\\]{}<>]"
+                }
+              }
+            ]
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from",
+              "to",
+              "kind",
+              "source",
+              "confidence",
+              "verdict"
+            ],
+            "properties": {
+              "from": {
+                "type": "string",
+                "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                "minLength": 1,
+                "not": {
+                  "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                },
+                "allOf": [
+                  {
+                    "not": {
+                      "pattern": "[\\s*?\\[\\]{}<>]"
+                    }
+                  }
+                ]
+              },
+              "to": {
+                "type": "string",
+                "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                "minLength": 1,
+                "not": {
+                  "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                },
+                "allOf": [
+                  {
+                    "not": {
+                      "pattern": "[\\s*?\\[\\]{}<>]"
+                    }
+                  }
+                ]
+              },
+              "kind": {
+                "enum": [
+                  "http",
+                  "grpc",
+                  "queue"
+                ]
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "default": "low"
+              },
+              "source": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "file",
+                  "line"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                    "minLength": 1,
+                    "not": {
+                      "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                    }
+                  },
+                  "line": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              "operation": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verdict": {
+                "enum": [
+                  "allowed",
+                  "forbidden"
+                ]
+              },
+              "rule": {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "forbid": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "from",
+              "to"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                "minLength": 1,
+                "allOf": [
+                  {
+                    "pattern": "\\S"
+                  }
+                ]
+              },
+              "from": {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                "minLength": 1,
+                "allOf": [
+                  {
+                    "not": {
+                      "pattern": "[<>]"
+                    }
+                  },
+                  {
+                    "pattern": "\\S"
+                  }
+                ]
+              },
+              "to": {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                "minLength": 1,
+                "allOf": [
+                  {
+                    "not": {
+                      "pattern": "[<>]"
+                    }
+                  },
+                  {
+                    "pattern": "\\S"
+                  }
+                ]
+              },
+              "kinds": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "enum": [
+                        "http",
+                        "grpc",
+                        "queue"
+                      ]
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "fan_in",
+              "fan_out",
+              "instability"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                "minLength": 1,
+                "not": {
+                  "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                },
+                "allOf": [
+                  {
+                    "not": {
+                      "pattern": "[\\s*?\\[\\]{}<>]"
+                    }
+                  }
+                ]
+              },
+              "fan_in": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "fan_out": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "instability": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        },
+        "cycles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "members",
+              "edge_indices",
+              "confidence"
+            ],
+            "properties": {
+              "members": {
+                "type": "array",
+                "minItems": 2,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                  "minLength": 1,
+                  "not": {
+                    "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                  },
+                  "allOf": [
+                    {
+                      "not": {
+                        "pattern": "[\\s*?\\[\\]{}<>]"
+                      }
+                    }
+                  ]
+                }
+              },
+              "edge_indices": {
+                "type": "array",
+                "minItems": 2,
+                "uniqueItems": true,
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "default": "low"
+              }
+            }
+          }
+        },
+        "hubs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "service",
+              "fan_in",
+              "callers"
+            ],
+            "properties": {
+              "service": {
+                "type": "string",
+                "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                "minLength": 1,
+                "not": {
+                  "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                },
+                "allOf": [
+                  {
+                    "not": {
+                      "pattern": "[\\s*?\\[\\]{}<>]"
+                    }
+                  }
+                ]
+              },
+              "fan_in": {
+                "type": "integer",
+                "minimum": 2
+              },
+              "callers": {
+                "type": "array",
+                "minItems": 2,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                  "minLength": 1,
+                  "not": {
+                    "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                  },
+                  "allOf": [
+                    {
+                      "not": {
+                        "pattern": "[\\s*?\\[\\]{}<>]"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "forbidden_calls": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "services",
+            "calls",
+            "cycles",
+            "largest_cycle",
+            "hubs",
+            "forbidden_calls",
+            "low_confidence_calls"
+          ],
+          "properties": {
+            "services": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "calls": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cycles": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "largest_cycle": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "hubs": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "forbidden_calls": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "low_confidence_calls": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "caveats": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
           }
         }
       }

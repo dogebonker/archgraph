@@ -35,6 +35,8 @@ mod infer_layout_cli;
 mod package_splits_cli;
 #[path = "cli/provenance.rs"]
 mod provenance_cli;
+#[path = "cli/services.rs"]
+mod services_cli;
 #[path = "cli/surface.rs"]
 mod surface_cli;
 #[path = "cli/tour.rs"]
@@ -88,6 +90,8 @@ enum Cmd {
     Context(context_cli::ContextArgs),
     /// Print a module reading tour, grouping cycles into a single stop
     Tour(tour_cli::TourArgs),
+    /// Analyze declared HTTP, gRPC and queue dependencies between services
+    Services(services_cli::ServicesArgs),
     /// List default file exclusions and their categories
     ShowExcludes,
     /// List imports whose file or external package could not be resolved
@@ -339,6 +343,7 @@ fn main() -> ExitCode {
         Cmd::PackageSplits(args) => package_splits_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Context(args) => context_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Tour(args) => tour_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Services(args) => services_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::ShowExcludes => show_excludes().map(|()| ExitCode::SUCCESS),
         Cmd::Unresolved(args) => unresolved(args).map(|()| ExitCode::SUCCESS),
     };

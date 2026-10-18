@@ -50,7 +50,7 @@ The collector runs inside the scanned repository:
 
 ## Commands
 
-`scan`, `report`, `history` and `impact` run collectors. `infer-layout` drafts rules, `context` selects reading context, and `tour` prints a reading order from saved graphs without running collectors. Other analysis commands read a scan document and recompute modules, metrics, cycles, verdicts and findings from its files, edges and config with the same code, so their output agrees with the rules in effect.
+`scan`, `report`, `history` and `impact` run collectors. `infer-layout` drafts rules, `context` selects reading context, and `tour` prints a reading order from saved graphs without running collectors. `services` analyzes a separate declarative service-call inventory without scanning source code. Other analysis commands read a scan document and recompute modules, metrics, cycles, verdicts and findings from its files, edges and config with the same code, so their output agrees with the rules in effect.
 
 **scan** writes the scan document (`kind: scan`).
 
@@ -133,6 +133,62 @@ archgraph diff before.json after.json --fail-on new-forbidden,new-cycles --forma
 - `--format json|markdown` (default `json`): `markdown` prints a compact summary for a pull request or CI job summary instead of the document: a pass or fail headline naming the failed `--fail-on` conditions, new forbidden and unplanned imports (`file → file (rule)`), new and resolved cycles, a table of modules whose cohesion or instability moved by 0.05 or more (largest move first, at most 20 rows, then "and N more"), and the numbers of added and removed modules. Paths and module ids are backslash-escaped (backslash, `|`, backtick, `<`, `>`, `*`, `_`, `[`, `]`) and line breaks become spaces, since they come from the scanned repository.
 
 `check`, `simulate` and `render` take `--rules layout.yaml` to replace the rules embedded in the scan.
+
+## Declared cross-service edges
+
+This first service-level milestone uses declarations. It does not discover OpenAPI clients, protobuf stubs or queue strings. Teams and external tools can feed the same versioned YAML/JSON manifest; no plugin executable is loaded or run.
+
+```sh
+archgraph services                              # read ./services.yaml, print Markdown
+archgraph services examples/services.yaml --format json
+archgraph services services.yaml --output services-report.json
+```
+
+```yaml
+version: 1
+services: [frontend-bff, billing, notifications, db-service]
+edges:
+  - from: frontend-bff
+    to: billing
+    kind: http
+    confidence: high
+    operation: POST /invoices
+    source: {file: apps/frontend/invoices.ts, line: 18}
+  - from: billing
+    to: frontend-bff
+    kind: grpc
+    confidence: high
+    operation: Frontend.GetCustomer
+    source: {file: services/billing/customer.go, line: 42}
+  - from: billing
+    to: notifications
+    kind: queue
+    confidence: low
+    operation: invoice.created
+    source: {file: services/billing/events.py, line: 27}
+  - from: frontend-bff
+    to: db-service
+    kind: http
+    source: {file: apps/frontend/customer.ts, line: 9}
+forbid:
+  - id: bff-no-direct-storage
+    from: frontend-*
+    to: db-service
+    kinds: [http, grpc]             # omitted: every transport
+    reason: Use the service API.
+```
+
+Every call requires a known caller/callee, transport (`http`, `grpc`, `queue`) and source file with a positive line number. Confidence is `high`, `medium` or `low`; omitted confidence defaults to **low**. `operation` is an optional opaque route, RPC method or topic label. Queue edges point **publisher → consumer**, not consumer → publisher. Source locations can identify code, configuration or a declaration; they are required, user-supplied evidence and are **not read or verified**. This also permits inventories spanning several repositories. No endpoint is contacted.
+
+The report includes all calls with confidence and file:line evidence, strongly connected service groups, distinct-service fan-in/out, instability `fan_out / (fan_in + fan_out)`, and forbid matches. Isolated instability is `null`. Parallel HTTP/gRPC/queue calls remain separate evidence but count once toward neighbor metrics. Self-calls remain visible while being excluded from cross-service cycles and coupling. A hub has at least two distinct other callers; hubs rank by fan-in, then ID. Cycle confidence is the lowest recorded confidence among its internal, non-self calls. Low-confidence edges participate rather than silently disappear.
+
+Forbid rules use existing glob semantics: `*` stays within one namespace segment, `**` crosses `/`; captures such as `<name>` are not supported. The first matching rule of an applicable transport wins. An edge marked `allowed` means **no declared forbid matched**, not approval of architectural intent. Rule IDs must be unique. Unknown fields, duplicate services/exact call records, unknown endpoints, invalid protocols/confidence/globs, control characters and malformed evidence are errors. Service IDs and evidence paths use normalized relative names; evidence paths may contain spaces. No absolute, drive-letter, backslash, empty or dot path segments are accepted.
+
+JSON reports use `schema: archgraph/v1.1`, `kind: services`. Their transport-valued edges have their own schema definition; source-import kinds are unchanged. [Manifest schema](../schema/services.v1.schema.json) validates the input structure, while [the v1.1 schema](../schema/archgraph.v1.1.schema.json) validates reports. Cross-references and semantic constraints are additionally checked by Rust. Array indices in cycle and forbidden-call evidence are zero-based; Markdown numbers calls from one. Report source metadata says `collector: declarative`, `complete: false`.
+
+This is a standalone report type. Import commands such as `check`, `render`, `simulate`, `tour` and `context` do not consume service reports. Service-map integration and automatic collectors are separate milestones; there is no legacy-v1 export. Valid reports exit 0 even when they contain cycles or forbidden calls; invalid declarations exit 2. JSON may be saved with `--output` while Markdown is printed; the output path must differ from the input manifest. All declared transports participate; file `--granularity` does not apply.
+
+**Interpretation:** a call cycle is communication-coupling evidence. It does not prove a distributed deadlock or a deployment-order failure, especially when queues are asynchronous. The inventory can be incomplete or wrong. Review the displayed confidence and evidence before acting; this mode makes no completeness claim.
 
 ## Layout inference
 

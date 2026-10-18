@@ -58,6 +58,8 @@ A scan document is input to `check`, `simulate`, `render` and `diff`: do not edi
 
 For onboarding, `archgraph tour graph.json` prints a dependency-first reading order; `--reverse` starts from entrypoints and `--agent` adds saved export names without opening bodies. Read cyclic stops together and follow their suggested starting module. Missing or partial export evidence is labeled.
 
+For a declared service inventory, `archgraph services services.yaml` reports HTTP/gRPC/queue cycles, hubs and policy violations with confidence and source evidence. `--format json` emits a standalone services report. Treat declarations as unverified and incomplete; a cycle is not proof of deadlock. Service reports are separate from import scans and cannot be fed to import `check` or `render`.
+
 ## Acting on the evidence
 
 Related skills take the next step:

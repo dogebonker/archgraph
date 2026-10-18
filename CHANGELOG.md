@@ -36,6 +36,8 @@
 
 ### Added
 
+- Declarative `services` analysis from YAML/JSON: transport-aware HTTP/gRPC/queue edges with confidence and source evidence, service SCCs, distinct fan-in hubs, instability and protocol-filtered forbid rules. Adds a standalone v1.1 service report and input schema; automatic discovery and service maps remain separate milestones.
+
 - Live What-if map previews: drag or enter a file move, compare cycles, two-way pairs, weighted instability and cycle/rule findings, clear transient state, and copy quoted Rust simulation and Git move commands. Rust-generated parity fixtures validate the dependency-free JS preview; unsupported refinements are labeled. Includes a recorded WebP demo.
 
 - `tour` generates a Markdown reading order from saved graphs: dependency layers, fan-in priorities, grouped cycles with a suggested starting module, reversed layers, and optional saved export summaries for agents.

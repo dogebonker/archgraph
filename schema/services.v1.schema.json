@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "archgraph service declarations v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "services",
+    "edges"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "services": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+        "minLength": 1,
+        "not": {
+          "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+        },
+        "allOf": [
+          {
+            "not": {
+              "pattern": "[\\s*?\\[\\]{}<>]"
+            }
+          }
+        ]
+      }
+    },
+    "edges": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "kind",
+          "source"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+            "minLength": 1,
+            "not": {
+              "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+            },
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "[\\s*?\\[\\]{}<>]"
+                }
+              }
+            ]
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+            "minLength": 1,
+            "not": {
+              "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+            },
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "[\\s*?\\[\\]{}<>]"
+                }
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "http",
+              "grpc",
+              "queue"
+            ]
+          },
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "default": "low"
+          },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "file",
+              "line"
+            ],
+            "properties": {
+              "file": {
+                "type": "string",
+                "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                "minLength": 1,
+                "not": {
+                  "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                }
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "operation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "forbid": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+            "minLength": 1,
+            "allOf": [
+              {
+                "pattern": "\\S"
+              }
+            ]
+          },
+          "from": {
+            "type": "string",
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+            "minLength": 1,
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "[<>]"
+                }
+              },
+              {
+                "pattern": "\\S"
+              }
+            ]
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+            "minLength": 1,
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "[<>]"
+                }
+              },
+              {
+                "pattern": "\\S"
+              }
+            ]
+          },
+          "kinds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "enum": [
+                    "http",
+                    "grpc",
+                    "queue"
+                  ]
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
