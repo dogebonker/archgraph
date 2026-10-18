@@ -644,6 +644,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
     };
     let mut history = history::collect_with_options(&args.root, &args.rev, &history_options, scan)?;
     if args.annotate {
+        let setup = std::cell::OnceCell::new();
         for i in 1..history.snapshots.len() {
             let (before, after) = history.snapshots.split_at_mut(i);
             let previous = &before[i - 1];
@@ -662,6 +663,7 @@ fn history(mut args: HistoryArgs) -> Result<()> {
                     &args.collector,
                     &mut current.graph,
                     Some(previous.commit.clone()),
+                    &setup,
                 )?;
                 history::persist_context(&args.root, &history_options, &current.graph)?;
             }

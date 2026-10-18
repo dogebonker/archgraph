@@ -238,18 +238,20 @@ fn unavailable(doc: &Document, status: &str, limitation: &str) -> Provenance {
 /// A report has one disposable checkout and a shared 64-scan budget across all findings.
 /// Cached collector results can be reused by subsequent finding investigations.
 pub(super) fn enrich(root: &Path, opts: &CollectorOpts, doc: &mut Document) -> Result<()> {
-    enrich_from(root, opts, doc, None)
+    enrich_from(root, opts, doc, None, &std::cell::OnceCell::new())
 }
 
+/// `enrich` from commit `from`; `setup` holds the collector options and checkout, made on first
+/// use, so a caller annotating several documents clones the repository once.
 pub(super) fn enrich_from(
     root: &Path,
     opts: &CollectorOpts,
     doc: &mut Document,
     from: Option<String>,
+    setup: &std::cell::OnceCell<Result<(CollectorOpts, history::Checkout)>>,
 ) -> Result<()> {
     let mut cached: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut scans = 0;
-    let setup = std::cell::OnceCell::new();
     for index in 0..doc.findings.len() {
         let result = match setup.get_or_init(|| {
             collector_opts(root, opts, engine(doc), doc.source.language)
