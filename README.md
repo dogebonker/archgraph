@@ -92,6 +92,8 @@ forbidden src/domain/user.ts -> src/adapters/out/pg.ts (layers)
 3 forbidden, 0 unplanned
 ```
 
+Enforce external boundaries with `to: "pkg:typeorm"` or `to: "category:orm"` and a `pkg-category` map in `layout.yaml`. Reports show per-module package counts and weighted exposure; high external shares are advisory and may describe intentional adapters. External-free layers can receive draft package forbids from `infer-layout`, and the map displays recorded packages in an outer ring. [Third-party exposure and limits](docs/guide.md#third-party-exposure-per-module).
+
 Start with an evidence-backed draft of the current architecture using `archgraph infer-layout graph.json`. It prints annotated YAML with inferred layers, unresolved cycles, and sparse-boundary proposals including existing violations. `--apply` creates `layout.yaml` without overwriting an existing file. Review and edit the draft before enforcing it; see [layout inference](docs/guide.md#layout-inference).
 
 <p align="center">

@@ -39,6 +39,8 @@ pub struct Document {
     pub external_nodes: Vec<ExternalNode>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub external_edges: Vec<Edge>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub external_exposure: Option<crate::exposure::Report>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub grabbags: Vec<crate::grabbag::Evidence>,
     /// The counts and module metrics that finding simulations and `simulate` compare.

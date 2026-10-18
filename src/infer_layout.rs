@@ -194,7 +194,7 @@ pub fn infer(input: &ScanInput, options: Options) -> Result<String> {
         }
     }
     let mut out = String::from(
-        "# DRAFT: inferred observations, not architectural intent. Review and edit before adoption.\n# Folder names do not establish intent. Only this scan's files and imports are evidence.\n# Exclusions and unresolved/dynamic imports limit absence claims; tests and externals are ignored.\n# All import kinds are included because layout rules apply to all kinds.\nversion: 1\n",
+        "# DRAFT: inferred observations, not architectural intent. Review and edit before adoption.\n# Folder names do not establish intent. Only this scan's files and imports are evidence.\n# Exclusions and unresolved/dynamic imports limit absence claims; tests are ignored; external rules require import accounting.\n# All import kinds are included because layout rules apply to all kinds.\nversion: 1\n",
     );
     writeln!(
         out,
@@ -287,6 +287,39 @@ pub fn infer(input: &ScanInput, options: Options) -> Result<String> {
             quoted(&union(&patterns))
         )?;
     }
+    let mut external_proposals = Vec::new();
+    if let Some(imports) = &input.imports {
+        let packages: BTreeSet<_> = imports
+            .iter()
+            .filter_map(|i| i.external.as_deref())
+            .collect();
+        for (&rank, modules) in &levels {
+            let layer: BTreeSet<_> = modules.iter().map(|&i| names[i]).collect();
+            let count: usize = modules.iter().map(|&i| members[names[i]].len()).sum();
+            let potential = count
+                .checked_mul(packages.len())
+                .ok_or_else(|| anyhow::anyhow!("potential package edge count exceeds usize"))?;
+            let uncertain_or_external = imports.iter().any(|import| {
+                files
+                    .get(import.from.as_str())
+                    .and_then(|m| *m)
+                    .is_some_and(|m| layer.contains(m))
+                    && (import.external.is_some() || import.unresolved.is_some())
+            });
+            if potential >= options.min_potential_edges && !uncertain_or_external {
+                let patterns: Vec<_> = modules
+                    .iter()
+                    .flat_map(|&i| globs[names[i]].iter().cloned())
+                    .collect();
+                external_proposals.push((rank, union(&patterns), count, packages.len(), potential));
+            }
+        }
+    } else {
+        out.push_str("# Package rules unavailable: no import accounting; rescan before inferring external boundaries.\n");
+    }
+    let external_eligible = external_proposals.len();
+    external_proposals.truncate(options.max_rules);
+    let internal_limit = options.max_rules.saturating_sub(external_proposals.len());
     let mut proposals: Vec<(usize, usize, usize, usize, f64)> = Vec::new();
     let mut eligible_count = 0;
     for from in 0..names.len() {
@@ -330,9 +363,9 @@ pub fn infer(input: &ScanInput, options: Options) -> Result<String> {
                             .then_with(|| (current.0, current.1).cmp(&(from, to)))
                     })
                     .unwrap_or_else(|position| position);
-                if position < options.max_rules {
+                if position < internal_limit {
                     proposals.insert(position, (from, to, potential, observed, density));
-                    proposals.truncate(options.max_rules);
+                    proposals.truncate(internal_limit);
                 }
             }
         }
@@ -343,11 +376,23 @@ pub fn infer(input: &ScanInput, options: Options) -> Result<String> {
         eligible_count,
         eligible_count - proposals.len()
     )?;
+    writeln!(
+        out,
+        "# {external_eligible} eligible external-free layers; {} omitted by --max-rules.",
+        external_eligible - external_proposals.len()
+    )?;
     out.push_str("forbid:");
-    if proposals.is_empty() {
+    if proposals.is_empty() && external_proposals.is_empty() {
         out.push_str(" []\n");
     } else {
         out.push('\n');
+    }
+    for (rank, pattern, count, packages, potential) in external_proposals {
+        writeln!(
+            out,
+            "  # Layer {rank}: 0 recorded external imports in {count} files; no unresolved imports.\n  # {packages} package identities observed repo-wide; {potential} file/package opportunities. Review intent.\n  - id: infer-no-external-layer-{rank}\n    from: {}\n    to: \"pkg:**\"\n    reason: Draft external-free layer; review intent",
+            quoted(&pattern)
+        )?;
     }
     for (i, &(from, to, potential, observed, density)) in proposals.iter().enumerate() {
         writeln!(
@@ -447,6 +492,88 @@ mod tests {
         let rules = serde_yaml_ng::from_str(&text).unwrap();
         Compiled::new(&rules).unwrap();
         (text, rules)
+    }
+
+    #[test]
+    fn external_free_layers_require_accounting_and_sufficient_certain_evidence() {
+        let mut scan = input(
+            &[
+                ("adapter", &["adapter/a.ts"]),
+                ("domain", &["domain/a.ts", "domain/b.ts"]),
+            ],
+            &[("adapter/a.ts", "domain/a.ts")],
+        );
+        let options = Options {
+            min_potential_edges: 2,
+            max_rules: 1,
+            ..Options::default()
+        };
+        assert!(parsed(&scan, options).1.forbid.is_empty());
+        scan.imports = Some(vec![crate::model::ImportRecord {
+            from: "adapter/a.ts".into(),
+            specifier: "typeorm".into(),
+            external: Some("typeorm".into()),
+            ..Default::default()
+        }]);
+        let (text, rules) = parsed(&scan, options);
+        assert!(text.contains("2 file/package opportunities"));
+        assert_eq!(rules.forbid.len(), 1);
+        assert_eq!(rules.forbid[0].from, "domain/**");
+        assert_eq!(rules.forbid[0].to, "pkg:**");
+        let compiled = Compiled::new(&rules).unwrap();
+        let mut edges = vec![Edge {
+            from: "domain/a.ts".into(),
+            to: "external:typescript:prisma".into(),
+            ..Default::default()
+        }];
+        compiled.decide_with_externals(
+            &mut edges,
+            &scan
+                .files
+                .iter()
+                .map(|f| (f.path.clone(), f.module.clone()))
+                .collect(),
+            &[("external:typescript:prisma".into(), "prisma".into())]
+                .into_iter()
+                .collect(),
+        );
+        assert_eq!(edges[0].verdict, Some(crate::model::Verdict::Forbidden));
+        assert!(
+            parsed(
+                &scan,
+                Options {
+                    max_rules: 0,
+                    ..options
+                }
+            )
+            .1
+            .forbid
+            .is_empty()
+        );
+        assert!(
+            parsed(
+                &scan,
+                Options {
+                    min_potential_edges: 3,
+                    ..options
+                }
+            )
+            .1
+            .forbid
+            .is_empty()
+        );
+        scan.imports
+            .as_mut()
+            .unwrap()
+            .push(crate::model::ImportRecord {
+                from: "domain/a.ts".into(),
+                specifier: "unknown".into(),
+                unresolved: Some(crate::model::ImportReason::Missing),
+                ..Default::default()
+            });
+        assert!(parsed(&scan, options).1.forbid.is_empty());
+        scan.imports = Some(Vec::new());
+        assert!(parsed(&scan, options).1.forbid.is_empty());
     }
 
     #[test]

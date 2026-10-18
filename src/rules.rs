@@ -21,6 +21,14 @@ pub struct Rules {
     pub include: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub edge_weights: Option<EdgeWeights>,
+    #[serde(
+        rename = "pkg-category",
+        default,
+        skip_serializing_if = "BTreeMap::is_empty"
+    )]
+    pub pkg_category: BTreeMap<String, Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub external_exposure: Option<crate::exposure::Thresholds>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grabbag: Option<crate::grabbag::Thresholds>,
     #[serde(default)]
@@ -187,6 +195,8 @@ fn known_keys() -> serde_json::Value {
             ..Allow::default()
         }],
         edge_weights: Some(EdgeWeights::default()),
+        pkg_category: BTreeMap::from([("orm".into(), vec!["typeorm".into()])]),
+        external_exposure: Some(crate::exposure::Thresholds::default()),
         grabbag: Some(crate::grabbag::Thresholds::default()),
         exclude: vec!["excluded/**".into()],
         include: vec!["included/**".into()],
@@ -204,7 +214,7 @@ fn unknown_key(
     at: &str,
 ) -> Option<(String, String)> {
     use serde_json::Value::{Array, Object};
-    if at == "entrypoints" {
+    if matches!(at, "entrypoints" | "pkg-category") {
         return None;
     }
     match (given, known) {
@@ -316,6 +326,7 @@ type Reached<'a> = HashMap<(usize, Option<String>, &'a str), Option<Vec<String>>
 type CompiledForbid = (String, Pattern, String, bool, Option<Vec<EdgeKind>>);
 
 pub struct Compiled {
+    categories: BTreeMap<String, Vec<GlobMatcher>>,
     modules: Vec<(Pattern, String)>,
     layers: Vec<GlobMatcher>,
     public: Vec<(Pattern, Vec<String>, Option<Vec<EdgeKind>>)>,
@@ -389,6 +400,35 @@ impl Compiled {
                 bail!("{s:?} holds a control character; rules strings must be one plain line");
             }
         }
+        let mut categories = BTreeMap::new();
+        for (name, packages) in &rules.pkg_category {
+            if name.is_empty()
+                || name
+                    .chars()
+                    .any(|c| c.is_control() || c.is_whitespace() || matches!(c, ':' | '<' | '>'))
+                || packages.is_empty()
+            {
+                bail!("pkg-category names and package lists must be non-empty plain names");
+            }
+            for package in packages {
+                if package.is_empty()
+                    || package.chars().any(char::is_control)
+                    || !captures(package)?.is_empty()
+                {
+                    bail!("pkg-category packages must be non-empty package globs without captures");
+                }
+            }
+            categories.insert(
+                name.clone(),
+                packages
+                    .iter()
+                    .map(|p| glob(p))
+                    .collect::<Result<Vec<_>>>()?,
+            );
+        }
+        if let Some(thresholds) = rules.external_exposure {
+            thresholds.validate()?;
+        }
         let mut modules = Vec::new();
         for m in &rules.modules {
             let path = Pattern::new(&m.path)?;
@@ -421,9 +461,26 @@ impl Compiled {
             id.clone().unwrap_or_else(|| format!("{kind}[{i}]"))
         };
         let pair = |from: &str, to: &str| -> Result<Pattern> {
+            if from.starts_with("pkg:") || from.starts_with("category:") {
+                bail!("package selectors are supported only as rule targets (`to`)");
+            }
             let from = Pattern::new(from)?;
             from.check_template(to)?;
-            glob(&from.instance(to, Some("x")))?;
+            if let Some(name) = to.strip_prefix("category:") {
+                if !categories.contains_key(name) {
+                    bail!("unknown or empty package category `{name}`");
+                }
+                if !captures(to)?.is_empty() {
+                    bail!("package categories do not support captures");
+                }
+            } else if let Some(package) = to.strip_prefix("pkg:") {
+                if package.is_empty() {
+                    bail!("pkg: requires a package glob");
+                }
+                glob(&from.instance(package, Some("x")))?;
+            } else {
+                glob(&from.instance(to, Some("x")))?;
+            }
             Ok(from)
         };
         let mut layers = Vec::new();
@@ -465,6 +522,7 @@ impl Compiled {
                     ))
                 })
                 .collect::<Result<_>>()?,
+            categories,
             default_forbidden: rules.default == Some(Fallback::Forbidden),
             bound: RefCell::default(),
         })
@@ -502,6 +560,15 @@ impl Compiled {
 
     /// Sets `verdict`, `rule` and `reach` on every edge.
     pub fn decide(&self, edges: &mut [Edge], module_of: &BTreeMap<String, String>) {
+        self.decide_with_externals(edges, module_of, &BTreeMap::new());
+    }
+
+    pub fn decide_with_externals(
+        &self,
+        edges: &mut [Edge],
+        module_of: &BTreeMap<String, String>,
+        externals: &BTreeMap<String, String>,
+    ) {
         let mut adjacency: HashMap<&str, Vec<(&str, EdgeKind)>> = HashMap::new();
         for e in edges.iter() {
             adjacency.entry(&e.from).or_default().push((&e.to, e.kind));
@@ -509,7 +576,7 @@ impl Compiled {
         let mut reached: Reached = HashMap::new();
         let decisions: Vec<_> = edges
             .iter()
-            .map(|e| self.verdict(e, module_of, &adjacency, &mut reached))
+            .map(|e| self.verdict(e, module_of, externals, &adjacency, &mut reached))
             .collect();
         for (e, (verdict, rule, reach)) in edges.iter_mut().zip(decisions) {
             e.verdict = Some(verdict);
@@ -523,11 +590,30 @@ impl Compiled {
         &self,
         e: &'a Edge,
         module_of: &BTreeMap<String, String>,
+        externals: &BTreeMap<String, String>,
         adjacency: &HashMap<&'a str, Vec<(&'a str, EdgeKind)>>,
         reached: &mut Reached<'a>,
     ) -> (Verdict, String, Option<Vec<String>>) {
         use Verdict::*;
         let written = e.original_to.as_deref().unwrap_or(&e.to);
+        let matches_target = |selector: &str, target: &str| match externals.get(target) {
+            Some(package) => {
+                if let Some(pattern) = selector.strip_prefix("pkg:") {
+                    self.bound_match(pattern, package)
+                } else if let Some(category) = selector.strip_prefix("category:") {
+                    self.categories
+                        .get(category)
+                        .is_some_and(|patterns| patterns.iter().any(|p| p.is_match(package)))
+                } else {
+                    false
+                }
+            }
+            None => {
+                !selector.starts_with("pkg:")
+                    && !selector.starts_with("category:")
+                    && self.bound_match(selector, target)
+            }
+        };
         for (i, (name, from, to, reachable, kinds)) in self.forbid.iter().enumerate() {
             if !includes_kind(kinds, e.kind) {
                 continue;
@@ -536,12 +622,12 @@ impl Compiled {
                 continue;
             };
             let to = from.bound_glob(to, value.as_deref());
-            if self.bound_match(&to, written) {
+            if matches_target(&to, written) {
                 return (Forbidden, name.clone(), None);
             }
             if *reachable {
                 let path = reached.entry((i, value, e.to.as_str())).or_insert_with(|| {
-                    shortest_path(&e.to, adjacency, kinds, |f| self.bound_match(&to, f))
+                    shortest_path(&e.to, adjacency, kinds, |f| matches_target(&to, f))
                 });
                 if let Some(path) = path {
                     return (Forbidden, name.clone(), Some(path.clone()));
@@ -549,7 +635,9 @@ impl Compiled {
             }
         }
         for (module, entry) in &self.entrypoints {
-            if let Some(value) = self.bind(module, written) {
+            if !externals.contains_key(written)
+                && let Some(value) = self.bind(module, written)
+            {
                 let value = value.as_deref();
                 let inside = self.bound_match(&module.bound_glob(&module.raw, value), &e.from);
                 if !inside && written != module.instance(entry, value) {
@@ -562,10 +650,17 @@ impl Compiled {
                 continue;
             }
             if let Some(value) = self.bind(from, &e.from)
-                && self.bound_match(&from.bound_glob(to, value.as_deref()), written)
+                && matches_target(&from.bound_glob(to, value.as_deref()), written)
             {
                 return (Allowed, name.clone(), None);
             }
+        }
+        if externals.contains_key(written) {
+            return if self.default_forbidden {
+                (Forbidden, "default".into(), None)
+            } else {
+                (Unplanned, "none".into(), None)
+            };
         }
         let entry_of = |module: &Pattern, entries: &[String], value: Option<&str>| {
             entries
@@ -593,7 +688,10 @@ impl Compiled {
             };
             return (verdict, "layers".into(), None);
         }
-        if module_of[&e.from] == module_of[written] {
+        if module_of
+            .get(&e.from)
+            .is_some_and(|module| Some(module) == module_of.get(written))
+        {
             return (Allowed, "same-module".into(), None);
         }
         for (module, entry) in &self.entrypoints {

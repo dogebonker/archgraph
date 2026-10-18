@@ -36,6 +36,8 @@
 
 ### Added
 
+- External package policies via `pkg:<glob>` and declared `category:<name>` targets, including kind-filtered reachable checks; per-module occurrence/weighted exposure with an advisory threshold; external-free layer inference; and an inspectable package ring in maps. Missing import accounting remains unavailable, and live what-if previews explicitly defer external verdicts to Rust.
+
 - Declarative `services` analysis from YAML/JSON: transport-aware HTTP/gRPC/queue edges with confidence and source evidence, service SCCs, distinct fan-in hubs, instability and protocol-filtered forbid rules. Adds a standalone v1.1 service report and input schema; automatic discovery and service maps remain separate milestones.
 
 - Live What-if map previews: drag or enter a file move, compare cycles, two-way pairs, weighted instability and cycle/rule findings, clear transient state, and copy quoted Rust simulation and Git move commands. Rust-generated parity fixtures validate the dependency-free JS preview; unsupported refinements are labeled. Includes a recorded WebP demo.

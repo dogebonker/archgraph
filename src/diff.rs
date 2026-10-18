@@ -1,6 +1,6 @@
 //! Trend between two scans: module metrics, cycles and forbidden imports.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::model::{
     Cycle, CycleLevel, Diff, Document, Edge, Module, ModuleDelta, SCHEMA, Snapshot, Verdict,
@@ -50,16 +50,18 @@ pub fn diff(old: &Document, new: &Document) -> Diff {
     // Imports with `verdict` in `a` whose pair has another verdict, or is missing, in `b`.
     let only_in = |a: &Document, b: &Document, verdict: Verdict| -> Vec<Edge> {
         let with = |e: &&Edge| e.verdict == Some(verdict);
-        let theirs: HashSet<(&str, &str)> = b
+        let theirs: BTreeSet<(&str, &str, crate::model::EdgeKind)> = b
             .edges
             .iter()
+            .chain(&b.external_edges)
             .filter(with)
-            .map(|e| (e.from.as_str(), e.to.as_str()))
+            .map(|e| (e.from.as_str(), e.to.as_str(), e.kind))
             .collect();
         a.edges
             .iter()
+            .chain(&a.external_edges)
             .filter(with)
-            .filter(|e| !theirs.contains(&(e.from.as_str(), e.to.as_str())))
+            .filter(|e| !theirs.contains(&(e.from.as_str(), e.to.as_str(), e.kind)))
             .cloned()
             .collect()
     };

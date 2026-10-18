@@ -1020,7 +1020,7 @@ fn report(args: Report) -> Result<ExitCode> {
         heading("Graph"),
         count(doc.files.len(), "file"),
         count(doc.modules.len(), "module"),
-        count(doc.edges.len(), "import")
+        count(doc.edges.len(), "internal import edge")
     );
     if let Some(resolution) = &doc.import_resolution {
         let percent = resolution
@@ -1052,6 +1052,45 @@ fn report(args: Report) -> Result<ExitCode> {
         }
     }
     out += &format!("  {} excluded files\n", doc.config.excluded_files.len());
+    out += &format!("\n{}\n", heading("External exposure"));
+    if let Some(exposure) = &doc.external_exposure {
+        out += &format!(
+            "  advisory threshold >{}% of import occurrences; known packages include standard libraries\n",
+            exposure.threshold_percent
+        );
+        for row in &exposure.modules {
+            let percent = row
+                .external_percent
+                .map(|p| format!("{p:.1}%"))
+                .unwrap_or_else(|| "n/a".into());
+            let weighted_percent = row
+                .weighted_external_percent
+                .map(|p| format!("{p:.1}%"))
+                .unwrap_or_else(|| "n/a".into());
+            out += &format!(
+                "  {}: {} packages, {}/{} imports ({percent}), weight {:.4}/{:.4} ({weighted_percent}){}\n",
+                row.module,
+                row.external_packages,
+                row.external_imports,
+                row.imports,
+                row.external_weight,
+                row.total_weight,
+                if row.exceeds_threshold {
+                    " — high exposure; review wrapper or boundary"
+                } else {
+                    ""
+                }
+            );
+            if row.unresolved_imports > 0 {
+                out += &format!(
+                    "    {} unresolved; known external share is a lower bound\n",
+                    row.unresolved_imports
+                );
+            }
+        }
+    } else {
+        out += "  unavailable in this recording; rescan with import accounting\n";
+    }
     if let Some(owners) = &doc.config.codeowners {
         let owned = doc.files.iter().filter(|f| !f.owners.is_empty()).count();
         let mut counts = BTreeMap::new();
@@ -1079,7 +1118,12 @@ fn report(args: Report) -> Result<ExitCode> {
             (Verdict::Unplanned, "unplanned"),
         ] {
             let mut by_rule: BTreeMap<&str, usize> = BTreeMap::new();
-            for e in doc.edges.iter().filter(|e| e.verdict == Some(verdict)) {
+            for e in doc
+                .edges
+                .iter()
+                .chain(&doc.external_edges)
+                .filter(|e| e.verdict == Some(verdict))
+            {
                 *by_rule
                     .entry(e.rule.as_deref().unwrap_or_default())
                     .or_default() += 1;
@@ -1253,13 +1297,21 @@ fn count(n: usize, noun: &str) -> String {
     format!("{n} {noun}{}", if n == 1 { "" } else { "s" })
 }
 
+fn policy_target(doc: &archgraph::model::Document, path: &str) -> String {
+    doc.external_nodes
+        .iter()
+        .find(|node| node.id == path)
+        .map(|node| format!("pkg:{}", node.package))
+        .unwrap_or_else(|| path.to_owned())
+}
+
 fn check(args: Check) -> Result<ExitCode> {
     let doc = recompute(&args.graph, args.rules.as_deref())?;
     if doc.config.rules.is_none() && doc.surface.is_none() {
         bail!("no rules: pass --rules, or scan with --rules");
     }
     let (mut forbidden, mut unplanned) = (0, 0);
-    for e in &doc.edges {
+    for e in doc.edges.iter().chain(&doc.external_edges) {
         let label = match e.verdict {
             Some(Verdict::Forbidden) => {
                 forbidden += 1;
@@ -1272,17 +1324,27 @@ fn check(args: Check) -> Result<ExitCode> {
             _ => continue,
         };
         let via = match &e.reach {
-            Some(path) => format!(" via {}", path.join(" -> ")),
+            Some(path) => format!(
+                " via {}",
+                path.iter()
+                    .map(|p| policy_target(&doc, p))
+                    .collect::<Vec<_>>()
+                    .join(" -> ")
+            ),
             None => String::new(),
         };
         let rule = e.rule.as_deref().unwrap_or_default();
         let written = e.original_to.as_deref().unwrap_or(&e.to);
         let resolved = if written != e.to {
-            format!(" [resolves to {}]", e.to)
+            format!(" [resolves to {}]", policy_target(&doc, &e.to))
         } else {
             String::new()
         };
-        println!("{label} {} -> {} ({rule}){via}{resolved}", e.from, written);
+        println!(
+            "{label} {} -> {} ({rule}){via}{resolved}",
+            e.from,
+            policy_target(&doc, written)
+        );
     }
     println!("{forbidden} forbidden, {unplanned} unplanned");
     if let Some(surface) = &doc.surface {
@@ -1307,6 +1369,7 @@ fn simulate(args: Simulate) -> Result<()> {
     if let Some(path) = &args.rules {
         config.rules = Some(rules::load(path)?);
     }
+    archgraph::resolution::require_policy_accounting(&config)?;
     let rules = rules::compile(&config)?;
     let owners = config
         .codeowners
@@ -1323,6 +1386,7 @@ fn simulate(args: Simulate) -> Result<()> {
         rules.as_ref(),
         owners.as_ref(),
     );
+    archgraph::exposure::validate(&doc)?;
     write(None, &simulate::simulate(&doc, rules.as_ref(), file, to)?)
 }
 

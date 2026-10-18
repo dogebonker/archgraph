@@ -244,7 +244,7 @@ h3.next svg, .assess.next svg { color: var(--blue); }
 .assess li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 10px; padding: 10px 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .assess li + li { border-top: 1px solid var(--sep); }
 .assess li > svg.i { margin-top: 2px; width: 15px; height: 15px; }
-.assess li.empty { color: var(--label2); }
+.assess li.empty { display: block; color: var(--label2); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .act { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: var(--r);
   background: rgba(118, 118, 128, .24); font-weight: 500; transition: background-color .18s ease-out; }
@@ -570,6 +570,7 @@ p { margin: 6px 0; }
             <p>Ring colours are a reading aid, not a score. Drag nodes to arrange the map. Enable What-if to drag a file into another module and preview a code move; its form also works without dragging. With a module focused, Shift and an arrow key moves it.</p>
             <p id="churn-legend" hidden>Churn view: larger, warmer file discs changed more often. Module fill size and color show the highest file churn in that module. Outer rings still show architecture checks. Churn is normalized within the scanned files and selected history window.</p>
             <p id="surface-legend" hidden></p>
+            <p id="external-legend" hidden></p>
             <p id="package-split-legend" hidden></p>
           </div>
         </div>
@@ -654,6 +655,25 @@ const dirname = p => p.slice(0, Math.max(p.lastIndexOf("/"), 0));
 const basename = p => p.slice(p.lastIndexOf("/") + 1);
 const TAU = Math.PI * 2;
 
+/* ---------- external helpers ---------- */
+function externalRing(nodes, boxes) {
+  if (!nodes.length) return [];
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const box of boxes) { x0 = Math.min(x0, box[0]); y0 = Math.min(y0, box[1]); x1 = Math.max(x1, box[2]); y1 = Math.max(y1, box[3]); }
+  if (!boxes.length) { x0 = y0 = -50; x1 = y1 = 50; }
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const radius = Math.max(Math.hypot(x1 - x0, y1 - y0) / 2 + 65, nodes.length * 24 / TAU);
+  return nodes.map((node, i) => ({ ...node, i, x: cx + radius * Math.cos(TAU * i / nodes.length - Math.PI / 2),
+    y: cy + radius * Math.sin(TAU * i / nodes.length - Math.PI / 2), r: 8 }));
+}
+function externalHit(nodes, x, y, k) {
+  return nodes.find(node => Math.hypot(node.x - x, node.y - y) <= Math.max(node.r, 7 / k));
+}
+function exposureText(row) {
+  return `${row.external_packages} external packages; ${row.external_imports} of ${row.imports} recorded imports external (${fmt(row.external_percent)}%); weight ${fmt(row.external_weight)} of ${fmt(row.total_weight)} (${fmt(row.weighted_external_percent)}%).`;
+}
+/* ---------- end external helpers ---------- */
+
 /* ---------- history context helpers ---------- */
 function churnMark(value) {
   const n = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
@@ -720,7 +740,7 @@ function drawPackageSplitHalo(ctx, marker, x, y, r, px) {
 
 /* ---------- header ---------- */
 const mods = doc.modules, N = mods.length;
-const forbidden = doc.edges.filter(e => e.verdict === "forbidden").length;
+const forbidden = [...doc.edges, ...(doc.external_edges || [])].filter(e => e.verdict === "forbidden").length;
 const commit = doc.source.git ? " at " + doc.source.git.commit.slice(0, 12) + (doc.source.git.dirty ? " (dirty)" : "") : "";
 /* The full sentence for screen readers; the strip below shows the same counts. */
 $("stats-text").textContent =
@@ -751,7 +771,8 @@ $("stats-text").textContent =
   };
   stat(doc.files.length, count(doc.files.length, "file", "files"));
   stat(mods.length, count(mods.length, "module", "modules"));
-  stat(doc.edges.length, count(doc.edges.length, "import", "imports"));
+  stat(doc.edges.length, count(doc.edges.length, "internal import edge", "internal import edges"));
+  if (doc.external_edges?.length) stat(doc.external_edges.length, count(doc.external_edges.length, "recorded external import", "recorded external imports"));
   stat(doc.cycles.length, count(doc.cycles.length, "cycle", "cycles"), doc.cycles.length > 0);
   stat(forbidden, `${forbidden} forbidden`, forbidden > 0);
   stat(doc.findings.length, count(doc.findings.length, "finding", "findings"));
@@ -763,6 +784,21 @@ const files = doc.files.map((f, i) => ({ i, path: f.path, name: basename(f.path)
   barrel: f.barrel, owners: f.owners || [], x: 0, y: 0, ins: [], outs: [] }));
 const F = files.length;
 const fileIndex = new Map(files.map(f => [f.path, f.i]));
+/* ---------- external model ---------- */
+const externalNodes = (doc.external_nodes || []).filter(n => n.external && typeof n.package === "string").slice().sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+const externalById = new Map(externalNodes.map((node, i) => [node.id, i]));
+const externalEdges = (doc.external_edges || []).filter(e => externalById.has(e.to) && fileIndex.has(e.from));
+const exposureByModule = new Map((doc.external_exposure?.modules || []).map(row => [row.module, row]));
+function externalPositions() {
+  if (whatifResult) return [];
+  return externalRing(externalNodes, mods.map((_, i) => [mx[i] - modR[i], my[i] - modR[i], mx[i] + modR[i], my[i] + modR[i]]));
+}
+if (externalNodes.length) {
+  $("external-legend").hidden = false;
+  $("external-legend").textContent = "Outer dots are recorded external packages, excluded from internal cycles and cohesion. Select a package or a module to see its import links. Package names are searchable; the assessment lists keyboard-accessible package links. Missing imports are not evidence of no dependency.";
+}
+/* ---------- end external model ---------- */
+
 const hotspotFiles = doc.hotspots ? doc.hotspots.files : [];
 const hotspotByPath = new Map(hotspotFiles.map(h => [h.path, h]));
 /* ---------- package split model ---------- */
@@ -1266,6 +1302,7 @@ function hotspotStepPriority(parts) {
    near 0, and being imported a lot marks stable code, not a problem. */
 const forbiddenMod = new Uint8Array(N), cutMod = new Uint8Array(N);
 for (const e of edges) if (e.verdict === "forbidden") forbiddenMod[files[e.a].mod] = forbiddenMod[files[e.b].mod] = 1;
+for (const e of externalEdges) if (e.verdict === "forbidden") forbiddenMod[files[fileIndex.get(e.from)].mod] = 1;
 for (const c of doc.cycles) if (c.level === "module") {
   for (const l of c.break) if (fileIndex.has(l.from)) cutMod[files[fileIndex.get(l.from)].mod] = 1;
   for (const r of c.registrar_moves || []) if (modIndex.has(r.module)) cutMod[modIndex.get(r.module)] = 1;
@@ -1455,12 +1492,21 @@ const assessment = (() => {
       ": most imports of ", loose.length === 1 ? "its" : "their", " files go to other modules, so the folder may hold several modules' worth of code."] });
   }
   for (const verdict of ["forbidden", "unplanned"]) {
+    const external = externalEdges.filter(edge => edge.verdict === verdict);
+    if (external.length) {
+      const first = external[0], target = { pkg: externalById.get(first.to), label: `pkg:${externalNodes[externalById.get(first.to)].package}` };
+      bad.push({ touch: new Set(external.map(edge => edge.from)).size,
+        parts: [`${count(external.length, "recorded external import is", "recorded external imports are")} ${verdict}; `,
+          "inspect ", target, verdict === "forbidden" ? ` (first rule: ${first.rule || "no named rule"}).` : ": no rule covers these package dependencies."] });
+      if (verdict === "forbidden") next.push([`Review the ${count(external.length, "forbidden external import", "forbidden external imports")}, starting with `,
+        { f: fileIndex.get(first.from), label: first.from + (first.line ? ":" + first.line : "") }, " → ", target, ` (${first.rule || "no named rule"}).`]);
+    }
     const groups = ruleGroups(verdict);
     if (!groups.length) continue;
     const total = groups.reduce((s, g) => s + g[1].length, 0), touched = new Set();
     for (const [, l] of groups) for (const e of l) { touched.add(edges[e].a); touched.add(edges[e].b); }
     if (verdict === "unplanned") {
-      bad.push({ touch: touched.size, parts: [{ e: groups[0][1][0], label: count(total, "import is unplanned", "imports are unplanned") },
+      bad.push({ touch: touched.size, parts: [{ e: groups[0][1][0], label: count(total, "internal import is unplanned", "internal imports are unplanned") },
         `: no rule covers ${total === 1 ? "it" : "them"}, so either the rules are incomplete or the import is unexpected.`] });
       continue;
     }
@@ -1623,7 +1669,9 @@ function diagnosis(i) {
   if (role === "foundation" && !moreVolatile[i].length) good.push("it imports nothing more volatile than itself");
   else if (role === "foundation" && !pullsVolatile.has(i)) good.push(`what it imports is less than 0.25 more volatile (${listed(moreVolatile[i].map(j => `${mods[j].id} ${n2(mods[j].instability)}`))}, against its ${n2(m.instability)})`);
   const out_ = medges.filter(me => me.a === i);
-  const forb = out_.reduce((s, me) => s + me.v.forbidden, 0), unpl = out_.reduce((s, me) => s + me.v.unplanned, 0);
+  const external = externalEdges.filter(edge => files[fileIndex.get(edge.from)].mod === i);
+  const forb = out_.reduce((s, me) => s + me.v.forbidden, 0) + external.filter(edge => edge.verdict === "forbidden").length,
+    unpl = out_.reduce((s, me) => s + me.v.unplanned, 0) + external.filter(edge => edge.verdict === "unplanned").length;
   if (doc.config.rules && !forb && !unpl && m.ce) good.push("every import out of it is allowed by a rule");
   const c = modCycles.find(c => c.members.includes(m.id));
   if (c) risky.push(`it is one of the ${c.members.length} modules in an import cycle`);
@@ -1676,7 +1724,11 @@ function applyFocus() {
   focused = !!t;
   if (!t) return;
   modS.fill(S_DIM); fileS.fill(S_DIM); meS.fill(S_DIM); feS.fill(S_DIM);
-  if (t.type === "module") {
+  if (t.type === "external") {
+    for (const edge of externalEdges) if (edge.to === externalNodes[t.i].id) {
+      const f = fileIndex.get(edge.from); fileS[f] = S_OUT; modS[files[f].mod] = S_OUT;
+    }
+  } else if (t.type === "module") {
     const i = t.i;
     modS[i] = S_SELF;
     for (const me of medges) {
@@ -1846,7 +1898,9 @@ function extent() {
     x0 = Math.min(x0, mx[i] - modR[i]); x1 = Math.max(x1, mx[i] + modR[i]);
     y0 = Math.min(y0, my[i] - modR[i]); y1 = Math.max(y1, my[i] + modR[i]);
   }
-  return N ? [x0, y0, x1, y1] : [-100, -100, 100, 100];
+  const packages = externalPositions();
+  for (const node of packages) { x0 = Math.min(x0, node.x - node.r); x1 = Math.max(x1, node.x + node.r); y0 = Math.min(y0, node.y - node.r); y1 = Math.max(y1, node.y + node.r); }
+  return N || packages.length ? [x0, y0, x1, y1] : [-100, -100, 100, 100];
 }
 /* Past the extent a pan gives way progressively, like a scroll view. */
 function band(v, lo, hi, d) {
@@ -1879,8 +1933,10 @@ function bounds(k) {
     x0 = Math.min(x0, mx[i] - half); x1 = Math.max(x1, mx[i] + half);
     y0 = Math.min(y0, my[i] - modR[i] - 22 / k); y1 = Math.max(y1, my[i] + modR[i] + 22 / k);
   }
+  const packages = externalPositions();
+  for (const node of packages) { const r = Math.max(node.r, 9 / k); x0 = Math.min(x0, node.x - r); x1 = Math.max(x1, node.x + r); y0 = Math.min(y0, node.y - r); y1 = Math.max(y1, node.y + r); }
   const m = 12 / k;
-  return N ? [x0 - m, y0 - m, x1 + m, y1 + m] : [-100, -100, 100, 100];
+  return N || packages.length ? [x0 - m, y0 - m, x1 + m, y1 + m] : [-100, -100, 100, 100];
 }
 function fitK() {
   let k = 1;
@@ -1910,7 +1966,8 @@ function zoomToFinding(fd) {
 }
 function zoomToTarget(t) {
   if (!t) return;
-  if (t.type === "module") zoomToModule(t.i);
+  if (t.type === "external") { const p = externalPositions()[t.i]; if (p) animateTo(Math.max(view.k, K_LABEL), p.x, p.y); }
+  else if (t.type === "module") zoomToModule(t.i);
   else if (t.type === "file") zoomToFile(t.i);
   else if (t.type === "finding") zoomToFinding(findings[t.i]);
   else if (t.type === "fedge") {
@@ -2217,6 +2274,7 @@ function draw() {
     }
   }
   if (!clustersDone) drawClusters();
+  drawExternals(px);
   ctx.setLineDash([]);
   ctx.lineWidth = 1.3 * px;
   for (const [G, j, color, alpha] of marks) {
@@ -2456,6 +2514,8 @@ function distToCurve(G, o, x, y) {
 }
 function hit(sx, sy) {
   const k = view.k, x = (sx - view.x) / k, y = (sy - view.y) / k;
+  const packageHit = externalHit(externalPositions(), x, y, k);
+  if (packageHit) return { type: "external", i: packageHit.i };
   const fileT = smooth((k - K_FILE0) / (K_FILE1 - K_FILE0));
   if (fileT > 0.4) {
     const tol = Math.max(R_DOT * (churnView ? 3 : 1) + 1, 6 / k);
@@ -2506,6 +2566,7 @@ function verdictLine(v) {
   return parts.join(", ");
 }
 function tipLines(h) {
+  if (h.type === "external") return [`pkg:${externalNodes[h.i].package}`, `${externalEdges.filter(e => e.to === externalNodes[h.i].id).length} recorded imports; external package, excluded from internal cycles`];
   if (whatifResult) {
     const lines = whatifTip(h);
     if (lines) return lines;
@@ -3094,6 +3155,10 @@ function drawMini() {
   mctx.beginPath();
   for (let i = 0; i < N; i++) { const r = Math.max(1.2, modR[i] * sc); mctx.moveTo(mx[i] * sc + ox + r, my[i] * sc + oy); mctx.arc(mx[i] * sc + ox, my[i] * sc + oy, r, 0, TAU); }
   mctx.fill();
+  for (const p of externalPositions()) {
+    mctx.fillStyle = sel?.type === "external" && sel.i === p.i ? C.focus : C.muted;
+    mctx.beginPath(); mctx.arc(p.x * sc + ox, p.y * sc + oy, 1.5, 0, TAU); mctx.fill();
+  }
   if (sel && sel.type === "module") {
     mctx.fillStyle = C.focus;
     mctx.beginPath(); mctx.arc(mx[sel.i] * sc + ox, my[sel.i] * sc + oy, Math.max(2, modR[sel.i] * sc), 0, TAU); mctx.fill();
@@ -3319,6 +3384,8 @@ function find(q) {
   if (i >= 0) { go({ type: "module", i }); return true; }
   i = files.findIndex(f => f.path.toLowerCase().includes(lq));
   if (i >= 0) { go({ type: "file", i }); return true; }
+  i = externalNodes.findIndex(n => n.package.toLowerCase().includes(lq) || ("pkg:" + n.package).toLowerCase() === lq);
+  if (i >= 0) { go({ type: "external", i }); return true; }
   return false;
 }
 $("find").addEventListener("submit", ev => {
@@ -3742,7 +3809,7 @@ function hotspotContext(rows, limit = 3) {
 /* A sentence of text and references; each reference highlights its target on hover and selects
    and shows it on click. */
 function refTarget(p) {
-  return p.m !== undefined ? { type: "module", i: p.m } : p.f !== undefined ? { type: "file", i: p.f }
+  return p.pkg !== undefined ? { type: "external", i: p.pkg } : p.m !== undefined ? { type: "module", i: p.m } : p.f !== undefined ? { type: "file", i: p.f }
     : p.e !== undefined ? { type: "fedge", i: p.e } : { type: "finding", i: p.fd };
 }
 function sentence(parts, tag) {
@@ -3807,6 +3874,7 @@ function overview() {
   panel.append(el("p", { class: "sub" }, `${nf(F)} ${F === 1 ? "file" : "files"} in ${nf(N)} ${N === 1 ? "module" : "modules"}`));
   panel.append(el("p", { class: "intro" }, "Read from imports" + (doc.config.codeowners ? " and declared ownership" : "") + "; every line names its evidence. Select a name to see it on the map."));
   packageSplitContext();
+  externalContext();
   if (doc.config.codeowners) {
     const counts = new Map();
     let owned = 0;
@@ -3996,6 +4064,64 @@ function surfaceContext(row) {
   for (const limit of doc.surface.limitations || []) panel.append(el("p", { class: "muted" }, limit));
 }
 /* ---------- end public surface panel ---------- */
+/* ---------- external panel and drawing ---------- */
+function drawExternals(px) {
+  const positions = externalPositions(), target = hover || kb || sel;
+  if (!positions.length) return;
+  ctx.setLineDash([]);
+  for (const edge of externalEdges) {
+    const f = files[fileIndex.get(edge.from)], i = externalById.get(edge.to);
+    const visible = target && (target.type === "external" && target.i === i || target.type === "module" && target.i === f.mod || target.type === "file" && target.i === f.i);
+    if (!visible || hiddenMods[f.mod]) continue;
+    const p = positions[i];
+    ctx.globalAlpha = .65; ctx.lineWidth = px; ctx.strokeStyle = edge.verdict === "forbidden" ? C.forbidden : C.muted;
+    ctx.beginPath(); ctx.moveTo(mx[f.mod], my[f.mod]); ctx.lineTo(p.x, p.y); ctx.stroke();
+  }
+  for (const p of positions) {
+    const active = target?.type === "external" && target.i === p.i;
+    ctx.globalAlpha = 1; ctx.fillStyle = C.surface; ctx.strokeStyle = active ? C.focus : C.muted; ctx.lineWidth = (active ? 2 : 1) * px;
+    ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(p.r, 4 * px), 0, TAU); ctx.fill(); ctx.stroke();
+    if (active) { ctx.font = `12px ${MONO}`; ctx.fillStyle = C.fg; ctx.textAlign = "center"; ctx.save(); ctx.translate(p.x, p.y + p.r + 16 * px); ctx.scale(px, px); ctx.fillText("pkg:" + p.package, 0, 0); ctx.restore(); }
+  }
+  ctx.globalAlpha = 1;
+}
+function externalContext(moduleId) {
+  if (moduleId !== undefined) {
+    const row = exposureByModule.get(moduleId);
+    if (!row) return;
+    panel.append(el("h3", {}, "Third-party exposure"), el("p", {}, exposureText(row)));
+    if (row.unresolved_imports) panel.append(el("p", { class: "note" }, `${row.unresolved_imports} unresolved imports; exposure covers recorded dependencies only.`));
+    if (row.exceeds_threshold) panel.append(el("p", { class: "note" }, `Above the ${doc.external_exposure.threshold_percent}% external-import threshold. Review whether this is an intentional adapter or wrapper, or a leaking boundary.`));
+  } else if (!externalNodes.length) return;
+  const rows = moduleId === undefined ? externalNodes : externalNodes.filter(node => externalEdges.some(e => e.to === node.id && files[fileIndex.get(e.from)].mod === modIndex.get(moduleId)));
+  if (!rows.length) return;
+  const detail = el("details"), summary = el("summary", {}, `${rows.length} recorded external packages`);
+  detail.append(summary); detail.addEventListener("toggle", () => {
+    if (!detail.open || detail.childNodes.length > 1) return;
+    const list = el("div", { class: "actions" });
+    for (const node of rows) list.append(btn("pkg:" + node.package, "link", () => go({ type: "external", i: externalById.get(node.id) })));
+    detail.append(list);
+  });
+  panel.append(detail);
+}
+function externalPanel(i) {
+  const node = externalNodes[i]; head("External package", "pkg:" + node.package);
+  panel.append(el("p", { class: "note" }, "Recorded imports only. External packages do not participate in internal cycles or cohesion; this is not a complete dependency or vulnerability inventory."));
+  const categories = Object.entries(doc.config.rules?.doc?.["pkg-category"] || {}).filter(([, names]) => names.includes(node.package)).map(([name]) => name);
+  if (categories.length) panel.append(el("p", {}, "Exact category memberships: " + categories.join(", ")));
+  if (doc.config.rules?.doc?.["pkg-category"]) panel.append(el("p", { class: "note" }, "Package globs are evaluated by the CLI; the recorded verdict and rule are authoritative."));
+  const rows = externalEdges.filter(edge => edge.to === node.id);
+  const list = el("ul");
+  for (const edge of rows) {
+    const row = el("li");
+    row.append(btn(edge.from + (edge.line ? ":" + edge.line : ""), "link path", () => go({ type: "file", i: fileIndex.get(edge.from) })),
+      document.createTextNode(` — ${edge.kind || "runtime"}; weight ${fmt(edge.weight)}; ${edge.verdict || "no verdict"}${edge.rule ? " (" + edge.rule + ")" : ""}${edge.specifier ? "; " + edge.specifier : ""}${edge.confidence ? "; confidence " + edge.confidence : ""}`));
+    list.append(row);
+  }
+  panel.append(el("h3", {}, `${rows.length} recorded imports`), list);
+}
+/* ---------- end external panel and drawing ---------- */
+
 function modulePanel(i) {
   const m = mods[i];
   const chip = el("span", { class: "pill" });
@@ -4011,6 +4137,7 @@ function modulePanel(i) {
   if (doc.hotspots) hotspotContext(hotspotFiles.filter(h => h.module === m.id));
   surfaceContext(surfaceByModule.get(m.id));
   packageSplitContext(m.id);
+  externalContext(m.id);
   panel.append(sentence(diagnosis(i), "p"));
   panel.lastChild.className = "diag";
   panel.append(metrics([
@@ -4253,6 +4380,7 @@ function showPanel() {
   const t = sel;
   if (!t || overviewKeep) overview();
   else if (t.type === "module") modulePanel(t.i);
+  else if (t.type === "external") externalPanel(t.i);
   else if (t.type === "file") filePanel(t.i);
   else if (t.type === "medge") medgePanel(t.i);
   else if (t.type === "fedge") fedgePanel(t.i);

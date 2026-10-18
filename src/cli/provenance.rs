@@ -128,7 +128,7 @@ pub(super) fn run(args: BisectArgs) -> Result<()> {
     } else {
         let from = &args.edge[0];
         let to = &args.edge[1];
-        if !doc.edges.iter().any(|edge| {
+        if !doc.edges.iter().chain(&doc.external_edges).any(|edge| {
             edge.from == *from && edge.to == *to && edge.verdict == Some(Verdict::Forbidden)
         }) {
             bail!("{from} -> {to} is not a forbidden edge in the supplied graph");
@@ -243,14 +243,7 @@ pub(super) fn enrich_from(
                 |oid| {
                     if let Some(bytes) = cached.get(oid) {
                         let input: ScanInput = serde_json::from_slice(bytes)?;
-                        return archgraph::analyze(
-                            input.source,
-                            input.config,
-                            input.files.into_iter().map(|file| file.path).collect(),
-                            input.edges,
-                            input.package_entries,
-                            input.cochange,
-                        );
+                        return archgraph::restore_scan(input);
                     }
                     if scans >= 64 {
                         bail!("shared report provenance budget exhausted (64 historical scans)");

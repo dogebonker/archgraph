@@ -1847,6 +1847,9 @@
         },
         "package_splits": {
           "$ref": "#/$defs/package-splits"
+        },
+        "external_exposure": {
+          "$ref": "#/$defs/external-exposure"
         }
       }
     },
@@ -2173,7 +2176,8 @@
               },
               "to": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Internal file glob, pkg:<package glob>, or category:<declared category>. Package selectors match known external identities only."
               },
               "reachable": {
                 "type": "boolean"
@@ -2219,7 +2223,8 @@
               },
               "to": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Internal file glob, pkg:<package glob>, or category:<declared category>. Package selectors match known external identities only."
               },
               "reason": {
                 "type": [
@@ -2284,6 +2289,30 @@
         },
         "grabbag": {
           "$ref": "#/$defs/grabbag-thresholds"
+        },
+        "pkg-category": {
+          "description": "Named sets of package-identity globs for category:<name> rule targets. Members match collector package identities, without guessed aliases.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "external_exposure": {
+          "description": "Advisory threshold on raw recorded external import occurrences; strict greater-than comparison. This does not change rule verdicts.",
+          "type": "object",
+          "properties": {
+            "max_percent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 80
+            }
+          }
         }
       }
     },
@@ -4162,6 +4191,108 @@
           "items": {
             "type": "string",
             "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+          }
+        }
+      }
+    },
+    "external-exposure": {
+      "description": "Per-module exposure from collector import occurrences, including unresolved imports in denominators. Absent when import accounting is unavailable; zero denominators yield null percentages. Advisory only.",
+      "type": "object",
+      "required": [
+        "threshold_percent",
+        "modules"
+      ],
+      "properties": {
+        "threshold_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "module",
+              "imports",
+              "external_imports",
+              "external_packages",
+              "external_weight",
+              "total_weight",
+              "external_percent",
+              "weighted_external_percent",
+              "unresolved_imports",
+              "exceeds_threshold",
+              "packages"
+            ],
+            "properties": {
+              "module": {
+                "type": "string"
+              },
+              "imports": {
+                "$ref": "#/$defs/count"
+              },
+              "external_imports": {
+                "$ref": "#/$defs/count"
+              },
+              "external_packages": {
+                "$ref": "#/$defs/count"
+              },
+              "external_weight": {
+                "type": "number",
+                "minimum": 0
+              },
+              "total_weight": {
+                "type": "number",
+                "minimum": 0
+              },
+              "external_percent": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 100
+              },
+              "weighted_external_percent": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 100
+              },
+              "unresolved_imports": {
+                "$ref": "#/$defs/count"
+              },
+              "exceeds_threshold": {
+                "type": "boolean"
+              },
+              "packages": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "package",
+                    "imports",
+                    "weight"
+                  ],
+                  "properties": {
+                    "package": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "imports": {
+                      "$ref": "#/$defs/count"
+                    },
+                    "weight": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

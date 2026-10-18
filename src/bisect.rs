@@ -62,9 +62,11 @@ impl Target {
             Self::Cycle { level, members } => graph.cycles.iter().any(|cycle| {
                 cycle.level == *level && members.iter().all(|member| cycle.members.contains(member))
             }),
-            Self::ForbiddenEdge { from, to } => graph.edges.iter().any(|edge| {
-                edge.from == *from && edge.to == *to && edge.verdict == Some(Verdict::Forbidden)
-            }),
+            Self::ForbiddenEdge { from, to } => {
+                graph.edges.iter().chain(&graph.external_edges).any(|edge| {
+                    edge.from == *from && edge.to == *to && edge.verdict == Some(Verdict::Forbidden)
+                })
+            }
         }
     }
 
@@ -131,7 +133,10 @@ impl Target {
                 }
                 paths
             }
-            Self::ForbiddenEdge { from, to } => [from.clone(), to.clone()].into_iter().collect(),
+            Self::ForbiddenEdge { from, to } => [from.clone(), to.clone()]
+                .into_iter()
+                .filter(|path| graph.files.iter().any(|file| file.path == *path))
+                .collect(),
             Self::Cycle {
                 level: CycleLevel::File,
                 members,
@@ -157,6 +162,7 @@ impl Target {
         graph
             .edges
             .iter()
+            .chain(&graph.external_edges)
             .filter(|edge| match self {
                 Self::Finding { .. } => false,
                 Self::ForbiddenEdge { from, to } => edge.from == *from && edge.to == *to,
@@ -534,6 +540,7 @@ pub fn investigate(
             edges: graph
                 .edges
                 .into_iter()
+                .chain(graph.external_edges)
                 .map(|edge| (edge.from, edge.to))
                 .collect(),
         };

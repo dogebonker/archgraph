@@ -106,6 +106,10 @@
     const warnings = [], files = doc.files || [], rename = p => moved && p === moved.file ? moved.to : p;
     const edges = (doc.edges || []).map(e=>({...e,from:rename(e.from),to:rename(e.to),original_to:e.original_to ? rename(e.original_to) : undefined}));
     const nodes = new Map(files.map(f=>[rename(f.path),{...f,path:rename(f.path)}]));
+    if ((doc.external_nodes || []).length || (doc.external_edges || []).length || doc.external_exposure ||
+      [...(rules?.forbid || []), ...(rules?.allow || [])].some(r => /^(?:pkg|category):/.test(r.to || ""))) {
+      warnings.push('Internal-only preview: external dependency policy verdicts and exposure are not recomputed. Run archgraph simulate for authoritative results.');
+    }
     let moduleRules = [], compiled = null;
     try {
       if (rules) {

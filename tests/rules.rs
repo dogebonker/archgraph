@@ -194,7 +194,7 @@ fn default_forbidden_makes_unplanned_imports_forbidden() {
     assert_eq!(doc["summary"]["forbidden"], 6);
     assert_eq!(doc["summary"]["unplanned"], 0);
 
-    // Without other violations the default alone fails check: ts-basic under empty rules has 6
+    // Without other violations the default alone fails check: six internal imports plus node:fs
     // unplanned imports and exits 0; with `default: forbidden` they are forbidden and it exits 1.
     let plain = scan_file("ts-basic", &[]);
     let strict = write_tmp(
@@ -203,11 +203,13 @@ fn default_forbidden_makes_unplanned_imports_forbidden() {
     );
     let (stdout, _, code) = check(&[&plain, "--rules", &strict]);
     assert_eq!(code, Some(1));
-    assert!(stdout.ends_with("6 forbidden, 0 unplanned\n"), "{stdout}");
+    assert!(stdout.ends_with("7 forbidden, 0 unplanned\n"), "{stdout}");
     assert!(
         stdout.starts_with("forbidden src/app/shell/run.ts -> src/core/model/store.ts (default)\n"),
         "{stdout}"
     );
+
+    assert!(stdout.contains("forbidden src/core/util/log.ts -> pkg:node:fs (default)\n"));
 
     // Leaving the key out keeps the embedded rules as they were.
     let (doc, _, _) = scan_recorded("ts-fda", &["--rules", &layout("ts-fda")]);
@@ -442,11 +444,13 @@ fn check_uses_embedded_rules_and_the_flag_replaces_them() {
     );
 
     // Nothing forbidden: exit 0. Of ts-basic's 8 edges, view -> run and store -> types stay
-    // within a module.
+    // within a module; the known node:fs import is unplanned.
     let empty = write_tmp("rules/empty.yaml", "version: 1\n");
     let (stdout, _, code) = check(&[&scan_file("ts-basic", &[]), "--rules", &empty]);
     assert_eq!(code, Some(0));
-    assert!(stdout.ends_with("0 forbidden, 6 unplanned\n"), "{stdout}");
+    assert!(stdout.ends_with("0 forbidden, 7 unplanned\n"), "{stdout}");
+
+    assert!(stdout.contains("unplanned src/core/util/log.ts -> pkg:node:fs (none)\n"));
 
     // No rules anywhere is a usage error.
     let (_, stderr, code) = check(&[&scan_file("ts-basic", &[])]);

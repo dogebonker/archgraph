@@ -75,3 +75,18 @@ test('grab-bag fan-in threshold uses rounded Rust metrics',()=>{
   assert.equal(result.partial,true);
   assert.ok(result.warnings.some(w=>w.includes('Grab-bag refinement required for utils')));
 });
+
+test('external dependencies and package/category rules explicitly limit previews', () => {
+  for (const patch of [
+    { external_nodes: [{ id: 'external:typescript:typeorm', external: true, package: 'typeorm' }] },
+    { external_edges: [{ from: 'a/one.ts', to: 'external:typescript:typeorm', kind: 'runtime' }] },
+    { external_exposure: { modules: [] } },
+    { config: { ...fixtures[0].document.config, rules: { doc: { version: 1, forbid: [{ from: '**', to: 'pkg:typeorm' }] } } } },
+    { config: { ...fixtures[0].document.config, rules: { doc: { version: 1, allow: [{ from: '**', to: 'category:orm' }] } } } },
+  ]) {
+    const doc = { ...structuredClone(fixtures[0].document), ...patch };
+    const result = preview.simulate(doc, fixtures[0].move);
+    assert.equal(result.partial, true);
+    assert.ok(result.warnings.some(warning => /Internal-only preview: external dependency policy verdicts and exposure/.test(warning)));
+  }
+});

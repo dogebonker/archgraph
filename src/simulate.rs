@@ -1,6 +1,6 @@
 //! Proposed moves: rename files, rerun the pipeline, compare.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use anyhow::{Result, bail};
 
@@ -11,7 +11,13 @@ use crate::model::{
 use crate::rules::Compiled;
 
 pub fn summary(doc: &Document) -> Summary {
-    let count = |v| doc.edges.iter().filter(|e| e.verdict == Some(v)).count();
+    let count = |v| {
+        doc.edges
+            .iter()
+            .chain(&doc.external_edges)
+            .filter(|e| e.verdict == Some(v))
+            .count()
+    };
     Summary {
         forbidden: count(Verdict::Forbidden),
         unplanned: count(Verdict::Unplanned),
@@ -78,6 +84,7 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
             })
             .collect()
     });
+    crate::resolution::require_policy_accounting(&config)?;
     config.file_metadata = doc
         .files
         .iter()
@@ -119,6 +126,7 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
         owners.as_ref(),
     );
     crate::resolution::attach(&mut moved);
+    crate::exposure::validate(&moved)?;
     if let Some(saved) = &doc.package_splits {
         moved.package_splits = Some(crate::package_splits::analyze(
             &moved,
@@ -191,15 +199,20 @@ pub fn simulate(
     let forbidden = |d: &Document| -> Vec<Edge> {
         d.edges
             .iter()
+            .chain(&d.external_edges)
             .filter(|e| e.verdict == Some(Verdict::Forbidden))
             .cloned()
             .collect()
     };
     let (was, is) = (forbidden(doc), forbidden(&after));
-    let was_set: HashSet<(String, String)> =
-        was.iter().map(|e| (e.from.clone(), e.to.clone())).collect();
-    let is_set: HashSet<(String, String)> =
-        is.iter().map(|e| (e.from.clone(), e.to.clone())).collect();
+    let was_set: BTreeSet<(String, String, crate::model::EdgeKind)> = was
+        .iter()
+        .map(|e| (e.from.clone(), e.to.clone(), e.kind))
+        .collect();
+    let is_set: BTreeSet<(String, String, crate::model::EdgeKind)> = is
+        .iter()
+        .map(|e| (e.from.clone(), e.to.clone(), e.kind))
+        .collect();
     let module = after
         .files
         .iter()
@@ -218,11 +231,11 @@ pub fn simulate(
         after: after.summary.clone(),
         new_forbidden: is
             .into_iter()
-            .filter(|e| !was_set.contains(&(old_name(&e.from), old_name(&e.to))))
+            .filter(|e| !was_set.contains(&(old_name(&e.from), old_name(&e.to), e.kind)))
             .collect(),
         removed_forbidden: was
             .into_iter()
-            .filter(|e| !is_set.contains(&(new_name(&e.from), new_name(&e.to))))
+            .filter(|e| !is_set.contains(&(new_name(&e.from), new_name(&e.to), e.kind)))
             .collect(),
     })
 }

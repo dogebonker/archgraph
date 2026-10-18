@@ -7,6 +7,7 @@ pub mod collect;
 pub mod compat;
 pub mod context;
 pub mod diff;
+pub mod exposure;
 pub mod findings;
 pub mod grabbag;
 pub mod graph;
@@ -168,6 +169,14 @@ pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
         }
     }
     resolution::validate(input.imports.as_deref(), &input.files)?;
+    resolution::validate_external_identities(
+        &input.source,
+        input.imports.as_deref(),
+        &input.files,
+    )?;
+    let mut config = input.config.clone();
+    config.import_records = input.imports.clone();
+    resolution::require_policy_accounting(&config)?;
     Ok(())
 }
 
@@ -198,6 +207,7 @@ pub fn analyze(
     cochange: Option<Cochange>,
 ) -> Result<Document> {
     let rules = rules::compile(&config)?;
+    resolution::require_policy_accounting(&config)?;
     let owners = config
         .codeowners
         .as_ref()
@@ -227,6 +237,7 @@ pub fn analyze(
         bail!("edge_weights overflow the weighted metrics; use smaller finite weights");
     }
     resolution::validate(doc.imports.as_deref(), &doc.files)?;
+    exposure::validate(&doc)?;
     findings::place_registrars(&mut doc, rules.as_ref(), owners.as_ref());
     doc.cochange = cochange;
     doc.findings = findings::find(&doc, rules.as_ref(), owners.as_ref());
@@ -279,6 +290,9 @@ pub fn build(
             (f, module)
         })
         .collect();
+    let (external_nodes, mut external_edges) = resolution::external_graph(&source, &config);
+    let internal_count = edges.len();
+    edges.append(&mut external_edges);
     match rules {
         Some(rules) => {
             let mut policy_modules: BTreeMap<_, _> = module_of
@@ -299,7 +313,14 @@ pub fn build(
                         .unwrap_or_else(|| modules::folder_of(path, &config, source.language))
                 });
             }
-            rules.decide(&mut edges, &policy_modules);
+            rules.decide_with_externals(
+                &mut edges,
+                &policy_modules,
+                &external_nodes
+                    .iter()
+                    .map(|n| (n.id.clone(), n.package.clone()))
+                    .collect(),
+            );
         }
         None => {
             for e in &mut edges {
@@ -307,6 +328,7 @@ pub fn build(
             }
         }
     }
+    let external_edges = edges.split_off(internal_count);
     let inferred = modules::barrels(&edges);
     let barrels = module_of
         .keys()
@@ -390,8 +412,9 @@ pub fn build(
         imports: config.import_records.clone(),
         import_resolution: None,
         unresolved: Vec::new(),
-        external_nodes: Vec::new(),
-        external_edges: Vec::new(),
+        external_nodes,
+        external_edges,
+        external_exposure: None,
         grabbags: Vec::new(),
         files: module_of
             .iter()
@@ -439,6 +462,7 @@ pub fn build(
             module.ownership = Some(ownership);
         }
     }
+    resolution::attach(&mut doc);
     grabbag::classify(&mut doc);
     doc.summary = simulate::summary(&doc);
     doc
