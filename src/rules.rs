@@ -559,6 +559,162 @@ impl Compiled {
         })
     }
 
+    /// The first matching layer, retaining the policy's lowest-first index.
+    pub fn layer_for(&self, path: &str) -> Option<(usize, String)> {
+        self.layers.iter().enumerate().find_map(|(index, layer)| {
+            layer
+                .is_match(path)
+                .then(|| (index, layer.glob().glob().to_owned()))
+        })
+    }
+
+    /// Constraint evidence for edits to these paths. Source order is policy precedence.
+    /// Reachability needs a graph, so reachable forbids are retained conservatively.
+    pub fn relevant(&self, doc: &Rules, paths: &[String]) -> Result<serde_json::Value> {
+        use serde_json::json;
+        for path in paths {
+            if !crate::collect::is_relative_path(path, false)
+                || path.contains(['*', '?', '[', ']', '{', '}', '<', '>'])
+            {
+                bail!(
+                    "invalid rule path {path:?}: supply an exact path relative to the scanned root, without traversal or globs"
+                );
+            }
+        }
+        let mut paths = paths.to_vec();
+        paths.sort();
+        paths.dedup();
+        let mut modules = Vec::new();
+        for (order, (pattern, id)) in self.modules.iter().enumerate() {
+            for (capture, matched) in self.relevant_instances(pattern, None, &paths)? {
+                modules.push(json!({"id": pattern.instance(id, capture.as_deref()),
+                    "path": pattern.bound_glob(&pattern.raw, capture.as_deref()),
+                    "order": order, "matched_paths": matched}));
+            }
+        }
+        // All layer boundaries matter to a possible new import, not just its edited end.
+        let layers: Vec<_> = doc
+            .layers
+            .iter()
+            .enumerate()
+            .map(|(index, path)| {
+                let matched: Vec<_> = paths
+                    .iter()
+                    .filter(|p| self.layers[index].is_match(p))
+                    .collect();
+                json!({"index": index, "path": path, "matched_paths": matched})
+            })
+            .collect();
+        let mut public = Vec::new();
+        for (order, (pattern, entries, kinds)) in self.public.iter().enumerate() {
+            let mut matches = self.relevant_instances(pattern, None, &paths)?;
+            for entry in entries {
+                for (capture, matched) in self.relevant_instances(pattern, Some(entry), &paths)? {
+                    matches.entry(capture).or_default().extend(matched);
+                }
+            }
+            for (capture, mut matched) in matches {
+                matched.sort();
+                matched.dedup();
+                let entries: Vec<_> = entries
+                    .iter()
+                    .map(|entry| pattern.bound_glob(entry, capture.as_deref()))
+                    .collect();
+                public.push(
+                    json!({"module": pattern.bound_glob(&pattern.raw, capture.as_deref()),
+                    "entries": entries, "kinds": kinds, "order": order, "matched_paths": matched}),
+                );
+            }
+        }
+        let mut entrypoints = Vec::new();
+        for (pattern, entry) in &self.entrypoints {
+            for (capture, matched) in self.relevant_instances(pattern, Some(entry), &paths)? {
+                entrypoints.push(json!({"module": pattern.bound_glob(&pattern.raw, capture.as_deref()),
+                    "entry": pattern.instance(entry, capture.as_deref()), "matched_paths": matched}));
+            }
+        }
+        let mut forbid = Vec::new();
+        for (order, ((_, pattern, to, reachable, _), rule)) in
+            self.forbid.iter().zip(&doc.forbid).enumerate()
+        {
+            let mut matches = self.relevant_instances(pattern, Some(to), &paths)?;
+            if *reachable {
+                matches.entry(None).or_default();
+            }
+            for (capture, matched) in matches {
+                let mut value = serde_json::to_value(rule)?;
+                value["from"] = json!(pattern.bound_glob(&pattern.raw, capture.as_deref()));
+                value["to"] = json!(pattern.bound_glob(to, capture.as_deref()));
+                value["order"] = json!(order);
+                value["matched_paths"] = json!(matched);
+                if *reachable {
+                    value["selection"] =
+                        json!("conservative: indirect reachability may cross the edited paths");
+                }
+                forbid.push(value);
+            }
+        }
+        let mut allow = Vec::new();
+        for (order, ((_, pattern, to, _), rule)) in self.allow.iter().zip(&doc.allow).enumerate() {
+            for (capture, matched) in self.relevant_instances(pattern, Some(to), &paths)? {
+                let mut value = serde_json::to_value(rule)?;
+                value["from"] = json!(pattern.bound_glob(&pattern.raw, capture.as_deref()));
+                value["to"] = json!(pattern.bound_glob(to, capture.as_deref()));
+                value["order"] = json!(order);
+                value["matched_paths"] = json!(matched);
+                allow.push(value);
+            }
+        }
+        let categories: BTreeMap<_, _> = doc
+            .pkg_category
+            .iter()
+            .filter(|(name, _)| {
+                let selector = format!("category:{name}");
+                forbid.iter().chain(&allow).any(|r| r["to"] == selector)
+            })
+            .collect();
+        let relevant_globs = |patterns: &[String]| -> Vec<String> {
+            patterns
+                .iter()
+                .filter(|pattern| paths.iter().any(|p| self.bound_match(pattern, p)))
+                .cloned()
+                .collect()
+        };
+        Ok(json!({"version": doc.version, "paths": paths,
+            "default": doc.default.unwrap_or(Fallback::Unplanned),
+            "edge_weights": doc.edge_weights.unwrap_or_default(),
+            "modules": modules, "layers": layers, "public": public,
+            "entrypoints": entrypoints, "forbid": forbid, "allow": allow,
+            "pkg-category": categories, "exclude": relevant_globs(&doc.exclude),
+            "include": relevant_globs(&doc.include), "external_exposure": doc.external_exposure,
+            "precedence": "forbid, entrypoints, allow, public, layers, same-module, public entry, default"}))
+    }
+
+    fn relevant_instances(
+        &self,
+        from: &Pattern,
+        to: Option<&str>,
+        paths: &[String],
+    ) -> Result<BTreeMap<Option<String>, Vec<String>>> {
+        let target = to
+            .filter(|to| !to.starts_with("pkg:") && !to.starts_with("category:"))
+            .map(Pattern::new)
+            .transpose()?;
+        let mut matches: BTreeMap<Option<String>, Vec<String>> = BTreeMap::new();
+        for path in paths {
+            if let Some(capture) = self.bind(from, path) {
+                matches.entry(capture).or_default().push(path.clone());
+            }
+            if let Some(capture) = target.as_ref().and_then(|target| self.bind(target, path)) {
+                let matched = matches.entry(capture).or_default();
+                if !matched.contains(path) {
+                    matched.push(path.clone());
+                }
+            }
+        }
+        Ok(matches)
+    }
+
     /// Sets `verdict`, `rule` and `reach` on every edge.
     pub fn decide(&self, edges: &mut [Edge], module_of: &BTreeMap<String, String>) {
         self.decide_with_externals(edges, module_of, &BTreeMap::new());

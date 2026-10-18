@@ -890,3 +890,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## Daemon filesystem watcher
 
 `notify` 8.2.0 is distributed under CC0-1.0; `notify-types` 2.1.0 is MIT or Apache-2.0. Source and license files are included in their pinned crates: https://github.com/notify-rs/notify/tree/8.2.0 . Platform backend dependencies retain their individual licenses in Cargo metadata.
+
+## MCP protocol and runtime
+
+The official Rust MCP SDK, `rmcp` 3.5.1, is Apache-2.0; upstream retains MIT notices for earlier contributions: https://github.com/modelcontextprotocol/rust-sdk/blob/main/LICENSE . `tokio` 1.53.1 is MIT: https://github.com/tokio-rs/tokio/blob/master/tokio/LICENSE . Only server/stdio and the current-thread runtime are enabled; HTTP and OAuth features are disabled. Transitive dependencies retain their individual licenses in Cargo metadata and published source crates.

@@ -51,6 +51,8 @@ mod impact_context;
 mod impact_typescript;
 #[path = "cli/infer_layout.rs"]
 mod infer_layout_cli;
+#[path = "cli/mcp.rs"]
+mod mcp_cli;
 #[path = "cli/package_splits.rs"]
 mod package_splits_cli;
 #[path = "cli/provenance.rs"]
@@ -94,6 +96,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Expose architecture tools to MCP clients over stdio
+    Mcp(mcp_cli::Mcp),
+    #[command(hide = true)]
+    McpCall(mcp_cli::Call),
     /// Keep a repository graph warm over local JSON-RPC
     Serve(daemon_cli::Serve),
     /// Show the local daemon state
@@ -326,6 +332,14 @@ fn main() -> ExitCode {
             ExitCode::from(2)
         });
     }
+    if let Cmd::Mcp(args) = cli.command {
+        return mcp_cli::serve(args)
+            .map(|()| ExitCode::SUCCESS)
+            .unwrap_or_else(|e| {
+                eprintln!("error: {e:#}");
+                ExitCode::from(2)
+            });
+    }
     match daemon_cli::forward(&cli) {
         Ok(Some(out)) => {
             print!("{}", out.stdout);
@@ -390,6 +404,10 @@ fn execute_inner(cli: Cli) -> ExitCode {
     );
     let result = match cli.command {
         Cmd::Serve(_) => unreachable!("serve is dispatched before request execution"),
+        Cmd::Mcp(_) => unreachable!("MCP is dispatched before request execution"),
+        Cmd::McpCall(args) => mcp_cli::call(args)
+            .and_then(|value| write(None, &value))
+            .map(|()| ExitCode::SUCCESS),
         Cmd::Status(args) => daemon_cli::status(args).map(|()| ExitCode::SUCCESS),
         Cmd::Explain(args) => recompute(&args.graph, None)
             .and_then(|doc| explain_cli::explain(&doc, &args.subject))

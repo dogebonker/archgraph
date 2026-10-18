@@ -444,6 +444,7 @@ pub(super) fn forward(cli: &Cli) -> Result<Option<archgraph::output::Output>> {
             | Cmd::Simulate(_)
             | Cmd::Explain(_)
             | Cmd::Status(_)
+            | Cmd::McpCall(_)
     ) {
         return Ok(None);
     }
@@ -458,10 +459,17 @@ pub(super) fn forward(cli: &Cli) -> Result<Option<archgraph::output::Output>> {
         Cmd::Context(a) => a.root.clone(),
         _ => std::env::current_dir()?,
     };
-    let Some(ep) = discover(&start) else {
+    forward_args(&start, args, std::io::stdout().is_terminal())
+}
+pub(super) fn forward_args(
+    start: &Path,
+    args: Vec<String>,
+    tty: bool,
+) -> Result<Option<archgraph::output::Output>> {
+    let Some(ep) = discover(start) else {
         return Ok(None);
     };
-    rpc(&ep, args, std::io::stdout().is_terminal())
+    rpc(&ep, args, tty)
 }
 pub(super) fn status(args: Status) -> Result<()> {
     let active = ACTIVE.with(|a| a.borrow().clone());
@@ -1042,6 +1050,7 @@ pub(super) fn serve(mut args: Serve) -> Result<ExitCode> {
                     | Cmd::Simulate(_)
                     | Cmd::Explain(_)
                     | Cmd::Status(_)
+                    | Cmd::McpCall(_)
             ) || request.params.args.iter().any(|a| a == "--github-actions")
             {
                 bail!(

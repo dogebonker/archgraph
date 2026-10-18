@@ -18,6 +18,7 @@ pub mod hotspots;
 pub mod impact;
 pub mod incremental;
 pub mod infer_layout;
+pub mod mcp_tools;
 pub mod model;
 pub mod modules;
 pub mod output;

@@ -1,0 +1,1242 @@
+{
+  "$defs": {
+    "check_diff_input": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "brief": {
+          "default": true,
+          "description": "Prefer compact output. All responses retain a hard output cap.",
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "check_diff_output": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "not": {
+              "required": [
+                "error"
+              ]
+            },
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "findings": {
+                    "items": {
+                      "properties": {
+                        "evidence": {
+                          "type": "object"
+                        },
+                        "finding_id": {
+                          "pattern": "^ag-[0-9a-f]{64}$",
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "subject": {
+                          "type": "string"
+                        },
+                        "suggestion": {
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "finding_id",
+                        "kind",
+                        "subject",
+                        "evidence"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "grown_cycles": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "after": {
+                          "properties": {
+                            "level": {
+                              "enum": [
+                                "file",
+                                "module"
+                              ]
+                            },
+                            "members": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "members"
+                          ],
+                          "type": "object"
+                        },
+                        "before": {
+                          "properties": {
+                            "level": {
+                              "enum": [
+                                "file",
+                                "module"
+                              ]
+                            },
+                            "members": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "members"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "before",
+                        "after"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "new_cycles": {
+                    "items": {
+                      "properties": {
+                        "level": {
+                          "enum": [
+                            "file",
+                            "module"
+                          ]
+                        },
+                        "members": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "level",
+                        "members"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "new_forbidden": {
+                    "items": {
+                      "required": [
+                        "from",
+                        "to"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "new_forbidden",
+                  "new_cycles",
+                  "grown_cycles",
+                  "findings"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "data": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "omitted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "data",
+        "truncated",
+        "omitted"
+      ],
+      "type": "object"
+    },
+    "context_input": {
+      "additionalProperties": false,
+      "properties": {
+        "brief": {
+          "default": true,
+          "description": "Prefer compact output. All responses retain a hard output cap.",
+          "type": "boolean"
+        },
+        "budget_tokens": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "symbols": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task",
+        "budget_tokens"
+      ],
+      "type": "object"
+    },
+    "context_output": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "not": {
+              "required": [
+                "error"
+              ]
+            },
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "budget": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "entries": {
+                    "items": {
+                      "properties": {
+                        "content": {
+                          "type": "null"
+                        },
+                        "path": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "tier": {
+                          "type": "string"
+                        },
+                        "tokens": {
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "tier",
+                        "reason",
+                        "tokens"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "used_tokens": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "entries",
+                  "budget",
+                  "used_tokens"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "data": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "omitted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "data",
+        "truncated",
+        "omitted"
+      ],
+      "type": "object"
+    },
+    "explain_input": {
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "not": {
+            "required": [
+              "module"
+            ]
+          },
+          "required": [
+            "path"
+          ]
+        },
+        {
+          "not": {
+            "required": [
+              "path"
+            ]
+          },
+          "required": [
+            "module"
+          ]
+        }
+      ],
+      "properties": {
+        "brief": {
+          "default": true,
+          "description": "Prefer compact output. All responses retain a hard output cap.",
+          "type": "boolean"
+        },
+        "module": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "explain_output": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "not": {
+              "required": [
+                "error"
+              ]
+            },
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "summary"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "data": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "omitted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "data",
+        "truncated",
+        "omitted"
+      ],
+      "type": "object"
+    },
+    "propose_input": {
+      "additionalProperties": false,
+      "properties": {
+        "brief": {
+          "default": true,
+          "description": "Prefer compact output. All responses retain a hard output cap.",
+          "type": "boolean"
+        },
+        "finding_id": {
+          "pattern": "^ag-[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finding_id"
+      ],
+      "type": "object"
+    },
+    "propose_output": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "not": {
+              "required": [
+                "error"
+              ]
+            },
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "finding_id": {
+                    "type": "string"
+                  },
+                  "steps": {
+                    "items": {
+                      "properties": {
+                        "action": {
+                          "enum": [
+                            "cut_import",
+                            "move_file",
+                            "review"
+                          ]
+                        },
+                        "expected_delta": {
+                          "type": "object"
+                        },
+                        "verification": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "absent_edges": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "from": {
+                                    "type": "string"
+                                  },
+                                  "to": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "from",
+                                  "to"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "cycles_in": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "equals": {
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "files_absent": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "files_present": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "findings_absent": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "forbidden": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "action",
+                        "expected_delta",
+                        "verification"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "verification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "absent_edges": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "from": {
+                              "type": "string"
+                            },
+                            "to": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "cycles_in": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "equals": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "files_absent": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "files_present": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "findings_absent": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "forbidden": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "finding_id",
+                  "steps",
+                  "verification"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "data": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "omitted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "data",
+        "truncated",
+        "omitted"
+      ],
+      "type": "object"
+    },
+    "rules_input": {
+      "additionalProperties": false,
+      "properties": {
+        "brief": {
+          "default": true,
+          "description": "Prefer compact output. All responses retain a hard output cap.",
+          "type": "boolean"
+        },
+        "paths": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "paths"
+      ],
+      "type": "object"
+    },
+    "rules_output": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "not": {
+              "required": [
+                "error"
+              ]
+            },
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "version",
+                      "modules",
+                      "layers",
+                      "public",
+                      "entrypoints",
+                      "forbid",
+                      "allow"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "configured",
+                      "paths",
+                      "hint"
+                    ]
+                  }
+                ],
+                "properties": {
+                  "allow": {
+                    "items": {
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "configured": {
+                    "const": false
+                  },
+                  "entrypoints": {
+                    "items": {
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "forbid": {
+                    "items": {
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "hint": {
+                    "type": "string"
+                  },
+                  "layers": {
+                    "items": {
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "modules": {
+                    "items": {
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "paths": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "public": {
+                    "items": {
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "version": {
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "data": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "omitted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "data",
+        "truncated",
+        "omitted"
+      ],
+      "type": "object"
+    },
+    "simulate_input": {
+      "additionalProperties": false,
+      "properties": {
+        "brief": {
+          "default": true,
+          "description": "Prefer compact output. All responses retain a hard output cap.",
+          "type": "boolean"
+        },
+        "moves": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "from",
+              "to"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "moves"
+      ],
+      "type": "object"
+    },
+    "simulate_output": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "not": {
+              "required": [
+                "error"
+              ]
+            },
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "additionalProperties": false,
+                "properties": {
+                  "after": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cycles": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "forbidden": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "two_way_pairs": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "cycles",
+                      "forbidden",
+                      "two_way_pairs"
+                    ],
+                    "type": "object"
+                  },
+                  "before": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cycles": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "forbidden": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "two_way_pairs": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "cycles",
+                      "forbidden",
+                      "two_way_pairs"
+                    ],
+                    "type": "object"
+                  },
+                  "limitations": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "new_cycles": {
+                    "items": {
+                      "properties": {
+                        "level": {
+                          "enum": [
+                            "file",
+                            "module"
+                          ]
+                        },
+                        "members": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "level",
+                        "members"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "pairs_removed": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "before",
+                  "after",
+                  "pairs_removed",
+                  "new_cycles",
+                  "limitations"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "data": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "omitted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "data",
+        "truncated",
+        "omitted"
+      ],
+      "type": "object"
+    },
+    "verify_input": {
+      "additionalProperties": false,
+      "properties": {
+        "brief": {
+          "default": true,
+          "description": "Prefer compact output. All responses retain a hard output cap.",
+          "type": "boolean"
+        },
+        "expect": {
+          "additionalProperties": false,
+          "properties": {
+            "absent_edges": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "from": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "from",
+                  "to"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "cycles_in": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "equals": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "files_absent": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "files_present": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "findings_absent": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "forbidden": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "verify_output": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "not": {
+              "required": [
+                "error"
+              ]
+            },
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "checks": {
+                    "items": {
+                      "properties": {
+                        "pass": {
+                          "type": "boolean"
+                        },
+                        "predicate": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "predicate",
+                        "pass"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "expectations_supplied": {
+                    "type": "boolean"
+                  },
+                  "findings": {
+                    "items": {
+                      "properties": {
+                        "evidence": {
+                          "type": "object"
+                        },
+                        "finding_id": {
+                          "pattern": "^ag-[0-9a-f]{64}$",
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "subject": {
+                          "type": "string"
+                        },
+                        "suggestion": {
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "finding_id",
+                        "kind",
+                        "subject",
+                        "evidence"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "pass": {
+                    "type": "boolean"
+                  },
+                  "summary": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cycles": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "forbidden": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "cycles",
+                      "forbidden"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "pass",
+                  "expectations_supplied",
+                  "checks",
+                  "summary",
+                  "findings"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "data": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "omitted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "data",
+        "truncated",
+        "omitted"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/dogebonker/archgraph/schema/mcp.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "archgraph MCP tool contracts v1"
+}
