@@ -1020,7 +1020,7 @@ fn report(args: Report) -> Result<ExitCode> {
         heading("Graph"),
         count(doc.files.len(), "file"),
         count(doc.modules.len(), "module"),
-        count(doc.edges.len(), "internal import edge")
+        count(doc.edges.len(), "import")
     );
     if let Some(resolution) = &doc.import_resolution {
         let percent = resolution
