@@ -106,7 +106,7 @@ struct Graph<'a> {
     consuming: &'a BTreeSet<(String, String)>,
 }
 
-impl<'a> Graph<'a> {
+impl Graph<'_> {
     fn via_barrel<'p>(&self, mut used: impl Iterator<Item = &'p (String, String)>) -> bool {
         used.any(|(a, b)| !self.raw.contains(&(a.as_str(), b.as_str())))
     }

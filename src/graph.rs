@@ -454,8 +454,12 @@ pub(crate) fn components<'a>(pairs: &[(&'a str, &'a str)]) -> Vec<BTreeSet<&'a s
         .collect();
     let index: BTreeMap<&str, usize> = names.iter().enumerate().map(|(i, &n)| (n, i)).collect();
     let mut adjacency = vec![Vec::new(); names.len()];
-    for (from, to) in pairs {
+    let mut looped = BTreeSet::new();
+    for &(from, to) in pairs {
         adjacency[index[from]].push(index[to]);
+        if from == to {
+            looped.insert(from);
+        }
     }
     sccs(&adjacency)
         .into_iter()
@@ -463,7 +467,7 @@ pub(crate) fn components<'a>(pairs: &[(&'a str, &'a str)]) -> Vec<BTreeSet<&'a s
             component.len() > 1
                 || component
                     .first()
-                    .is_some_and(|&i| pairs.contains(&(names[i], names[i])))
+                    .is_some_and(|&i| looped.contains(names[i]))
         })
         .map(|component| component.into_iter().map(|i| names[i]).collect())
         .collect()
