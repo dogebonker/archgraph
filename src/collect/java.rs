@@ -23,30 +23,15 @@ pub fn run(root: &Path, java: &str, excludes: &GlobSet) -> Result<Vec<u8>> {
     } else {
         java.to_owned()
     };
-    let mut dirs = vec![root.clone()];
-    let mut files = Vec::new();
-    while let Some(dir) = dirs.pop() {
-        for entry in fs::read_dir(&dir).with_context(|| format!("reading {}", dir.display()))? {
-            let entry = entry?;
-            let name = entry.file_name().to_string_lossy().into_owned();
-            let rel = entry
-                .path()
-                .strip_prefix(&root)?
-                .to_string_lossy()
-                .replace('\\', "/");
-            if entry.file_type()?.is_dir() {
-                if !name.starts_with('.') && name != "node_modules" && !excludes.is_match(&rel) {
-                    dirs.push(entry.path());
-                }
-            } else if entry.file_type()?.is_file()
-                && name.ends_with(".java")
-                && !excludes.is_match(&rel)
-            {
-                files.push(rel);
-            }
-        }
-    }
-    files.sort();
+    let mut files = super::native::source_files(&root, &["java"])?;
+    files.retain(|file| {
+        !excludes.is_match(file)
+            && !file
+                .split('/')
+                .rev()
+                .skip(1)
+                .any(|dir| dir.starts_with('.'))
+    });
     ensure!(!files.is_empty(), "no Java source files after excludes");
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
