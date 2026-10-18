@@ -3,9 +3,9 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use anyhow::{Context, Result};
-use globset::{Glob, GlobSetBuilder};
 use serde::Serialize;
 
+use crate::collect::excludes::is_test;
 use crate::model::{CycleLevel, Document, EdgeKind};
 
 #[derive(Debug, Serialize)]
@@ -55,11 +55,7 @@ pub fn analyze(
     max_depth: usize,
     tests: &[String],
 ) -> Result<Impact> {
-    let mut globs = GlobSetBuilder::new();
-    for pattern in tests {
-        globs.add(Glob::new(pattern).with_context(|| format!("invalid test glob: {pattern}"))?);
-    }
-    let globs = globs.build().context("compiling test globs")?;
+    let globs = crate::collect::globset(tests).context("invalid test glob")?;
     let changed_files: Vec<_> = changed
         .into_iter()
         .collect::<BTreeSet<_>>()
@@ -276,21 +272,6 @@ fn weight(depth: usize) -> f64 {
     1.0 / (1.0 + depth as f64)
 }
 
-fn is_test(path: &str) -> bool {
-    let name = path.rsplit('/').next().unwrap_or(path);
-    path.split('/')
-        .any(|part| matches!(part, "tests" | "test" | "__tests__"))
-        || name.ends_with("_test.go")
-        || name.ends_with("_test.exs")
-        || name == "test_helper.exs"
-        || name.starts_with("test_") && name.ends_with(".py")
-        || name.ends_with("_test.py")
-        || name.contains(".spec.")
-        || name.contains(".test.")
-        || name.ends_with("Test.java")
-        || name.ends_with("Tests.java")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -411,6 +392,14 @@ mod tests {
         assert_eq!(impact.changed_files.len(), 3);
         assert_eq!(impact.affected_files[0].depth, 0);
         assert!(analyze(&doc, vec![], 3, &["[".into()]).is_err());
+        // Custom globs keep `*` within one segment; built-in conventions match the scan's.
+        let doc = self::doc(&[
+            ("checks/deep/check.ts", "src/a.ts", EdgeKind::Static),
+            ("pkg/conftest.py", "src/a.ts", EdgeKind::Static),
+            ("src/tests", "src/a.ts", EdgeKind::Static),
+        ]);
+        let impact = analyze(&doc, vec!["src/a.ts".into()], 1, &["checks/*.ts".into()]).unwrap();
+        assert_eq!(impact.selected_tests, ["pkg/conftest.py"]);
     }
     #[test]
     fn merge_preserves_removed_imports_and_uses_minimum_depth() {
