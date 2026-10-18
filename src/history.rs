@@ -366,38 +366,6 @@ fn snapshot(
     }
 }
 
-/// Compatibility path: latest first-parent commits, no cache, abort on the first scan failure.
-pub fn collect(
-    root: &Path,
-    rev: &str,
-    limit: usize,
-    mut scan: impl FnMut(&Path) -> Result<Document>,
-) -> Result<History> {
-    if limit == 0 {
-        bail!("history limit must be positive");
-    }
-    let commits = commits(root, rev)?;
-    if commits.is_empty() {
-        bail!("no commits selected by {rev}");
-    }
-    let tags = tags(root)?;
-    let checkout = Checkout::new(root)?;
-    let mut snapshots = Vec::new();
-    for commit in commits.iter().take(limit).rev() {
-        eprintln!("history: scanning {}", commit.hash);
-        let graph = scan(&checkout.at(&commit.hash)?)
-            .with_context(|| format!("scanning commit {}", commit.hash))?;
-        snapshots.push(snapshot(commit, graph, &tags, snapshots.last()));
-    }
-    Ok(History {
-        schema: SCHEMA,
-        kind: "history",
-        release_markers: release_markers(&commits, &tags, &snapshots),
-        snapshots,
-        failures: Vec::new(),
-    })
-}
-
 fn digest(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
