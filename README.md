@@ -1,22 +1,61 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.png">
-    <img alt="archgraph" src="docs/assets/banner-light.png" width="800">
-  </picture>
-</p>
+# archgraph: architecture enforcement derived from the import graph
 
-<p align="center">
-  An architecture linter for your codebase.<br>
-  It finds the folders that import each other, names the import that breaks each loop,<br>
-  and simulates a suggested file move before you make it.<br>
-  <sub>Reads TypeScript, JavaScript, Python, Go, Rust, Java and Elixir.</sub>
-</p>
+## Install and initialize
 
-<p align="center">
-  <a href="https://github.com/dogebonker/archgraph/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dogebonker/archgraph/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/dogebonker/archgraph/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/dogebonker/archgraph?color=0A84FF"></a>
-  <a href="#license"><img alt="License: MIT or Apache-2.0" src="https://img.shields.io/badge/license-MIT%20or%20Apache--2.0-0A84FF"></a>
-</p>
+```sh
+cargo +stable install --git https://github.com/dogebonker/archgraph --locked && archgraph init --preset layered --scope internal
+```
+
+Builds current `main` with stable Rust. No architecture docs required: infer a reviewable draft from existing imports, or start with one of five reasoned presets. Reads TypeScript, JavaScript, Python, Go, Rust, Java and Elixir; the native engine remains experimental.
+
+## Per-edit checks
+
+```sh
+archgraph hook install --agent codex     # or claude
+archgraph serve . --engine native --symbols
+```
+
+Keep the daemon running; start the agent in another terminal. Codex requires explicit trust of the installed hooks through `/hooks`. Claude/Codex receive bounded context before edits and new-only checks afterwards, with fix recipes for new violations. Pre-existing findings stay advisory. Cursor/OpenCode require `--feedback-only`; see [host contracts and recovery](docs/agents/loop.md). [Install the five skills](#install-the-skills) or [connect MCP](docs/guide.md#mcp-server).
+
+![Scripted CLI fixture: capture, forbidden domain-to-adapters import, BLOCK with recipe, repair against the same snapshot, PASS](docs/assets/edit-loop.webp)
+
+[Reproduce the fixture](docs/agents/loop.md#run-the-scripted-demo) · [Full transcript](docs/agents/loop-transcript.json) · [Live Codex block → repair proof](bench/results/codex-live-loop-2026-10-19.json). The 2,000-file fixture met the 300 ms warm / 3 s cold target; [all samples and limits](docs/agents/loop.md).
+
+## Measured results, including failures
+
+One predeclared utility task per public repo, three runs per arm, same model. Isolated feature checks passed:
+
+| Repo | Bare | With hooks + synced rules |
+| --- | ---: | ---: |
+| Flask | 3/3 | 3/3 |
+| tRPC | 3/3 | 3/3 |
+| HTTPX | 3/3 | 3/3 |
+| Pydantic | 3/3 | 0/3* |
+
+All 24 runs ended with zero new graph violations: **no architecture benefit demonstrated**. Guarded runs cost more time; Pydantic could not begin because of a snapshot restriction. [Every run, variance, tokens and failure diagnosis](bench/results/README.md). Perf-specific tasks remain pending.
+
+\* The restriction was fixed after these runs; the [CLI regression passes](bench/results/pydantic-dirlink-fix-2026-10-19.json). No feature run was replaced.
+
+<details>
+<summary>Comparison: documented capabilities, verified 2026-10-19</summary>
+
+These are upstream descriptions, not comparative execution results. Code-derived rules are shared with Lintel and hex; the edit loop and recipes must earn their usefulness through measurement.
+
+| Tool | Policy input and documented workflow |
+| --- | --- |
+| **archgraph** | Import graph + `layout.yaml`; presets/inference, new-only edit checks, fix recipes, owned agent-rule blocks, conservative ADR proposals. [Measured limits](docs/agents/loop.md). |
+| [adr-kit v0.60.0](https://github.com/rvdbreemen/adr-kit/blob/9a0b9b4c22509f27e43d056b8b0ecf44a519403a/README.md) | ADR context injection and retrieval; declarative regex enforcement at pre-commit/CI; MCP and several agent clients. |
+| [Archgate v0.60.0](https://github.com/archgate/cli/blob/6075eafb55fc2425537a52690d2d2486e452811d/README.md) | ADRs with authored `.rules.ts` checks; ADR-linked violations, CLI/CI and agent plugins. |
+| [Archcore](https://github.com/archcore-ai/archcore/blob/6aafe90b1900d4cdb39b0778b44d0b95e624480e/README.md) | Git-backed specs, architecture, decisions and rules; plan/document/review workflows across agents. |
+| [hex](https://github.com/gaberger/hex/blob/2b26dabc629ebc0ce1a72c6d92c7525e6dbc1ec0/README.md) | Hexagonal scaffolding, AST/import-graph boundary checks, architecture grades and build/test gates. Repository archived September 17, 2026. |
+| [Mneme HQ](https://mnemehq.com/integrations/) | Structured decisions with pre-change enforcement, post-change audits and CI; its current [CLI is open source](https://github.com/MnemeHQ/mneme). Integration support varies by host. |
+| [Lintel v1.0.0](https://github.com/yasomaru/lintel/blob/3829db6b45353dd5fe700b536739e7c9209f2493/README.md) | Import-derived layer rules, reasons, baselines, cycles and encapsulation; JSON/context output and a Claude post-tool hook example. |
+
+ADR tools supply the why; archgraph can supply graph checks alongside their existing enforcement. [ADR import and rule-file interoperation](docs/interop.md) retain provenance and disclose the upstream mapping target that remains unmet.
+
+</details>
+
+## Analysis
 
 <a href="https://dogebonker.github.io/archgraph/next.js.html">
   <img alt="The archgraph map of Next.js: modules as discs with cycle and finding rings; the selected module highlights its importers and imports" src="docs/assets/hero.png" width="100%">
@@ -25,7 +64,7 @@
 
 archgraph reads every file import in a repository, groups files into modules by folder, and finds the modules that depend on each other in both directions. Folders tied together like that can't be changed, tested or split off alone. archgraph shows where it happened and which few imports to remove first, with the counts behind each suggestion.
 
-## Try it
+### Visual reports
 
 ```bash
 curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/dogebonker/archgraph/main/install.sh | sh
@@ -59,7 +98,7 @@ For agent workflows, [install the five bundled skills](#install-the-skills) for 
 
 </details>
 
-## Recipes an agent can verify
+### Recipes an agent can verify
 
 Actionable findings include a stable ID, ordered fix steps, expected graph deltas and structured verification predicates. Run `archgraph propose <finding_id> --engine native --symbols`, then `archgraph apply <finding_id> --engine native --symbols --dry-run` to inspect exact source edits. `--yes` applies fully mechanical plans and rescans; semantic steps stay explicit agent instructions. Run `archgraph verify <finding_id> --engine native --symbols` after application, plus the project’s build and tests. Use the same collection options for every command.
 
@@ -67,13 +106,13 @@ Default finding order uses hotspot evidence × recipe confidence × pairs remove
 
 The [native input-quality comparison](docs/native-input-quality.md) measures Rust test/containment handling and Python package/facade inference on real working trees. Rust components describe source coupling; review the recorded grouping, test profile and collector limitations before choosing a refactor.
 
-## What it tells you
+### What it tells you
 
-### Which import to cut
+#### Which import to cut
 
 In [outline](https://github.com/outline/outline), `app/editor` imports `app/components` 54 times, and `app/components` imports the editor once: `Lightbox.tsx` reaches into `EditorContext`. Only the editor ever renders the lightbox. Move it into the editor and the two modules stop depending on each other. archgraph finds pairs like this in every import cycle and lists the lightest side first, so the first fix is usually one import, not a refactor.
 
-### Which file move untangles the most
+#### Which file move untangles the most
 
 Some cycles hang on a single wiring file. In [typeorm](https://github.com/typeorm/typeorm), `DriverFactory.ts` imports all eleven database drivers from inside the folder they live in. archgraph simulates moving it into a folder of its own before suggesting it:
 
@@ -87,7 +126,7 @@ Cycles
   move driver/DriverFactory.ts to driver/driver-factory/DriverFactory.ts: removes 10 two-way pairs; the cycle drops from 27 to 5 modules; no new cycle
 ```
 
-### Whether imports follow your layout
+#### Whether imports follow your layout
 
 Write down the architecture you agreed on, and every import gets a verdict:
 
@@ -128,7 +167,7 @@ Enable **What-if**, then drag a file into another module to preview a code move.
 
 The recording uses the small Rust parity fixture, not an OSS benchmark. [Reproduce the capture](docs/guide.md#record-the-demo).
 
-## Does this code belong here?
+### Does this code belong here?
 
 Find folders that could become packages with `archgraph package-splits graph.json --root .`. Suggestions distinguish free boundaries from cheap cuts, rank importing modules × file count, check existing workspaces, and simulate the remaining cycles. Save an enriched graph with `--output packages.json`, then `archgraph render packages.json -o packages.html` to highlight candidate islands. These are **import-level** suggestions; package exports, builds, tests, and environment assumptions still need review. See [package splits](docs/guide.md#package-splits).
 
@@ -158,7 +197,7 @@ archgraph impact origin/main..HEAD --format json --tests-output tests.txt
 
 Impact follows reverse imports up to three steps, marks cycle and hotspot risk, and suggests CODEOWNERS or recent contributors. It scans committed code with tests included. Results mean **at least these**; dynamic wiring and symbol ambiguity through barrels limit coverage. See [impact options and CI comments](docs/guide.md#impact).
 
-## What each module exposes
+### What each module exposes
 
 ```sh
 archgraph scan . --symbols -o graph.json
@@ -167,18 +206,13 @@ archgraph surface graph.json
 
 Compare exports with the symbols other modules actually import. The report lists deep imports, exports with no external consumer in the scan, and surfaces that may need a facade. Declare `entrypoints` in `layout.yaml` to make bypasses fail `check`. Maps show surface size as ring thickness. Symbol collection supports TypeScript/JavaScript, Python and Go; incomplete coverage withholds unused-export suggestions. See [public surface checks](docs/guide.md#public-surface).
 
-## How the architecture changed
+### Architecture drift
 
-```sh
-archgraph history path/to/repo --append
-archgraph history path/to/repo --sample tags --limit 20
-```
+`archgraph history path/to/repo --append` writes a drift chart and retained graph snapshots into `.archgraph/`. Use it to inspect changes in cycles, forbidden imports and module metrics; see [history options](docs/guide.md#history). History remains an analysis utility. Current development prioritizes the edit loop, presets, shared rule files and ADR interoperation.
 
-Open `.archgraph/history.html` to step through commits, inspect each architecture map, and see changes in cycles, forbidden imports and module metrics. `history.json` contains the complete snapshots and adjacent diffs. History uses a temporary local clone and leaves your checkout untouched. See the [history options and collector requirements](docs/guide.md#history).
+The [collector benchmark suite](benchmarks/) checks pinned Java/Rust repositories and historical changes. See the [changelog](CHANGELOG.md) for earlier features.
 
-The [benchmark suite](benchmarks/) checks pinned Java/Rust repositories and real historical changes, with repeatable timings and source-reference assertions. See the [changelog](CHANGELOG.md) for added features.
-
-## Results on 20 well-known repositories
+### Results on 20 well-known repositories
 
 archgraph on 20 open-source projects at pinned commits. Each name opens its live map; the path under a name is the folder that was scanned.
 
@@ -219,9 +253,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { fetch-depth: 0, persist-credentials: false }
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with: { node-version: 22 }
-      - uses: dogebonker/archgraph@v0.1.0
+      - run: rustup toolchain install stable --profile minimal
+      - run: cargo +stable install --git https://github.com/dogebonker/archgraph --rev 8ff338fd97ad51e2bc2a15c4f43856c527007c92 --locked
+      - run: archgraph sync-rules --check
+      - uses: dogebonker/archgraph@8ff338fd97ad51e2bc2a15c4f43856c527007c92
+        with: { binary: archgraph, engine: native }
 ```
 
 The action scans the pull request and its base commit and fails only on what the pull request adds: a new forbidden import, or a new or grown cycle. Problems already on the base branch do not fail the check. The summary lands in the job:
@@ -249,7 +285,7 @@ cp -R skills/archgraph* "${CODEX_HOME:-$HOME/.codex}/skills/"
 
 This installs or updates the bundled skills for your user. Keep any local customizations before updating. Start a new agent session, then invoke `$archgraph` for architecture analysis, `$archgraph-context` for a reading plan, `$archgraph-guard` for regression checks, `$archgraph-fix` for a finding, or `$archgraph-rules` for boundary policies.
 
-For a project install or another client, copy the same complete folders into that client's project skill directory (for example `.claude/skills/` for Claude Code), keeping them as siblings. Installing skills does not install the Archgraph binary, configure MCP, or enable hooks; follow [installation](#try-it) and the chosen skill's setup instructions.
+For a project install or another client, copy the same complete folders into that client's project skill directory (for example `.claude/skills/` for Claude Code), keeping them as siblings. Installing skills does not install the Archgraph binary, configure MCP, or enable hooks; follow [installation](#install-and-initialize) and the chosen skill's setup instructions.
 
 ## How it works
 
@@ -265,7 +301,7 @@ The default reference engine asks [dependency-cruiser](https://github.com/sverwe
 
 ## Free, all of it
 
-No paid tier, no account, no telemetry. What comes next is open source too: Kotlin support, history across repositories, shared rule libraries, cross-team coupling summaries, and migration plans that sequence simulated moves into a target layout.
+No paid tier, no account, no telemetry. Current work focuses on the per-edit check loop, day-zero setup, shared rule files and ADR interoperation. Cross-service discovery, package-split expansion and history as a separate product are deferred; existing analysis commands remain available.
 
 ## License
 

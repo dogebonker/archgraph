@@ -2,13 +2,21 @@
 
 The full reference: install options, every command, the CI action, the rules file, the scan document contract, every finding kind and the limits. The [README](../README.md) is the short tour.
 
-archgraph turns a repository's import graph into evidence for architecture decisions. It collects file-level imports with an existing tool (dependency-cruiser for TypeScript/JavaScript, grimp for Python, the Go toolchain's own `go list` and `go/types` for Go, `rust-analyzer` for Rust, the JDK compiler for Java, Elixir’s `Code.string_to_quoted` for Elixir), groups files into modules, and reports per-module coupling and cohesion, cycles with their smallest break set, rule verdicts for every import, and findings that propose file moves backed by a simulation of each move.
+archgraph derives architecture enforcement from a repository's import graph. `init` combines reasoned presets with observed code, `sync-rules` shares the policy with agents, and installed hooks compare edits with a pre-edit snapshot. New violations include fix recipes; ADR imports can supply the reason and source. Architecture documents are optional. The analysis commands retain coupling, cohesion, cycle cuts, surfaces and simulated file moves. The [edit-loop evidence](agents/loop.md), [paired agent results](../bench/results/README.md) and [interoperation gaps](interop.md) distinguish measured behavior from remaining limits.
 
 The default reference engine uses those collectors; its Python pass also reads importing files with the standard `ast` module, without running them, to distinguish deferred and type-only imports. The experimental native engine uses tree-sitter queries for every supported language, with Rust resolvers. Both feed the same graph analysis. For Go, imports and identifiers are resolved with Go's standard library (`go/types`) by an embedded helper run with your Go toolchain, which compiles nothing from the repository and runs no repository code. `report` and `history` write into `<root>/.archgraph/` without `--out-dir`; `serve` also maintains its local endpoint and live graph there.
 
 **Scan only repositories you trust, or scan inside a sandbox.** For TypeScript/JavaScript, `scan` runs `npx --no-install depcruise` in the scanned repository, and npx resolves that repository's own `node_modules/.bin/depcruise` and reads its `.npmrc`: the repository controls what runs. `--depcruise <path>` runs that executable instead, so the repository no longer picks the binary (depcruise still reads its `tsconfig.json`). The Python collector runs your interpreter with `-I` and adds the source root to `sys.path` last, so repository files cannot shadow the standard library or grimp; git runs with `core.fsmonitor=false`. The Go collector writes its helper to a temporary directory outside the repository and runs `go run` there, which compiles only the helper; the helper runs `go list -e -find -json ./...` in each module of the repository, which reads `go.mod` and the source files' package clauses and build constraints and builds, generates and runs nothing. Both run with `GOTOOLCHAIN=local` (a `toolchain` line in the repository's `go.mod` would otherwise make the go command download and run another toolchain; with it the line is ignored, and a `go` line newer than your Go fails the scan instead), `GOPROXY=off` (no network), `GOWORK=off` (a `go.work` in the repository is not read), `CGO_ENABLED=0` (no C toolchain) and `GOFLAGS=-mod=readonly` (replacing any `GOFLAGS` from your environment or `go env`, so no `-toolexec` or `-overlay` applies, and `go.mod` and `go.sum` are never written).
 
 ## Install
+
+For the current-main agent workflows, build from source with stable Rust:
+
+```sh
+cargo +stable install --git https://github.com/dogebonker/archgraph --locked
+```
+
+Check the required command's `--help` when using a released binary; releases can differ from current main.
 
 A prebuilt binary (Linux x64 and arm64, static; macOS x64 and arm64), installed to `~/.local/bin`:
 

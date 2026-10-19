@@ -1,0 +1,156 @@
+{
+  "kind": "scripted CLI session; no live agent host",
+  "capture": {
+    "snapshot": "4ead032c703d482314ff9994683adde744c949c2c948eb8d99dad413e40547b1",
+    "context": "snapshot=4ead032c703d482314ff9994683adde744c949c2c948eb8d99dad413e40547b1\nStatic evidence;files:1;unscanned:0;imports:0;importers:0;rules:2;unknown_modules:0;unclassified:0;modules:domain;layers:src/**;forbid:src/domain/**->src/adapters/**"
+  },
+  "blocked": {
+    "schema": "archgraph/edit-check/v1",
+    "verdict": "BLOCK",
+    "violations": [
+      {
+        "finding_id": "ag-67931d1f6a5bfa60c7903493fc31bebc5ffd8d282a660b66cf3089da240c2a4b",
+        "kind": "forbidden-edge",
+        "rule": "domain-no-adapters",
+        "file": "src/domain/a.ts",
+        "recipe": {
+          "steps": [
+            {
+              "kind": "cut_import",
+              "file": "src/domain/a.ts",
+              "line": 2,
+              "from": "src/domain/a.ts",
+              "to": "src/adapters/b.ts",
+              "detail": {
+                "operation": "remove_import",
+                "target": "src/adapters/b.ts",
+                "specifier": "../adapters/b",
+                "edge_kind": "runtime",
+                "original_to": null
+              },
+              "mechanical": true
+            }
+          ],
+          "expected": {
+            "pairs_removed": 0,
+            "cycle_size_after": 0,
+            "new_cycles": 0,
+            "instability_delta": {
+              "adapters": null,
+              "domain": null
+            }
+          },
+          "verify": {
+            "predicate": "recipe_deltas_match && all(structured)",
+            "structured": {
+              "absent_edges": [
+                {
+                  "from": "src/domain/a.ts",
+                  "to": "src/adapters/b.ts"
+                }
+              ],
+              "baseline_id": "ag-67931d1f6a5bfa60c7903493fc31bebc5ffd8d282a660b66cf3089da240c2a4b",
+              "expected": {
+                "pairs_removed": 0,
+                "cycle_size_after": 0,
+                "new_cycles": 0,
+                "instability_delta": {
+                  "adapters": null,
+                  "domain": null
+                }
+              }
+            }
+          },
+          "confidence": "medium",
+          "risk_notes": [
+            "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing."
+          ]
+        }
+      }
+    ]
+  },
+  "unchanged_repair_blocked": {
+    "schema": "archgraph/edit-check/v1",
+    "verdict": "BLOCK",
+    "violations": [
+      {
+        "finding_id": "ag-67931d1f6a5bfa60c7903493fc31bebc5ffd8d282a660b66cf3089da240c2a4b",
+        "kind": "forbidden-edge",
+        "rule": "domain-no-adapters",
+        "file": "src/domain/a.ts",
+        "recipe": {
+          "steps": [
+            {
+              "kind": "cut_import",
+              "file": "src/domain/a.ts",
+              "line": 2,
+              "from": "src/domain/a.ts",
+              "to": "src/adapters/b.ts",
+              "detail": {
+                "operation": "remove_import",
+                "target": "src/adapters/b.ts",
+                "specifier": "../adapters/b",
+                "edge_kind": "runtime",
+                "original_to": null
+              },
+              "mechanical": true
+            }
+          ],
+          "expected": {
+            "pairs_removed": 0,
+            "cycle_size_after": 0,
+            "new_cycles": 0,
+            "instability_delta": {
+              "adapters": null,
+              "domain": null
+            }
+          },
+          "verify": {
+            "predicate": "recipe_deltas_match && all(structured)",
+            "structured": {
+              "absent_edges": [
+                {
+                  "from": "src/domain/a.ts",
+                  "to": "src/adapters/b.ts"
+                }
+              ],
+              "baseline_id": "ag-67931d1f6a5bfa60c7903493fc31bebc5ffd8d282a660b66cf3089da240c2a4b",
+              "expected": {
+                "pairs_removed": 0,
+                "cycle_size_after": 0,
+                "new_cycles": 0,
+                "instability_delta": {
+                  "adapters": null,
+                  "domain": null
+                }
+              }
+            }
+          },
+          "confidence": "medium",
+          "risk_notes": [
+            "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing."
+          ]
+        }
+      }
+    ]
+  },
+  "fixed": {
+    "schema": "archgraph/edit-check/v1",
+    "verdict": "PASS",
+    "violations": []
+  },
+  "preexisting_unchanged": {
+    "schema": "archgraph/edit-check/v1",
+    "verdict": "PASS",
+    "violations": []
+  },
+  "fires": {
+    "total": 2,
+    "rules": [
+      {
+        "rule": "domain-no-adapters",
+        "count": 2
+      }
+    ]
+  }
+}
