@@ -22,6 +22,8 @@ Context selection combines graph neighbours with whole-word source matches, incl
 
 Explicit seeds may receive export summaries to share the budget across files; an export entry means the body still needs reading. Open the body before editing or drawing conclusions about implementation. Omissions and the selected set are a reading plan, not complete evidence that other callers or files are irrelevant; inspect missing callers and search directly when the plan leaves a question unanswered.
 
+For a single pending edit, `archgraph explain <file> --for-agent --graph <graph.json>` gives a conservative 400-byte summary. It includes new-file and classification gaps; use the full explanation or reading plan when those omissions matter.
+
 The opt-in examples in `integrations/` support Claude Code prompt context and Cursor artifact preparation. Cursor's pre-task hook does not inject context; its always-apply rule is the fallback. Copy or merge examples only when the user asks to configure that editor.
 
 When context leads to a finding fix, fetch its recipe with MCP `propose` before editing, retain `verify.structured` and its baseline, then follow [archgraph-fix](../archgraph-fix/SKILL.md). Read advisory diagnostics as context; unknown recipe deltas do not establish a benefit. Use the CLI dry run for complete source edits when MCP truncates a proposal.

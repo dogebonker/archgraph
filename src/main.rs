@@ -161,6 +161,9 @@ struct Explain {
     subject: String,
     #[arg(long, default_value = ".archgraph/archgraph.json")]
     graph: PathBuf,
+    /// Compact edit context, bounded to 400 UTF-8 bytes
+    #[arg(long)]
+    for_agent: bool,
 }
 
 #[derive(Args)]
@@ -370,7 +373,7 @@ fn main() -> ExitCode {
     execute(cli)
 }
 fn execute(cli: Cli) -> ExitCode {
-    let brief = cli.brief;
+    let brief = cli.brief && !matches!(&cli.command, Cmd::Explain(args) if args.for_agent);
     let capture = brief.then(archgraph::output::Capture::begin);
     let code = execute_inner(cli);
     if let Some(capture) = capture {
@@ -427,8 +430,21 @@ fn execute_inner(cli: Cli) -> ExitCode {
             .map(|()| ExitCode::SUCCESS),
         Cmd::Status(args) => daemon_cli::status(args).map(|()| ExitCode::SUCCESS),
         Cmd::Explain(args) => recompute(&args.graph, None)
-            .and_then(|doc| explain_cli::explain(&doc, &args.subject))
-            .and_then(|value| write(None, &value))
+            .and_then(|doc| {
+                if args.for_agent {
+                    explain_cli::for_agent(&doc, &[args.subject])
+                } else {
+                    explain_cli::explain(&doc, &args.subject)
+                }
+            })
+            .and_then(|value| {
+                if args.for_agent {
+                    println!("{}", serde_json::to_string(&value)?);
+                    Ok(())
+                } else {
+                    write(None, &value)
+                }
+            })
             .map(|()| ExitCode::SUCCESS),
         Cmd::Scan(args) => scan_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Report(args) => report_cli::run(args),

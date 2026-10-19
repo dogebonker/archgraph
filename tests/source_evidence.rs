@@ -61,6 +61,12 @@ fn rust_report_and_agent_explanations_disclose_grouping_and_source_semantics() {
         serde_json::from_slice(&std::fs::read(output.join("archgraph.json")).unwrap()).unwrap();
     let doc = archgraph::restore_scan(value).unwrap();
     let cli = explain::explain(&doc, "src/a.rs").unwrap();
+    assert!(
+        explain::for_agent(&doc, &["src/a.rs".into()]).unwrap()["summary"]
+            .as_str()
+            .unwrap()
+            .contains("imports:0")
+    );
     let mcp = archgraph::mcp_tools::call(&doc, &root, "explain", json!({"path":"src/a.rs"}), None)
         .unwrap();
     for value in [&cli, &mcp] {

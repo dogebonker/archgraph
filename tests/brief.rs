@@ -103,6 +103,12 @@ fn explain_uses_graph_evidence_and_unknown_subject_says_what_to_do() {
             .any(|value| value["to"] == edge.to)
     );
     assert_eq!(result["file"]["path"], edge.from);
+    assert!(
+        serde_json::to_vec(&explain::for_agent(&doc, std::slice::from_ref(&edge.from)).unwrap())
+            .unwrap()
+            .len()
+            <= 400
+    );
     let module = &doc
         .files
         .iter()
