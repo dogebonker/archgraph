@@ -15,7 +15,9 @@ Use `--package NAME` for a monorepo requiring explicit package selection (for ex
 `--package pydantic`). The same selection reaches hook installation, final graph comparison
 and receipt verification, and is recorded in report JSON/Markdown.
 The source must have a clean tracked/untracked worktree. Each run uses a private local
-clone with no hard links; the source worktree and index are never changed. Temporary
+clone with no hard links; the source worktree and index are never changed. Setup and
+private diff staging respect Git ignore rules and exclude `.archgraph` with an index-only
+restore, including repositories that ignore that directory. Temporary
 clones are deleted; command stdout/stderr and measurements remain in the raw report.
 
 Tasks JSON: `[{"id":"feature", "prompt":"Implement ...", "area":["src/domain/**"],

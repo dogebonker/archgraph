@@ -189,16 +189,22 @@ def remove_configs(root):
             'rule_blocks_updated': updated}
 
 
+def stage_changes(root, base, timeout, env):
+    required(['git', 'add', '-A'], root, timeout, env)
+    # Negative add pathspecs fail on ignored .archgraph; restore only its index entries.
+    required(['git', 'reset', '-q', base, '--', '.archgraph'], root, timeout, env)
+
+
 def diff_metrics(root, base, timeout, environment=None):
     # A private index includes untracked files without changing the agent's index.
     with tempfile.TemporaryDirectory(prefix='archgraph-diff-index-') as work:
         env = dict(os.environ if environment is None else environment, GIT_INDEX_FILE=str(Path(work) / 'index'))
-        commands = [invoke(['git', 'read-tree', base], root, timeout, env),
-                    invoke(['git', 'add', '-A', '--', '.', ':!.archgraph'], root, timeout, env),
-                    invoke(['git', 'diff', '--cached', '--no-renames', '--numstat', '-z', base], root, timeout, env)]
-        if any(x['code'] != 0 for x in commands):
+        required(['git', 'read-tree', base], root, timeout, env)
+        stage_changes(root, base, timeout, env)
+        diff = invoke(['git', 'diff', '--cached', '--no-renames', '--numstat', '-z', base], root, timeout, env)
+        if diff['code'] != 0:
             raise RuntimeError('cannot measure private-index diff')
-        entries = commands[-1]['stdout'].split('\0')
+        entries = diff['stdout'].split('\0')
         files, added, removed, binary = [], 0, 0, 0
         for entry in entries:
             if not entry:
@@ -281,7 +287,7 @@ def one_run(repo, commit, task, runner, binary, arm, repeat, timeout, artifact_d
                     result['errors'].append('guarded setup failed; agent was not run')
                     break
         # Freeze setup so reported agent diff excludes installation changes.
-        required(['git', 'add', '-A', '--', '.', ':!.archgraph'], root, timeout, env)
+        stage_changes(root, commit, timeout, env)
         setup_tree = required(['git', 'write-tree'], root, timeout, env)
         setup_commit = required(['git', '-c', 'user.name=Archgraph benchmark', '-c',
                                  'user.email=benchmark@example.invalid', '-c', 'commit.gpgsign=false',

@@ -13,6 +13,37 @@ FIXTURES = Path(__file__).parent / 'fixtures'
 
 
 class HarnessTests(unittest.TestCase):
+    def test_ignored_and_unignored_state_never_blocks_setup_or_enters_agent_diff(self):
+        for ignored in (True, False):
+            with self.subTest(ignored=ignored), tempfile.TemporaryDirectory() as temporary:
+                work = Path(temporary)
+                root = work / 'source'
+                root.mkdir()
+                self.fixture(root)
+                if ignored:
+                    (root / '.gitignore').write_text('.archgraph/\n')
+                    self.git(root, 'add', '.')
+                    self.git(root, '-c', 'commit.gpgsign=false', 'commit', '-m', 'ignore generated state')
+                binary = work / 'mock-archgraph'
+                script = (FIXTURES / 'mock_archgraph.py').read_text().replace(
+                    "    agent = args[args.index('--agent') + 1]",
+                    "    state = root / '.archgraph'\n    state.mkdir(exist_ok=True)\n"
+                    "    (state / 'setup-state.json').write_text('{}')\n"
+                    "    agent = args[args.index('--agent') + 1]")
+                binary.write_text(script)
+                binary.chmod(0o755)
+                runner = {'agent': 'claude', 'model': 'mock', 'argv': [sys.executable,
+                    str((FIXTURES / 'mock_runner.py').resolve()), '--model', '{model}', '--prompt', '{prompt}']}
+                _, data = bench.benchmark(root, [{'id': 'state', 'prompt': 'Valid receipt',
+                    'area': ['src/**'], 'tests': [sys.executable, '-c', 'pass']}], runner,
+                    binary, work / 'out', repeats=1)
+                for row in data['runs']:
+                    self.assertEqual(row['agent_exit'], 0)
+                    self.assertEqual(row['errors'], [])
+                    self.assertEqual(row['diff']['files'], ['src/domain.txt'])
+                self.assertEqual(self.git(root, 'status', '--porcelain'), '')
+                self.assertFalse((root / '.archgraph').exists())
+
     def git(self, root, *args):
         return subprocess.check_output(['git', '-c', 'core.hooksPath=/dev/null', *args], cwd=root,
                                        stderr=subprocess.DEVNULL).decode().strip()
