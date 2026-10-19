@@ -9,6 +9,7 @@ pub mod collect;
 pub mod compat;
 pub mod context;
 pub mod diff;
+pub mod edit_audit;
 pub mod edit_gate;
 pub mod exposure;
 pub mod findings;

@@ -11,6 +11,11 @@
           "default": true,
           "description": "Prefer compact output. All responses retain a hard output cap.",
           "type": "boolean"
+        },
+        "snapshot": {
+          "description": "Pre-edit capture ID; mutually exclusive with base.",
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
         }
       },
       "required": [],

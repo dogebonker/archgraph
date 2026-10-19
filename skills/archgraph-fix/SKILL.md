@@ -18,6 +18,8 @@ Prefer MCP `check_diff`/`verify` to obtain current findings, then `propose({find
 
 One run fixes one finding, as one reviewable change. Every step ends on evidence; the change survives only if the last step is green.
 
+When a per-edit hook supplies a recipe, retain its snapshot ID through the repair and rerun `archgraph hook check --baseline ID --brief`; MCP `check_diff({snapshot: ID})` inspects the same baseline without consuming it. An unchanged repair must still block. Mechanical hook recipes save proposal evidence for `apply`; semantic instructions still need source work and project tests. Never replace the pending baseline or loosen `layout.yaml` to turn a regression into pre-existing debt. A post-edit block leaves the edit on disk.
+
 ## Steps
 
 1. **Pick one actionable finding.** Scan with the intended rules, symbols, engine and exclusions, then select the requested `findings[].finding_id`. Otherwise choose a relevant ranked finding and state its evidence. Every actionable v1.2 finding carries `recipe`; advisory `diagnostics[]` retain unsupported or weak-signal evidence and a reason. Read those diagnostics too, especially `small-repo`. Default ranking is hotspot × confidence × pair reduction, not proof of priority; use `--rank legacy` for the previous hotspot-first order.

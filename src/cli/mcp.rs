@@ -43,6 +43,11 @@ pub(super) fn call(mut args: Call) -> Result<Value> {
     if !root.is_dir() {
         bail!("repository root is not a directory: start archgraph mcp <repo>");
     }
+    if args.tool == "check_diff"
+        && let Some(snapshot) = arguments.get("snapshot").and_then(Value::as_str)
+    {
+        return hooks_cli::snapshot_check(&root, snapshot);
+    }
     if args.setup.opts.rules.is_none() && root.join("layout.yaml").is_file() {
         args.setup.opts.rules = Some(root.join("layout.yaml"));
     }

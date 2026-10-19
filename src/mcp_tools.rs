@@ -34,6 +34,8 @@ struct ContextArgs {
 struct DiffArgs {
     #[serde(default)]
     base: Option<String>,
+    #[serde(default)]
+    snapshot: Option<String>,
     #[serde(default = "yes")]
     brief: bool,
 }
@@ -122,6 +124,15 @@ pub fn validate(name: &str, arguments: &Value) -> Result<()> {
         }
         "check_diff" => {
             let a: DiffArgs = parse(arguments.clone())?;
+            if let Some(snapshot) = &a.snapshot
+                && (a.base.is_some()
+                    || snapshot.len() != 64
+                    || !snapshot
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+            {
+                bail!("snapshot must be a 64-character lowercase hex capture ID, without base");
+            }
             if a.base.as_ref().is_some_and(|b| b.trim().is_empty()) {
                 bail!("base must be a non-empty Git revision");
             }
@@ -267,6 +278,9 @@ pub fn call(
         "check_diff" => {
             let a: DiffArgs = parse(arguments)?;
             let _ = a.brief;
+            if a.snapshot.is_some() {
+                bail!("pre-edit snapshots require the live MCP or mcp-call transport");
+            }
             let old=baseline.context("check_diff requires a baseline scan; run inside a Git repository and provide base=<commit> if HEAD has no parent")?;
             let diff = crate::diff::diff(old, doc);
             let mut grown = Vec::new();
@@ -585,8 +599,8 @@ pub fn schemas() -> Vec<ToolSchema> {
         ),
         schema(
             "check_diff",
-            "Compare the current scan with a Git baseline; report new forbidden imports, new/grown cycles and stable finding IDs.",
-            json!({"base":{"type":"string","minLength":1}}),
+            "Compare the current scan with a Git base or pre-edit snapshot; report new forbidden imports, new/grown cycles and stable finding IDs.",
+            json!({"base":{"type":"string","minLength":1},"snapshot":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Pre-edit capture ID; mutually exclusive with base."}}),
             &[],
             json!({"type":"object","required":["new_forbidden","new_cycles","grown_cycles","findings"],"properties":{"new_forbidden":array(json!({"type":"object","required":["from","to"]})),"new_cycles":array(cycle.clone()),"grown_cycles":array(object(json!({"before":cycle.clone(),"after":cycle.clone()}),&["before","after"])),"findings":array(finding.clone())}}),
         ),

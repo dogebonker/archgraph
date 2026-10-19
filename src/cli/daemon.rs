@@ -466,6 +466,10 @@ pub(super) fn forward_args(
     args: Vec<String>,
     tty: bool,
 ) -> Result<Option<archgraph::output::Output>> {
+    // Nested scan requests reuse the active graph instead of calling this serial lane itself.
+    if ACTIVE.with(|active| active.borrow().is_some()) {
+        return Ok(None);
+    }
     let Some(ep) = discover(start) else {
         return Ok(None);
     };
@@ -480,7 +484,7 @@ pub(super) fn status(args: Status) -> Result<()> {
     };
     write(None, &value)
 }
-fn token() -> Result<String> {
+pub(super) fn token() -> Result<String> {
     let mut bytes = [0u8; 32];
     #[cfg(unix)]
     fs::File::open("/dev/urandom")?.read_exact(&mut bytes)?;

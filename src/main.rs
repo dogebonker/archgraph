@@ -11,6 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// Options belong to the calling thread, including daemon requests.
 #[derive(Clone, Default)]
 struct Globals {
+    no_daemon: bool,
     all_kinds: bool,
     legacy_v1: bool,
     granularity: Option<Granularity>,
@@ -42,6 +43,8 @@ mod daemon_cli;
 mod explain_cli;
 #[path = "cli/history.rs"]
 mod history_cli;
+#[path = "cli/hooks.rs"]
+mod hooks_cli;
 #[path = "cli/hotspots.rs"]
 mod hotspots_cli;
 #[path = "cli/impact.rs"]
@@ -102,6 +105,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Install and run architecture checks around agent edits
+    Hook(hooks_cli::Hook),
+    /// Inspect architecture rule-fire counts
+    Fires(hooks_cli::Fires),
     /// Return a typed fix recipe and its verification predicates
     Propose(recipes_cli::Target),
     /// Preview or execute the mechanical steps of a finding's recipe
@@ -330,6 +337,7 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     GLOBALS.with(|g| {
         *g.borrow_mut() = Globals {
+            no_daemon: cli.no_daemon,
             all_kinds: cli.all_kinds,
             legacy_v1: cli.legacy_v1,
             granularity: cli.granularity,
@@ -373,7 +381,9 @@ fn main() -> ExitCode {
     execute(cli)
 }
 fn execute(cli: Cli) -> ExitCode {
-    let brief = cli.brief && !matches!(&cli.command, Cmd::Explain(args) if args.for_agent);
+    let brief = cli.brief
+        && !matches!(&cli.command, Cmd::Hook(_) | Cmd::Fires(_))
+        && !matches!(&cli.command, Cmd::Explain(args) if args.for_agent);
     let capture = brief.then(archgraph::output::Capture::begin);
     let code = execute_inner(cli);
     if let Some(capture) = capture {
@@ -407,6 +417,7 @@ fn execute_inner(cli: Cli) -> ExitCode {
     use std::io::IsTerminal;
     GLOBALS.with(|g| {
         *g.borrow_mut() = Globals {
+            no_daemon: cli.no_daemon,
             all_kinds: cli.all_kinds,
             legacy_v1: cli.legacy_v1,
             granularity: cli.granularity,
@@ -420,6 +431,8 @@ fn execute_inner(cli: Cli) -> ExitCode {
         (cli.tool_timeout > 0).then(|| std::time::Duration::from_secs(cli.tool_timeout)),
     );
     let result = match cli.command {
+        Cmd::Hook(args) => hooks_cli::run(args),
+        Cmd::Fires(args) => hooks_cli::fires(args),
         Cmd::Propose(args) => recipes_cli::propose(args).map(|()| ExitCode::SUCCESS),
         Cmd::Apply(args) => recipes_cli::apply(args),
         Cmd::Verify(args) => recipes_cli::verify(args),

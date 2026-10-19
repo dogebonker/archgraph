@@ -58,6 +58,31 @@ fn validate(name: &str, value: &Value) {
     assert!(errors.is_empty(), "{name}: {errors:?}");
 }
 #[test]
+fn edit_snapshot_arguments_are_validated_before_collection() {
+    use archgraph::mcp_tools::validate;
+    let id = "a".repeat(64);
+    assert!(validate("check_diff", &json!({"snapshot":id})).is_ok());
+    for arguments in [
+        json!({"snapshot":"../bad"}),
+        json!({"snapshot":"A".repeat(64)}),
+        json!({"base":"HEAD","snapshot":id}),
+    ] {
+        assert!(validate("check_diff", &arguments).is_err());
+    }
+    assert!(
+        call(
+            &document(&[]),
+            Path::new("."),
+            "check_diff",
+            json!({"snapshot":id}),
+            Some(&document(&[]))
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("live MCP")
+    );
+}
+#[test]
 fn stable_ids_exclude_timing_priority_and_member_order() {
     let doc = cycle();
     let f = doc

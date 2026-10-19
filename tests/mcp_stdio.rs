@@ -434,6 +434,79 @@ fn stdio_uses_matching_daemon_and_refreshes_its_generation() {
     );
 }
 
+#[test]
+fn warm_snapshot_query_does_not_wait_for_a_native_transaction_lock() {
+    let mut f = Fixture::new();
+    let output = f
+        .command()
+        .args([
+            "--no-daemon",
+            "hook",
+            "capture",
+            "--agent",
+            "codex",
+            "--language",
+            "typescript",
+            "--files",
+            "src/b/b.ts",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let captured: Value = serde_json::from_slice(&output.stdout).unwrap();
+    f.start_daemon();
+    f.cycle(true);
+    let mut client = Client::start(&f, false);
+    // A native hook can own this lock while waiting for its scan RPC in the serial daemon.
+    let lock = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(f.root.join(".archgraph/hooks/lock"))
+        .unwrap();
+    lock.lock().unwrap();
+    let response = client.tool(
+        "check_diff",
+        json!({"snapshot":captured["snapshot"], "brief":false}),
+    );
+    assert_ne!(response["isError"], true, "{response}");
+    let envelope = &response["structuredContent"];
+    let result = &envelope["data"];
+    assert_eq!(result["verdict"], "BLOCK", "{result}");
+    assert!(
+        envelope["counts"]["new_forbidden"].as_u64().unwrap() > 0,
+        "{response}"
+    );
+    assert_eq!(result["base_selection"], "pre-edit snapshot");
+    drop(lock);
+    // The reason changes the environment: a bypass must not require weakening daemon trust.
+    let bypass = f
+        .command()
+        .args([
+            "hook",
+            "check",
+            "--baseline",
+            captured["snapshot"].as_str().unwrap(),
+            "--brief",
+        ])
+        .env("ARCHGRAPH_BYPASS", "accept fixture boundary once")
+        .output()
+        .unwrap();
+    assert!(
+        bypass.status.success(),
+        "{}",
+        String::from_utf8_lossy(&bypass.stderr)
+    );
+    assert!(bypass.stdout.starts_with(b"PASS\n"));
+    let overrides = fs::read_to_string(f.root.join(".archgraph/overrides.log")).unwrap();
+    let record: Value = serde_json::from_str(overrides.lines().next().unwrap()).unwrap();
+    assert_eq!(record["reason"], "accept fixture boundary once");
+    assert!(!record["finding_ids"].as_array().unwrap().is_empty());
+}
+
 #[cfg(unix)]
 #[test]
 fn mcp_reuses_reference_daemon_cache_when_collector_cannot_run_again() {
