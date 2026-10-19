@@ -31,6 +31,8 @@ use archgraph::model::{Document, Git, Granularity, Language, SCHEMA, ScanInput, 
 use archgraph::{codeowners, diff, history, modules, render, rules, simulate};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
+#[path = "cli/adr.rs"]
+mod adr_cli;
 #[path = "cli/brief.rs"]
 mod brief_cli;
 #[path = "cli/check.rs"]
@@ -109,6 +111,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Propose architecture rules from ADRs and check source lifecycle
+    Adr(adr_cli::Adr),
     /// Generate owned agent instruction blocks from layout.yaml
     SyncRules(sync_rules_cli::SyncRules),
     /// Create a reasoned day-zero layout and show its first findings
@@ -439,6 +443,7 @@ fn execute_inner(cli: Cli) -> ExitCode {
         (cli.tool_timeout > 0).then(|| std::time::Duration::from_secs(cli.tool_timeout)),
     );
     let result = match cli.command {
+        Cmd::Adr(args) => adr_cli::run(args),
         Cmd::SyncRules(args) => sync_rules_cli::run(args),
         Cmd::Init(args) => init_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Hook(args) => hooks_cli::run(args),

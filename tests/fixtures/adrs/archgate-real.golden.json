@@ -1,0 +1,56 @@
+{
+  "schema": "archgraph/adr-import/v1",
+  "documents": 1,
+  "proposals": [
+    {
+      "id": "adr-c13a429ce22e",
+      "to": "pkg:inquirer",
+      "reason": "ARCH-018 Lazy-Load Heavy Dependencies",
+      "source": "archgate-real/ARCH-018-lazy-load-heavy-dependencies.md",
+      "lifecycle": "unknown",
+      "kinds": [
+        "runtime"
+      ],
+      "source_sha256": "76bdd50c70fdd98b5007390513b0d58fd5822dacc24a291a89337f8a20bc691e",
+      "from": "src/**/*.ts"
+    },
+    {
+      "id": "adr-923ba7b86376",
+      "to": "pkg:posthog-node",
+      "reason": "ARCH-018 Lazy-Load Heavy Dependencies",
+      "source": "archgate-real/ARCH-018-lazy-load-heavy-dependencies.md",
+      "lifecycle": "unknown",
+      "kinds": [
+        "runtime"
+      ],
+      "source_sha256": "76bdd50c70fdd98b5007390513b0d58fd5822dacc24a291a89337f8a20bc691e",
+      "from": "src/**/*.ts"
+    },
+    {
+      "id": "adr-f51deaaf89db",
+      "to": "pkg:@sentry/*",
+      "reason": "ARCH-018 Lazy-Load Heavy Dependencies",
+      "source": "archgate-real/ARCH-018-lazy-load-heavy-dependencies.md",
+      "lifecycle": "unknown",
+      "kinds": [
+        "runtime"
+      ],
+      "source_sha256": "76bdd50c70fdd98b5007390513b0d58fd5822dacc24a291a89337f8a20bc691e",
+      "from": "src/**/*.ts"
+    }
+  ],
+  "informational": [
+    {
+      "source": "archgate-real/ARCH-018-lazy-load-heavy-dependencies.md",
+      "message": "partial mapping: named package classes only, static runtime imports; future unspecified heavy dependencies require review"
+    },
+    {
+      "source": "archgate-real/ARCH-018-lazy-load-heavy-dependencies.md",
+      "message": "companion .rules.ts is not executed or translated"
+    },
+    {
+      "source": "archgate-real/ARCH-018-lazy-load-heavy-dependencies.md",
+      "message": "lifecycle unknown; review before applying proposals"
+    }
+  ]
+}

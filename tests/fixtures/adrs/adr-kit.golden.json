@@ -1,0 +1,50 @@
+{
+  "schema": "archgraph/adr-import/v1",
+  "documents": 6,
+  "proposals": [
+    {
+      "id": "adr-ada42c3ad9b6",
+      "from": "src/domain/**",
+      "to": "src/adapters/**",
+      "reason": "ADR-001 Fixture boundary",
+      "source": "adr-kit/001-boundary.md",
+      "lifecycle": "accepted",
+      "source_sha256": "1d776b2da0c937d644ec18e339cdfeee2f32b60a3b708212579084a7ca131235"
+    },
+    {
+      "id": "adr-b4b56de30ba2",
+      "from": "src/domain/**",
+      "to": "src/adapters/**",
+      "reason": "ADR-002 Fixture module",
+      "source": "adr-kit/002-module.md",
+      "lifecycle": "accepted",
+      "source_sha256": "10b0d83c74483e096e5396c5a23e4b5cc15ec9ed32fd76f785521d5ea74a0b64"
+    }
+  ],
+  "informational": [
+    {
+      "source": "adr-kit/003-deprecated.md",
+      "message": "informational only: lifecycle deprecated"
+    },
+    {
+      "source": "adr-kit/004-alternatives.md",
+      "message": "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+    },
+    {
+      "source": "adr-kit/005-calls.md",
+      "message": "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+    },
+    {
+      "source": "adr-kit/006-format-specific.md",
+      "message": "Enforcement regex checks require source-text semantics; not translated to import edges"
+    },
+    {
+      "source": "adr-kit/006-format-specific.md",
+      "message": "lifecycle unknown; review before applying proposals"
+    },
+    {
+      "source": "adr-kit/006-format-specific.md",
+      "message": "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+    }
+  ]
+}

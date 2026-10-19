@@ -1,0 +1,476 @@
+{
+  "schema": "archgraph/adr-corpora/v1",
+  "corpora": [
+    {
+      "name": "adr-kit",
+      "url": "https://github.com/rvdbreemen/adr-kit.git",
+      "commit": "9a0b9b4c22509f27e43d056b8b0ecf44a519403a",
+      "directory": "docs/adr",
+      "expected_documents": 51,
+      "expected_proposals": 0,
+      "gaps": {
+        "docs/adr/ADR-001-llm-gates-opt-in.md": [
+          "informational only: lifecycle superseded"
+        ],
+        "docs/adr/ADR-002-adr-guardian-session-start-staleness-detector.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-003-template-profile-compatibility.md": [
+          "informational only: lifecycle superseded"
+        ],
+        "docs/adr/ADR-004-layered-adr-context-injection.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-005-selectable-agent-friendly-adr-formats.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-006-prepare-platform-local-marketplaces-for-native-installs.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-007-json-adr-graph-index-for-agent-retrieval.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-008-resolve-the-enforcement-engine-from-a-version-ranked-root-set-including-the-checkout.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-009-bound-heuristic-gates-to-findings-an-author-can-act-on.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-010-certify-three-native-cli-clients-through-one-outcome-contract.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-011-adopt-deterministic-readiness-and-human-gated-grilling-across-the-adr-lifecycle.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-012-release-to-the-three-coding-agent-marketplaces-from-the-public-repository.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-013-declare-version-sites-in-one-registry-and-bump-by-writing.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-014-use-the-generated-adr-graph-as-the-selective-context-query-engine.md": [
+          "informational only: lifecycle superseded"
+        ],
+        "docs/adr/ADR-015-enforce-a-two-second-deterministic-latency-budget-as-a-test-fixture-contract.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-016-serve-both-mcp-protocol-eras-from-one-hand-rolled-stdio-server.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-017-run-the-llm-judge-by-default-on-the-host-agent-model.md": [
+          "informational only: lifecycle superseded"
+        ],
+        "docs/adr/ADR-018-add-a-local-precomputed-vector-layer-for-adr-retrieval.md": [
+          "informational only: lifecycle superseded"
+        ],
+        "docs/adr/ADR-019-keep-the-end-of-session-hooks-deliberately-silent.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-020-embed-the-query-where-the-query-is-asked-and-read-authority-from-the-index.md": [
+          "informational only: lifecycle superseded"
+        ],
+        "docs/adr/ADR-021-let-the-session-scoped-hooks-regenerate-a-stale-adr-index.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-022-make-open-questions-append-only-for-a-proposed-adr.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-023-record-the-pull-request-guard-as-a-fail-closed-tier.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-024-ask-for-a-missing-adr-at-the-pull-request-moment-inside-the-guard.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-025-separate-what-tracked-configuration-may-select-from-what-only-a-machine-may-introduce.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-026-record-the-combined-audit-command-and-its-five-way-exit-contract.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-027-derive-the-lifecycle-signer-from-a-person-named-git-identity-announced.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-028-gate-the-declared-related-link-and-leave-the-prose-one-alone.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-029-retire-the-native-hook-binary-rather-than-maintain-a-second-retrieval-engine.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-030-recalibrate-the-hook-latency-budgets-to-the-python-host-that-actually-ships.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-031-name-the-pull-request-moment-as-a-deliberately-slower-user-initiated-event.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-032-treat-a-generated-client-tree-as-a-first-class-doctor-context.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-033-name-the-user-initiated-whole-repository-commands-as-deliberately-slower.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-034-declare-the-hook-network-property-per-event-rather-than-for-the-hook-set.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-035-run-the-suggestion-pass-by-default-on-the-same-terms-as-the-judge.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-036-retire-the-vector-layer-and-run-the-judge-on-the-host-model-only.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-037-keep-per-adr-judge-verdicts-in-the-advisory-per-machine-guardian-state.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-038-cost-an-unusable-llm-verdict-to-that-adr-alone-not-the-whole-pass.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-039-add-a-native-opencode-plugin-without-expanding-the-certified-cli-gate.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-040-grow-the-mcp-tool-surface-only-with-read-only-deterministic-cycle-tools.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-041-automatically-hand-off-unfinished-proposed-adrs-to-interactive-grilling.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-042-drive-the-release-from-the-maintainer-s-machine-and-create-the-tag-from-the-merge.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-043-forbid-a-pinned-model-or-a-default-llm-command-in-every-model-calling-entry-point.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-044-resolve-the-interpreter-and-the-engine-through-one-resolver-at-every-entry-point.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-045-let-the-judge-acquire-its-own-diff-and-give-every-diff-shape-an-explicit-verdict.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-046-match-every-path-glob-in-the-judge-s-dialect-wherever-it-is-read.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-047-cap-supporting-adrs-per-response-and-let-them-fill-only-the-slots-left-under-the-limit.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-048-certify-each-native-client-on-every-platform-it-runs-on.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-049-record-the-judge-host-client-at-the-first-session-and-ask-per-llm-layer-at-upgrade.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "Enforcement regex checks require source-text semantics; not translated to import edges",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/ADR-INDEX.md": [
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        "docs/adr/README.md": [
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ]
+      },
+      "expected_mapped_documents": 0
+    },
+    {
+      "name": "archgate",
+      "url": "https://github.com/archgate/cli.git",
+      "commit": "6075eafb55fc2425537a52690d2d2486e452811d",
+      "directory": ".archgate/adrs",
+      "expected_documents": 35,
+      "expected_proposals": 3,
+      "gaps": {
+        ".archgate/adrs/ARCH-001-command-structure.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-002-error-handling.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-003-output-formatting.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-004-no-barrel-files.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-005-testing-standards.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-006-dependency-policy.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-007-cross-platform-subprocess-execution.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-008-typed-command-options.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-009-platform-detection-helper.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-010-prefer-bun-built-in-json-parsing.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-011-consistent-project-root-resolution.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-012-command-error-boundaries.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-013-version-synchronization.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-014-prefer-bun-env.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-015-cli-command-documentation-coverage.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-016-cli-subcommand-documentation-accuracy.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-017-multi-ecosystem-distribution.md": [
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-018-lazy-load-heavy-dependencies.md": [
+          "partial mapping: named package classes only, static runtime imports; future unspecified heavy dependencies require review",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals"
+        ],
+        ".archgate/adrs/ARCH-019-inquirer-prompt-fix.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-020-glob-scan-include-dotfiles.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-021-authored-text-integrity.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-022-ast-aware-rule-context.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-023-engine-file-listing-via-in-memory-git-tracked-matching.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-024-rule-file-sandbox-boundary.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-025-idiomatic-bun-test-parametrization-and-matchers.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/ARCH-026-strict-mode-and-check-severity-tiers.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/CI-001-pin-github-actions-by-hash.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/CI-002-validate-workflow-syntax-with-actionlint.md": [
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/GEN-001-documentation-site.md": [
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/GEN-002-docs-i18n.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/GEN-003-tool-invocation-via-scripts.md": [
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/GEN-004-concise-forward-only-code-comments.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/GEN-005-repository-root-contents-allowlist.md": [
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/LEGAL-001-spdx-license-headers.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ],
+        ".archgate/adrs/LEGAL-002-dependency-license-compatibility.md": [
+          "scope metadata retained as informational only; it does not imply an import prohibition",
+          "companion .rules.ts is not executed or translated",
+          "lifecycle unknown; review before applying proposals",
+          "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+        ]
+      },
+      "expected_mapped_documents": 1,
+      "architecture_sources": [
+        ".archgate/adrs/ARCH-001-command-structure.md",
+        ".archgate/adrs/ARCH-002-error-handling.md",
+        ".archgate/adrs/ARCH-003-output-formatting.md",
+        ".archgate/adrs/ARCH-004-no-barrel-files.md",
+        ".archgate/adrs/ARCH-005-testing-standards.md",
+        ".archgate/adrs/ARCH-006-dependency-policy.md",
+        ".archgate/adrs/ARCH-007-cross-platform-subprocess-execution.md",
+        ".archgate/adrs/ARCH-008-typed-command-options.md",
+        ".archgate/adrs/ARCH-009-platform-detection-helper.md",
+        ".archgate/adrs/ARCH-010-prefer-bun-built-in-json-parsing.md",
+        ".archgate/adrs/ARCH-011-consistent-project-root-resolution.md",
+        ".archgate/adrs/ARCH-012-command-error-boundaries.md",
+        ".archgate/adrs/ARCH-013-version-synchronization.md",
+        ".archgate/adrs/ARCH-014-prefer-bun-env.md",
+        ".archgate/adrs/ARCH-015-cli-command-documentation-coverage.md",
+        ".archgate/adrs/ARCH-016-cli-subcommand-documentation-accuracy.md",
+        ".archgate/adrs/ARCH-017-multi-ecosystem-distribution.md",
+        ".archgate/adrs/ARCH-018-lazy-load-heavy-dependencies.md",
+        ".archgate/adrs/ARCH-019-inquirer-prompt-fix.md",
+        ".archgate/adrs/ARCH-020-glob-scan-include-dotfiles.md",
+        ".archgate/adrs/ARCH-021-authored-text-integrity.md",
+        ".archgate/adrs/ARCH-022-ast-aware-rule-context.md",
+        ".archgate/adrs/ARCH-023-engine-file-listing-via-in-memory-git-tracked-matching.md",
+        ".archgate/adrs/ARCH-024-rule-file-sandbox-boundary.md",
+        ".archgate/adrs/ARCH-025-idiomatic-bun-test-parametrization-and-matchers.md",
+        ".archgate/adrs/ARCH-026-strict-mode-and-check-severity-tiers.md"
+      ]
+    }
+  ]
+}

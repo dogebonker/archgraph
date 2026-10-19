@@ -59,7 +59,7 @@ fn lines(rules: &RulesRef) -> Vec<String> {
     }
     for rule in &r.forbid {
         lines.push(format!(
-            "Forbid {} -> {}{}{}. Reason: {}",
+            "Forbid {} -> {}{}{}. Reason: {}{}",
             text(&rule.from),
             text(&rule.to),
             if rule.reachable {
@@ -71,19 +71,25 @@ fn lines(rules: &RulesRef) -> Vec<String> {
                 " kinds={}",
                 serde_json::to_string(k).expect("import kinds serialize")
             )),
-            text(rule.reason.as_deref().unwrap_or("not supplied"))
+            text(rule.reason.as_deref().unwrap_or("not supplied")),
+            rule.source
+                .as_ref()
+                .map_or(String::new(), |source| format!(" Source: {}", text(source)))
         ));
     }
     for rule in &r.allow {
         lines.push(format!(
-            "Allow {} -> {}{}. Reason: {}",
+            "Allow {} -> {}{}. Reason: {}{}",
             text(&rule.from),
             text(&rule.to),
             rule.kinds.as_ref().map_or(String::new(), |k| format!(
                 " kinds={}",
                 serde_json::to_string(k).expect("import kinds serialize")
             )),
-            text(rule.reason.as_deref().unwrap_or("not supplied"))
+            text(rule.reason.as_deref().unwrap_or("not supplied")),
+            rule.source
+                .as_ref()
+                .map_or(String::new(), |source| format!(" Source: {}", text(source)))
         ));
     }
     for (module, entry) in &r.entrypoints {

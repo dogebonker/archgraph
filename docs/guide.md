@@ -79,6 +79,12 @@ Init synchronizes these files after creating its draft. Live `check` warns when 
 
 Content and layout hashes distinguish manual edits from a changed source policy. A hand-edited owned block refuses the entire write batch and prints a diff; move custom instructions outside the fence, restore the generated block, then sync again. Missing/duplicate/malformed fences are refused. Original bytes outside existing fences, including line endings and non-UTF-8 bytes, remain unchanged. New blocks append to existing content. All targets are checked for symlink paths before writes; file permissions are preserved. Each replacement checks the preflight bytes again to reject an observed concurrent edit. Replacements are atomic per file; an I/O failure can leave other files stale, so rerun `--check` after correcting it.
 
+## ADR import and lifecycle checks
+
+`archgraph adr import docs/adr` proposes a YAML fragment; it leaves the layout unchanged until `--apply`. Use `--json` for the full inventory or `--brief` for its bounded envelope. Clear positive import prohibitions in Decision/Decision Outcome sections map to reasoned rules; existing module IDs resolve to unique declared file globs. Examples, alternatives, ambiguous scopes and call restrictions stay informational. Proposals include the ADR ID/title, repository-relative `source`, and source digest; apply rechecks source/lifecycle and layout bytes before publishing. It preserves existing comments and refuses ambiguous flow-style/anchor edits.
+
+`archgraph adr check [root]` flags stale or missing sources and distinguishes unknown lifecycle. Check output, generated rule blocks and recipe notes cite source paths. MADR, ADR-kit and Archgate metadata differ; Archgate does not supply a standard status field. Regex checks and arbitrary companion TypeScript are retained in their original tools. A narrow reviewed Archgate ARCH-018 adapter supplies three runtime-only package rules with type/dynamic exemptions. The measured upstream conversion remains below the requested 50% target; see [the pinned compatibility report and gap list](interop.md).
+
 ## Native engine
 
 ```sh

@@ -1,0 +1,6 @@
+version: 1
+modules:
+  - id: domain
+    path: src/domain/**
+  - id: adapters
+    path: src/adapters/**

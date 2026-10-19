@@ -1,0 +1,46 @@
+{
+  "schema": "archgraph/adr-import/v1",
+  "documents": 6,
+  "proposals": [
+    {
+      "id": "adr-06ddc17e27f8",
+      "from": "src/domain/**",
+      "to": "src/adapters/**",
+      "reason": "ADR-001 Fixture boundary",
+      "source": "madr/001-boundary.md",
+      "lifecycle": "accepted",
+      "source_sha256": "b649589426464395d489db5d881e30eb5c9507c803847d3998e3dc51ddec905c"
+    },
+    {
+      "id": "adr-8e2fc34b6c75",
+      "from": "src/domain/**",
+      "to": "src/adapters/**",
+      "reason": "ADR-002 Fixture module",
+      "source": "madr/002-module.md",
+      "lifecycle": "accepted",
+      "source_sha256": "bef363aa228d4a110e9d0f70044a900fa34e770981c0e2d202686b7298c37cab"
+    }
+  ],
+  "informational": [
+    {
+      "source": "madr/003-deprecated.md",
+      "message": "informational only: lifecycle deprecated"
+    },
+    {
+      "source": "madr/004-alternatives.md",
+      "message": "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+    },
+    {
+      "source": "madr/005-calls.md",
+      "message": "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+    },
+    {
+      "source": "madr/006-format-specific.md",
+      "message": "lifecycle unknown; review before applying proposals"
+    },
+    {
+      "source": "madr/006-format-specific.md",
+      "message": "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+    }
+  ]
+}

@@ -18,6 +18,8 @@ Prefer MCP `check_diff`/`verify` to obtain current findings, then `propose({find
 
 One run fixes one finding, as one reviewable change. Every step ends on evidence; the change survives only if the last step is green.
 
+When a rule cites an ADR, read its source and reason before changing the dependency. `archgraph adr check` identifies stale/missing or unknown-lifecycle sources; the normal check and recipe notes retain that provenance. Resolving a code violation does not authorize rewriting the decision or dropping its source link. Keep external regex/companion checks when a graph proposal only represents part of an ADR.
+
 When a per-edit hook supplies a recipe, retain its snapshot ID through the repair and rerun `archgraph hook check --baseline ID --brief`; MCP `check_diff({snapshot: ID})` inspects the same baseline without consuming it. An unchanged repair must still block. Mechanical hook recipes save proposal evidence for `apply`; semantic instructions still need source work and project tests. Never replace the pending baseline or loosen `layout.yaml` to turn a regression into pre-existing debt. A post-edit block leaves the edit on disk.
 
 ## Steps

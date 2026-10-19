@@ -317,7 +317,8 @@
               "from": { "type": "string", "minLength": 1 },
               "to": { "type": "string", "minLength": 1 },
               "reachable": { "type": "boolean" },
-              "reason": { "type": ["string", "null"] }
+              "reason": { "type": ["string", "null"] },
+              "source": { "type": "string", "minLength": 1, "description": "Repository-relative ADR path supplying this rule." }
             }
           }
         },
@@ -330,7 +331,8 @@
               "id": { "type": ["string", "null"] },
               "from": { "type": "string", "minLength": 1 },
               "to": { "type": "string", "minLength": 1 },
-              "reason": { "type": ["string", "null"] }
+              "reason": { "type": ["string", "null"] },
+              "source": { "type": "string", "minLength": 1, "description": "Repository-relative ADR path supplying this rule." }
             }
           }
         },

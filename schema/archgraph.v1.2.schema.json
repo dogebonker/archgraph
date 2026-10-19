@@ -2268,6 +2268,7 @@
                   "null"
                 ]
               },
+              "source": { "type": "string", "minLength": 1, "description": "Repository-relative ADR path supplying this rule." },
               "kinds": {
                 "type": "array",
                 "items": {
@@ -2312,6 +2313,7 @@
                   "null"
                 ]
               },
+              "source": { "type": "string", "minLength": 1, "description": "Repository-relative ADR path supplying this rule." },
               "kinds": {
                 "type": "array",
                 "items": {

@@ -1,0 +1,99 @@
+{
+  "schema": "archgraph/adr-import/v1",
+  "documents": 6,
+  "proposals": [
+    {
+      "id": "adr-0e63967a8461",
+      "from": "src/domain/**",
+      "to": "src/adapters/**",
+      "reason": "ARCH-001 Fixture boundary",
+      "source": "archgate/001-boundary.md",
+      "lifecycle": "unknown",
+      "source_sha256": "b8a573d4c3a5c5ac31b14b97f60e3b9a3fd3940c4b4be23d8a629c30a950ab80"
+    },
+    {
+      "id": "adr-fbe4d346a825",
+      "from": "src/domain/**",
+      "to": "src/adapters/**",
+      "reason": "ARCH-002 Fixture module",
+      "source": "archgate/002-module.md",
+      "lifecycle": "unknown",
+      "source_sha256": "31fc9ebdf0683ba5333e3635c52f293eb84aa69f6d9d477f6d6d383e6be311ef"
+    },
+    {
+      "id": "adr-a10a590283bd",
+      "from": "src/domain/**",
+      "to": "src/old/**",
+      "reason": "ARCH-003 Fixture deprecated",
+      "source": "archgate/003-deprecated.md",
+      "lifecycle": "unknown",
+      "source_sha256": "7b7105227885764b24c3ffd226b4339488a7ff274dc8321fddef84fd1071a9e2"
+    }
+  ],
+  "informational": [
+    {
+      "source": "archgate/001-boundary.md",
+      "message": "scope metadata retained as informational only; it does not imply an import prohibition"
+    },
+    {
+      "source": "archgate/001-boundary.md",
+      "message": "lifecycle unknown; review before applying proposals"
+    },
+    {
+      "source": "archgate/002-module.md",
+      "message": "scope metadata retained as informational only; it does not imply an import prohibition"
+    },
+    {
+      "source": "archgate/002-module.md",
+      "message": "lifecycle unknown; review before applying proposals"
+    },
+    {
+      "source": "archgate/003-deprecated.md",
+      "message": "scope metadata retained as informational only; it does not imply an import prohibition"
+    },
+    {
+      "source": "archgate/003-deprecated.md",
+      "message": "lifecycle unknown; review before applying proposals"
+    },
+    {
+      "source": "archgate/004-alternatives.md",
+      "message": "scope metadata retained as informational only; it does not imply an import prohibition"
+    },
+    {
+      "source": "archgate/004-alternatives.md",
+      "message": "lifecycle unknown; review before applying proposals"
+    },
+    {
+      "source": "archgate/004-alternatives.md",
+      "message": "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+    },
+    {
+      "source": "archgate/005-calls.md",
+      "message": "scope metadata retained as informational only; it does not imply an import prohibition"
+    },
+    {
+      "source": "archgate/005-calls.md",
+      "message": "lifecycle unknown; review before applying proposals"
+    },
+    {
+      "source": "archgate/005-calls.md",
+      "message": "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+    },
+    {
+      "source": "archgate/006-format-specific.md",
+      "message": "scope metadata retained as informational only; it does not imply an import prohibition"
+    },
+    {
+      "source": "archgate/006-format-specific.md",
+      "message": "companion .rules.ts is not executed or translated"
+    },
+    {
+      "source": "archgate/006-format-specific.md",
+      "message": "lifecycle unknown; review before applying proposals"
+    },
+    {
+      "source": "archgate/006-format-specific.md",
+      "message": "informational only: no unambiguous import prohibition in Decision or Decision Outcome"
+    }
+  ]
+}

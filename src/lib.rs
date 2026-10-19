@@ -1,6 +1,7 @@
 macro_rules! eprintln { ($($arg:tt)*) => { $crate::output::stderr(format_args!("{}\n", format_args!($($arg)*))) }; }
 // Library half of the CLI and daemon, shared with integration tests.
 
+pub mod adr;
 pub mod apply;
 pub mod bisect;
 pub mod cochange;

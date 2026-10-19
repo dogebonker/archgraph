@@ -87,7 +87,7 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
                 "cycles": doc.cycles, "forbidden": forbidden, "unplanned": unplanned,
                 "surface": doc.surface,
                 "early_smells": smells,
-                "reasons": forbidden.iter().map(|edge| serde_json::json!({"from":edge.from,"to":edge.to,"reasons":reasons(&doc, edge.rule.as_deref().unwrap_or_default())})).collect::<Vec<_>>(),
+                "reasons": forbidden.iter().map(|edge| serde_json::json!({"from":edge.from,"to":edge.to,"reasons":reasons(&doc, edge.rule.as_deref().unwrap_or_default()),"sources":sources(&doc, edge.rule.as_deref().unwrap_or_default())})).collect::<Vec<_>>(),
             }),
         )?;
         return Ok(if !forbidden.is_empty() || smells.blocking_count > 0 {
@@ -129,12 +129,16 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
             String::new()
         };
         println!(
-            "{label} {} -> {} ({rule}){via}{resolved}{}",
+            "{label} {} -> {} ({rule}){via}{resolved}{}{}",
             e.from,
             policy_target(&doc, written),
             reasons(&doc, rule)
                 .into_iter()
                 .map(|reason| format!(" reason={reason:?}"))
+                .collect::<String>(),
+            sources(&doc, rule)
+                .into_iter()
+                .map(|source| format!(" source={source:?}"))
                 .collect::<String>()
         );
     }
@@ -175,4 +179,11 @@ fn reasons<'a>(doc: &'a Document, rule: &str) -> Vec<&'a str> {
         return vec![];
     };
     rules.doc.reasons(rule)
+}
+
+fn sources<'a>(doc: &'a Document, rule: &str) -> Vec<&'a str> {
+    doc.config
+        .rules
+        .as_ref()
+        .map_or_else(Vec::new, |rules| rules.doc.sources(rule))
 }

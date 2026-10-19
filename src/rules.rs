@@ -138,6 +138,8 @@ pub struct Forbid {
     pub reachable: bool,
     pub reason: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kinds: Option<Vec<EdgeKind>>,
 }
 
@@ -147,6 +149,8 @@ pub struct Allow {
     pub from: String,
     pub to: String,
     pub reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kinds: Option<Vec<EdgeKind>>,
 }
@@ -175,6 +179,28 @@ impl Rules {
             }
         }
         reasons
+    }
+
+    /// ADR paths for the decision label retained on an edge.
+    pub fn sources(&self, decision: &str) -> Vec<&str> {
+        let mut sources = Vec::new();
+        for (index, rule) in self.forbid.iter().enumerate() {
+            if rule.id.as_deref().map_or_else(
+                || decision == format!("forbid[{index}]"),
+                |id| id == decision,
+            ) {
+                sources.extend(rule.source.as_deref());
+            }
+        }
+        for (index, rule) in self.allow.iter().enumerate() {
+            if rule.id.as_deref().map_or_else(
+                || decision == format!("allow[{index}]"),
+                |id| id == decision,
+            ) {
+                sources.extend(rule.source.as_deref());
+            }
+        }
+        sources
     }
 }
 
@@ -226,10 +252,12 @@ fn known_keys() -> serde_json::Value {
         }],
         entrypoints: BTreeMap::from([("module".into(), "entry".into())]),
         forbid: vec![Forbid {
+            source: Some("docs/adr/ADR-001.md".into()),
             kinds: Some(vec![EdgeKind::Static]),
             ..Forbid::default()
         }],
         allow: vec![Allow {
+            source: Some("docs/adr/ADR-001.md".into()),
             kinds: Some(vec![EdgeKind::Static]),
             ..Allow::default()
         }],
@@ -387,6 +415,22 @@ impl Compiled {
             && (reason.trim().is_empty() || reason.chars().any(char::is_control))
         {
             bail!("layer-reason must be nonempty and contain no control characters");
+        }
+        for source in rules
+            .forbid
+            .iter()
+            .filter_map(|rule| rule.source.as_deref())
+            .chain(rules.allow.iter().filter_map(|rule| rule.source.as_deref()))
+        {
+            if source.is_empty()
+                || source.contains(['\\', ':'])
+                || source.chars().any(char::is_control)
+                || source
+                    .split('/')
+                    .any(|part| part.is_empty() || part == "." || part == "..")
+            {
+                bail!("rule source must be a normalized repository-relative path: {source:?}");
+            }
         }
         if rules.version != 1 {
             bail!("unsupported rules version {}; expected 1", rules.version);

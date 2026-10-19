@@ -1,0 +1,3 @@
+ARCH-018-lazy-load-heavy-dependencies.md is an unmodified test fixture from archgate/cli.
+Source: https://github.com/archgate/cli/blob/6075eafb55fc2425537a52690d2d2486e452811d/.archgate/adrs/ARCH-018-lazy-load-heavy-dependencies.md
+Upstream license: Apache-2.0; reproduced in LICENSE.upstream.

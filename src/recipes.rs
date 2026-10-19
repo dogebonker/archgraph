@@ -253,6 +253,9 @@ pub fn attach(doc: &mut Document) -> Result<()> {
                     for reason in rules.doc.reasons(edge.rule.as_deref().unwrap_or_default()) {
                         recipe.risk_notes.push(format!("Policy reason: {reason}"));
                     }
+                    for source in rules.doc.sources(edge.rule.as_deref().unwrap_or_default()) {
+                        recipe.risk_notes.push(format!("Policy source: {source}"));
+                    }
                 }
                 forecast(doc, &mut recipe)?;
                 f.recipe = Some(recipe);
