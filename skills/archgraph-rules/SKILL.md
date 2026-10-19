@@ -2,7 +2,8 @@
 name: archgraph-rules
 description: Writes and calibrates an archgraph layout.yaml from an architecture the user approves (layered, hexagonal or clean, modular monolith, frontend domains, feature folders) and wires the CI gate. Use when asked to define, write, tighten or enforce architecture rules, layers or module boundaries for a repository.
 license: MIT OR Apache-2.0
-compatibility: Needs git and the archgraph binary (setup in the archgraph skill).
+metadata:
+  compatibility: Needs git and the archgraph binary (setup in the archgraph skill).
 ---
 
 # archgraph-rules

@@ -17,6 +17,8 @@ Environment:
 - `ARCHGRAPH_DOWNLOAD_BASE`: release URL base, read as `<base>/<tag>/<file>` (default `https://github.com/dogebonker/archgraph/releases/download`), for a mirror. Without it every URL, redirects included, must be HTTPS; with it, any URL is fetched.
 - `ARCHGRAPH_BINARY`: run this archgraph executable and download nothing.
 
-Scans need a collector (dependency-cruiser or grimp): see the [archgraph README](https://github.com/dogebonker/archgraph#install).
+Scans need a collector (dependency-cruiser or grimp): see the [archgraph README](https://github.com/dogebonker/archgraph#try-it).
+
+For coding agents, Archgraph includes five skills for context selection, architecture analysis, regression checks, fixes and rules. Follow the [skill installation instructions](https://github.com/dogebonker/archgraph#install-the-skills) using a source checkout or extracted release archive.
 
 MIT OR Apache-2.0.

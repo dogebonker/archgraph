@@ -180,6 +180,13 @@ fn downrank(path: &str) -> bool {
             .is_match(path)
 }
 
+fn searchable(file: &crate::model::File) -> bool {
+    !file.barrel
+        && file.class != Some(crate::model::ModuleClass::Tests)
+        && !dependency_directory(&file.path)
+        && !downrank(&file.path)
+}
+
 fn export_names(input: &ScanInput) -> BTreeMap<String, BTreeSet<String>> {
     let mut names: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     let exports = input.symbols.iter().flat_map(|s| &s.exports).chain(
@@ -252,20 +259,62 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
             Err(error) => omit(&mut report, path, error.to_string()),
         }
     }
+    let seed_folders: BTreeSet<_> = seeds
+        .keys()
+        .filter(|path| {
+            !files
+                .get(path.as_str())
+                .map_or_else(|| barrel_path(path), |file| file.barrel)
+        })
+        .filter_map(|path| Path::new(path).parent().map(Path::to_path_buf))
+        .collect();
     let keywords = words(&options.task);
     let symbols: BTreeSet<_> = options.symbols.iter().map(|s| s.to_lowercase()).collect();
+    let mut text_hits = BTreeMap::new();
+    let mut term_files: BTreeMap<String, usize> = BTreeMap::new();
+    let mut searched_files = 0_usize;
+    let mut symbol_matches = BTreeSet::new();
+    let mut unreadable = BTreeSet::new();
     let mut automatic = Vec::new();
-    for file in &input.files {
-        if dependency_directory(&file.path) || downrank(&file.path) || file.barrel {
-            continue;
-        }
+    for file in input.files.iter().filter(|file| searchable(file)) {
         let path_words = words(&file.path);
+        let content = if keywords.is_empty() {
+            String::new()
+        } else {
+            match safe_path(&root, &file.path).and_then(|path| {
+                std::fs::read_to_string(path)
+                    .with_context(|| format!("cannot search UTF-8 source {}", file.path))
+            }) {
+                Ok(content) => content,
+                Err(error) => {
+                    omit(&mut report, &file.path, error.to_string());
+                    unreadable.insert(file.path.clone());
+                    continue;
+                }
+            }
+        };
+        let source_words = words(&content);
+        searched_files += 1;
+        let matches: BTreeSet<_> = keywords
+            .iter()
+            .filter(|word| path_words.contains(*word) || source_words.contains(*word))
+            .cloned()
+            .collect();
+        for word in &matches {
+            *term_files.entry(word.clone()).or_default() += 1;
+        }
+        if !matches.is_empty() {
+            text_hits.insert(file.path.clone(), matches);
+        }
         let symbol_hits = exports.get(&file.path).map_or(0, |names| {
             names
                 .iter()
                 .filter(|n| symbols.contains(&n.to_lowercase()))
                 .count()
         });
+        if symbol_hits > 0 {
+            symbol_matches.insert(file.path.clone());
+        }
         let hits = keywords.intersection(&path_words).count() + symbol_hits * 3;
         if hits > 0 {
             automatic.push((hits, file.path.clone()));
@@ -275,6 +324,15 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
     for (_, path) in automatic.into_iter().take(20) {
         seeds.entry(path).or_insert(false);
     }
+    let term_weights: BTreeMap<_, _> = term_files
+        .into_iter()
+        .map(|(term, count)| {
+            (
+                term,
+                ((searched_files + 1) as f64 / (count + 1) as f64).ln(),
+            )
+        })
+        .collect();
 
     // Constraints from original seeds survive barrel redirection.
     let mut constraint_paths = BTreeSet::new();
@@ -429,8 +487,17 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
             );
         }
     }
-    let seed_modules: BTreeSet<_> = seeds
-        .keys()
+    let mut graph_seeds: BTreeSet<_> = seeds
+        .iter()
+        .filter(|(path, explicit)| **explicit || symbol_matches.contains(*path))
+        .map(|(path, _)| path.clone())
+        .collect();
+    let have_anchors = !graph_seeds.is_empty();
+    if !have_anchors {
+        graph_seeds.extend(seeds.keys().cloned());
+    }
+    let seed_modules: BTreeSet<_> = graph_seeds
+        .iter()
         .filter_map(|p| files.get(p.as_str()).map(|f| f.module.as_str()))
         .collect();
     let mut neighbors: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
@@ -443,8 +510,8 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
         neighbors.entry(&edge.from).or_default().insert(&edge.to);
         neighbors.entry(&edge.to).or_default().insert(&edge.from);
     }
-    let mut depths: BTreeMap<String, usize> = seeds.keys().map(|p| (p.clone(), 0)).collect();
-    let mut pending: VecDeque<_> = seeds.keys().cloned().collect();
+    let mut depths: BTreeMap<String, usize> = graph_seeds.iter().map(|p| (p.clone(), 0)).collect();
+    let mut pending: VecDeque<_> = graph_seeds.iter().cloned().collect();
     while let Some(path) = pending.pop_front() {
         let depth = depths[&path];
         if depth >= options.depth {
@@ -456,6 +523,21 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
             }
             depths.insert((*neighbor).into(), depth + 1);
             pending.push_back((*neighbor).into());
+        }
+    }
+    let mut depths: BTreeMap<_, _> = depths
+        .into_iter()
+        .map(|(path, depth)| (path, Some(depth)))
+        .collect();
+    for path in text_hits.keys() {
+        depths.entry(path.clone()).or_insert(None);
+    }
+    for file in input.files.iter().filter(|file| searchable(file)) {
+        if Path::new(&file.path)
+            .parent()
+            .is_some_and(|folder| seed_folders.contains(folder))
+        {
+            depths.entry(file.path.clone()).or_insert(None);
         }
     }
     let max_hotspot = input
@@ -487,77 +569,153 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
                 (&pair.files[0], &pair.files[1]),
                 (&pair.files[1], &pair.files[0]),
             ] {
-                if seeds.contains_key(seed) {
+                if graph_seeds.contains(seed) {
                     *cochange.entry(other.as_str()).or_insert(0_usize) += pair.commits;
                 }
             }
         }
     }
     let max_cochange = cochange.values().copied().max().unwrap_or(1).max(1) as f64;
+    let constraints: BTreeSet<_> = report.entries.iter().map(|e| e.path.clone()).collect();
     let mut candidates = Vec::new();
     for (path, depth) in depths {
+        if constraints.contains(&path) || unreadable.contains(&path) {
+            continue;
+        }
+        let bytes = match safe_path(&root, &path).and_then(|full| {
+            std::fs::File::open(full)
+                .and_then(|file| file.metadata())
+                .map(|meta| usize::try_from(meta.len()).unwrap_or(usize::MAX))
+                .map_err(Into::into)
+        }) {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                omit(&mut report, &path, error.to_string());
+                continue;
+            }
+        };
         let explicit = seeds.get(&path).copied().unwrap_or(false);
         let same_module = files
             .get(path.as_str())
             .is_some_and(|f| seed_modules.contains(f.module.as_str()));
-        let tier = if depth <= 1 {
+        let matched = text_hits.get(&path);
+        let hits = matched.map_or(0, BTreeSet::len);
+        let relevance: f64 = matched
+            .into_iter()
+            .flatten()
+            .map(|term| term_weights[term])
+            .sum();
+        let links = if have_anchors {
+            neighbors
+                .get(path.as_str())
+                .into_iter()
+                .flatten()
+                .filter(|neighbor| graph_seeds.contains(**neighbor))
+                .count()
+        } else {
+            0
+        };
+        let corroborated = have_anchors && hits > 0 && depth.is_some_and(|depth| depth > 0);
+        let tier = if depth.is_some_and(|depth| depth <= 1) || hits > 0 {
             "must-read"
-        } else if depth == 2 && same_module {
+        } else if depth.is_none() || (depth == Some(2) && same_module) {
             "should-read"
         } else {
             "skim"
         };
         let hotspot = hotspots.get(path.as_str()).copied().unwrap_or(0.0);
         let co = cochange.get(path.as_str()).copied().unwrap_or(0) as f64 / max_cochange;
-        let mut score = 1.0 / depth.max(1) as f64
-            + if same_module { 0.5 } else { 0.0 }
+        let mut score = depth.map_or(if hits > 0 { 1.0 } else { 0.0 }, |depth| {
+            1.0 / depth.max(1) as f64
+        }) + if same_module { 0.5 } else { 0.0 }
             + hotspot * 0.5
-            + co * 0.5;
-        if downrank(&path) && !explicit {
+            + co * 0.5
+            + relevance
+            + links as f64 / (links + 1) as f64;
+        if (downrank(&path)
+            || files
+                .get(path.as_str())
+                .is_some_and(|file| file.class == Some(crate::model::ModuleClass::Tests)))
+            && !explicit
+        {
             score *= 0.1;
         }
-        let reason = if explicit {
+        let mut reason = if explicit {
             "explicit file seed".into()
-        } else if depth == 0 {
-            "task keyword or explicit symbol matches saved evidence".into()
-        } else {
+        } else if depth == Some(0) || (depth.is_none() && hits > 0) {
+            "task text or explicit symbol match".into()
+        } else if let Some(depth) = depth {
             format!(
                 "import/importer distance {depth}; same module: {same_module}; hotspot {hotspot:.2}; co-change {co:.2}"
             )
+        } else {
+            "same folder as explicit seed".into()
         };
-        candidates.push((!explicit, depth, score, path, tier, reason));
+        if hits > 0 {
+            let _ = write!(
+                reason,
+                "; task keyword matches {hits}; relevance {relevance:.2}"
+            );
+        }
+        if corroborated {
+            let _ = write!(
+                reason,
+                "; corroborated import/importer distance {}",
+                depth.unwrap()
+            );
+        }
+        if links > 0 {
+            let _ = write!(reason, "; anchor links {links}");
+        }
+        candidates.push((!explicit, depth, score, path, tier, reason, bytes));
     }
     candidates.sort_by(|a, b| {
         a.0.cmp(&b.0)
             .then_with(|| tier_order(a.4).cmp(&tier_order(b.4)))
             .then_with(|| b.2.total_cmp(&a.2))
-            .then_with(|| a.1.cmp(&b.1))
+            .then_with(|| a.1.unwrap_or(usize::MAX).cmp(&b.1.unwrap_or(usize::MAX)))
+            .then_with(|| cost(&a.3, &a.5, a.6).cmp(&cost(&b.3, &b.5, b.6)))
             .then_with(|| a.3.cmp(&b.3))
     });
-    let constraints: BTreeSet<_> = report.entries.iter().map(|e| e.path.clone()).collect();
-    for (_, depth, score, path, tier, mut reason) in candidates {
-        if constraints.contains(&path) {
-            continue;
-        }
-        let full = match safe_path(&root, &path) {
-            Ok(full) => full,
-            Err(error) => {
-                omit(&mut report, &path, error.to_string());
-                continue;
-            }
-        };
-        let bytes = match std::fs::File::open(&full).and_then(|file| file.metadata()) {
-            Ok(meta) => usize::try_from(meta.len()).unwrap_or(usize::MAX),
-            Err(error) => {
-                omit(&mut report, &path, error.to_string());
-                continue;
-            }
-        };
+    let seed_count = candidates.iter().filter(|candidate| !candidate.0).count();
+    let available = options.budget - report.used_tokens;
+    let requested_bodies = candidates
+        .iter()
+        .filter(|candidate| candidate.4 != "skim")
+        .fold(0_usize, |total, candidate| {
+            total.saturating_add(cost(&candidate.3, &candidate.5, candidate.6))
+        });
+    let seed_body_limit = if requested_bodies > available
+        && candidates.iter().any(|candidate| {
+            candidate.0
+                && candidate.4 != "skim"
+                && cost(&candidate.3, &candidate.5, candidate.6) <= available
+        }) {
+        available / (seed_count + 1)
+    } else {
+        available
+    };
+    let mut seed_bodies = Vec::new();
+    for (automatic, depth, score, path, tier, mut reason, bytes) in candidates {
         let mut mode = "body";
         let mut content = None;
         let mut tokens = cost(&path, &reason, bytes);
-        if tier == "skim" || tokens > options.budget - report.used_tokens {
-            let Some(exports) = summary(&path, &exports) else {
+        let shared_summary = if !automatic && tokens > seed_body_limit {
+            summary(&path, &exports).filter(|content| {
+                embedded_cost(
+                    &path,
+                    &format!("{reason}; exports only to share seed budget"),
+                    content,
+                ) < tokens
+            })
+        } else {
+            None
+        };
+        let share_seed_budget = shared_summary.is_some();
+        let body_tokens = tokens;
+        let body_reason = share_seed_budget.then(|| reason.clone());
+        if tier == "skim" || tokens > options.budget - report.used_tokens || share_seed_budget {
+            let Some(exports) = shared_summary.or_else(|| summary(&path, &exports)) else {
                 omit(
                     &mut report,
                     &path,
@@ -569,7 +727,11 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
                 );
                 continue;
             };
-            reason.push_str("; exports only");
+            reason.push_str(if share_seed_budget {
+                "; exports only to share seed budget"
+            } else {
+                "; exports only"
+            });
             tokens = embedded_cost(&path, &reason, &exports);
             mode = "exports";
             content = Some(exports);
@@ -583,6 +745,9 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
             continue;
         }
         report.used_tokens += tokens;
+        if let Some(body_reason) = body_reason {
+            seed_bodies.push((report.entries.len(), body_tokens, body_reason));
+        }
         report.entries.push(Entry {
             tier: tier.into(),
             path,
@@ -590,9 +755,19 @@ pub fn select(input: &ScanInput, root: &Path, options: &Options) -> Result<Repor
             tokens,
             mode: mode.into(),
             content,
-            depth: Some(depth),
+            depth,
             score,
         });
+    }
+    for (index, tokens, reason) in seed_bodies {
+        let entry = &mut report.entries[index];
+        if tokens.saturating_sub(entry.tokens) <= options.budget - report.used_tokens {
+            report.used_tokens = report.used_tokens - entry.tokens + tokens;
+            entry.tokens = tokens;
+            entry.mode = "body".into();
+            entry.content = None;
+            entry.reason = reason;
+        }
     }
     if input.symbols.as_ref().is_none_or(|s| !s.complete) {
         report.limitations.push("Export evidence is incomplete or absent; files requiring summaries may be omitted. Collect a surface index for better coverage.".into());
@@ -769,7 +944,7 @@ mod tests {
             report
                 .entries
                 .iter()
-                .any(|e| e.path == "billing/InvoiceFactory.ts" && e.depth == Some(0))
+                .any(|e| e.path == "billing/InvoiceFactory.ts" && e.depth.is_none())
         );
         let paths: Vec<_> = report.entries.iter().map(|e| e.path.as_str()).collect();
         assert!(
@@ -900,6 +1075,250 @@ mod tests {
             .to_string()
             .contains("require at least")
         );
+    }
+    #[test]
+    fn all_text_matches_compete_but_only_twenty_expand_the_graph() {
+        let dir = Fixture::new();
+        let mut paths: Vec<_> = (0..21).map(|i| format!("a/needle/{i:02}.ts")).collect();
+        paths.push("remote/neighbor.ts".into());
+        let mut scan = input(
+            &dir,
+            &paths.iter().map(String::as_str).collect::<Vec<_>>(),
+            &[("a/needle/20.ts", "remote/neighbor.ts")],
+        );
+        for path in &paths[..21] {
+            dir.write(path, "export const item = 'needle';\n");
+        }
+        let opts = Options {
+            task: "needle".into(),
+            ..Default::default()
+        };
+        let report = select(&scan, &dir.0, &opts).unwrap();
+        assert_eq!(report.entries.len(), 21);
+        assert!(report.entries.iter().all(|entry| entry.mode == "body"));
+        assert!(
+            !report
+                .entries
+                .iter()
+                .any(|entry| entry.path == "remote/neighbor.ts")
+        );
+        scan.files.reverse();
+        scan.edges.reverse();
+        assert_eq!(
+            serde_json::to_value(&report).unwrap(),
+            serde_json::to_value(select(&scan, &dir.0, &opts).unwrap()).unwrap()
+        );
+    }
+    #[test]
+    fn stronger_text_evidence_outweighs_a_weak_graph_match() {
+        let dir = Fixture::new();
+        let scan = input(
+            &dir,
+            &["a/seed.ts", "b/near.ts", "c/far.ts"],
+            &[("a/seed.ts", "b/near.ts")],
+        );
+        dir.write("b/near.ts", "export const item = 'invoice';\n");
+        dir.write("c/far.ts", "export const item = 'invoice tax rounding';\n");
+        let report = select(
+            &scan,
+            &dir.0,
+            &Options {
+                task: "invoice tax rounding".into(),
+                ..options("a/seed.ts")
+            },
+        )
+        .unwrap();
+        assert_eq!(report.entries[0].path, "a/seed.ts");
+        assert_eq!(report.entries[1].path, "c/far.ts");
+    }
+    #[test]
+    fn unused_shared_budget_restores_the_explicit_seed_body() {
+        let dir = Fixture::new();
+        let mut scan = input(
+            &dir,
+            &["a/seed.ts", "b/neighbor.ts"],
+            &[("a/seed.ts", "b/neighbor.ts")],
+        );
+        dir.write("a/seed.ts", &"x".repeat(4000));
+        dir.write("b/neighbor.ts", &format!("needle {}", "y".repeat(6900)));
+        scan.symbols
+            .as_mut()
+            .unwrap()
+            .exports
+            .retain(|e| e.file == "a/seed.ts");
+        let opts = Options {
+            task: "needle".into(),
+            ..options("a/seed.ts")
+        };
+        let full = select(&scan, &dir.0, &opts).unwrap();
+        let neighbor = full
+            .entries
+            .iter()
+            .find(|e| e.path == "b/neighbor.ts")
+            .unwrap();
+        let report = select(
+            &scan,
+            &dir.0,
+            &Options {
+                budget: full.overhead_tokens + neighbor.tokens,
+                ..opts
+            },
+        )
+        .unwrap();
+        assert_eq!(report.entries.len(), 1);
+        assert_eq!(report.entries[0].path, "a/seed.ts");
+        assert_eq!(report.entries[0].mode, "body");
+        assert!(report.entries[0].content.is_none());
+        assert_eq!(
+            report.used_tokens,
+            report.overhead_tokens + report.entries[0].tokens
+        );
+        assert!(report.used_tokens <= report.budget);
+    }
+    #[test]
+    fn seed_body_is_not_replaced_by_a_larger_saved_summary() {
+        let dir = Fixture::new();
+        let mut scan = input(
+            &dir,
+            &["a/seed.ts", "b/neighbor.ts"],
+            &[("a/seed.ts", "b/neighbor.ts")],
+        );
+        dir.write("a/seed.ts", &"x".repeat(5000));
+        dir.write("b/neighbor.ts", &"y".repeat(3500));
+        let symbols = scan.symbols.as_mut().unwrap();
+        for i in 0..200 {
+            symbols.exports.push(crate::surface::SymbolExport {
+                file: "a/seed.ts".into(),
+                name: format!("saved_export_name_from_an_earlier_scan_{i}"),
+                target: crate::surface::SymbolTarget {
+                    file: "a/seed.ts".into(),
+                    name: format!("saved_{i}"),
+                },
+            });
+        }
+        let report = select(
+            &scan,
+            &dir.0,
+            &Options {
+                budget: 2000,
+                ..options("a/seed.ts")
+            },
+        )
+        .unwrap();
+        assert_eq!(report.entries[0].path, "a/seed.ts");
+        assert_eq!(report.entries[0].mode, "body");
+        assert!(report.used_tokens <= report.budget);
+    }
+    #[test]
+    fn a_path_match_keeps_its_real_anchor_distance() {
+        let dir = Fixture::new();
+        let scan = input(
+            &dir,
+            &["a/seed.ts", "b/needle.ts"],
+            &[("a/seed.ts", "b/needle.ts")],
+        );
+        let report = select(
+            &scan,
+            &dir.0,
+            &Options {
+                task: "needle".into(),
+                ..options("a/seed.ts")
+            },
+        )
+        .unwrap();
+        let entry = report
+            .entries
+            .iter()
+            .find(|e| e.path == "b/needle.ts")
+            .unwrap();
+        assert_eq!(entry.depth, Some(1));
+        assert!(
+            entry
+                .reason
+                .contains("corroborated import/importer distance 1")
+        );
+    }
+    #[test]
+    fn automatic_matches_do_not_create_anchor_neighbors() {
+        let dir = Fixture::new();
+        let scan = input(
+            &dir,
+            &["a/seed.ts", "b/needle.ts", "b/other.ts"],
+            &[("b/needle.ts", "b/other.ts")],
+        );
+        let report = select(
+            &scan,
+            &dir.0,
+            &Options {
+                task: "needle".into(),
+                ..options("a/seed.ts")
+            },
+        )
+        .unwrap();
+        assert!(
+            report
+                .entries
+                .iter()
+                .any(|e| e.path == "b/needle.ts" && e.depth.is_none())
+        );
+        assert!(!report.entries.iter().any(|e| e.path == "b/other.ts"));
+    }
+    #[test]
+    fn rare_task_words_outweigh_corpus_wide_words() {
+        let dir = Fixture::new();
+        let paths = [
+            "seed/start.ts",
+            "neighbors/a.ts",
+            "neighbors/z.ts",
+            "misc/one.ts",
+            "misc/two.ts",
+        ];
+        let scan = input(
+            &dir,
+            &paths,
+            &[
+                ("seed/start.ts", "neighbors/a.ts"),
+                ("seed/start.ts", "neighbors/z.ts"),
+            ],
+        );
+        for path in paths {
+            dir.write(path, "order status");
+        }
+        dir.write("neighbors/z.ts", "order status custody");
+        let report = select(
+            &scan,
+            &dir.0,
+            &Options {
+                task: "order status custody".into(),
+                ..options("seed/start.ts")
+            },
+        )
+        .unwrap();
+        assert_eq!(report.entries[1].path, "neighbors/z.ts");
+    }
+    #[test]
+    fn distinct_anchor_links_add_bounded_graph_evidence() {
+        let dir = Fixture::new();
+        let scan = input(
+            &dir,
+            &["seed/a.ts", "seed/b.ts", "neighbors/a.ts", "neighbors/z.ts"],
+            &[
+                ("seed/a.ts", "neighbors/a.ts"),
+                ("seed/a.ts", "neighbors/z.ts"),
+                ("seed/b.ts", "neighbors/z.ts"),
+            ],
+        );
+        let report = select(
+            &scan,
+            &dir.0,
+            &Options {
+                files: vec!["seed/a.ts".into(), "seed/b.ts".into()],
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(report.entries[2].path, "neighbors/z.ts");
+        assert!(report.entries[2].reason.contains("anchor links 2"));
     }
     #[test]
     fn missing_unsafe_unknown_and_symlink_files_are_explicit() {

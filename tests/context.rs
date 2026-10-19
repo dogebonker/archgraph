@@ -56,18 +56,57 @@ impl Fixture {
         Self(root)
     }
     fn run(&self, extra: &[&str]) -> Output {
+        self.run_task("Edit the named source", extra)
+    }
+    fn run_task(&self, task: &str, extra: &[&str]) -> Output {
         Command::new(env!("CARGO_BIN_EXE_archgraph"))
             .current_dir(&self.0)
-            .args([
-                "context",
-                "--graph",
-                "graph.json",
-                "--task",
-                "Edit the named source",
-            ])
+            .args(["context", "--graph", "graph.json", "--task", task])
             .args(extra)
             .output()
             .unwrap()
+    }
+    fn graph(&self, paths: &[&str], edges: &[(&str, &str)]) {
+        let original: Value =
+            serde_json::from_slice(&fs::read(self.0.join("graph.json")).unwrap()).unwrap();
+        let doc = archgraph::analyze(
+            serde_json::from_value(original["source"].clone()).unwrap(),
+            serde_json::from_value(original["config"].clone()).unwrap(),
+            paths.iter().map(|path| (*path).into()).collect(),
+            edges
+                .iter()
+                .map(|(from, to)| Edge {
+                    from: (*from).into(),
+                    to: (*to).into(),
+                    ..Default::default()
+                })
+                .collect(),
+            vec![],
+            None,
+        )
+        .unwrap();
+        fs::write(self.0.join("graph.json"), serde_json::to_vec(&doc).unwrap()).unwrap();
+    }
+    fn write(&self, path: &str, content: &str) {
+        let path = self.0.join(path);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, content).unwrap();
+    }
+    fn exports(&self, paths: &[&str]) {
+        let mut graph: Value =
+            serde_json::from_slice(&fs::read(self.0.join("graph.json")).unwrap()).unwrap();
+        graph["symbols"] = json!({
+            "complete": true,
+            "exports": paths.iter().map(|path| json!({
+                "file": path, "name": "start", "target": {"file": path, "name": "start"}
+            })).collect::<Vec<_>>(),
+            "imports": [], "limitations": []
+        });
+        fs::write(
+            self.0.join("graph.json"),
+            serde_json::to_vec(&graph).unwrap(),
+        )
+        .unwrap();
     }
 }
 impl Drop for Fixture {
@@ -187,5 +226,316 @@ fn reads_legacy_graph_but_rejects_legacy_context_json_output() {
     assert!(
         String::from_utf8_lossy(&output.stderr)
             .contains("context JSON requires the current schema")
+    );
+}
+
+#[test]
+fn source_matches_join_graph_context_and_corroboration_gets_body_priority() {
+    let fixture = Fixture::new();
+    let paths = [
+        "seed/start.ts",
+        "connected/z.ts",
+        "isolated/a.ts",
+        "connected/b.ts",
+    ];
+    for path in paths {
+        fixture.write(path, "export const value = 1;\n");
+    }
+    fixture.write("connected/z.ts", "export const value = 'NEEDLE';\n");
+    fixture.write("isolated/a.ts", "export const value = 'needle';\n");
+    fixture.graph(
+        &paths,
+        &[
+            ("seed/start.ts", "connected/z.ts"),
+            ("seed/start.ts", "connected/b.ts"),
+        ],
+    );
+    let report: Value = serde_json::from_str(&success(
+        fixture.run_task("needle", &["--files", "seed/start.ts", "--budget", "2k"]),
+    ))
+    .unwrap();
+    let entries = report["entries"].as_array().unwrap();
+    let sources: Vec<_> = entries.iter().filter(|e| e["mode"] != "rules").collect();
+    assert_eq!(sources[0]["path"], "seed/start.ts");
+    assert_eq!(sources[1]["path"], "connected/z.ts");
+    assert!(
+        sources
+            .iter()
+            .any(|e| e["path"] == "isolated/a.ts" && e["mode"] == "body")
+    );
+    assert!(sources.iter().any(|e| e["path"] == "connected/b.ts"));
+    assert!(report["used_tokens"].as_u64().unwrap() <= 2_000);
+}
+
+#[test]
+fn folder_fallback_is_immediate_and_search_respects_saved_graph_eligibility() {
+    let fixture = Fixture::new();
+    let paths = [
+        "feature/start.ts",
+        "feature/helper.ts",
+        "feature/nested/deep.ts",
+        "feature-other/near.ts",
+        "tests/check.ts",
+        "generated/table.ts",
+        "vendor/pkg.ts",
+        "barrel/index.ts",
+    ];
+    for path in paths {
+        fixture.write(path, "export const value = 1;\n");
+    }
+    for path in ["tests/check.ts", "generated/table.ts", "vendor/pkg.ts"] {
+        fixture.write(path, "export const value = 'needle';\n");
+    }
+    fixture.write(
+        "barrel/index.ts",
+        "export { needle } from './definition';\n",
+    );
+    fixture.write("unlisted.ts", "export const value = 'needle';\n");
+    fixture.graph(&paths, &[]);
+    let mut graph: Value =
+        serde_json::from_slice(&fs::read(fixture.0.join("graph.json")).unwrap()).unwrap();
+    graph["files"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|file| file["path"] == "barrel/index.ts")
+        .unwrap()["barrel"] = json!(true);
+    fs::write(
+        fixture.0.join("graph.json"),
+        serde_json::to_vec(&graph).unwrap(),
+    )
+    .unwrap();
+    let report: Value = serde_json::from_str(&success(
+        fixture.run_task("needle", &["--files", "feature/start.ts", "--budget", "2k"]),
+    ))
+    .unwrap();
+    let sources: Vec<_> = report["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|entry| entry["mode"] != "rules")
+        .map(|entry| entry["path"].as_str().unwrap())
+        .collect();
+    assert_eq!(sources, ["feature/start.ts", "feature/helper.ts"]);
+}
+
+#[cfg(unix)]
+#[test]
+fn source_search_reports_outside_symlinks_without_admitting_them() {
+    let fixture = Fixture::new();
+    let outside = Fixture::new();
+    outside.write("secret.ts", "export const secret = 'needle';\n");
+    std::os::unix::fs::symlink(outside.0.join("secret.ts"), fixture.0.join("linked.ts")).unwrap();
+    fixture.graph(&["a.ts", "linked.ts"], &[]);
+    let report: Value = serde_json::from_str(&success(fixture.run_task("needle", &[]))).unwrap();
+    assert!(
+        !report["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|entry| entry["path"] == "linked.ts")
+    );
+    assert!(report["omitted"].as_array().unwrap().iter().any(|entry| {
+        entry["path"] == "linked.ts" && entry["reason"].as_str().unwrap().contains("escapes root")
+    }));
+}
+
+#[test]
+fn source_search_reports_invalid_utf8_without_panicking() {
+    let fixture = Fixture::new();
+    fs::write(fixture.0.join("binary.ts"), [0xff, 0xfe]).unwrap();
+    fixture.graph(&["a.ts", "binary.ts"], &[("a.ts", "binary.ts")]);
+    let report: Value =
+        serde_json::from_str(&success(fixture.run_task("needle", &["--files", "a.ts"]))).unwrap();
+    assert!(
+        !report["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|entry| entry["path"] == "binary.ts")
+    );
+    assert!(report["omitted"].as_array().unwrap().iter().any(|entry| {
+        entry["path"] == "binary.ts" && entry["reason"].as_str().unwrap().contains("UTF-8")
+    }));
+}
+
+#[test]
+fn source_search_matches_words_and_identifier_tokens_without_substrings() {
+    let fixture = Fixture::new();
+    let paths = [
+        "words/a.ts",
+        "camel/b.ts",
+        "underscore/c.ts",
+        "substring/d.ts",
+    ];
+    fixture.write(paths[0], "export const action = 'PAY';\n");
+    fixture.write(paths[1], "export const payInvoice = 1;\n");
+    fixture.write(paths[2], "export const invoice_pay = 1;\n");
+    fixture.write(paths[3], "export const payload = 'repayment';\n");
+    fixture.graph(&paths, &[]);
+    let report: Value = serde_json::from_str(&success(fixture.run_task("pay", &[]))).unwrap();
+    let mut selected: Vec<_> = report["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|entry| entry["mode"] != "rules")
+        .map(|entry| entry["path"].as_str().unwrap())
+        .collect();
+    selected.sort_unstable();
+    assert_eq!(selected, ["camel/b.ts", "underscore/c.ts", "words/a.ts"]);
+}
+
+#[test]
+fn equally_matching_graph_neighbors_prefer_compact_source_bodies() {
+    let fixture = Fixture::new();
+    let paths = ["seed/start.ts", "neighbors/a.ts", "neighbors/z.ts"];
+    fixture.write(paths[0], "export const start = 1;\n");
+    let matching = "export const action = 'needle reconcile';\n";
+    fixture.write(
+        paths[1],
+        &format!("{matching}/* {} */\n", "padding ".repeat(1500)),
+    );
+    fixture.write(paths[2], matching);
+    fixture.graph(&paths, &[(paths[0], paths[1]), (paths[0], paths[2])]);
+    let report: Value = serde_json::from_str(&success(
+        fixture.run_task("needle reconcile", &["--files", paths[0], "--budget", "8k"]),
+    ))
+    .unwrap();
+    let sources: Vec<_> = report["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|entry| entry["mode"] != "rules")
+        .collect();
+    assert_eq!(sources.len(), 3);
+    assert_eq!(sources[0]["path"], paths[0]);
+    assert_eq!(sources[1]["path"], paths[2]);
+    assert_eq!(sources[1]["mode"], "body");
+    assert_eq!(sources[2]["path"], paths[1]);
+}
+
+#[test]
+fn large_explicit_seeds_leave_budget_for_relevant_neighbor_bodies() {
+    let fixture = Fixture::new();
+    let paths = ["seed/a.ts", "seed/b.ts", "neighbor/c.ts"];
+    for path in &paths[..2] {
+        fixture.write(
+            path,
+            &format!(
+                "export const start = 1;\n/* {} */\n",
+                "padding ".repeat(750)
+            ),
+        );
+    }
+    fixture.write(
+        paths[2],
+        &format!(
+            "export const action = 'needle';\n/* {} */\n",
+            "padding ".repeat(190)
+        ),
+    );
+    fixture.graph(&paths, &[(paths[0], paths[2]), (paths[1], paths[2])]);
+    fixture.exports(&paths);
+    let report: Value = serde_json::from_str(&success(fixture.run_task(
+        "needle",
+        &["--files", paths[0], "--files", paths[1], "--budget", "2k"],
+    )))
+    .unwrap();
+    let entries = report["entries"].as_array().unwrap();
+    assert_eq!(entries[0]["path"], "layout.yaml");
+    let sources: Vec<_> = entries
+        .iter()
+        .filter(|entry| entry["mode"] != "rules")
+        .collect();
+    assert_eq!(sources.len(), 3);
+    for (entry, path) in sources[..2].iter().zip(paths) {
+        assert_eq!(entry["path"], path);
+        assert_eq!(entry["mode"], "exports");
+    }
+    assert_eq!(sources[2]["path"], "neighbor/c.ts");
+    assert_eq!(sources[2]["mode"], "body");
+    let used = report["used_tokens"].as_u64().unwrap();
+    assert!(used <= 2000);
+    assert_eq!(
+        used,
+        report["overhead_tokens"].as_u64().unwrap()
+            + entries
+                .iter()
+                .map(|entry| entry["tokens"].as_u64().unwrap())
+                .sum::<u64>()
+    );
+}
+
+#[test]
+fn seed_body_is_preserved_when_it_fits_with_related_body() {
+    let fixture = Fixture::new();
+    let paths = ["seed/a.ts", "neighbor/b.ts"];
+    fixture.write(
+        paths[0],
+        &format!(
+            "export const start = 1;\n/* {} */\n",
+            "padding ".repeat(750)
+        ),
+    );
+    fixture.write(paths[1], "export const action = 'needle';\n");
+    fixture.graph(&paths, &[(paths[0], paths[1])]);
+    fixture.exports(&[paths[0]]);
+    let report: Value = serde_json::from_str(&success(
+        fixture.run_task("needle", &["--files", paths[0], "--budget", "2k"]),
+    ))
+    .unwrap();
+    let sources: Vec<_> = report["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|entry| entry["mode"] != "rules")
+        .collect();
+    assert_eq!(sources.len(), 2);
+    assert_eq!(sources[0]["path"], paths[0]);
+    assert_eq!(sources[0]["mode"], "body");
+    assert_eq!(sources[1]["path"], paths[1]);
+    assert_eq!(sources[1]["mode"], "body");
+    assert!(report["used_tokens"].as_u64().unwrap() <= 2000);
+}
+
+#[test]
+fn seed_body_is_preserved_when_related_body_cannot_fit_anyway() {
+    let fixture = Fixture::new();
+    let paths = ["seed/a.ts", "neighbor/b.ts"];
+    fixture.write(
+        paths[0],
+        &format!(
+            "export const start = 1;\n/* {} */\n",
+            "padding ".repeat(750)
+        ),
+    );
+    fixture.write(
+        paths[1],
+        &format!(
+            "export const action = 'needle';\n/* {} */\n",
+            "padding ".repeat(3000)
+        ),
+    );
+    fixture.graph(&paths, &[(paths[0], paths[1])]);
+    fixture.exports(&[paths[0]]);
+    let report: Value = serde_json::from_str(&success(
+        fixture.run_task("needle", &["--files", paths[0], "--budget", "2k"]),
+    ))
+    .unwrap();
+    let sources: Vec<_> = report["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|entry| entry["mode"] != "rules")
+        .collect();
+    assert_eq!(sources.len(), 1);
+    assert_eq!(sources[0]["path"], paths[0]);
+    assert_eq!(sources[0]["mode"], "body");
+    assert!(
+        report["omitted"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|entry| entry["path"] == paths[1])
     );
 }

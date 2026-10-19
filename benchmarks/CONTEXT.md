@@ -2,6 +2,8 @@
 
 This is a pre-registered retrieval experiment, not a measure of agent correctness or developer productivity. The experiment freezes its PRs and holdouts before running either ranker. Results below use the frozen 30-PR sample and unchanged ranking parameters.
 
+These results archive the earlier path-seeded selector at the measured commit below. The current selector also searches source text and considers seed-folder neighbours; rerunning this already inspected sample is exploratory evidence, not a fresh held-out evaluation of the combined ranking.
+
 ## Sampling and leakage controls
 
 Use exactly the first 20 repositories in `showcase/repos.json`, with their declared language, scanned subroot and exclusion flags. Supplemental Go repositories are outside this experiment. Collect the first 500 closed PRs returned by GitHub's updated-descending endpoint; retain merged PRs and sort them by merge time, then number, descending. Take the first eligible PR for each repository and a second eligible PR for the first ten manifest entries. This is a deterministic convenience sample of recent eligible changes, not a random sample of all PRs.

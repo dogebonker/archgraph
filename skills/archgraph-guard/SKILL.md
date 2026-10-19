@@ -2,7 +2,8 @@
 name: archgraph-guard
 description: Guards a code change against architecture regressions with archgraph, comparing the change with its base commit and resolving the forbidden imports and import cycles it introduced. Use when finishing a code change in a repository that has a layout.yaml or uses archgraph, or when asked whether a change breaks architecture rules or adds cycles.
 license: MIT OR Apache-2.0
-compatibility: Needs git, bash and the archgraph binary (setup in the archgraph skill). Works in any agent harness; the optional Stop hook is Claude Code specific.
+metadata:
+  compatibility: Needs git, bash and the archgraph binary (setup in the archgraph skill). Works in any agent harness; the optional Stop hook is Claude Code specific.
 ---
 
 # archgraph-guard

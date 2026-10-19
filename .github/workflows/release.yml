@@ -62,6 +62,7 @@ jobs:
           stem=archgraph-$GITHUB_REF_NAME-$TARGET
           mkdir -p "dist/$stem"
           cp LICENSE-MIT LICENSE-APACHE THIRD_PARTY_NOTICES.md README.md "dist/$stem/"
+          cp -R skills "dist/$stem/"
           cd dist
           if [ "$RUNNER_OS" = Windows ]; then
             cp "../target/$TARGET/release/archgraph.exe" "$stem/"

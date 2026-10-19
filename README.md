@@ -43,6 +43,8 @@ For agents making repeated edits, `archgraph serve . --engine native --symbols` 
 
 For Claude Code, install the MCP server with `claude mcp add --transport stdio archgraph -- archgraph mcp . --engine native --symbols`. It exposes seven typed architecture tools, with bounded answers by default. The native engine remains experimental; [client configs and tool semantics](docs/guide.md#mcp-server) cover Claude Code, Cursor and Codex.
 
+For agent workflows, [install the five bundled skills](#install-the-skills) for reading plans, architecture reviews, regression checks, fixes and rules.
+
 <details>
 <summary>Other ways to install, and what each language needs</summary>
 
@@ -235,6 +237,19 @@ Five skills in the open Agent Skills format, for Claude Code, Codex, Cursor and 
 - **[archgraph-guard](skills/archgraph-guard/SKILL.md)** checks a change against its base commit before the agent says it is done, and fixes the violations it introduced. It can run as a Claude Code Stop hook.
 - **[archgraph-fix](skills/archgraph-fix/SKILL.md)** fixes one finding end to end and keeps the change only when a re-scan and the tests agree.
 - **[archgraph-rules](skills/archgraph-rules/SKILL.md)** writes a `layout.yaml` from the architecture you approve and proves each rule catches a planted violation.
+
+### Install the skills
+
+From an Archgraph source checkout or an extracted release archive containing `skills/`, copy all five folders together so sibling links and supporting scripts stay available. For Codex, run:
+
+```sh
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+cp -R skills/archgraph* "${CODEX_HOME:-$HOME/.codex}/skills/"
+```
+
+This installs or updates the bundled skills for your user. Keep any local customizations before updating. Start a new agent session, then invoke `$archgraph` for architecture analysis, `$archgraph-context` for a reading plan, `$archgraph-guard` for regression checks, `$archgraph-fix` for a finding, or `$archgraph-rules` for boundary policies.
+
+For a project install or another client, copy the same complete folders into that client's project skill directory (for example `.claude/skills/` for Claude Code), keeping them as siblings. Installing skills does not install the Archgraph binary, configure MCP, or enable hooks; follow [installation](#try-it) and the chosen skill's setup instructions.
 
 ## How it works
 
