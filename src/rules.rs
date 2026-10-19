@@ -31,10 +31,22 @@ pub struct Rules {
     pub external_exposure: Option<crate::exposure::Thresholds>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grabbag: Option<crate::grabbag::Thresholds>,
+    #[serde(
+        rename = "early-smells",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub early_smells: Option<crate::early_smells::Thresholds>,
     #[serde(default)]
     pub modules: Vec<ModuleRule>,
     #[serde(default)]
     pub layers: Vec<String>,
+    #[serde(
+        rename = "layer-reason",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub layer_reason: Option<String>,
     #[serde(default)]
     pub public: Vec<PublicRule>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -139,6 +151,33 @@ pub struct Allow {
     pub kinds: Option<Vec<EdgeKind>>,
 }
 
+impl Rules {
+    /// Reasons for the decision label retained on an edge, including implicit layer order.
+    pub fn reasons(&self, decision: &str) -> Vec<&str> {
+        let mut reasons = Vec::new();
+        if decision == "layers" {
+            reasons.extend(self.layer_reason.as_deref());
+        }
+        for (index, rule) in self.forbid.iter().enumerate() {
+            if rule.id.as_deref().map_or_else(
+                || decision == format!("forbid[{index}]"),
+                |id| id == decision,
+            ) {
+                reasons.extend(rule.reason.as_deref());
+            }
+        }
+        for (index, rule) in self.allow.iter().enumerate() {
+            if rule.id.as_deref().map_or_else(
+                || decision == format!("allow[{index}]"),
+                |id| id == decision,
+            ) {
+                reasons.extend(rule.reason.as_deref());
+            }
+        }
+        reasons
+    }
+}
+
 /// The rules in effect for `config`, compiled.
 pub fn compile(config: &Config) -> Result<Option<Compiled>> {
     config
@@ -198,6 +237,8 @@ fn known_keys() -> serde_json::Value {
         pkg_category: BTreeMap::from([("orm".into(), vec!["typeorm".into()])]),
         external_exposure: Some(crate::exposure::Thresholds::default()),
         grabbag: Some(crate::grabbag::Thresholds::default()),
+        early_smells: Some(crate::early_smells::Thresholds::default()),
+        layer_reason: Some("Keep foundational layers independent.".into()),
         exclude: vec!["excluded/**".into()],
         include: vec!["included/**".into()],
         default: Some(Fallback::Forbidden),
@@ -342,12 +383,20 @@ pub struct Compiled {
 
 impl Compiled {
     pub fn new(rules: &Rules) -> Result<Compiled> {
+        if let Some(reason) = &rules.layer_reason
+            && (reason.trim().is_empty() || reason.chars().any(char::is_control))
+        {
+            bail!("layer-reason must be nonempty and contain no control characters");
+        }
         if rules.version != 1 {
             bail!("unsupported rules version {}; expected 1", rules.version);
         }
         crate::collect::globset(&rules.exclude).context("exclude patterns")?;
         crate::collect::globset(&rules.include).context("include patterns")?;
         if let Some(thresholds) = rules.grabbag {
+            thresholds.validate()?;
+        }
+        if let Some(thresholds) = &rules.early_smells {
             thresholds.validate()?;
         }
         if let Some(weights) = rules.edge_weights {
@@ -687,6 +736,8 @@ impl Compiled {
             "entrypoints": entrypoints, "forbid": forbid, "allow": allow,
             "pkg-category": categories, "exclude": relevant_globs(&doc.exclude),
             "include": relevant_globs(&doc.include), "external_exposure": doc.external_exposure,
+            "early-smells": doc.early_smells,
+            "layer-reason": doc.layer_reason,
             "precedence": "forbid, entrypoints, allow, public, layers, same-module, public entry, default"}))
     }
 

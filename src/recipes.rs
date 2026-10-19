@@ -247,6 +247,13 @@ pub fn attach(doc: &mut Document) -> Result<()> {
         f.finding_id = stable_id(&f);
         match generate(doc, &f)? {
             Some(mut recipe) => {
+                if let Evidence::ForbiddenEdge { edge } = &f.evidence
+                    && let Some(rules) = &doc.config.rules
+                {
+                    for reason in rules.doc.reasons(edge.rule.as_deref().unwrap_or_default()) {
+                        recipe.risk_notes.push(format!("Policy reason: {reason}"));
+                    }
+                }
                 forecast(doc, &mut recipe)?;
                 f.recipe = Some(recipe);
                 generated.push(f);

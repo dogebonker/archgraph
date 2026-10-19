@@ -55,6 +55,8 @@ mod impact_context;
 mod impact_typescript;
 #[path = "cli/infer_layout.rs"]
 mod infer_layout_cli;
+#[path = "cli/init.rs"]
+mod init_cli;
 #[path = "cli/mcp.rs"]
 mod mcp_cli;
 #[path = "cli/package_splits.rs"]
@@ -105,6 +107,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Create a reasoned day-zero layout and show its first findings
+    Init(init_cli::Init),
     /// Install and run architecture checks around agent edits
     Hook(hooks_cli::Hook),
     /// Inspect architecture rule-fire counts
@@ -431,6 +435,7 @@ fn execute_inner(cli: Cli) -> ExitCode {
         (cli.tool_timeout > 0).then(|| std::time::Duration::from_secs(cli.tool_timeout)),
     );
     let result = match cli.command {
+        Cmd::Init(args) => init_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Hook(args) => hooks_cli::run(args),
         Cmd::Fires(args) => hooks_cli::fires(args),
         Cmd::Propose(args) => recipes_cli::propose(args).map(|()| ExitCode::SUCCESS),

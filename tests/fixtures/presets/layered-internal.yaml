@@ -1,0 +1,59 @@
+# archgraph preset: Layered; scope: Internal
+# Enforcement comes from imports; this draft needs an ownership review.
+# reason: Layer order keeps foundational code independent of outer concerns.
+# reason: Grab-bag thresholds surface weakly related, widely imported modules.
+#
+# ## How to change this
+# Rename paths to match your source tree; layers are foundation-first.
+# Review CONFLICT comments before adopting inferred boundaries.
+# Keep a reason on every explicit rule and rerun archgraph check after changes.
+# Single observed implementations are medium-confidence review candidates.
+version: 1
+grabbag:
+  cohesion_max: 0.2
+  fan_in_min: 10.0
+  internal_edges_per_file_max: 0.5
+early-smells:
+  file-size:
+    max: 1000
+    reason: Keep a file small enough to review as one responsibility.
+  fan-in:
+    max: 60
+    reason: Limit the number of source files affected by changing one file.
+  module-reach:
+    max: 70.0
+    reason: Avoid a module becoming a dependency of most of the repository.
+  single-implementation:
+    enabled: true
+    reason: Review an abstraction with only one observed explicit implementation before adding indirection.
+  every-file-in-layer:
+    enabled: true
+    reason: Every source file needs an explicit architectural home.
+modules:
+- id: domain
+  path: src/domain/**
+- id: application
+  path: src/application/**
+- id: adapters
+  path: src/adapters/**
+- id: presentation
+  path: src/presentation/**
+layers:
+- src/domain/**
+- src/application/**
+- src/adapters/**
+- src/presentation/**
+layer-reason: Foundational layers must not depend on outer layers.
+public: []
+forbid:
+- id: domain-no-adapters
+  from: src/domain/**
+  to: src/adapters/**
+  reachable: false
+  reason: Domain logic must not depend on adapter implementations.
+- id: application-no-presentation
+  from: src/application/**
+  to: src/presentation/**
+  reachable: false
+  reason: Application workflows must not depend on presentation code.
+allow: []

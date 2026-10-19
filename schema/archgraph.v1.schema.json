@@ -337,6 +337,117 @@
         "default": {
           "description": "The verdict for an import no other step decides. Absent means unplanned.",
           "enum": ["unplanned", "forbidden"]
+        },
+        "early-smells": {
+          "additionalProperties": false,
+          "properties": {
+            "every-file-in-layer": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "minLength": 1,
+                  "pattern": "\\S",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "enabled",
+                "reason"
+              ],
+              "type": "object"
+            },
+            "fan-in": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                "reason": {
+                  "minLength": 1,
+                  "pattern": "\\S",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "max",
+                "reason"
+              ],
+              "type": "object"
+            },
+            "file-size": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                "reason": {
+                  "minLength": 1,
+                  "pattern": "\\S",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "max",
+                "reason"
+              ],
+              "type": "object"
+            },
+            "module-reach": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "exclusiveMinimum": 0,
+                  "maximum": 100,
+                  "type": "number"
+                },
+                "reason": {
+                  "minLength": 1,
+                  "pattern": "\\S",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "max",
+                "reason"
+              ],
+              "type": "object"
+            },
+            "single-implementation": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "minLength": 1,
+                  "pattern": "\\S",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "enabled",
+                "reason"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "file-size",
+            "fan-in",
+            "module-reach",
+            "single-implementation",
+            "every-file-in-layer"
+          ],
+          "type": "object"
+        },
+        "layer-reason": {
+          "minLength": 1,
+          "type": "string"
         }
       }
     },

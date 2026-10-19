@@ -155,11 +155,11 @@ fn ts_fda_check_prints_violations_and_exits_one() {
         stdout,
         "unplanned src/domains/cart/controller.ts -> src/lib/clock.ts (none)\n\
          forbidden src/domains/cart/ui/Cart.tsx -> src/domains/checkout/client.ts (public)\n\
-         forbidden src/domains/checkout/client.ts -> src/domains/checkout/model.server.ts (browser-no-server)\n\
+         forbidden src/domains/checkout/client.ts -> src/domains/checkout/model.server.ts (browser-no-server) reason=\"browser graph never reaches server code\"\n\
          forbidden src/domains/checkout/controller.ts -> src/domains/checkout/client.ts (browser-no-server) \
-         via src/domains/checkout/client.ts -> src/domains/checkout/model.server.ts\n\
-         forbidden src/domains/checkout/index.ts -> src/domains/checkout/model.server.ts (browser-no-server)\n\
-         forbidden src/shared/format.ts -> src/domains/cart/types.ts (shared-no-domain)\n\
+         via src/domains/checkout/client.ts -> src/domains/checkout/model.server.ts reason=\"browser graph never reaches server code\"\n\
+         forbidden src/domains/checkout/index.ts -> src/domains/checkout/model.server.ts (browser-no-server) reason=\"browser graph never reaches server code\"\n\
+         forbidden src/shared/format.ts -> src/domains/cart/types.ts (shared-no-domain) reason=\"shared imports no domain\"\n\
          5 forbidden, 1 unplanned\n"
     );
 

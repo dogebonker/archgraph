@@ -31,6 +31,32 @@ pub(super) fn run(args: Scan) -> Result<()> {
     write(args.output.as_deref(), &doc)
 }
 
+/// Live native evidence shared by first-run setup and directory checks.
+pub(super) fn live(root: &Path, rules: Option<&Path>) -> Result<Document> {
+    let mut argv = vec![
+        "archgraph".into(),
+        "scan".into(),
+        root.to_string_lossy().into_owned(),
+        "--engine".into(),
+        "native".into(),
+        "--symbols".into(),
+    ];
+    if let Some(rules) = rules {
+        argv.extend(["--rules".into(), rules.to_string_lossy().into_owned()]);
+    }
+    let Cmd::Scan(args) = Cli::try_parse_from(argv)?.command else {
+        unreachable!()
+    };
+    scan_doc(
+        &args.root,
+        &args.opts,
+        &args.hotspots,
+        &args.collector,
+        args.opts.rules.as_deref(),
+        &[],
+    )
+}
+
 /// Runs the collector under `root` and analyzes its output with `rules`. `outputs` are the
 /// files this run writes, which do not make the checkout dirty.
 pub(super) fn scan_doc(

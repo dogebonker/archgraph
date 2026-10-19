@@ -49,6 +49,28 @@ The collector runs inside the scanned repository:
 - Java: JDK 11 or later on `PATH`, or `--java <path>`. The helper uses [JavacTask parse/analyze](https://docs.oracle.com/en/java/javase/24/docs/api/jdk.compiler/com/sun/source/util/JavacTask.html), without generating bytecode or running Maven, Gradle or annotation processors.
 - Elixir: Elixir 1.14+ with Erlang/OTP 25+ on `PATH`, or `--elixir <path>`. The embedded helper parses source with `Code.string_to_quoted`; it never loads `mix.exs`, evaluates source, compiles the project or expands macros. No Mix dependency installation is required.
 
+## Day-zero presets and init
+
+```sh
+archgraph init --preset layered --scope internal
+archgraph check                 # fresh native scan of this directory
+```
+
+`init [root]` creates a reviewable `layout.yaml` and prints the top three actionable findings or `clean`. It asks one scope question when stdin is interactive; scripts must supply `--scope`. The default preset is `layered`; alternatives are `hexagonal`, `feature-sliced`, `modular-monolith` and `minimal`. Presets express folder-layer direction and explicit reasoned boundaries. Adapt their paths and declare project-specific entrypoints before relying on a framework's complete architecture conventions. Minimal keeps one ownership layer and the inferred/default module boundaries for the grab-bag guard; it adds no inferred import bans. Scope limits apply to all presets.
+
+| Scope | File lines, maximum | Distinct file importers, maximum | Repo files importing a module, maximum | One observed explicit implementation |
+| --- | ---: | ---: | ---: | --- |
+| demo | 1,500 | 100 | 90% | Disabled |
+| internal | 1,000 | 60 | 70% | Advisory |
+| production | 600 | 30 | 40% | Advisory |
+| regulated | 350 | 15 | 25% | Advisory |
+
+Every scanned production file must match a layer in all scopes. Module reach counts distinct production importing files outside the module, divided by all scanned production files; duplicate imports do not inflate it. File lines include comments and blanks. Deterministic caps and unclassified files fail live `check`; one observed implementation is a medium-confidence review candidate. Its TypeScript evidence uses the existing parser and uniquely resolved exported interfaces plus explicit `class implements` clauses, including resolved import aliases/barrels. Structural, inherited, generic, namespace-qualified and unscanned implementations remain unknown. Other languages retain the graph/size checks and disclose unavailable implementation evidence. The existing grab-bag thresholds require cycle-backed evidence; they are not a blanket ban on large utility folders.
+
+Each threshold under `early-smells` has a `reason`; `layer-reason` explains implicit ordered-layer violations. Explicit import rules carry their own `reason`. Check output and recipes retain these explanations. All presets include a `## How to change this` comment block; the [20 golden policies](../tests/fixtures/presets/) show every preset/scope combination. Existing v1/v1.1/v1.2 scan inputs remain readable. Saved scans with mandatory size checks return `INCOMPLETE` and exit 2 when no live root is available; use `check <directory>` for full evidence. Existing saved scans without these policies keep their prior check behavior.
+
+For an existing repository, init runs the existing layout inference, merges its module/layer evidence into the preset, and marks conflicting observations `# CONFLICT: inferred X, preset says Y`. Preset boundaries take precedence; review sparse inferred forbids before adoption. It refuses existing layouts and symlinks; `--force` explicitly replaces an existing regular layout. First-run findings describe the resulting draft, including existing violations; creating a draft does not assert that its policy is satisfied. Installed hooks adopt a newly created first layout at the next clean pre-edit event; creating or changing policy during a pending transaction remains unavailable until resolved.
+
 ## Native engine
 
 ```sh

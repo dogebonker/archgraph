@@ -422,7 +422,15 @@ fn manifest(root: &Path, outputs: &globset::GlobSet) -> Result<BTreeMap<String, 
     Ok(out)
 }
 fn policy(setup: &Setup) -> Result<String> {
-    let rules = setup.rules.as_ref().map(fs::read).transpose()?;
+    let rules = if let Some(path) = &setup.rules {
+        Some(fs::read(path)?)
+    } else {
+        match fs::read(setup.root.join("layout.yaml")) {
+            Ok(bytes) => Some(bytes),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(error) => return Err(error.into()),
+        }
+    };
     Ok(hash(&serde_json::to_vec(&(setup, rules))?))
 }
 fn changed(before: &BTreeMap<String, String>, after: &BTreeMap<String, String>) -> Vec<String> {
@@ -806,7 +814,7 @@ fn native(args: Native) -> Result<ExitCode> {
             Event::Pre => Ok((
                 false,
                 String::new(),
-                pre(&root, &config.setup, args.agent, &call)?,
+                pre(&root, &canonical(config.setup.clone())?, args.agent, &call)?,
             )),
             Event::Post => {
                 let lease: Lease = optional(&root, LEASE)?

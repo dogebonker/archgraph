@@ -130,6 +130,101 @@ fn binds_require(node: Node<'_>, source: &str) -> bool {
         .any(|n| binds_require(n, source))
 }
 
+/// Explicit declarations only; structural implementations cannot be established from syntax.
+#[derive(Clone, Default)]
+pub(crate) struct ArchitectureFacts {
+    pub interfaces: BTreeSet<String>,
+    pub implementations: Vec<(String, String)>,
+    pub imports: Vec<(String, String, String)>,
+    pub incomplete: bool,
+}
+
+pub(crate) fn architecture(file: &str, source: &str) -> Result<ArchitectureFacts> {
+    let parsed = parse(file, source)?;
+    let mut facts = parsed.architecture;
+    facts.incomplete |= !parsed.limitations.is_empty();
+    for statement in parsed.statements.iter().filter(|s| !s.reexport) {
+        if let Some(specifier) = &statement.specifier {
+            for name in &statement.names {
+                facts
+                    .imports
+                    .push((name.local.clone(), name.imported.clone(), specifier.clone()));
+            }
+        }
+    }
+    Ok(facts)
+}
+
+fn architecture_facts(root: Node<'_>, source: &str) -> ArchitectureFacts {
+    let mut facts = ArchitectureFacts {
+        incomplete: root.has_error(),
+        ..Default::default()
+    };
+    for child in named_children(root) {
+        let declaration = if child.kind() == "export_statement" {
+            child.child_by_field_name("declaration").unwrap_or(child)
+        } else {
+            child
+        };
+        if declaration.kind() == "interface_declaration" {
+            if let Some(name) = declaration.child_by_field_name("name") {
+                facts.interfaces.insert(text(name, source).into());
+            }
+        } else if declaration.kind() == "class_declaration" {
+            // Generic parameters can shadow imported interface names; leave their binding unknown.
+            if declaration.child_by_field_name("type_parameters").is_some() {
+                facts.incomplete = true;
+                continue;
+            }
+            let Some(class) = declaration.child_by_field_name("name") else {
+                facts.incomplete = true;
+                continue;
+            };
+            for heritage in named_children(declaration)
+                .into_iter()
+                .filter(|n| n.kind() == "class_heritage")
+            {
+                for clause in named_children(heritage) {
+                    if clause.kind() != "implements_clause" {
+                        facts.incomplete = true;
+                        continue;
+                    }
+                    for target in named_children(clause) {
+                        let target = if target.kind() == "generic_type" {
+                            target.child_by_field_name("name").unwrap_or(target)
+                        } else {
+                            target
+                        };
+                        if target.kind() == "type_identifier" {
+                            facts
+                                .implementations
+                                .push((text(class, source).into(), text(target, source).into()));
+                        } else {
+                            facts.incomplete = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    facts
+}
+
+#[cfg(test)]
+mod architecture_tests {
+    #[test]
+    fn generic_type_parameters_do_not_become_interface_implementation_evidence() {
+        let facts = super::architecture(
+            "a.ts",
+            "export interface Port {} export class Fake<Port> implements Port {}",
+        )
+        .unwrap();
+        assert!(facts.interfaces.contains("Port"));
+        assert!(facts.implementations.is_empty());
+        assert!(facts.incomplete);
+    }
+}
+
 #[derive(Clone, Default)]
 struct Parsed {
     statements: Vec<ImportStatement>,
@@ -138,6 +233,7 @@ struct Parsed {
     pure: bool,
     limitations: Vec<String>,
     type_declarations: BTreeSet<String>,
+    architecture: ArchitectureFacts,
     type_uses: BTreeSet<String>,
     value_uses: BTreeSet<String>,
 }
@@ -185,6 +281,7 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
         pure: true,
         limitations: Vec::new(),
         type_declarations: BTreeSet::new(),
+        architecture: architecture_facts(root, source),
         type_uses: BTreeSet::new(),
         value_uses: BTreeSet::new(),
     };

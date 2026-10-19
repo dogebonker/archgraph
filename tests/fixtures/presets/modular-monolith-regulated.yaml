@@ -1,0 +1,56 @@
+# archgraph preset: ModularMonolith; scope: Regulated
+# Enforcement comes from imports; this draft needs an ownership review.
+# reason: Layer order keeps foundational code independent of outer concerns.
+# reason: Grab-bag thresholds surface weakly related, widely imported modules.
+#
+# ## How to change this
+# Rename paths to match your source tree; layers are foundation-first.
+# Review CONFLICT comments before adopting inferred boundaries.
+# Keep a reason on every explicit rule and rerun archgraph check after changes.
+# Single observed implementations are medium-confidence review candidates.
+version: 1
+grabbag:
+  cohesion_max: 0.2
+  fan_in_min: 3.0
+  internal_edges_per_file_max: 0.5
+early-smells:
+  file-size:
+    max: 350
+    reason: Keep a file small enough to review as one responsibility.
+  fan-in:
+    max: 15
+    reason: Limit the number of source files affected by changing one file.
+  module-reach:
+    max: 25.0
+    reason: Avoid a module becoming a dependency of most of the repository.
+  single-implementation:
+    enabled: true
+    reason: Review an abstraction with only one observed explicit implementation before adding indirection.
+  every-file-in-layer:
+    enabled: true
+    reason: Every source file needs an explicit architectural home.
+modules:
+- id: shared
+  path: src/shared/**
+- id: modules
+  path: src/modules/**
+- id: composition
+  path: src/composition/**
+layers:
+- src/shared/**
+- src/modules/**
+- src/composition/**
+layer-reason: Foundational layers must not depend on outer layers.
+public: []
+forbid:
+- id: shared-no-modules
+  from: src/shared/**
+  to: src/modules/**
+  reachable: false
+  reason: Shared contracts must not depend on a business module.
+- id: modules-no-composition
+  from: src/modules/**
+  to: src/composition/**
+  reachable: false
+  reason: Business modules must not depend on their composition root.
+allow: []

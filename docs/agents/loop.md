@@ -4,7 +4,7 @@ The edit gate compares current code with the graph captured immediately before a
 
 Install with `archgraph hook install --agent claude --root . --scope 'src/**'` (or `--agent codex`) and start `archgraph serve . --engine native --symbols` with matching scan options/environment. Installer output names the files it wrote and the supported capabilities. Existing settings and foreign hooks are retained; repeated installation produces identical contents. For shell tools without known paths, pre-edit context states the transaction contract; actual workspace changes determine the post verdict. Known read-only tools skip transactions.
 
-Installation selects the layout that exists at that time. Reinstall after introducing a first layout or changing its path; edits to an already-configured policy are detected during pending transactions. Generated/dependency directories are outside inventory. Explicit edits there are refused, while opaque shell writes there are not scope-enforced. Snapshot artifacts currently accumulate under `.archgraph/hooks/`; there is no automatic retention policy.
+Installation selects an existing layout. A first layout introduced later is adopted at the next clean Pre event; introducing it mid-edit makes the pending transaction unavailable. Changing an explicit rule path still requires reinstall. Generated/dependency directories are outside inventory. Explicit edits there are refused, while opaque shell writes there are not scope-enforced. Snapshot artifacts currently accumulate under `.archgraph/hooks/`; there is no automatic retention policy.
 
 | Host | Project configuration | Supported contract and limits |
 | --- | --- | --- |

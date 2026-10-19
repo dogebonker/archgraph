@@ -381,6 +381,12 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
             .write(true)
             .create_new(true)
             .open(&temporary)?;
+        // Preserve private settings before their content enters the replacement file.
+        match fs::metadata(path) {
+            Ok(metadata) => file.set_permissions(metadata.permissions())?,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+            Err(error) => return Err(error.into()),
+        }
         file.write_all(bytes)?;
         file.sync_all()?;
         fs::rename(&temporary, path)?;

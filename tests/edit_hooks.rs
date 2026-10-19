@@ -248,3 +248,54 @@ fn read_tools_allow_external_paths_without_taking_the_edit_lease() {
             .starts_with("PASS\n")
     );
 }
+
+#[test]
+fn default_layout_created_after_install_is_adopted_at_the_next_clean_pre() {
+    for agent in ["claude", "codex"] {
+        let fixture = Fixture::new();
+        let layout = fs::read(fixture.0.join("layout.yaml")).unwrap();
+        fs::remove_file(fixture.0.join("layout.yaml")).unwrap();
+        fixture.json(&["hook", "install", "--agent", agent], None);
+        fixture.native(agent, "pre", "initial", false);
+        assert_ne!(
+            fixture.native(agent, "post", "initial", false)["decision"],
+            "block"
+        );
+        fs::write(fixture.0.join("layout.yaml"), layout).unwrap();
+        let pre = fixture.native(agent, "pre", "with-layout", false);
+        assert_ne!(pre["hookSpecificOutput"]["permissionDecision"], "deny");
+        fixture.violate();
+        let post = fixture.native(agent, "post", "with-layout", false);
+        assert_eq!(post["decision"], "block");
+        assert!(
+            post["reason"]
+                .as_str()
+                .unwrap()
+                .contains("domain-no-adapters")
+        );
+    }
+}
+
+#[test]
+fn first_default_layout_created_during_an_edit_makes_post_and_stop_unavailable() {
+    for agent in ["claude", "codex"] {
+        let fixture = Fixture::new();
+        let layout = fs::read(fixture.0.join("layout.yaml")).unwrap();
+        fs::remove_file(fixture.0.join("layout.yaml")).unwrap();
+        fixture.json(&["hook", "install", "--agent", agent], None);
+        fixture.native(agent, "pre", "pending", false);
+        fs::write(fixture.0.join("layout.yaml"), layout).unwrap();
+        for event in ["post", "stop"] {
+            let response = fixture.native(agent, event, "pending", false);
+            assert_eq!(response["decision"], "block");
+            assert!(
+                response["reason"]
+                    .as_str()
+                    .unwrap()
+                    .starts_with("UNAVAILABLE\n")
+            );
+        }
+        let repair = fixture.native(agent, "pre", "repair", false);
+        assert_eq!(repair["hookSpecificOutput"]["permissionDecision"], "deny");
+    }
+}
