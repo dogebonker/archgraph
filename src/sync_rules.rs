@@ -179,7 +179,7 @@ fn block(rules: &RulesRef, full: bool, body: &str) -> String {
 }
 pub fn render(rules: &RulesRef, full: bool) -> String {
     let header = "Architecture from layout.yaml. Precedence: forbid, entrypoints, allow, public, layers, module/default.\n";
-    let footer = "Use archgraph MCP rules/explain before edits; installed hooks check new violations. Run archgraph sync-rules --full for all rules.\n";
+    let footer = "Before edits use connected archgraph MCP rules/explain, or `archgraph explain FILE --graph CURRENT_SCAN.json --for-agent` with a saved scan when MCP is unavailable. Installed hooks check new violations. Run archgraph sync-rules --full for all rules.\n";
     let all = lines(rules);
     let mut selected = Vec::new();
     for line in &all {

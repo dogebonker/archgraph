@@ -323,6 +323,18 @@ fn subjects(root: &Path, files: &[String]) -> Result<Vec<String>> {
                 !omitted(Path::new(rel)),
                 "edit path is outside the snapshot inventory: {rel}"
             );
+            let mut ancestor = root.to_path_buf();
+            for component in Path::new(rel).components() {
+                ancestor.push(component);
+                match fs::symlink_metadata(&ancestor) {
+                    Ok(meta) => ensure!(
+                        !meta.is_symlink() || !ancestor.is_dir(),
+                        "explicit edits through a directory symlink are unsupported: {rel}; use its physical path"
+                    ),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => break,
+                    Err(e) => return Err(e.into()),
+                }
+            }
             let mut ancestor = root.join(rel);
             while !ancestor.exists() {
                 ensure!(ancestor.pop(), "cannot resolve edit path");
@@ -410,11 +422,33 @@ fn manifest(root: &Path, outputs: &globset::GlobSet) -> Result<BTreeMap<String, 
                 target.starts_with(root),
                 "source symlink escapes repository: {key}"
             );
-            ensure!(
-                target.is_file(),
-                "directory symlinks are unsupported by edit snapshots: {key}"
-            );
-            out.insert(key.to_owned(), hash(&fs::read(target)?));
+            if target.is_dir() {
+                ensure!(
+                    !full
+                        .parent()
+                        .is_some_and(|parent| parent.starts_with(&target)),
+                    "cyclic directory symlink in snapshot inventory: {key}"
+                );
+                let link = fs::read_link(&full)?;
+                let identity = (
+                    link.to_str().context("non-UTF8 directory symlink target")?,
+                    target
+                        .strip_prefix(root)?
+                        .to_str()
+                        .context("non-UTF8 directory symlink destination")?,
+                );
+                // Alias contents are already inventoried at physical paths; never walk the alias.
+                out.insert(
+                    key.to_owned(),
+                    format!(
+                        "directory-symlink:{}",
+                        hash(&serde_json::to_vec(&identity)?)
+                    ),
+                );
+            } else {
+                ensure!(target.is_file(), "non-regular source symlink target: {key}");
+                out.insert(key.to_owned(), hash(&fs::read(target)?));
+            }
         } else if meta.is_file() {
             out.insert(key.to_owned(), hash(&fs::read(full)?));
         }
@@ -1194,6 +1228,153 @@ mod tests {
         let fixture = Fixture::new();
         std::os::unix::fs::symlink(std::env::temp_dir(), fixture.0.join(".archgraph")).unwrap();
         assert!(locked(&fixture.0).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn directory_alias_inventory_tracks_physical_contents_and_link_targets_once() {
+        use std::os::unix::fs::symlink;
+        let fixture = Fixture::new();
+        let alias = fixture.0.join("domain-alias");
+        symlink("src/domain", &alias).unwrap();
+        let outputs = build_outputs(&fixture.setup()).unwrap();
+        let before = manifest(&fixture.0, &outputs).unwrap();
+        assert!(before.contains_key("domain-alias"));
+        assert!(before.contains_key("src/domain/a.ts"));
+        assert!(!before.contains_key("domain-alias/a.ts"));
+        fs::write(alias.join("a.ts"), "export const a = 3;\n").unwrap();
+        let edited = manifest(&fixture.0, &outputs).unwrap();
+        assert_eq!(changed(&before, &edited), vec!["src/domain/a.ts"]);
+        fs::remove_file(&alias).unwrap();
+        symlink("src/adapters", &alias).unwrap();
+        let retargeted = manifest(&fixture.0, &outputs).unwrap();
+        assert_eq!(changed(&edited, &retargeted), vec!["domain-alias"]);
+        fs::remove_file(&alias).unwrap();
+        symlink("./src/adapters", &alias).unwrap();
+        assert_eq!(
+            changed(&retargeted, &manifest(&fixture.0, &outputs).unwrap()),
+            vec!["domain-alias"]
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn directory_alias_explicit_edits_are_refused_before_scope_or_output_bypass() {
+        use std::os::unix::fs::symlink;
+        let fixture = Fixture::new();
+        let mut setup = fixture.setup();
+        setup.scope = vec!["src/domain/**".into()];
+        symlink("../adapters", fixture.0.join("src/domain/bridge")).unwrap();
+        fs::create_dir_all(fixture.0.join("dist")).unwrap();
+        symlink("../../dist", fixture.0.join("src/domain/output-bridge")).unwrap();
+        for file in [
+            "src/domain/bridge/b.ts",
+            "src/domain/bridge/new.ts",
+            "src/domain/output-bridge/new.ts",
+        ] {
+            let error = subjects(&fixture.0, &[file.into()]).unwrap_err();
+            assert!(error.to_string().contains("directory symlink"), "{error:#}");
+            let mut call = fixture.call("alias-edit");
+            call.files = vec![file.into()];
+            let error = pre(&fixture.0, &setup, Agent::Codex, &call).unwrap_err();
+            assert!(error.to_string().contains("directory symlink"), "{error:#}");
+            assert!(!fixture.0.join(LEASE).exists());
+        }
+        assert!(subjects(&fixture.0, &["src/domain/a.ts".into()]).is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn directory_alias_allows_canonical_edits_and_observes_alias_write_repair() {
+        let fixture = Fixture::new();
+        let mut setup = fixture.setup();
+        setup.scope = vec!["src/domain/**".into()];
+        std::os::unix::fs::symlink("src/domain", fixture.0.join("domain-alias")).unwrap();
+        std::os::unix::fs::symlink("src/adapters", fixture.0.join("adapters-alias")).unwrap();
+        let _lock = locked(&fixture.0).unwrap();
+        pre(&fixture.0, &setup, Agent::Codex, &fixture.call("canonical")).unwrap();
+        let lease: Lease = load(&fixture.0, LEASE).unwrap();
+        fs::write(
+            fixture.0.join("domain-alias/a.ts"),
+            "import {b} from '../adapters/b'; export const a=b;\n",
+        )
+        .unwrap();
+        let report = compare(&fixture.0, &lease.baseline).unwrap().1;
+        assert_eq!(report.verdict, "BLOCK");
+        assert!(
+            report.violations.iter().any(
+                |finding| finding.file == "src/domain/a.ts" && finding.kind == "forbidden-edge"
+            )
+        );
+        assert!(
+            !report
+                .violations
+                .iter()
+                .any(|finding| finding.kind == "scope")
+        );
+        fs::write(fixture.0.join("domain-alias/a.ts"), "export const a = 2;\n").unwrap();
+        assert_eq!(
+            compare(&fixture.0, &lease.baseline).unwrap().1.verdict,
+            "PASS"
+        );
+        fs::write(
+            fixture.0.join("adapters-alias/b.ts"),
+            "export const b = 3;\n",
+        )
+        .unwrap();
+        let report = compare(&fixture.0, &lease.baseline).unwrap().1;
+        assert_eq!(report.verdict, "BLOCK");
+        assert!(
+            report
+                .violations
+                .iter()
+                .any(|finding| finding.kind == "scope" && finding.file == "src/adapters/b.ts")
+        );
+        assert!(
+            !report
+                .violations
+                .iter()
+                .any(|finding| finding.file.starts_with("adapters-alias/"))
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn directory_alias_external_broken_and_cyclic_targets_still_fail_closed() {
+        use std::os::unix::fs::symlink;
+        let fixture = Fixture::new();
+        let outside = Fixture::new();
+        let link = fixture.0.join("unsafe-link");
+        let outputs = build_outputs(&fixture.setup()).unwrap();
+        for target in [
+            outside.0.clone(),
+            fixture.0.join("missing"),
+            link.clone(),
+            fixture.0.clone(),
+        ] {
+            symlink(target, &link).unwrap();
+            assert!(manifest(&fixture.0, &outputs).is_err());
+            fs::remove_file(&link).unwrap();
+        }
+        let other = fixture.0.join("other-link");
+        symlink("other-link", &link).unwrap();
+        symlink("unsafe-link", &other).unwrap();
+        assert!(manifest(&fixture.0, &outputs).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn directory_alias_non_regular_link_target_is_refused() {
+        let root = PathBuf::from("/tmp").join(format!(
+            "ag-hook-socket-{}",
+            &daemon_cli::token().unwrap()[..16]
+        ));
+        fs::create_dir(&root).unwrap();
+        let fixture = Fixture(root.canonicalize().unwrap());
+        let _socket = std::os::unix::net::UnixListener::bind(fixture.0.join("socket")).unwrap();
+        std::os::unix::fs::symlink("socket", fixture.0.join("socket-link")).unwrap();
+        let error = manifest(&fixture.0, &collect::globset(&[]).unwrap()).unwrap_err();
+        assert!(error.to_string().contains("non-regular"), "{error:#}");
     }
 
     #[test]

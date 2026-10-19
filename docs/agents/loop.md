@@ -6,6 +6,8 @@ Install with `archgraph hook install --agent claude --root . --scope 'src/**'` (
 
 Installation selects an existing layout. A first layout introduced later is adopted at the next clean Pre event; introducing it mid-edit makes the pending transaction unavailable. Changing an explicit rule path still requires reinstall. Generated/dependency directories are outside inventory. Explicit edits there are refused, while opaque shell writes there are not scope-enforced. Snapshot artifacts currently accumulate under `.archgraph/hooks/`; there is no automatic retention policy.
 
+Contained directory symlinks are recorded as link identities; snapshots do not traverse alias trees, and changes to the physical target files are inventoried at their ordinary repository paths. Retargeting the link is also a change. Explicit edit paths through directory aliases are refused: edit the physical path so scope and generated-output checks apply to it. External, broken, unresolved cyclic and non-regular symlink targets remain unavailable; links back to an ancestor directory are refused. Dependency/build-output exclusions still apply to physical paths. The original Pydantic benchmark failures from directory symlinks remain in the report; this subsequent compatibility fix does not rescore them.
+
 | Host | Project configuration | Supported contract and limits |
 | --- | --- | --- |
 | Claude Code | `.claude/settings.json` | Pre context/deny, successful and failed post checks, Stop continuation gate. Failure blocking requires v2.1.295+; Stop crash/timeout handling and continuation limits remain host constraints. |
@@ -17,7 +19,19 @@ These contracts follow the official [Claude hook reference](https://code.claude.
 
 A live Codex 0.163.0 session with `gpt-6.1-sol` on 2026-10-19 validated the native loop on a private TypeScript fixture. After exact installed-hook review and hash trust in an isolated profile, PostToolUse blocked a temporary `domain → adapters` import and returned a semantic `extract_interface` recipe. The agent repaired the code with `apply_patch`; its repair Pre event retained the blocked edit’s snapshot, the next Post returned PASS, Stop completed, and a full graph comparison plus the corrected source assertion passed. One rule fire was recorded; no automatic recipe application was claimed. The layout and frozen binary remained unchanged, and the temporary auth link was removed before evaluation. An initial preflight rejected the default `codex_apps` MCP transport before any feature turn; disabling Apps preserved the empty-MCP requirement. The successful retry used the only feature turn. The [safe live summary](../../bench/results/codex-live-loop-2026-10-19.json) retains model/version/pins, token counters, hook verdicts, that preflight failure and a local assertion quoting error followed by its corrected pass. Raw prompts, RPC and auth paths remain private. This smoke verifies one host’s protocol; it is not a paired efficacy result or a latency measurement.
 
-Run the reproducible acceptance session and 2,000-file benchmark:
+## Run the scripted demo
+
+With the current-main binary installed as shown in the README, clone the repository outside your project to obtain the demo script. From an existing source checkout, skip the clone and `cd` steps:
+
+```sh
+git clone https://github.com/dogebonker/archgraph
+cd archgraph
+python3 ci/bench_edit_loop.py --archgraph "$(command -v archgraph)" --fixture-only
+```
+
+The script creates its own temporary fixture. No project initialization, separately started daemon or live agent is needed for this scripted block/repair check. A binary installation alone does not contain the repository's `ci/` scripts.
+
+To also reproduce the release-binary 2,000-file latency benchmark from that checkout:
 
 ```sh
 cargo +stable build --release --locked
