@@ -516,24 +516,21 @@ fn scan(setup: &Setup) -> Result<(Document, BTreeMap<String, String>)> {
             daemon_cli::forward_args(&setup.root, args.clone(), false)
                 .context("daemon snapshot failed; correct it or explicitly select --no-daemon")?
         };
-        let result = if let Some(output) = response {
-            ensure!(output.code == 0, "daemon scan failed: {}", output.stderr);
-            Ok(())
-        } else {
-            let cli = Cli::try_parse_from(std::iter::once("archgraph".to_owned()).chain(args))?;
-            let Cmd::Scan(args) = cli.command else {
-                unreachable!()
-            };
-            scan_cli::run(args)
-        };
+        let result = (|| -> Result<Document> {
+            if let Some(output) = response {
+                ensure!(output.code == 0, "daemon scan failed: {}", output.stderr);
+                archgraph::restore_scan(read_scan(&graph_path)?)
+            } else {
+                let cli = Cli::try_parse_from(std::iter::once("archgraph".to_owned()).chain(args))?;
+                let Cmd::Scan(args) = cli.command else {
+                    unreachable!()
+                };
+                args.document()
+            }
+        })();
         let output = capture.finish(if result.is_ok() { 0 } else { 2 });
-        if let Err(error) = result {
-            remove(&setup.root, &graph_relative)?;
-            return Err(error).context(output.stderr);
-        }
-        let input = read_scan(&graph_path);
         remove(&setup.root, &graph_relative)?;
-        let doc = archgraph::restore_scan(input?)?;
+        let doc = result.context(output.stderr)?;
         let after = manifest(&setup.root, &outputs)?;
         if before == after {
             return Ok((doc, after));

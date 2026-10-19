@@ -18,16 +18,22 @@ pub(super) struct Scan {
     output: Option<PathBuf>,
 }
 
+impl Scan {
+    pub(super) fn document(&self) -> Result<Document> {
+        let outputs: Vec<&Path> = self.output.as_deref().into_iter().collect();
+        scan_doc(
+            &self.root,
+            &self.opts,
+            &self.hotspots,
+            &self.collector,
+            self.opts.rules.as_deref(),
+            &outputs,
+        )
+    }
+}
+
 pub(super) fn run(args: Scan) -> Result<()> {
-    let outputs: Vec<&Path> = args.output.as_deref().into_iter().collect();
-    let doc = scan_doc(
-        &args.root,
-        &args.opts,
-        &args.hotspots,
-        &args.collector,
-        args.opts.rules.as_deref(),
-        &outputs,
-    )?;
+    let doc = args.document()?;
     write(args.output.as_deref(), &doc)
 }
 

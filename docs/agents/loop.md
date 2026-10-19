@@ -85,11 +85,11 @@ Measured on 2026-10-19 with the release build on macOS arm64, five independent e
 
 | Path | Mode | Median | p95 / maximum |
 | --- | --- | ---: | ---: |
-| Complete `hook check` | Warm daemon | 200.4 ms | 208.9 ms |
-| Complete `hook check` | Cold standalone | 492.2 ms | 505.8 ms |
-| Snapshot `check_diff` through `mcp-call` | Warm daemon | 264.5 ms | 279.7 ms |
-| Snapshot `check_diff` through `mcp-call` | Cold standalone | 484.5 ms | 495.9 ms |
+| Complete `hook check` | Warm daemon | 205.6 ms | 211.0 ms |
+| Complete `hook check` | Cold standalone | 446.8 ms | 481.3 ms |
+| Snapshot `check_diff` through `mcp-call` | Warm daemon | 211.9 ms | 218.9 ms |
+| Snapshot `check_diff` through `mcp-call` | Cold standalone | 423.8 ms | 442.3 ms |
 
 Every measured sample met the 300 ms warm / 3,000 ms cold targets. With five samples, nearest-rank p95 equals the maximum. See [raw results, all samples, host, binary hash and fixture commit](loop-results.json). The explicit MCP measurements include the CLI bridge and complete result serialization; stdio envelope processing, model time and host scheduling are excluded. Read-only MCP calls do not append fires. These measurements concern the pre-edit snapshot path; Git-baseline checks still scan a historical checkout. They establish this fixture's performance, not a latency guarantee for every language, graph or audit-log size.
 
-An earlier development run exceeded the warm target (588 ms maximum); the figures above use the final runtime on a quiet machine. Architecture enforcement does not depend on hitting the latency target: collection/configuration errors remain unavailable rather than clean. The scripted acceptance reports two blocked checks, a successful repair, an unchanged pre-existing violation passing, and two fire records. Live Claude Code, Cursor and OpenCode sessions remain validation gaps; the Codex smoke above does not replace a paired agent benchmark.
+An earlier development run exceeded the warm target (588 ms maximum). A later post-symlink-fix batch also missed it: one warm MCP sample reached 359.7 ms, while its other four samples were 269.0–280.9 ms. That complete [pre-optimization batch](loop-results-before-direct-doc.json) is retained. Inspection found an already-built live graph being serialized, read back and reanalyzed. The local snapshot path now reuses that document; transported and persisted graphs retain validation, both freshness manifests remain, and a regression compares local/daemon verdicts and output exclusions. The table above uses the optimized release after all validation jobs finished, with every sample retained. Architecture enforcement does not depend on hitting the latency target: collection/configuration errors remain unavailable rather than clean. The scripted acceptance reports two blocked checks, a successful repair, an unchanged pre-existing violation passing, and two fire records. Live Claude Code, Cursor and OpenCode sessions remain validation gaps; the Codex smoke above does not replace a paired agent benchmark.

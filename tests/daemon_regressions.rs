@@ -376,3 +376,154 @@ fn nested_sibling_edits_preserve_dirty_parity_without_touching_git_index() {
     assert_eq!(f.parity()["source"]["git"]["dirty"], false);
     unchanged_index();
 }
+
+#[test]
+fn local_and_forwarded_hook_snapshots_preserve_verdicts_and_output_exclusions() {
+    let mut f = Fixture::new(false);
+    fs::write(f.root.join("src/a/a.ts"), "export const a = 1;\n").unwrap();
+    fs::write(f.root.join("layout.yaml"), "version: 1\nforbid:\n  - {id: boundary, from: 'src/a/**', to: 'src/b/**', reason: 'Keep a independent'}\n").unwrap();
+    f.git(&["add", "."]);
+    f.commit("2001-01-01T00:00:00+0000");
+    fs::create_dir_all(f.root.join(".archgraph")).unwrap();
+    f.child = Some(
+        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+            .current_dir(&f.root)
+            .env_remove("SOURCE_DATE_EPOCH")
+            .args([
+                "serve",
+                ".",
+                "--engine",
+                "native",
+                "--symbols",
+                "--language",
+                "typescript",
+                "--rules",
+                "layout.yaml",
+                "--port",
+            ])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap(),
+    );
+    f.ready();
+    let mut captures = Vec::new();
+    for (session, standalone) in [("cold", true), ("warm", false)] {
+        let mut args = vec![
+            "hook",
+            "capture",
+            "--agent",
+            "codex",
+            "--session",
+            session,
+            "--files",
+            "src/a/a.ts",
+            "--language",
+            "typescript",
+            "--rules",
+            "layout.yaml",
+        ];
+        if standalone {
+            args.push("--no-daemon");
+        }
+        let output = f.command(&args);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let capture: Value = serde_json::from_slice(&output.stdout).unwrap();
+        let id = capture["snapshot"].as_str().unwrap().to_owned();
+        let mut graph: Value = serde_json::from_slice(
+            &fs::read(
+                f.root
+                    .join(format!(".archgraph/hooks/snapshots/{id}.graph.json")),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            graph["source"]["git"]["dirty"], false,
+            "snapshot output polluted Git provenance"
+        );
+        let rules_path = f
+            .root
+            .join(graph["config"]["rules"]["path"].as_str().unwrap())
+            .canonicalize()
+            .unwrap();
+        assert_eq!(
+            rules_path,
+            f.root.join("layout.yaml").canonicalize().unwrap()
+        );
+        graph["config"]["rules"]["path"] = serde_json::to_value(rules_path).unwrap();
+        let pass = f.command(&["hook", "check", "--baseline", &id, "--no-daemon"]);
+        assert!(
+            pass.status.success(),
+            "{}",
+            String::from_utf8_lossy(&pass.stderr)
+        );
+        captures.push((id, graph));
+    }
+    assert_eq!(
+        captures[0].1, captures[1].1,
+        "local and transported graph semantics differ"
+    );
+    fs::write(
+        f.root.join("src/a/a.ts"),
+        "import '../b/b'; export const a = 1;\n",
+    )
+    .unwrap();
+    let mut reports = Vec::new();
+    for ((id, _), standalone) in captures.iter().zip([true, false]) {
+        let arguments = serde_json::json!({"snapshot": id}).to_string();
+        let mut args = vec![
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--language",
+            "typescript",
+            "--rules",
+            "layout.yaml",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            &arguments,
+        ];
+        if standalone {
+            args.push("--no-daemon");
+        }
+        let output = f.command(&args);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(report["verdict"], "BLOCK");
+        assert_eq!(report["new_forbidden"].as_array().unwrap().len(), 1);
+        reports.push(report);
+    }
+    for key in [
+        "verdict",
+        "violations",
+        "new_forbidden",
+        "new_cycles",
+        "grown_cycles",
+    ] {
+        assert_eq!(reports[0][key], reports[1][key], "transport changed {key}");
+    }
+    assert!(!f.root.join(".archgraph/fires.log").exists());
+    let status = f.command(&["status"]);
+    assert!(
+        status.status.success(),
+        "{}",
+        String::from_utf8_lossy(&status.stderr)
+    );
+    let status: Value = serde_json::from_slice(&status.stdout).unwrap();
+    assert_eq!(
+        status["parsed_files"], 1,
+        "warm check did not refresh changed source"
+    );
+}

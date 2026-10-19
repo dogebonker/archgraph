@@ -1,5 +1,5 @@
 {
-  "binary_sha256": "4659356e47434c245626c60a99eb715fff31d31eca2073addb468dc45024d5ba",
+  "binary_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
   "fixture": {
     "blocked": {
       "schema": "archgraph/edit-check/v1",
@@ -21,7 +21,8 @@
               "pairs_removed": 0
             },
             "risk_notes": [
-              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing."
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
+              "Policy reason: Domain logic must not depend on adapter implementations."
             ],
             "steps": [
               {
@@ -67,8 +68,8 @@
       ]
     },
     "capture": {
-      "context": "snapshot=4ead032c703d482314ff9994683adde744c949c2c948eb8d99dad413e40547b1\nStatic evidence;files:1;unscanned:0;imports:0;importers:0;rules:2;unknown_modules:0;unclassified:0;modules:domain;layers:src/**;forbid:src/domain/**->src/adapters/**",
-      "snapshot": "4ead032c703d482314ff9994683adde744c949c2c948eb8d99dad413e40547b1"
+      "context": "snapshot=f86ba33e2a5683e5145ce31e19ec6bc4177e66057b4e3942ab14ee4ddd45c6d6\nStatic evidence;files:1;unscanned:0;imports:0;importers:0;rules:2;unknown_modules:0;unclassified:0;modules:domain;layers:src/**;forbid:src/domain/**->src/adapters/**",
+      "snapshot": "f86ba33e2a5683e5145ce31e19ec6bc4177e66057b4e3942ab14ee4ddd45c6d6"
     },
     "fires": {
       "rules": [
@@ -110,7 +111,8 @@
               "pairs_removed": 0
             },
             "risk_notes": [
-              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing."
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
+              "Policy reason: Domain logic must not depend on adapter implementations."
             ],
             "steps": [
               {
@@ -164,45 +166,45 @@
   "latency": {
     "all_samples_meet_targets": true,
     "cold": {
-      "max_ms": 505.831,
-      "p50_ms": 492.164,
-      "p95_ms": 505.831
+      "max_ms": 481.261,
+      "p50_ms": 446.835,
+      "p95_ms": 481.261
     },
     "cold_samples_ms": [
-      482.6607909053564,
-      477.6045409962535,
-      492.16437502764165,
-      499.5311250677332,
-      505.83112507592887
+      445.6493330653757,
+      456.4752499572933,
+      481.2605839688331,
+      446.8349580420181,
+      415.9593329532072
     ],
     "files": 2000,
     "fixture_commit": "77be956b6a333746eab9f5213262bef9cbc8985b",
     "initial_edges": 1999,
     "mcp_check_diff": {
       "cold": {
-        "max_ms": 495.875,
-        "p50_ms": 484.451,
-        "p95_ms": 495.875
+        "max_ms": 442.286,
+        "p50_ms": 423.808,
+        "p95_ms": 442.286
       },
       "cold_samples_ms": [
-        495.8752910606563,
-        473.2977910898626,
-        462.22941600717604,
-        484.4508341047913,
-        487.26633295882493
+        442.2862079227343,
+        420.1238340465352,
+        423.8084169337526,
+        394.313000026159,
+        436.00208300631493
       ],
       "transport": "mcp-call CLI bridge; stdio envelope/host scheduling excluded",
       "warm": {
-        "max_ms": 279.736,
-        "p50_ms": 264.451,
-        "p95_ms": 279.736
+        "max_ms": 218.895,
+        "p50_ms": 211.914,
+        "p95_ms": 218.895
       },
       "warm_samples_ms": [
-        264.4510829122737,
-        279.7357499366626,
-        252.73716694209725,
-        266.85995794832706,
-        257.59587506763637
+        218.89520809054375,
+        218.81483297329396,
+        211.9135420070961,
+        203.24870909098536,
+        204.36983392573893
       ]
     },
     "modules": 100,
@@ -213,9 +215,9 @@
     },
     "timing": "whole hook check subprocess after a new forbidden import: freshness, graph diff, recipe, audit and response; capture and repair excluded",
     "warm": {
-      "max_ms": 208.878,
-      "p50_ms": 200.437,
-      "p95_ms": 208.878
+      "max_ms": 210.955,
+      "p50_ms": 205.648,
+      "p95_ms": 210.955
     },
     "warm_daemon_status": [
       {
@@ -228,18 +230,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 52.854958,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 54.744958000000004,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 29.037625000000002,
-            "collect_ms": 10.332167,
+            "analyze_ms": 27.189167,
+            "collect_ms": 13.691917,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.976792,
-            "provenance_ms": 5.492,
-            "publish_ms": 6.739709
+            "normalize_ms": 1.076584,
+            "provenance_ms": 5.975041,
+            "publish_ms": 6.510625
           }
         },
         "before_edit": {
@@ -251,18 +253,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 2000,
-          "refresh_ms": 533.404125,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 517.694834,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 36.166374,
-            "collect_ms": 135.469709,
-            "full_scan_ms": 247.38774999999998,
-            "normalize_ms": 34.3305,
+            "analyze_ms": 32.943666,
+            "collect_ms": 138.982291,
+            "full_scan_ms": 239.708791,
+            "normalize_ms": 32.602667000000004,
             "provenance_ms": 0.0,
-            "publish_ms": 7.8617919999999994
+            "publish_ms": 7.792625
           }
         }
       },
@@ -276,18 +278,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 54.429375,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 52.140792,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 28.894042000000002,
-            "collect_ms": 11.845084,
+            "analyze_ms": 27.636875000000003,
+            "collect_ms": 10.717834,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.948416,
-            "provenance_ms": 5.161625000000001,
-            "publish_ms": 6.9036669999999996
+            "normalize_ms": 0.949542,
+            "provenance_ms": 5.3811659999999994,
+            "publish_ms": 6.790667
           }
         },
         "before_edit": {
@@ -299,18 +301,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 50.424125000000004,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 56.147792,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 15.071917000000001,
-            "collect_ms": 10.324959,
+            "analyze_ms": 15.397083,
+            "collect_ms": 10.617875,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.929959,
-            "provenance_ms": 16.891125,
-            "publish_ms": 6.462042
+            "normalize_ms": 0.895625,
+            "provenance_ms": 22.237791,
+            "publish_ms": 6.307417
           }
         }
       },
@@ -324,18 +326,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 54.243708,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 55.199,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 28.471708,
-            "collect_ms": 11.133624999999999,
+            "analyze_ms": 29.875166,
+            "collect_ms": 11.3035,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.944167,
-            "provenance_ms": 5.381583,
-            "publish_ms": 7.631958
+            "normalize_ms": 1.0098749999999999,
+            "provenance_ms": 5.952708,
+            "publish_ms": 6.243958
           }
         },
         "before_edit": {
@@ -347,18 +349,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 50.808958000000004,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 54.468334,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 15.010833,
-            "collect_ms": 10.153792,
+            "analyze_ms": 15.803917,
+            "collect_ms": 11.388417,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.948,
-            "provenance_ms": 17.182208,
-            "publish_ms": 6.840667
+            "normalize_ms": 0.890417,
+            "provenance_ms": 18.711458,
+            "publish_ms": 6.966417
           }
         }
       },
@@ -372,18 +374,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 52.785332999999994,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 56.416083,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 28.977292000000002,
-            "collect_ms": 10.072375,
+            "analyze_ms": 30.484792,
+            "collect_ms": 10.751541,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.9819169999999999,
-            "provenance_ms": 5.594791,
-            "publish_ms": 6.486042
+            "normalize_ms": 1.008834,
+            "provenance_ms": 6.356709,
+            "publish_ms": 6.995875000000001
           }
         },
         "before_edit": {
@@ -395,18 +397,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 52.017167,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 56.47875,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 15.543917,
-            "collect_ms": 10.487125,
+            "analyze_ms": 16.029917,
+            "collect_ms": 11.36075,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.948625,
-            "provenance_ms": 18.124084,
-            "publish_ms": 6.148541000000001
+            "normalize_ms": 0.974208,
+            "provenance_ms": 19.959459,
+            "publish_ms": 7.410917
           }
         }
       },
@@ -420,18 +422,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 57.331,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 54.379333,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 30.857292,
-            "collect_ms": 11.809166,
+            "analyze_ms": 29.482958,
+            "collect_ms": 11.588,
             "full_scan_ms": 0.0,
-            "normalize_ms": 1.157792,
-            "provenance_ms": 5.94975,
-            "publish_ms": 6.686209
+            "normalize_ms": 1.0566250000000001,
+            "provenance_ms": 5.991917,
+            "publish_ms": 5.565708
           }
         },
         "before_edit": {
@@ -443,18 +445,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 52.180749999999996,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 56.699125,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 15.644667000000002,
-            "collect_ms": 11.328208,
+            "analyze_ms": 16.149209000000003,
+            "collect_ms": 12.047749999999999,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.9913750000000001,
-            "provenance_ms": 17.5755,
-            "publish_ms": 5.963209
+            "normalize_ms": 0.914542,
+            "provenance_ms": 19.599667,
+            "publish_ms": 7.244375
           }
         }
       },
@@ -468,18 +470,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 56.372458,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 54.261959,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 30.034875,
-            "collect_ms": 11.613,
+            "analyze_ms": 29.845542,
+            "collect_ms": 10.930166,
             "full_scan_ms": 0.0,
-            "normalize_ms": 1.004875,
-            "provenance_ms": 5.934584,
-            "publish_ms": 7.0629170000000006
+            "normalize_ms": 0.880958,
+            "provenance_ms": 5.697625,
+            "publish_ms": 6.0941670000000006
           }
         },
         "before_edit": {
@@ -491,18 +493,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 53.621916999999996,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 55.171083,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 15.633208,
-            "collect_ms": 11.441208,
+            "analyze_ms": 16.280834000000002,
+            "collect_ms": 12.602625,
             "full_scan_ms": 0.0,
-            "normalize_ms": 1.024416,
-            "provenance_ms": 19.37925,
-            "publish_ms": 5.272792
+            "normalize_ms": 0.938791,
+            "provenance_ms": 17.724791,
+            "publish_ms": 6.6225
           }
         }
       },
@@ -516,18 +518,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 54.793416,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 54.824667,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 30.027292,
-            "collect_ms": 11.376209,
+            "analyze_ms": 29.442084,
+            "collect_ms": 11.341584,
             "full_scan_ms": 0.0,
-            "normalize_ms": 1.0028750000000002,
-            "provenance_ms": 5.348333,
-            "publish_ms": 6.259542
+            "normalize_ms": 1.017,
+            "provenance_ms": 5.8742090000000005,
+            "publish_ms": 6.402166
           }
         },
         "before_edit": {
@@ -539,18 +541,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 57.091,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 54.65225,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 16.125041,
-            "collect_ms": 12.233667,
+            "analyze_ms": 16.036833,
+            "collect_ms": 11.059790999999999,
             "full_scan_ms": 0.0,
-            "normalize_ms": 1.0198749999999999,
-            "provenance_ms": 19.666667,
-            "publish_ms": 7.21625
+            "normalize_ms": 1.0410000000000001,
+            "provenance_ms": 18.74,
+            "publish_ms": 7.004625
           }
         }
       },
@@ -564,18 +566,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 53.909166,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 53.744292,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 28.830499999999997,
-            "collect_ms": 10.870458,
+            "analyze_ms": 29.345665999999998,
+            "collect_ms": 11.121959,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.9554579999999999,
-            "provenance_ms": 5.438791,
-            "publish_ms": 7.068334
+            "normalize_ms": 0.870791,
+            "provenance_ms": 5.387333,
+            "publish_ms": 6.192375
           }
         },
         "before_edit": {
@@ -587,18 +589,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 63.1,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 56.148375,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 16.377625,
-            "collect_ms": 11.980042,
+            "analyze_ms": 15.332958000000001,
+            "collect_ms": 12.135959,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.986084,
-            "provenance_ms": 25.409959,
-            "publish_ms": 7.5836250000000005
+            "normalize_ms": 0.8685,
+            "provenance_ms": 18.853708,
+            "publish_ms": 8.008542
           }
         }
       },
@@ -612,18 +614,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 51.7635,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 48.825416000000004,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 28.400666,
-            "collect_ms": 10.057292,
+            "analyze_ms": 26.526625000000003,
+            "collect_ms": 10.212499999999999,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.9412090000000001,
-            "provenance_ms": 4.829792,
-            "publish_ms": 6.855167
+            "normalize_ms": 0.898542,
+            "provenance_ms": 4.450959,
+            "publish_ms": 5.935084
           }
         },
         "before_edit": {
@@ -635,18 +637,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 51.689541,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 53.924082999999996,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 15.272292,
-            "collect_ms": 10.795041,
+            "analyze_ms": 15.579792,
+            "collect_ms": 10.863875,
             "full_scan_ms": 0.0,
-            "normalize_ms": 1.000375,
-            "provenance_ms": 17.283707999999997,
-            "publish_ms": 6.578583
+            "normalize_ms": 1.0096250000000002,
+            "provenance_ms": 20.248042,
+            "publish_ms": 5.524
           }
         }
       },
@@ -660,18 +662,18 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 52.876958,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 52.464334,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 28.364458,
-            "collect_ms": 10.710749999999999,
+            "analyze_ms": 26.860917,
+            "collect_ms": 11.406708,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.9617920000000001,
-            "provenance_ms": 5.566332999999999,
-            "publish_ms": 6.501167000000001
+            "normalize_ms": 1.152709,
+            "provenance_ms": 5.299583,
+            "publish_ms": 7.01425
           }
         },
         "before_edit": {
@@ -683,28 +685,28 @@
           "kind": "status",
           "modules": 100,
           "parsed_files": 1,
-          "refresh_ms": 53.344167,
-          "root": "/private/tmp/archgraph-edit-loop-final-20261019-2/fixture-2k",
+          "refresh_ms": 51.882666,
+          "root": "/private/tmp/archgraph-edit-loop-directdoc-20261019/fixture-2k",
           "running": true,
           "schema": "archgraph/daemon/v1",
           "snapshot_limit": 2,
           "timings": {
-            "analyze_ms": 15.981333000000001,
-            "collect_ms": 12.523249999999999,
+            "analyze_ms": 15.239667,
+            "collect_ms": 9.945792,
             "full_scan_ms": 0.0,
-            "normalize_ms": 0.994333,
-            "provenance_ms": 17.9275,
-            "publish_ms": 5.0901250000000005
+            "normalize_ms": 0.893542,
+            "provenance_ms": 18.565624999999997,
+            "publish_ms": 6.479125
           }
         }
       }
     ],
     "warm_samples_ms": [
-      200.3290840657428,
-      200.43658395297825,
-      205.69058298133314,
-      196.91100006457418,
-      208.87800003401935
+      203.230082988739,
+      204.2337500024587,
+      210.80508397426456,
+      210.95466602128,
+      205.64783399458975
     ]
   },
   "schema": "archgraph/edit-loop-benchmark/v1"

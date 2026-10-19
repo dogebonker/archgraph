@@ -1,0 +1,19 @@
+{
+  "schema": "archgraph/hook-regression/v1",
+  "date": "2026-10-19",
+  "kind": "CLI regression; no model or feature-task rerun",
+  "repo": "https://github.com/pydantic/pydantic",
+  "package": "pydantic",
+  "binary_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+  "binary_profile": "release",
+  "capture": "PASS",
+  "new_violation_kinds": [
+    "cycle",
+    "forbidden-edge"
+  ],
+  "same_baseline_through_repair": true,
+  "restored_source": "exact original bytes",
+  "repaired_verdict": "PASS",
+  "explicit_directory_alias_edit": "REFUSED",
+  "original_paired_results": "unchanged; the three guarded feature failures remain recorded"
+}

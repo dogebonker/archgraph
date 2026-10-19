@@ -29,6 +29,13 @@ inventory restriction applies before the selected Python package is scanned. The
 full graph check still returns zero new violations because no feature edit occurred.
 No failed run was replaced.
 
+After these frozen runs, contained directory links were supported without traversing
+aliases, and generated instructions gained an explicit CLI fallback when MCP is not
+connected. A [release-binary Pydantic CLI regression](pydantic-dirlink-fix-2026-10-19.json)
+now passes capture → BLOCK → same-baseline repair → PASS, while explicit alias edits
+remain refused. This is a targeted regression check; the feature tasks were not rerun
+or rescored, and no post-fix efficacy improvement is claimed.
+
 The frozen binary is a debug build from source commit `8075782`, SHA-256
 `67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52`.
 At most two repository benchmarks ran concurrently, with alternating arm order;
