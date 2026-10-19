@@ -73,6 +73,8 @@ mod scan_cli;
 mod services_cli;
 #[path = "cli/surface.rs"]
 mod surface_cli;
+#[path = "cli/sync_rules.rs"]
+mod sync_rules_cli;
 #[path = "cli/tour.rs"]
 mod tour_cli;
 
@@ -107,6 +109,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Generate owned agent instruction blocks from layout.yaml
+    SyncRules(sync_rules_cli::SyncRules),
     /// Create a reasoned day-zero layout and show its first findings
     Init(init_cli::Init),
     /// Install and run architecture checks around agent edits
@@ -435,6 +439,7 @@ fn execute_inner(cli: Cli) -> ExitCode {
         (cli.tool_timeout > 0).then(|| std::time::Duration::from_secs(cli.tool_timeout)),
     );
     let result = match cli.command {
+        Cmd::SyncRules(args) => sync_rules_cli::run(args),
         Cmd::Init(args) => init_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Hook(args) => hooks_cli::run(args),
         Cmd::Fires(args) => hooks_cli::fires(args),

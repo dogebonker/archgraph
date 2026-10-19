@@ -39,6 +39,26 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
     if doc.config.rules.is_none() && doc.surface.is_none() {
         bail!("no rules: pass --rules, or scan with --rules");
     }
+    let active_policy = args.rules.as_deref().map(Path::canonicalize).transpose()?;
+    let default_policy = default_rules
+        .as_deref()
+        .map(Path::canonicalize)
+        .transpose()?;
+    if let Some(root) = &root
+        && default_policy.is_some()
+        && (active_policy.is_none() || active_policy == default_policy)
+    {
+        match archgraph::sync_rules::run(root, false, true) {
+            Ok(report) if !report.stale.is_empty() => eprintln!(
+                "warning: generated agent rules are stale in {}; run archgraph sync-rules",
+                report.stale.join(", ")
+            ),
+            Err(error) => eprintln!(
+                "warning: cannot verify generated agent rules: {error:#}; run archgraph sync-rules --check"
+            ),
+            _ => (),
+        }
+    }
     let smells = archgraph::early_smells::check(&doc, root.as_deref())?;
     let incomplete = smells.verdict == "INCOMPLETE";
     if incomplete {

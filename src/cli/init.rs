@@ -153,6 +153,15 @@ pub(super) fn run(args: Init) -> Result<()> {
         file.write_all(rendered.as_bytes())?;
         file.sync_all()?;
     }
+    let synced = archgraph::sync_rules::run(&root, false, false)?;
+    if !synced.conflicts.is_empty() {
+        for conflict in &synced.conflicts {
+            eprintln!("{}", conflict.diff);
+        }
+        bail!(
+            "layout written; hand-edited agent rule blocks were preserved; resolve them before syncing"
+        );
+    }
     let mut findings = Vec::new();
     let mut limitations = Vec::new();
     if before.is_some() {
@@ -177,10 +186,13 @@ pub(super) fn run(args: Init) -> Result<()> {
     if globals().brief {
         write(
             None,
-            &serde_json::json!({"kind":"init","path":path,"preset":args.preset,"scope":scope,"status":if total == 0 {"clean"} else {"findings"},"total_findings":total,"findings":findings,"conflicts":comments,"limitations":limitations}),
+            &serde_json::json!({"kind":"init","path":path,"preset":args.preset,"scope":scope,"status":if total == 0 {"clean"} else {"findings"},"total_findings":total,"findings":findings,"conflicts":comments,"limitations":limitations,"rule_files_written":synced.written}),
         )?;
     } else {
         println!("Wrote {} ({:?}, {:?})", path.display(), args.preset, scope);
+        for file in synced.written {
+            println!("Synced owned block in {file}");
+        }
         if total == 0 {
             println!("clean");
         }

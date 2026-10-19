@@ -39,6 +39,7 @@ pub mod services;
 pub mod simulate;
 pub mod surface;
 pub mod symbols;
+pub mod sync_rules;
 pub mod tour;
 
 use std::collections::{BTreeMap, BTreeSet};

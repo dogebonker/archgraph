@@ -71,6 +71,14 @@ Each threshold under `early-smells` has a `reason`; `layer-reason` explains impl
 
 For an existing repository, init runs the existing layout inference, merges its module/layer evidence into the preset, and marks conflicting observations `# CONFLICT: inferred X, preset says Y`. Preset boundaries take precedence; review sparse inferred forbids before adoption. It refuses existing layouts and symlinks; `--force` explicitly replaces an existing regular layout. First-run findings describe the resulting draft, including existing violations; creating a draft does not assert that its policy is satisfied. Installed hooks adopt a newly created first layout at the next clean pre-edit event; creating or changing policy during a pending transaction remains unavailable until resolved.
 
+## Generated agent rule files
+
+`archgraph sync-rules [root]` renders `layout.yaml` into owned `<!-- archgraph:start -->` / `<!-- archgraph:end -->` blocks in `CLAUDE.md`, `AGENTS.md`, `.cursorrules` and `.github/copilot-instructions.md`. It includes layer direction, explicit import constraints, declared entrypoints/public surfaces, package categories, available reasons and a pointer to MCP/hooks. Default output targets at most 600 **estimated** tokens per block (UTF-8 bytes / 4, including marker/hash framing); omitted rule lines are counted and the layout/MCP remain authoritative. `--full` includes every rendered rule.
+
+Init synchronizes these files after creating its draft. Live `check` warns when blocks are stale, including an explicit `--rules layout.yaml` resolving to the repository policy; this warning does not change the policy verdict. Saved scans and genuinely alternative policies do not pretend to identify the current repository rule files. Use `sync-rules --check` in CI: exit 0 means current, exit 1 means missing/stale, and exit 2 means malformed input or another setup error. Default check accepts the stored full/brief mode; `--check --full` requires full blocks.
+
+Content and layout hashes distinguish manual edits from a changed source policy. A hand-edited owned block refuses the entire write batch and prints a diff; move custom instructions outside the fence, restore the generated block, then sync again. Missing/duplicate/malformed fences are refused. Original bytes outside existing fences, including line endings and non-UTF-8 bytes, remain unchanged. New blocks append to existing content. All targets are checked for symlink paths before writes; file permissions are preserved. Each replacement checks the preflight bytes again to reject an observed concurrent edit. Replacements are atomic per file; an I/O failure can leave other files stale, so rerun `--check` after correcting it.
+
 ## Native engine
 
 ```sh
