@@ -1,0 +1,3648 @@
+{
+  "schema": "archgraph/paired-benchmark/v1",
+  "repo_name": "baseline",
+  "commit": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+  "package": "shop",
+  "created": "2026-10-19T23:06:59.604623+00:00",
+  "repeats": 3,
+  "binary_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+  "runner": {
+    "agent": "codex",
+    "adapter": "codex-app-server",
+    "model": "gpt-6.1-sol",
+    "trust_reviewed_archgraph": true,
+    "codex": "/Users/dan/.local/bin/codex"
+  },
+  "auth_file_supplied": true,
+  "runner_env_keys": [],
+  "tasks": [
+    {
+      "id": "tax",
+      "prompt": "Add regional tax to composition.checkout(subtotal, region): return Decimal cents with ROUND_HALF_UP after subtotal * (1 + rate). Consume the existing mutable adapters.tax.RATES via rate_for, including changes after import, unknown regions at zero, and negative amounts. Keep application.total(subtotal, region) callable with its existing arguments. Preserve other behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py tax",
+      "area": [
+        "src/shop/application/**",
+        "src/shop/composition.py"
+      ],
+      "tests": [
+        "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+        "-B",
+        "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+        "tax"
+      ]
+    },
+    {
+      "id": "inventory",
+      "prompt": "Make application.checkout.can_fulfill(sku, quantity) use sellable stock: max(0, on_hand - reserved). Unknown SKUs and nonpositive quantities return False; preserve inventory.api.on_hand and unrelated behavior. Changes to storage records after import must be reflected.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py inventory",
+      "area": [
+        "src/shop/application/**",
+        "src/shop/inventory/**"
+      ],
+      "tests": [
+        "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+        "-B",
+        "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+        "inventory"
+      ]
+    },
+    {
+      "id": "receipt",
+      "prompt": "Include the canonical human status label in notifications.formatter.format_receipt(order) and orders.service.receipt(order): exactly \"Order <id>: <total to 2 decimals> [<label>]\". Missing/unknown status uses \"Unknown status\". Canonical labels currently live in orders.service; retain its STATUS_LABELS and status_label public API and reflect later table mutations. Keep both receipt entrypoints callable with one order argument and preserve unrelated behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py receipt",
+      "area": [
+        "src/shop/orders/**",
+        "src/shop/notifications/**",
+        "src/shop/shared/**"
+      ],
+      "tests": [
+        "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+        "-B",
+        "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+        "receipt"
+      ]
+    },
+    {
+      "id": "discount",
+      "prompt": "Implement pricing.discounted_total(unit_price, quantity, percent) as unit_price * quantity * (1 - percent / 100), using Decimal from string inputs and ROUND_HALF_UP cents once at the end. Support fractional percentages and zero quantity. Reject negative quantity or percentages outside 0..100 with ValueError. Preserve pricing.money and unrelated behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py discount",
+      "area": [
+        "src/shop/pricing.py"
+      ],
+      "tests": [
+        "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+        "-B",
+        "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+        "discount"
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "task": "tax",
+      "arm": "bare",
+      "repeat": 1,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/application/**",
+        "src/shop/composition.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Add regional tax to composition.checkout(subtotal, region): return Decimal cents with ROUND_HALF_UP after subtotal * (1 + rate). Consume the existing mutable adapters.tax.RATES via rate_for, including changes after import, unknown regions at zero, and negative amounts. Keep application.total(subtotal, region) callable with its existing arguments. Preserve other behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py tax",
+            "--mode",
+            "bare",
+            "--run-id",
+            "561f8014fc2c487681f35ccf00c2c362",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/2e9d900a21714ee19411b34c59f20a7e",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"561f8014fc2c487681f35ccf00c2c362\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-3k733ter/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566b-1450-7c43-8621-d6cc3b787d6b\", \"turn_id\": \"01a1566b-1699-77d0-9e5f-0560987b9f10\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-3k733ter/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 77338, \"inputTokens\": 76560, \"cachedInputTokens\": 68224, \"cacheWriteInputTokens\": 0, \"outputTokens\": 778, \"reasoningOutputTokens\": 175}}\n",
+          "stderr": "",
+          "seconds": 21.241755292052403
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.31044287502299994
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "tax"
+          ],
+          "code": 0,
+          "stdout": "tax: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.024448083015158772
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 21.241755292052403,
+      "tokens": {
+        "total": 77338,
+        "raw": {
+          "totalTokens": 77338,
+          "inputTokens": 76560,
+          "cachedInputTokens": 68224,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 778,
+          "reasoningOutputTokens": 175
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "561f8014fc2c487681f35ccf00c2c362",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-3k733ter/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566b-1450-7c43-8621-d6cc3b787d6b",
+        "turn_id": "01a1566b-1699-77d0-9e5f-0560987b9f10",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-3k733ter/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 77338,
+          "inputTokens": 76560,
+          "cachedInputTokens": 68224,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 778,
+          "reasoningOutputTokens": 175
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/application/checkout.py",
+          "src/shop/composition.py"
+        ],
+        "additions": 6,
+        "deletions": 4,
+        "binary_files": 0,
+        "changed_lines": 10
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "tax",
+      "arm": "guarded",
+      "repeat": 1,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    },
+    {
+      "task": "tax",
+      "arm": "guarded",
+      "repeat": 2,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    },
+    {
+      "task": "tax",
+      "arm": "bare",
+      "repeat": 2,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/application/**",
+        "src/shop/composition.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Add regional tax to composition.checkout(subtotal, region): return Decimal cents with ROUND_HALF_UP after subtotal * (1 + rate). Consume the existing mutable adapters.tax.RATES via rate_for, including changes after import, unknown regions at zero, and negative amounts. Keep application.total(subtotal, region) callable with its existing arguments. Preserve other behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py tax",
+            "--mode",
+            "bare",
+            "--run-id",
+            "92f7ad437ff841b9902d88eda6d96874",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/8e3a9d9b1d7345eaa5720a9727c98c71",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"92f7ad437ff841b9902d88eda6d96874\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-6l0rd_9n/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566b-6917-7ae2-be37-455930779ebc\", \"turn_id\": \"01a1566b-6ab3-7412-b52a-3c6cb1b7f909\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-6l0rd_9n/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 77100, \"inputTokens\": 76334, \"cachedInputTokens\": 71680, \"cacheWriteInputTokens\": 0, \"outputTokens\": 766, \"reasoningOutputTokens\": 146}}\n",
+          "stderr": "",
+          "seconds": 18.250788957928307
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.3028071670560166
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "tax"
+          ],
+          "code": 0,
+          "stdout": "tax: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.019682582933455706
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 18.250788957928307,
+      "tokens": {
+        "total": 77100,
+        "raw": {
+          "totalTokens": 77100,
+          "inputTokens": 76334,
+          "cachedInputTokens": 71680,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 766,
+          "reasoningOutputTokens": 146
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "92f7ad437ff841b9902d88eda6d96874",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-6l0rd_9n/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566b-6917-7ae2-be37-455930779ebc",
+        "turn_id": "01a1566b-6ab3-7412-b52a-3c6cb1b7f909",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-6l0rd_9n/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 77100,
+          "inputTokens": 76334,
+          "cachedInputTokens": 71680,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 766,
+          "reasoningOutputTokens": 146
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/application/checkout.py",
+          "src/shop/composition.py"
+        ],
+        "additions": 7,
+        "deletions": 4,
+        "binary_files": 0,
+        "changed_lines": 11
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "tax",
+      "arm": "bare",
+      "repeat": 3,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/application/**",
+        "src/shop/composition.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Add regional tax to composition.checkout(subtotal, region): return Decimal cents with ROUND_HALF_UP after subtotal * (1 + rate). Consume the existing mutable adapters.tax.RATES via rate_for, including changes after import, unknown regions at zero, and negative amounts. Keep application.total(subtotal, region) callable with its existing arguments. Preserve other behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py tax",
+            "--mode",
+            "bare",
+            "--run-id",
+            "c13c8d695e124eb4a948f2184a51157f",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/8298b1b5f1f343968a43b7c5daee1a52",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"c13c8d695e124eb4a948f2184a51157f\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-gykhaze_/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566b-b223-77b1-9b75-a6b63a4e1950\", \"turn_id\": \"01a1566b-b3de-7a53-b60b-9e5919ba3958\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-gykhaze_/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 60896, \"inputTokens\": 60185, \"cachedInputTokens\": 55936, \"cacheWriteInputTokens\": 0, \"outputTokens\": 711, \"reasoningOutputTokens\": 120}}\n",
+          "stderr": "",
+          "seconds": 16.34867120801937
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.3593474579975009
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "tax"
+          ],
+          "code": 0,
+          "stdout": "tax: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.01923883310519159
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 16.34867120801937,
+      "tokens": {
+        "total": 60896,
+        "raw": {
+          "totalTokens": 60896,
+          "inputTokens": 60185,
+          "cachedInputTokens": 55936,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 711,
+          "reasoningOutputTokens": 120
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "c13c8d695e124eb4a948f2184a51157f",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-gykhaze_/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566b-b223-77b1-9b75-a6b63a4e1950",
+        "turn_id": "01a1566b-b3de-7a53-b60b-9e5919ba3958",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-gykhaze_/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 60896,
+          "inputTokens": 60185,
+          "cachedInputTokens": 55936,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 711,
+          "reasoningOutputTokens": 120
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/application/checkout.py",
+          "src/shop/composition.py"
+        ],
+        "additions": 9,
+        "deletions": 4,
+        "binary_files": 0,
+        "changed_lines": 13
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "tax",
+      "arm": "guarded",
+      "repeat": 3,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    },
+    {
+      "task": "inventory",
+      "arm": "bare",
+      "repeat": 1,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/application/**",
+        "src/shop/inventory/**"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Make application.checkout.can_fulfill(sku, quantity) use sellable stock: max(0, on_hand - reserved). Unknown SKUs and nonpositive quantities return False; preserve inventory.api.on_hand and unrelated behavior. Changes to storage records after import must be reflected.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py inventory",
+            "--mode",
+            "bare",
+            "--run-id",
+            "f1bea08b00a14dbf82501336ea0682db",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/d0f39c394e6a42a582af3cf71ba6fdd9",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"f1bea08b00a14dbf82501336ea0682db\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-2a3pkpvt/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566b-f4cd-7673-acc0-1e13b22fc864\", \"turn_id\": \"01a1566b-f674-7e83-98e2-40e139b6aa3b\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-2a3pkpvt/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 76670, \"inputTokens\": 75882, \"cachedInputTokens\": 71424, \"cacheWriteInputTokens\": 0, \"outputTokens\": 788, \"reasoningOutputTokens\": 11}}\n",
+          "stderr": "",
+          "seconds": 18.62006979098078
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.31188858300447464
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "inventory"
+          ],
+          "code": 0,
+          "stdout": "inventory: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.02009274996817112
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 18.62006979098078,
+      "tokens": {
+        "total": 76670,
+        "raw": {
+          "totalTokens": 76670,
+          "inputTokens": 75882,
+          "cachedInputTokens": 71424,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 788,
+          "reasoningOutputTokens": 11
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "f1bea08b00a14dbf82501336ea0682db",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-2a3pkpvt/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566b-f4cd-7673-acc0-1e13b22fc864",
+        "turn_id": "01a1566b-f674-7e83-98e2-40e139b6aa3b",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-2a3pkpvt/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 76670,
+          "inputTokens": 75882,
+          "cachedInputTokens": 71424,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 788,
+          "reasoningOutputTokens": 11
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/application/checkout.py",
+          "src/shop/inventory/api.py"
+        ],
+        "additions": 7,
+        "deletions": 2,
+        "binary_files": 0,
+        "changed_lines": 9
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "inventory",
+      "arm": "guarded",
+      "repeat": 1,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    },
+    {
+      "task": "inventory",
+      "arm": "guarded",
+      "repeat": 2,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    },
+    {
+      "task": "inventory",
+      "arm": "bare",
+      "repeat": 2,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/application/**",
+        "src/shop/inventory/**"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Make application.checkout.can_fulfill(sku, quantity) use sellable stock: max(0, on_hand - reserved). Unknown SKUs and nonpositive quantities return False; preserve inventory.api.on_hand and unrelated behavior. Changes to storage records after import must be reflected.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py inventory",
+            "--mode",
+            "bare",
+            "--run-id",
+            "063ba74990f94c36b306c9f3bd210d56",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/adb448a3964645189c1e9a8ba7cc6a54",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"063ba74990f94c36b306c9f3bd210d56\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5equq89v/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566c-4069-7771-b38a-3abb13c13b74\", \"turn_id\": \"01a1566c-4239-7cb1-9be2-98f82b31ea4a\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5equq89v/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 76006, \"inputTokens\": 75440, \"cachedInputTokens\": 66304, \"cacheWriteInputTokens\": 0, \"outputTokens\": 566, \"reasoningOutputTokens\": 14}}\n",
+          "stderr": "",
+          "seconds": 17.883262958959676
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.31811995792668313
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "inventory"
+          ],
+          "code": 0,
+          "stdout": "inventory: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.020804625004529953
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 17.883262958959676,
+      "tokens": {
+        "total": 76006,
+        "raw": {
+          "totalTokens": 76006,
+          "inputTokens": 75440,
+          "cachedInputTokens": 66304,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 566,
+          "reasoningOutputTokens": 14
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "063ba74990f94c36b306c9f3bd210d56",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5equq89v/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566c-4069-7771-b38a-3abb13c13b74",
+        "turn_id": "01a1566c-4239-7cb1-9be2-98f82b31ea4a",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5equq89v/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 76006,
+          "inputTokens": 75440,
+          "cachedInputTokens": 66304,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 566,
+          "reasoningOutputTokens": 14
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/application/checkout.py",
+          "src/shop/inventory/api.py"
+        ],
+        "additions": 7,
+        "deletions": 2,
+        "binary_files": 0,
+        "changed_lines": 9
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "inventory",
+      "arm": "bare",
+      "repeat": 3,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/application/**",
+        "src/shop/inventory/**"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Make application.checkout.can_fulfill(sku, quantity) use sellable stock: max(0, on_hand - reserved). Unknown SKUs and nonpositive quantities return False; preserve inventory.api.on_hand and unrelated behavior. Changes to storage records after import must be reflected.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py inventory",
+            "--mode",
+            "bare",
+            "--run-id",
+            "88f042f9ce3d421cbd24569e6e503620",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/f84957d092114c5baa54da9fc2027566",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"88f042f9ce3d421cbd24569e6e503620\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-mc5lyq_8/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566c-8850-7210-8ed8-c7f15f8311c1\", \"turn_id\": \"01a1566c-89c4-7f51-9cc1-495f5fd50193\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-mc5lyq_8/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 76796, \"inputTokens\": 76195, \"cachedInputTokens\": 68480, \"cacheWriteInputTokens\": 0, \"outputTokens\": 601, \"reasoningOutputTokens\": 7}}\n",
+          "stderr": "",
+          "seconds": 14.870012165978551
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.31218416593037546
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "inventory"
+          ],
+          "code": 0,
+          "stdout": "inventory: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.020353083964437246
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 14.870012165978551,
+      "tokens": {
+        "total": 76796,
+        "raw": {
+          "totalTokens": 76796,
+          "inputTokens": 76195,
+          "cachedInputTokens": 68480,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 601,
+          "reasoningOutputTokens": 7
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "88f042f9ce3d421cbd24569e6e503620",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-mc5lyq_8/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566c-8850-7210-8ed8-c7f15f8311c1",
+        "turn_id": "01a1566c-89c4-7f51-9cc1-495f5fd50193",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-mc5lyq_8/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 76796,
+          "inputTokens": 76195,
+          "cachedInputTokens": 68480,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 601,
+          "reasoningOutputTokens": 7
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/application/checkout.py",
+          "src/shop/inventory/api.py"
+        ],
+        "additions": 7,
+        "deletions": 2,
+        "binary_files": 0,
+        "changed_lines": 9
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "inventory",
+      "arm": "guarded",
+      "repeat": 3,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    },
+    {
+      "task": "receipt",
+      "arm": "bare",
+      "repeat": 1,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/orders/**",
+        "src/shop/notifications/**",
+        "src/shop/shared/**"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Include the canonical human status label in notifications.formatter.format_receipt(order) and orders.service.receipt(order): exactly \"Order <id>: <total to 2 decimals> [<label>]\". Missing/unknown status uses \"Unknown status\". Canonical labels currently live in orders.service; retain its STATUS_LABELS and status_label public API and reflect later table mutations. Keep both receipt entrypoints callable with one order argument and preserve unrelated behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py receipt",
+            "--mode",
+            "bare",
+            "--run-id",
+            "c401f20d90af4fefaeeb1cbd36b7a2b5",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/1e92d8e65a9a4e919c8e4f55b0957e42",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"c401f20d90af4fefaeeb1cbd36b7a2b5\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-36it7vmv/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566c-c4ca-7463-b5ac-3116ca3a3e01\", \"turn_id\": \"01a1566c-c657-74a3-b340-f4f9c837644b\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-36it7vmv/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 76694, \"inputTokens\": 76122, \"cachedInputTokens\": 68096, \"cacheWriteInputTokens\": 0, \"outputTokens\": 572, \"reasoningOutputTokens\": 66}}\n",
+          "stderr": "",
+          "seconds": 17.584249999956228
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.3065014580497518
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "receipt"
+          ],
+          "code": 0,
+          "stdout": "receipt: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.01875399996060878
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 17.584249999956228,
+      "tokens": {
+        "total": 76694,
+        "raw": {
+          "totalTokens": 76694,
+          "inputTokens": 76122,
+          "cachedInputTokens": 68096,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 572,
+          "reasoningOutputTokens": 66
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "c401f20d90af4fefaeeb1cbd36b7a2b5",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-36it7vmv/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566c-c4ca-7463-b5ac-3116ca3a3e01",
+        "turn_id": "01a1566c-c657-74a3-b340-f4f9c837644b",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-36it7vmv/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 76694,
+          "inputTokens": 76122,
+          "cachedInputTokens": 68096,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 572,
+          "reasoningOutputTokens": 66
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/notifications/formatter.py"
+        ],
+        "additions": 5,
+        "deletions": 1,
+        "binary_files": 0,
+        "changed_lines": 6
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "receipt",
+      "arm": "guarded",
+      "repeat": 1,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    },
+    {
+      "task": "receipt",
+      "arm": "guarded",
+      "repeat": 2,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    },
+    {
+      "task": "receipt",
+      "arm": "bare",
+      "repeat": 2,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/orders/**",
+        "src/shop/notifications/**",
+        "src/shop/shared/**"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Include the canonical human status label in notifications.formatter.format_receipt(order) and orders.service.receipt(order): exactly \"Order <id>: <total to 2 decimals> [<label>]\". Missing/unknown status uses \"Unknown status\". Canonical labels currently live in orders.service; retain its STATUS_LABELS and status_label public API and reflect later table mutations. Keep both receipt entrypoints callable with one order argument and preserve unrelated behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py receipt",
+            "--mode",
+            "bare",
+            "--run-id",
+            "7e1912aea03642b8836cce669a58561b",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/fa5a4c06ae4e4149b48de4ccbe759875",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"7e1912aea03642b8836cce669a58561b\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-29wdvqm8/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566d-0c13-7361-a1ce-d177c16e657c\", \"turn_id\": \"01a1566d-0dc8-7212-a51b-f31e7c258cc7\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-29wdvqm8/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 76574, \"inputTokens\": 75748, \"cachedInputTokens\": 71168, \"cacheWriteInputTokens\": 0, \"outputTokens\": 826, \"reasoningOutputTokens\": 89}}\n",
+          "stderr": "",
+          "seconds": 18.718394791008905
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.2901344590354711
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "receipt"
+          ],
+          "code": 0,
+          "stdout": "receipt: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.020670833997428417
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 18.718394791008905,
+      "tokens": {
+        "total": 76574,
+        "raw": {
+          "totalTokens": 76574,
+          "inputTokens": 75748,
+          "cachedInputTokens": 71168,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 826,
+          "reasoningOutputTokens": 89
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "7e1912aea03642b8836cce669a58561b",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-29wdvqm8/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566d-0c13-7361-a1ce-d177c16e657c",
+        "turn_id": "01a1566d-0dc8-7212-a51b-f31e7c258cc7",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-29wdvqm8/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 76574,
+          "inputTokens": 75748,
+          "cachedInputTokens": 71168,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 826,
+          "reasoningOutputTokens": 89
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/notifications/formatter.py"
+        ],
+        "additions": 4,
+        "deletions": 1,
+        "binary_files": 0,
+        "changed_lines": 5
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "receipt",
+      "arm": "bare",
+      "repeat": 3,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/orders/**",
+        "src/shop/notifications/**",
+        "src/shop/shared/**"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Include the canonical human status label in notifications.formatter.format_receipt(order) and orders.service.receipt(order): exactly \"Order <id>: <total to 2 decimals> [<label>]\". Missing/unknown status uses \"Unknown status\". Canonical labels currently live in orders.service; retain its STATUS_LABELS and status_label public API and reflect later table mutations. Keep both receipt entrypoints callable with one order argument and preserve unrelated behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py receipt",
+            "--mode",
+            "bare",
+            "--run-id",
+            "4e43414de9e94af29913b44d478c485c",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/9bb26c5800ba4ccc8a6633025a8a2bce",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"4e43414de9e94af29913b44d478c485c\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-z7gw4hx5/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566d-5719-72a1-95c2-d67793f266dd\", \"turn_id\": \"01a1566d-58ae-7451-b5ff-703afe9ca7a9\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-z7gw4hx5/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 93895, \"inputTokens\": 92982, \"cachedInputTokens\": 87680, \"cacheWriteInputTokens\": 0, \"outputTokens\": 913, \"reasoningOutputTokens\": 223}}\n",
+          "stderr": "",
+          "seconds": 24.660109832999296
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.2974915000377223
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "receipt"
+          ],
+          "code": 0,
+          "stdout": "receipt: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.018716666963882744
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 24.660109832999296,
+      "tokens": {
+        "total": 93895,
+        "raw": {
+          "totalTokens": 93895,
+          "inputTokens": 92982,
+          "cachedInputTokens": 87680,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 913,
+          "reasoningOutputTokens": 223
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "4e43414de9e94af29913b44d478c485c",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-z7gw4hx5/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566d-5719-72a1-95c2-d67793f266dd",
+        "turn_id": "01a1566d-58ae-7451-b5ff-703afe9ca7a9",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-z7gw4hx5/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 93895,
+          "inputTokens": 92982,
+          "cachedInputTokens": 87680,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 913,
+          "reasoningOutputTokens": 223
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/notifications/formatter.py",
+          "src/shop/orders/service.py"
+        ],
+        "additions": 6,
+        "deletions": 4,
+        "binary_files": 0,
+        "changed_lines": 10
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "receipt",
+      "arm": "guarded",
+      "repeat": 3,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    },
+    {
+      "task": "discount",
+      "arm": "bare",
+      "repeat": 1,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/pricing.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Implement pricing.discounted_total(unit_price, quantity, percent) as unit_price * quantity * (1 - percent / 100), using Decimal from string inputs and ROUND_HALF_UP cents once at the end. Support fractional percentages and zero quantity. Reject negative quantity or percentages outside 0..100 with ValueError. Preserve pricing.money and unrelated behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py discount",
+            "--mode",
+            "bare",
+            "--run-id",
+            "ddf6a638e5874dfe89110c9f8005f953",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/3f831b374d2941859d798a2a07e3b5ad",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"ddf6a638e5874dfe89110c9f8005f953\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-bzhc7w0i/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566d-b994-76e1-bd85-e49d88f450d3\", \"turn_id\": \"01a1566d-bb15-76c3-a2a0-ae36e4c52424\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-bzhc7w0i/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 76184, \"inputTokens\": 75652, \"cachedInputTokens\": 71296, \"cacheWriteInputTokens\": 0, \"outputTokens\": 532, \"reasoningOutputTokens\": 16}}\n",
+          "stderr": "",
+          "seconds": 15.259725083014928
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.28069995797704905
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "discount"
+          ],
+          "code": 0,
+          "stdout": "discount: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.017930750036612153
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 15.259725083014928,
+      "tokens": {
+        "total": 76184,
+        "raw": {
+          "totalTokens": 76184,
+          "inputTokens": 75652,
+          "cachedInputTokens": 71296,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 532,
+          "reasoningOutputTokens": 16
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "ddf6a638e5874dfe89110c9f8005f953",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-bzhc7w0i/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566d-b994-76e1-bd85-e49d88f450d3",
+        "turn_id": "01a1566d-bb15-76c3-a2a0-ae36e4c52424",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-bzhc7w0i/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 76184,
+          "inputTokens": 75652,
+          "cachedInputTokens": 71296,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 532,
+          "reasoningOutputTokens": 16
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/pricing.py"
+        ],
+        "additions": 8,
+        "deletions": 1,
+        "binary_files": 0,
+        "changed_lines": 9
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "discount",
+      "arm": "guarded",
+      "repeat": 1,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    },
+    {
+      "task": "discount",
+      "arm": "guarded",
+      "repeat": 2,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    },
+    {
+      "task": "discount",
+      "arm": "bare",
+      "repeat": 2,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/pricing.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Implement pricing.discounted_total(unit_price, quantity, percent) as unit_price * quantity * (1 - percent / 100), using Decimal from string inputs and ROUND_HALF_UP cents once at the end. Support fractional percentages and zero quantity. Reject negative quantity or percentages outside 0..100 with ValueError. Preserve pricing.money and unrelated behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py discount",
+            "--mode",
+            "bare",
+            "--run-id",
+            "bb073610d1c340588c7263f805e1ec6d",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/e6eda937e0f24274b362c10674c67abd",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"bb073610d1c340588c7263f805e1ec6d\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-zj9ohtbj/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566d-f7b8-7351-8c35-79c5579f5ad2\", \"turn_id\": \"01a1566d-f924-7680-b57b-51dfc0b76143\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-zj9ohtbj/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 92164, \"inputTokens\": 91354, \"cachedInputTokens\": 83072, \"cacheWriteInputTokens\": 0, \"outputTokens\": 810, \"reasoningOutputTokens\": 0}}\n",
+          "stderr": "",
+          "seconds": 18.323363707982935
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.2868479589233175
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "discount"
+          ],
+          "code": 0,
+          "stdout": "discount: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.01928295800462365
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 18.323363707982935,
+      "tokens": {
+        "total": 92164,
+        "raw": {
+          "totalTokens": 92164,
+          "inputTokens": 91354,
+          "cachedInputTokens": 83072,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 810,
+          "reasoningOutputTokens": 0
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "bb073610d1c340588c7263f805e1ec6d",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-zj9ohtbj/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566d-f7b8-7351-8c35-79c5579f5ad2",
+        "turn_id": "01a1566d-f924-7680-b57b-51dfc0b76143",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-zj9ohtbj/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 92164,
+          "inputTokens": 91354,
+          "cachedInputTokens": 83072,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 810,
+          "reasoningOutputTokens": 0
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/pricing.py"
+        ],
+        "additions": 8,
+        "deletions": 1,
+        "binary_files": 0,
+        "changed_lines": 9
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "discount",
+      "arm": "bare",
+      "repeat": 3,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/shop/pricing.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Implement pricing.discounted_total(unit_price, quantity, percent) as unit_price * quantity * (1 - percent / 100), using Decimal from string inputs and ROUND_HALF_UP cents once at the end. Support fractional percentages and zero quantity. Reject negative quantity or percentages outside 0..100 with ValueError. Preserve pricing.money and unrelated behavior.\nWork inside this checkout. Follow layout.yaml; do not modify it. Execute the supplied external oracle, but do not inspect benchmark preparation or reference solutions. Run the feature check: /Users/dan/.pyenv/versions/3.10.0/bin/python3.10 -B /Users/dan/Work/archgraph/bench/usefulness/oracle.py discount",
+            "--mode",
+            "bare",
+            "--run-id",
+            "0cab85cc2a3a4a5ab32c93ac40183cae",
+            "--archgraph",
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--archgraph-sha256",
+            "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/usefulness-2026-10-20/.private-events/ea49280bc4904a01aca56f9bc4dd1ddc",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"0cab85cc2a3a4a5ab32c93ac40183cae\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-xt3c66gt/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a1566e-410d-7061-8c73-7d1d69deddc8\", \"turn_id\": \"01a1566e-4288-7522-9042-5ff36d71df58\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-xt3c66gt/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 59675, \"inputTokens\": 59214, \"cachedInputTokens\": 53376, \"cacheWriteInputTokens\": 0, \"outputTokens\": 461, \"reasoningOutputTokens\": 0}}\n",
+          "stderr": "",
+          "seconds": 12.4363841250306
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "shop",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"91d430866db63aa0177506861fb311d9ed8f4bbe\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\",\n      \"kind\": \"seam\",\n      \"subject\": \".\",\n      \"evidence\": {\n        \"modularity\": 0.4444,\n        \"folder_modularity\": -0.0,\n        \"clusters\": [\n          {\n            \"files\": [\n              \"src/shop/application/checkout.py\",\n              \"src/shop/inventory/api.py\",\n              \"src/shop/inventory/storage.py\"\n            ],\n            \"modules\": [\n              \"application\",\n              \"inventory\"\n            ]\n          },\n          {\n            \"files\": [\n              \"src/shop/notifications/formatter.py\",\n              \"src/shop/orders/service.py\"\n            ],\n            \"modules\": [\n              \"notifications\",\n              \"orders\"\n            ]\n          }\n        ],\n        \"hubs\": [\n          \"src/shop/composition.py\"\n        ],\n        \"via_barrel\": false\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"split_module\",\n            \"file\": \"src/shop/application/checkout.py\",\n            \"from\": \".\",\n            \"to\": \"\",\n            \"detail\": {\n              \"operation\": \"group_files\",\n              \"groups\": [\n                {\n                  \"files\": [\n                    \"src/shop/application/checkout.py\",\n                    \"src/shop/inventory/api.py\",\n                    \"src/shop/inventory/storage.py\"\n                  ],\n                  \"suggested_module\": \"split-1\"\n                },\n                {\n                  \"files\": [\n                    \"src/shop/notifications/formatter.py\",\n                    \"src/shop/orders/service.py\"\n                  ],\n                  \"suggested_module\": \"split-2\"\n                }\n              ],\n              \"evidence_source\": \"structural\"\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf\"\n            ]\n          }\n        },\n        \"confidence\": \"low\",\n        \"risk_notes\": [\n          \"Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "",
+          "seconds": 0.29140958306379616
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3.10",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/usefulness/oracle.py",
+            "discount"
+          ],
+          "code": 0,
+          "stdout": "discount: full-package behavior oracle passed\n",
+          "stderr": "",
+          "seconds": 0.019921207916922867
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "a727eb3cf6c5ae43f86c6308d7f00d844b827ab3b60d0b2b6dcc31028673cbcf"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 12.4363841250306,
+      "tokens": {
+        "total": 59675,
+        "raw": {
+          "totalTokens": 59675,
+          "inputTokens": 59214,
+          "cachedInputTokens": 53376,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 461,
+          "reasoningOutputTokens": 0
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "0cab85cc2a3a4a5ab32c93ac40183cae",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-xt3c66gt/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "b0b1f7a82b42e72b68ea3772771918d40e903a8c6a433b0bdb165c4347f60d76",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a1566e-410d-7061-8c73-7d1d69deddc8",
+        "turn_id": "01a1566e-4288-7522-9042-5ff36d71df58",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-xt3c66gt/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 59675,
+          "inputTokens": 59214,
+          "cachedInputTokens": 53376,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 461,
+          "reasoningOutputTokens": 0
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "91d430866db63aa0177506861fb311d9ed8f4bbe",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+            "kind": "seam",
+            "subject": ".",
+            "evidence": {
+              "modularity": 0.4444,
+              "folder_modularity": -0.0,
+              "clusters": [
+                {
+                  "files": [
+                    "src/shop/application/checkout.py",
+                    "src/shop/inventory/api.py",
+                    "src/shop/inventory/storage.py"
+                  ],
+                  "modules": [
+                    "application",
+                    "inventory"
+                  ]
+                },
+                {
+                  "files": [
+                    "src/shop/notifications/formatter.py",
+                    "src/shop/orders/service.py"
+                  ],
+                  "modules": [
+                    "notifications",
+                    "orders"
+                  ]
+                }
+              ],
+              "hubs": [
+                "src/shop/composition.py"
+              ],
+              "via_barrel": false
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "split_module",
+                  "file": "src/shop/application/checkout.py",
+                  "from": ".",
+                  "to": "",
+                  "detail": {
+                    "operation": "group_files",
+                    "groups": [
+                      {
+                        "files": [
+                          "src/shop/application/checkout.py",
+                          "src/shop/inventory/api.py",
+                          "src/shop/inventory/storage.py"
+                        ],
+                        "suggested_module": "split-1"
+                      },
+                      {
+                        "files": [
+                          "src/shop/notifications/formatter.py",
+                          "src/shop/orders/service.py"
+                        ],
+                        "suggested_module": "split-2"
+                      }
+                    ],
+                    "evidence_source": "structural"
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  ]
+                }
+              },
+              "confidence": "low",
+              "risk_notes": [
+                "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/shop/pricing.py"
+        ],
+        "additions": 8,
+        "deletions": 1,
+        "binary_files": 0,
+        "changed_lines": 9
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "discount",
+      "arm": "guarded",
+      "repeat": 3,
+      "errors": [
+        "['git', 'add', '-A', '--', '.', ':!.archgraph']: The following paths are ignored by one of your .gitignore files:\n.archgraph\nhint: Use -f if you really want to add them.\nhint: Disable this message with \"git config set advice.addIgnoredFile false\"\n"
+      ]
+    }
+  ],
+  "host": {
+    "system": "Darwin",
+    "machine": "arm64",
+    "python": "3.10.0"
+  },
+  "archgraph_version": {
+    "argv": [
+      "/private/tmp/archgraph-usefulness-frozen-20261020/archgraph-frozen",
+      "--version"
+    ],
+    "code": 0,
+    "stdout": "archgraph 0.1.0\n",
+    "stderr": "",
+    "seconds": 0.48112858389504254
+  },
+  "summary": {
+    "bare": {
+      "runs": 12,
+      "agent_runs": 12,
+      "failed_runs": 0,
+      "comparison_eligible": 12,
+      "new_violations": {
+        "measured": 12,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "edit_blocks": {
+        "measured": 12,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "recipes_applied": {
+        "measured": 12,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "wall_seconds": {
+        "measured": 12,
+        "mean": 17.84973232615933,
+        "stdev": 3.1164698433636207
+      }
+    },
+    "guarded": {
+      "runs": 12,
+      "agent_runs": 0,
+      "failed_runs": 12,
+      "comparison_eligible": 0,
+      "new_violations": {
+        "measured": 0,
+        "mean": null,
+        "stdev": null
+      },
+      "edit_blocks": {
+        "measured": 0,
+        "mean": null,
+        "stdev": null
+      },
+      "recipes_applied": {
+        "measured": 0,
+        "mean": null,
+        "stdev": null
+      },
+      "wall_seconds": {
+        "measured": 0,
+        "mean": null,
+        "stdev": null
+      }
+    }
+  },
+  "per_task_summary": {
+    "tax": {
+      "bare": {
+        "runs": 3,
+        "agent_runs": 3,
+        "failed_runs": 0,
+        "comparison_eligible": 3,
+        "new_violations": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "edit_blocks": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "recipes_applied": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "wall_seconds": {
+          "measured": 3,
+          "mean": 18.613738486000027,
+          "stdev": 2.466651015709349
+        }
+      },
+      "guarded": {
+        "runs": 3,
+        "agent_runs": 0,
+        "failed_runs": 3,
+        "comparison_eligible": 0,
+        "new_violations": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "edit_blocks": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "recipes_applied": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "wall_seconds": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        }
+      }
+    },
+    "inventory": {
+      "bare": {
+        "runs": 3,
+        "agent_runs": 3,
+        "failed_runs": 0,
+        "comparison_eligible": 3,
+        "new_violations": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "edit_blocks": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "recipes_applied": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "wall_seconds": {
+          "measured": 3,
+          "mean": 17.124448305306334,
+          "stdev": 1.9868524873927145
+        }
+      },
+      "guarded": {
+        "runs": 3,
+        "agent_runs": 0,
+        "failed_runs": 3,
+        "comparison_eligible": 0,
+        "new_violations": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "edit_blocks": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "recipes_applied": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "wall_seconds": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        }
+      }
+    },
+    "receipt": {
+      "bare": {
+        "runs": 3,
+        "agent_runs": 3,
+        "failed_runs": 0,
+        "comparison_eligible": 3,
+        "new_violations": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "edit_blocks": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "recipes_applied": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "wall_seconds": {
+          "measured": 3,
+          "mean": 20.320918207988143,
+          "stdev": 3.8003959097300877
+        }
+      },
+      "guarded": {
+        "runs": 3,
+        "agent_runs": 0,
+        "failed_runs": 3,
+        "comparison_eligible": 0,
+        "new_violations": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "edit_blocks": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "recipes_applied": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "wall_seconds": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        }
+      }
+    },
+    "discount": {
+      "bare": {
+        "runs": 3,
+        "agent_runs": 3,
+        "failed_runs": 0,
+        "comparison_eligible": 3,
+        "new_violations": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "edit_blocks": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "recipes_applied": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "wall_seconds": {
+          "measured": 3,
+          "mean": 15.339824305342821,
+          "stdev": 2.944307060513146
+        }
+      },
+      "guarded": {
+        "runs": 3,
+        "agent_runs": 0,
+        "failed_runs": 3,
+        "comparison_eligible": 0,
+        "new_violations": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "edit_blocks": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "recipes_applied": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "wall_seconds": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        }
+      }
+    }
+  }
+}

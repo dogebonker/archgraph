@@ -1,0 +1,297 @@
+{
+  "schema": "archgraph/controlled-usefulness/v1",
+  "planned_runs": 24,
+  "joint_criterion": "agent exit 0; business oracle passes; expected area touched; policy unchanged; verified arm activation/absence; measured zero final violations; no harness errors",
+  "groups": {
+    "boundary": {
+      "bare": {
+        "planned": 9,
+        "recorded": 9,
+        "joint_successes": 9,
+        "business_passes": 9,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 0,
+        "activation_unknown": 0,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 0,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 0,
+        "wall_seconds_all_runs": {
+          "measured": 9,
+          "mean": 18.68636833309817,
+          "sample_sd": 2.83504378064811
+        },
+        "tokens_all_runs": {
+          "measured": 9,
+          "mean": 76885.44444444444,
+          "sample_sd": 8262.866045009914
+        }
+      },
+      "guarded": {
+        "planned": 9,
+        "recorded": 9,
+        "joint_successes": 0,
+        "business_passes": 0,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 9,
+        "activation_unknown": 9,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 9,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 9,
+        "wall_seconds_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        },
+        "tokens_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        }
+      }
+    },
+    "control": {
+      "bare": {
+        "planned": 3,
+        "recorded": 3,
+        "joint_successes": 3,
+        "business_passes": 3,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 0,
+        "activation_unknown": 0,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 0,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 0,
+        "wall_seconds_all_runs": {
+          "measured": 3,
+          "mean": 15.339824305342821,
+          "sample_sd": 2.944307060513146
+        },
+        "tokens_all_runs": {
+          "measured": 3,
+          "mean": 76007.66666666667,
+          "sample_sd": 16245.217768110506
+        }
+      },
+      "guarded": {
+        "planned": 3,
+        "recorded": 3,
+        "joint_successes": 0,
+        "business_passes": 0,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 3,
+        "activation_unknown": 3,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 3,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 3,
+        "wall_seconds_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        },
+        "tokens_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        }
+      }
+    },
+    "tax": {
+      "bare": {
+        "planned": 3,
+        "recorded": 3,
+        "joint_successes": 3,
+        "business_passes": 3,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 0,
+        "activation_unknown": 0,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 0,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 0,
+        "wall_seconds_all_runs": {
+          "measured": 3,
+          "mean": 18.613738486000027,
+          "sample_sd": 2.466651015709349
+        },
+        "tokens_all_runs": {
+          "measured": 3,
+          "mean": 71778,
+          "sample_sd": 9424.83973338539
+        }
+      },
+      "guarded": {
+        "planned": 3,
+        "recorded": 3,
+        "joint_successes": 0,
+        "business_passes": 0,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 3,
+        "activation_unknown": 3,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 3,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 3,
+        "wall_seconds_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        },
+        "tokens_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        }
+      }
+    },
+    "inventory": {
+      "bare": {
+        "planned": 3,
+        "recorded": 3,
+        "joint_successes": 3,
+        "business_passes": 3,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 0,
+        "activation_unknown": 0,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 0,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 0,
+        "wall_seconds_all_runs": {
+          "measured": 3,
+          "mean": 17.124448305306334,
+          "sample_sd": 1.9868524873927145
+        },
+        "tokens_all_runs": {
+          "measured": 3,
+          "mean": 76490.66666666667,
+          "sample_sd": 424.4353111291912
+        }
+      },
+      "guarded": {
+        "planned": 3,
+        "recorded": 3,
+        "joint_successes": 0,
+        "business_passes": 0,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 3,
+        "activation_unknown": 3,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 3,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 3,
+        "wall_seconds_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        },
+        "tokens_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        }
+      }
+    },
+    "receipt": {
+      "bare": {
+        "planned": 3,
+        "recorded": 3,
+        "joint_successes": 3,
+        "business_passes": 3,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 0,
+        "activation_unknown": 0,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 0,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 0,
+        "wall_seconds_all_runs": {
+          "measured": 3,
+          "mean": 20.320918207988143,
+          "sample_sd": 3.8003959097300877
+        },
+        "tokens_all_runs": {
+          "measured": 3,
+          "mean": 82387.66666666667,
+          "sample_sd": 9965.823615403462
+        }
+      },
+      "guarded": {
+        "planned": 3,
+        "recorded": 3,
+        "joint_successes": 0,
+        "business_passes": 0,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 3,
+        "activation_unknown": 3,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 3,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 3,
+        "wall_seconds_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        },
+        "tokens_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        }
+      }
+    },
+    "discount": {
+      "bare": {
+        "planned": 3,
+        "recorded": 3,
+        "joint_successes": 3,
+        "business_passes": 3,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 0,
+        "activation_unknown": 0,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 0,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 0,
+        "wall_seconds_all_runs": {
+          "measured": 3,
+          "mean": 15.339824305342821,
+          "sample_sd": 2.944307060513146
+        },
+        "tokens_all_runs": {
+          "measured": 3,
+          "mean": 76007.66666666667,
+          "sample_sd": 16245.217768110506
+        }
+      },
+      "guarded": {
+        "planned": 3,
+        "recorded": 3,
+        "joint_successes": 0,
+        "business_passes": 0,
+        "final_violation_runs": 0,
+        "final_violations_unknown": 3,
+        "activation_unknown": 3,
+        "unavailable_hook_events": 0,
+        "unavailable_evidence_unknown": 3,
+        "rule_fire_records": 0,
+        "fire_counts_unknown": 3,
+        "wall_seconds_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        },
+        "tokens_all_runs": {
+          "measured": 0,
+          "mean": null,
+          "sample_sd": null
+        }
+      }
+    }
+  },
+  "control_rule_blocks": "requires diff/policy inspection; not automatically a false positive",
+  "limits": "Authored synthetic stress tasks, one model/host, three repetitions; bundle of hooks and generated instructions. No real-world, component-isolated or unconditional productivity claim."
+}

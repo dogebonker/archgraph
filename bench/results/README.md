@@ -1,5 +1,10 @@
 # First paired results: 2026-10-19
 
+The later [controlled boundary challenge](usefulness-2026-10-20-fixed-harness/README.md)
+tests dependency direction, facade access and cycles with full-package business checks.
+Its valid trial also showed no completion gain; all original and harness-failure runs
+are retained separately.
+
 All 24 predeclared runs are retained: one synthetic utility feature per repository,
 three repetitions per arm, Codex 0.163.0 with `gpt-6.1-sol`. Flask and tRPC are
 showcase repos; HTTPX and Pydantic substitute for the unavailable Perf tasks.

@@ -1,0 +1,18 @@
+# Deliberately authored synthetic benchmark policy, not upstream truth.
+version: 1
+modules:
+- {id: application, path: "src/shop/application/**"}
+- {id: adapters, path: "src/shop/adapters/**"}
+- {id: inventory, path: "src/shop/inventory/**"}
+- {id: orders, path: "src/shop/orders/**"}
+- {id: notifications, path: "src/shop/notifications/**"}
+- {id: shared, path: "src/shop/shared/**"}
+- {id: pricing, path: "src/shop/pricing.py"}
+- {id: composition, path: "src/shop/composition.py"}
+entrypoints:
+  "src/shop/inventory/**": "src/shop/inventory/api.py"
+forbid:
+- id: application-no-adapters
+  from: "src/shop/application/**"
+  to: "src/shop/adapters/**"
+  reason: Application receives adapter capabilities from composition.

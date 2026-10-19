@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="626" role="img" aria-label="Final new graph violations for every run">
+<rect width="100%" height="100%" fill="white"/>
+<text x="10" y="20" font-family="sans-serif">Final new graph violations (unknown shown as ?)</text>
+<text x="10" y="45" font-size="12" font-family="sans-serif">tax / bare / 1</text>
+<rect x="300" y="33" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="45" font-size="12">0</text>
+<text x="10" y="69" font-size="12" font-family="sans-serif">tax / guarded / 1</text>
+<rect x="300" y="57" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="69" font-size="12">0</text>
+<text x="10" y="93" font-size="12" font-family="sans-serif">tax / guarded / 2</text>
+<rect x="300" y="81" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="93" font-size="12">0</text>
+<text x="10" y="117" font-size="12" font-family="sans-serif">tax / bare / 2</text>
+<rect x="300" y="105" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="117" font-size="12">0</text>
+<text x="10" y="141" font-size="12" font-family="sans-serif">tax / bare / 3</text>
+<rect x="300" y="129" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="141" font-size="12">0</text>
+<text x="10" y="165" font-size="12" font-family="sans-serif">tax / guarded / 3</text>
+<rect x="300" y="153" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="165" font-size="12">0</text>
+<text x="10" y="189" font-size="12" font-family="sans-serif">inventory / bare / 1</text>
+<rect x="300" y="177" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="189" font-size="12">0</text>
+<text x="10" y="213" font-size="12" font-family="sans-serif">inventory / guarded / 1</text>
+<rect x="300" y="201" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="213" font-size="12">0</text>
+<text x="10" y="237" font-size="12" font-family="sans-serif">inventory / guarded / 2</text>
+<rect x="300" y="225" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="237" font-size="12">0</text>
+<text x="10" y="261" font-size="12" font-family="sans-serif">inventory / bare / 2</text>
+<rect x="300" y="249" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="261" font-size="12">0</text>
+<text x="10" y="285" font-size="12" font-family="sans-serif">inventory / bare / 3</text>
+<rect x="300" y="273" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="285" font-size="12">0</text>
+<text x="10" y="309" font-size="12" font-family="sans-serif">inventory / guarded / 3</text>
+<rect x="300" y="297" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="309" font-size="12">0</text>
+<text x="10" y="333" font-size="12" font-family="sans-serif">receipt / bare / 1</text>
+<rect x="300" y="321" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="333" font-size="12">0</text>
+<text x="10" y="357" font-size="12" font-family="sans-serif">receipt / guarded / 1</text>
+<rect x="300" y="345" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="357" font-size="12">0</text>
+<text x="10" y="381" font-size="12" font-family="sans-serif">receipt / guarded / 2</text>
+<rect x="300" y="369" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="381" font-size="12">0</text>
+<text x="10" y="405" font-size="12" font-family="sans-serif">receipt / bare / 2</text>
+<rect x="300" y="393" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="405" font-size="12">0</text>
+<text x="10" y="429" font-size="12" font-family="sans-serif">receipt / bare / 3</text>
+<rect x="300" y="417" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="429" font-size="12">0</text>
+<text x="10" y="453" font-size="12" font-family="sans-serif">receipt / guarded / 3</text>
+<rect x="300" y="441" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="453" font-size="12">0</text>
+<text x="10" y="477" font-size="12" font-family="sans-serif">discount / bare / 1</text>
+<rect x="300" y="465" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="477" font-size="12">0</text>
+<text x="10" y="501" font-size="12" font-family="sans-serif">discount / guarded / 1</text>
+<rect x="300" y="489" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="501" font-size="12">0</text>
+<text x="10" y="525" font-size="12" font-family="sans-serif">discount / guarded / 2</text>
+<rect x="300" y="513" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="525" font-size="12">0</text>
+<text x="10" y="549" font-size="12" font-family="sans-serif">discount / bare / 2</text>
+<rect x="300" y="537" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="549" font-size="12">0</text>
+<text x="10" y="573" font-size="12" font-family="sans-serif">discount / bare / 3</text>
+<rect x="300" y="561" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="573" font-size="12">0</text>
+<text x="10" y="597" font-size="12" font-family="sans-serif">discount / guarded / 3</text>
+<rect x="300" y="585" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="597" font-size="12">0</text>
+</svg>

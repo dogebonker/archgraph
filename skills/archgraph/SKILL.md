@@ -98,6 +98,8 @@ For a declared service inventory, `archgraph services services.yaml` reports HTT
 
 For agent efficacy claims, use the [paired benchmark harness](https://github.com/dogebonker/archgraph/tree/main/bench): matching models, three runs per arm, native hook activation evidence, and an independent feature oracle. Retain failures and zero-benefit results. A scripted block/repair demo proves the loop works; it does not establish that agents produce better changes. The public synthetic cases use isolated feature checks, not full upstream suites.
 
+The [controlled boundary challenge](https://github.com/dogebonker/archgraph/tree/main/bench/usefulness) tests adapter direction, facade access and cycles against full-package business checks, with a neutral control. Count every planned attempt in the denominator and require both working behavior and zero new violations. Report unknown activation and time/token cost; authored challenges cannot establish broad real-world usefulness.
+
 Related skills take the next step:
 
 - [archgraph-context](../archgraph-context/SKILL.md): before editing, prepares a token-budgeted reading plan from a saved scan, with constraints first and export summaries for large or distant files.

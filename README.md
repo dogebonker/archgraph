@@ -36,6 +36,8 @@ All 24 runs ended with zero new graph violations: **no architecture benefit demo
 
 \* The restriction was fixed after these runs; the [CLI regression passes](bench/results/pydantic-dirlink-fix-2026-10-19.json). No feature run was replaced.
 
+A later [controlled boundary challenge](bench/results/usefulness-2026-10-20-fixed-harness/README.md) also found no completion gain: both arms passed 12/12 attempts. Guarded boundary tasks took about 80% more agent time and 86% more tokens. Seeded violations were detected, but the agent introduced none in this small trial. The initial harness-failure pass is retained alongside the valid trial.
+
 <details>
 <summary>Comparison: documented capabilities, verified 2026-10-19</summary>
 
