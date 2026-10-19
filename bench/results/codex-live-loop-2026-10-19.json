@@ -1,0 +1,127 @@
+{
+  "schema": "archgraph/live-loop-smoke/v1",
+  "date": "2026-10-19",
+  "purpose": "One guarded native-host protocol smoke; not an efficacy comparison or latency benchmark.",
+  "model": "gpt-6.1-sol",
+  "codex_version": "codex-cli 0.163.0",
+  "codex_protocol_source_commit": "83086188ae0614bd882818ff1aa23f3194962012",
+  "fixture_commit": "8f203a22a92676217cea6f93b0b7f1642db6ce1b",
+  "archgraph_version": "archgraph 0.1.0",
+  "archgraph_binary_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+  "archgraph_build": "debug executable frozen before the session",
+  "fixture": {
+    "language": "TypeScript",
+    "scope": "src/**",
+    "source": "src/domain/value.ts",
+    "target": "src/adapters/adapter.ts",
+    "rule": "domain-no-adapters",
+    "reason": "Domain logic must not depend on adapter implementations."
+  },
+  "preflight_failure": {
+    "attempt": 1,
+    "reason": "Default Apps feature exposed codex_apps MCP server; rejected before feature turn.",
+    "feature_turns": 0,
+    "auth_cleanup": true,
+    "fix": "Start app-server with --disable apps in both benchmark arms; keep empty-MCP requirement."
+  },
+  "successful_attempt": {
+    "attempt": 2,
+    "feature_turns": 1,
+    "activation": "verified_active",
+    "hook_started": 7,
+    "hook_completed": 7,
+    "same_thread_turn_and_source": true,
+    "completed_events": [
+      {
+        "eventName": "preToolUse",
+        "status": "completed",
+        "snapshot": "316ffb4b13f8413c752c9dad9bfdb4fcbd6726937f9582cbbb8edaa98244cd14",
+        "verdict": null
+      },
+      {
+        "eventName": "postToolUse",
+        "status": "completed",
+        "snapshot": null,
+        "verdict": "PASS"
+      },
+      {
+        "eventName": "preToolUse",
+        "status": "completed",
+        "snapshot": "a0b5a9129926451918544979dd120d389566ce81d919e515de6d0b7967f2c685",
+        "verdict": null
+      },
+      {
+        "eventName": "postToolUse",
+        "status": "blocked",
+        "snapshot": null,
+        "verdict": "BLOCK"
+      },
+      {
+        "eventName": "preToolUse",
+        "status": "completed",
+        "snapshot": "a0b5a9129926451918544979dd120d389566ce81d919e515de6d0b7967f2c685",
+        "verdict": null
+      },
+      {
+        "eventName": "postToolUse",
+        "status": "completed",
+        "snapshot": null,
+        "verdict": "PASS"
+      },
+      {
+        "eventName": "stop",
+        "status": "completed",
+        "snapshot": null,
+        "verdict": null
+      }
+    ],
+    "forbidden_edit_snapshot": "a0b5a9129926451918544979dd120d389566ce81d919e515de6d0b7967f2c685",
+    "repair_snapshot": "a0b5a9129926451918544979dd120d389566ce81d919e515de6d0b7967f2c685",
+    "same_baseline_through_block_and_repair": true,
+    "blocks": 1,
+    "blocked_rule": "domain-no-adapters",
+    "recipe_received": true,
+    "recipe_step_kinds": [
+      "extract_interface"
+    ],
+    "recipes_auto_applied": 0,
+    "repair": "Agent removed the forbidden import and set domainValue = 2 using apply_patch.",
+    "post_repair_verdict": "PASS",
+    "stop_status": "completed",
+    "final_full_check": {
+      "new_forbidden": 0,
+      "new_cycles": 0,
+      "grown_cycles": 0
+    },
+    "final_source_assertion": "PASS",
+    "policy_unchanged": true,
+    "binary_unchanged": true,
+    "auth_cleanup_before_evaluation": true,
+    "effective_sandbox": "workspaceWrite",
+    "effective_approval_policy": "never",
+    "model_provider": "openai",
+    "mcp_servers": [],
+    "runner_wall_seconds": 24.745,
+    "token_usage": {
+      "totalTokens": 76189,
+      "inputTokens": 75714,
+      "cachedInputTokens": 68736,
+      "cacheWriteInputTokens": 0,
+      "outputTokens": 475,
+      "reasoningOutputTokens": 22
+    },
+    "cached_input_tokens_are_subset": true
+  },
+  "local_assertion_failure": {
+    "initial_exit": 1,
+    "reason": "The smoke launcher misquoted a newline in its separate Python content assertion.",
+    "model_repeated": false,
+    "corrected_assertion_exit": 0
+  },
+  "remaining_gaps": [
+    "Live Claude Code, Cursor and OpenCode sessions were not run.",
+    "No paired bare-versus-guarded efficacy result follows from this smoke.",
+    "The provided recipe required semantic work; no auto-apply receipt was produced."
+  ],
+  "privacy": "Raw prompts, RPC, account/auth data and absolute local paths are excluded; private originals remain with the operator."
+}

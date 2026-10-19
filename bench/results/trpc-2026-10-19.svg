@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="194" role="img" aria-label="Final new graph violations for every run">
+<rect width="100%" height="100%" fill="white"/>
+<text x="10" y="20" font-family="sans-serif">Final new graph violations (unknown shown as ?)</text>
+<text x="10" y="45" font-size="12" font-family="sans-serif">trpc-utility / bare / 1</text>
+<rect x="300" y="33" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="45" font-size="12">0</text>
+<text x="10" y="69" font-size="12" font-family="sans-serif">trpc-utility / guarded / 1</text>
+<rect x="300" y="57" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="69" font-size="12">0</text>
+<text x="10" y="93" font-size="12" font-family="sans-serif">trpc-utility / guarded / 2</text>
+<rect x="300" y="81" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="93" font-size="12">0</text>
+<text x="10" y="117" font-size="12" font-family="sans-serif">trpc-utility / bare / 2</text>
+<rect x="300" y="105" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="117" font-size="12">0</text>
+<text x="10" y="141" font-size="12" font-family="sans-serif">trpc-utility / bare / 3</text>
+<rect x="300" y="129" width="0.0" height="16" fill="#4979b7"/>
+<text x="310.0" y="141" font-size="12">0</text>
+<text x="10" y="165" font-size="12" font-family="sans-serif">trpc-utility / guarded / 3</text>
+<rect x="300" y="153" width="0.0" height="16" fill="#20906b"/>
+<text x="310.0" y="165" font-size="12">0</text>
+</svg>

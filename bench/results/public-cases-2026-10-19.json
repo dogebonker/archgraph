@@ -1,0 +1,68 @@
+{
+  "schema": "archgraph/public-benchmark-cases/v1",
+  "oracle_sha256": "843c49fcdeb3b8a34e17e92d445591b0cc4d997ea40073bc9c242e4794259eac",
+  "cases": [
+    {
+      "name": "flask",
+      "baseline_commit": "75526f46658521d279c2a493b14097898a6a6582",
+      "upstream": "https://github.com/pallets/flask",
+      "upstream_commit": "d086db856be187255b8ec61ef409357393020f32",
+      "role": "showcase",
+      "policy": "benchmark-authored; not upstream intent",
+      "layout_sha256": "bfe4204dd29e3e2ac62026ce0e3187661cfd4f9a7670890afb2a6b2226159808",
+      "oracle": "isolated feature check; not upstream test suite"
+    },
+    {
+      "name": "httpx",
+      "baseline_commit": "c8b9965eaca60a175c38c89634be7e30bc792b6c",
+      "upstream": "https://github.com/encode/httpx",
+      "upstream_commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
+      "role": "public substitute; Perf tasks unavailable",
+      "policy": "benchmark-authored; not upstream intent",
+      "layout_sha256": "c45256eb9bd68771173032e9acf910ec42049894045f5fd129c98f32fe555045",
+      "oracle": "isolated feature check; not upstream test suite"
+    },
+    {
+      "name": "pydantic",
+      "baseline_commit": "e6b41881927425ef7eeaf1e43624f3f760e14a7a",
+      "upstream": "https://github.com/pydantic/pydantic",
+      "upstream_commit": "5adfeaaaea947f81f0f01868604f219084ec151a",
+      "role": "public substitute; Perf tasks unavailable",
+      "policy": "benchmark-authored; not upstream intent",
+      "layout_sha256": "3dade9eeeeaa7c1d44fa1b3c14c5de4aac34fe0efab902fbc2cf6673fe96d861",
+      "oracle": "isolated feature check; not upstream test suite"
+    },
+    {
+      "name": "trpc",
+      "baseline_commit": "44cbb4e7e6ed6deb68efd336dcb149e750430598",
+      "upstream": "https://github.com/trpc/trpc",
+      "upstream_commit": "10e2ef98f7842b94eb3026e4f9bcfe62cc39b088",
+      "role": "showcase",
+      "policy": "benchmark-authored; not upstream intent",
+      "layout_sha256": "20eacb77ac1ff5e52c6d1697266c7dc962893a440df9c8c14bd4a22638083078",
+      "oracle": "isolated feature check; not upstream test suite"
+    }
+  ],
+  "oracle_checks": [
+    {
+      "name": "flask",
+      "baseline_exit": 1,
+      "solution_exit": 0
+    },
+    {
+      "name": "httpx",
+      "baseline_exit": 1,
+      "solution_exit": 0
+    },
+    {
+      "name": "pydantic",
+      "baseline_exit": 1,
+      "solution_exit": 0
+    },
+    {
+      "name": "trpc",
+      "baseline_exit": 1,
+      "solution_exit": 0
+    }
+  ]
+}

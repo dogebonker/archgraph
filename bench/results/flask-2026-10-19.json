@@ -1,0 +1,2294 @@
+{
+  "schema": "archgraph/paired-benchmark/v1",
+  "repo_name": "flask",
+  "commit": "75526f46658521d279c2a493b14097898a6a6582",
+  "created": "2026-10-19T19:27:36.641354+00:00",
+  "repeats": 3,
+  "binary_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+  "runner": {
+    "agent": "codex",
+    "adapter": "codex-app-server",
+    "model": "gpt-6.1-sol",
+    "trust_reviewed_archgraph": true,
+    "codex": "/Users/dan/.local/bin/codex"
+  },
+  "runner_env_keys": [],
+  "tasks": [
+    {
+      "id": "flask-utility",
+      "prompt": "Extend get_load_dotenv so FLASK_SKIP_DOTENV is stripped of surrounding whitespace before interpretation. Whitespace-only values use the default argument, like an unset value. Preserve case-insensitive 0/false/no behavior and all other existing behavior. Expected implementation area: src/flask/helpers.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py flask",
+      "area": [
+        "src/flask/helpers.py"
+      ],
+      "tests": [
+        "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+        "-B",
+        "/Users/dan/Work/archgraph/bench/cases/check.py",
+        "flask"
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "task": "flask-utility",
+      "arm": "bare",
+      "repeat": 1,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/flask/helpers.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend get_load_dotenv so FLASK_SKIP_DOTENV is stripped of surrounding whitespace before interpretation. Whitespace-only values use the default argument, like an unset value. Preserve case-insensitive 0/false/no behavior and all other existing behavior. Expected implementation area: src/flask/helpers.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py flask",
+            "--mode",
+            "bare",
+            "--run-id",
+            "b05caa097759419eb632fac38259451c",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/068015088ed8423c8d2a15ac815c7b5d",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"b05caa097759419eb632fac38259451c\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-tlg8ul6u/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a155a2-3831-71b0-a26a-6fd49c09242d\", \"turn_id\": \"01a155a2-39ff-7b20-8eec-b42d88e8c85f\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-tlg8ul6u/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 59718, \"inputTokens\": 59308, \"cachedInputTokens\": 53376, \"cacheWriteInputTokens\": 0, \"outputTokens\": 410, \"reasoningOutputTokens\": 0}}\n",
+          "stderr": "",
+          "seconds": 15.511310082976706
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"75526f46658521d279c2a493b14097898a6a6582\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"75526f46658521d279c2a493b14097898a6a6582\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 0.5801768749952316
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "flask"
+          ],
+          "code": 0,
+          "stdout": "flask: isolated feature oracle passed (not the upstream suite)\n",
+          "stderr": "",
+          "seconds": 0.029614083003252745
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "bfe4204dd29e3e2ac62026ce0e3187661cfd4f9a7670890afb2a6b2226159808"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 15.511310082976706,
+      "tokens": {
+        "total": 59718,
+        "raw": {
+          "totalTokens": 59718,
+          "inputTokens": 59308,
+          "cachedInputTokens": 53376,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 410,
+          "reasoningOutputTokens": 0
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "b05caa097759419eb632fac38259451c",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-tlg8ul6u/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a155a2-3831-71b0-a26a-6fd49c09242d",
+        "turn_id": "01a155a2-39ff-7b20-8eec-b42d88e8c85f",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-tlg8ul6u/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 59718,
+          "inputTokens": 59308,
+          "cachedInputTokens": 53376,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 410,
+          "reasoningOutputTokens": 0
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "75526f46658521d279c2a493b14097898a6a6582",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/flask/helpers.py"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "binary_files": 0,
+        "changed_lines": 2
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "flask-utility",
+      "arm": "guarded",
+      "repeat": 1,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/flask/helpers.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "hook",
+            "install",
+            "--root",
+            "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo",
+            "--agent",
+            "codex"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"agent\": \"codex\",\n  \"written\": [\n    \".codex/hooks.json\"\n  ],\n  \"unchanged\": [],\n  \"capabilities\": {\n    \"pre_tool_deny\": true,\n    \"pre_edit_context\": true,\n    \"completion_gate\": true,\n    \"post_edit_rollback\": false,\n    \"feedback_only\": false\n  },\n  \"notice\": \"Review and trust project-local hooks in Codex before they execute; no trust settings were changed.\",\n  \"configuration\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.archgraph/hooks/configs/codex.json\"\n}\n",
+          "stderr": "",
+          "seconds": 0.022673415951430798
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "sync-rules"
+          ],
+          "code": 0,
+          "stdout": "Wrote owned block in CLAUDE.md\nWrote owned block in AGENTS.md\nWrote owned block in .cursorrules\nWrote owned block in .github/copilot-instructions.md\n",
+          "stderr": "",
+          "seconds": 0.032011750037781894
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend get_load_dotenv so FLASK_SKIP_DOTENV is stripped of surrounding whitespace before interpretation. Whitespace-only values use the default argument, like an unset value. Preserve case-insensitive 0/false/no behavior and all other existing behavior. Expected implementation area: src/flask/helpers.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py flask",
+            "--mode",
+            "guarded",
+            "--run-id",
+            "393abacd70cb4c8988b04b82ea9ff3bc",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/38220395638446688c67b09f2ac44d22",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"393abacd70cb4c8988b04b82ea9ff3bc\", \"mode\": \"guarded\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"79b1efd6e8e94766ec27464b8472235bf54a8fe33076ca665a225aade247123d\", \"inventory_sha256\": \"ff14291fa330bfe7d6599a1d1a5b5d797b15b724c195f0c5912d6b0e140f9d1e\", \"inventory\": [{\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:post_tool_use:0:0\", \"eventName\": \"postToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo' # archgraph:managed:post\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 1, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:bf34b945bf3c7253c603168d4f705908affc1ec17d8987af7231622020e1cbf4\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:pre_tool_use:0:0\", \"eventName\": \"preToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo' # archgraph:managed:pre\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 0, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:275cef734600f590e009577c64a83744274cf15c3e6acaa307b2266cce79d29b\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:stop:0:0\", \"eventName\": \"stop\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo' # archgraph:managed:stop\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 2, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:2cb38095fc31e562803d1cadb337a78b19e27783cdd1ecef9939e1b5e230eb96\", \"trustStatus\": \"trusted\"}], \"thread_id\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turn_id\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_active\", \"hook_events\": [{\"method\": \"hook/started\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-9be2c449-baa2-46f6-8bb4-092736ad76a9\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-9be2c449-baa2-46f6-8bb4-092736ad76a9\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"58a30076e762e88ae3de28876149defe74a36810b1e6237da73e41cf3701eb8f\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-9be2c449-baa2-46f6-8bb4-092736ad76a9\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-9be2c449-baa2-46f6-8bb4-092736ad76a9\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c5042b3b-b58f-4255-95fd-7d6fe11620c1\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c5042b3b-b58f-4255-95fd-7d6fe11620c1\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"da50120614a20521c7a517175dd11a0e55229b0d565fdd769c6e0561bedd7ed6\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c5042b3b-b58f-4255-95fd-7d6fe11620c1\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c5042b3b-b58f-4255-95fd-7d6fe11620c1\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c9dbe666-01da-4611-9964-e79cd25c4fea\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c9dbe666-01da-4611-9964-e79cd25c4fea\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"7df4f4a94b2c157ec596a8aea4df05456540cf5013c788f2b27dfac28802641f\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c9dbe666-01da-4611-9964-e79cd25c4fea\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c9dbe666-01da-4611-9964-e79cd25c4fea\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-5d7cbd69-7c90-44a4-9d5f-048d237f8ea5\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-5d7cbd69-7c90-44a4-9d5f-048d237f8ea5\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"a37591d0a2d3d42915402b1f69ecc3f552e1e5e7b65e3006854d9c1917923bf8\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-5d7cbd69-7c90-44a4-9d5f-048d237f8ea5\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-5d7cbd69-7c90-44a4-9d5f-048d237f8ea5\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-783f-7ae1-9330-7f7162c25c33\", \"turnId\": \"01a155a2-7a2d-7831-829c-69b1e3b3ec90\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": null}], \"usage\": {\"totalTokens\": 62029, \"inputTokens\": 61514, \"cachedInputTokens\": 53504, \"cacheWriteInputTokens\": 0, \"outputTokens\": 515, \"reasoningOutputTokens\": 11}}\n",
+          "stderr": "",
+          "seconds": 19.867182500078343
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"75526f46658521d279c2a493b14097898a6a6582\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"75526f46658521d279c2a493b14097898a6a6582\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 0.5617748330114409
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "flask"
+          ],
+          "code": 0,
+          "stdout": "flask: isolated feature oracle passed (not the upstream suite)\n",
+          "stderr": "",
+          "seconds": 0.028639000025577843
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_active",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "bfe4204dd29e3e2ac62026ce0e3187661cfd4f9a7670890afb2a6b2226159808"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 19.867182500078343,
+      "tokens": {
+        "total": 62029,
+        "raw": {
+          "totalTokens": 62029,
+          "inputTokens": 61514,
+          "cachedInputTokens": 53504,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 515,
+          "reasoningOutputTokens": 11
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "393abacd70cb4c8988b04b82ea9ff3bc",
+        "mode": "guarded",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "79b1efd6e8e94766ec27464b8472235bf54a8fe33076ca665a225aade247123d",
+        "inventory_sha256": "ff14291fa330bfe7d6599a1d1a5b5d797b15b724c195f0c5912d6b0e140f9d1e",
+        "inventory": [
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:post_tool_use:0:0",
+            "eventName": "postToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo' # archgraph:managed:post",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 1,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:bf34b945bf3c7253c603168d4f705908affc1ec17d8987af7231622020e1cbf4",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:pre_tool_use:0:0",
+            "eventName": "preToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo' # archgraph:managed:pre",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 0,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:275cef734600f590e009577c64a83744274cf15c3e6acaa307b2266cce79d29b",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:stop:0:0",
+            "eventName": "stop",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo' # archgraph:managed:stop",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 2,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:2cb38095fc31e562803d1cadb337a78b19e27783cdd1ecef9939e1b5e230eb96",
+            "trustStatus": "trusted"
+          }
+        ],
+        "thread_id": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+        "turn_id": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_active",
+        "hook_events": [
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-9be2c449-baa2-46f6-8bb4-092736ad76a9",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-9be2c449-baa2-46f6-8bb4-092736ad76a9",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "58a30076e762e88ae3de28876149defe74a36810b1e6237da73e41cf3701eb8f",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-9be2c449-baa2-46f6-8bb4-092736ad76a9",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-9be2c449-baa2-46f6-8bb4-092736ad76a9",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c5042b3b-b58f-4255-95fd-7d6fe11620c1",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c5042b3b-b58f-4255-95fd-7d6fe11620c1",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "da50120614a20521c7a517175dd11a0e55229b0d565fdd769c6e0561bedd7ed6",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c5042b3b-b58f-4255-95fd-7d6fe11620c1",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c5042b3b-b58f-4255-95fd-7d6fe11620c1",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c9dbe666-01da-4611-9964-e79cd25c4fea",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c9dbe666-01da-4611-9964-e79cd25c4fea",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "7df4f4a94b2c157ec596a8aea4df05456540cf5013c788f2b27dfac28802641f",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c9dbe666-01da-4611-9964-e79cd25c4fea",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-c9dbe666-01da-4611-9964-e79cd25c4fea",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-5d7cbd69-7c90-44a4-9d5f-048d237f8ea5",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-5d7cbd69-7c90-44a4-9d5f-048d237f8ea5",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "a37591d0a2d3d42915402b1f69ecc3f552e1e5e7b65e3006854d9c1917923bf8",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-5d7cbd69-7c90-44a4-9d5f-048d237f8ea5",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json:exec-5d7cbd69-7c90-44a4-9d5f-048d237f8ea5",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-783f-7ae1-9330-7f7162c25c33",
+            "turnId": "01a155a2-7a2d-7831-829c-69b1e3b3ec90",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-jp2mhk44/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": null
+          }
+        ],
+        "usage": {
+          "totalTokens": 62029,
+          "inputTokens": 61514,
+          "cachedInputTokens": 53504,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 515,
+          "reasoningOutputTokens": 11
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "75526f46658521d279c2a493b14097898a6a6582",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/flask/helpers.py"
+        ],
+        "additions": 2,
+        "deletions": 2,
+        "binary_files": 0,
+        "changed_lines": 4
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "flask-utility",
+      "arm": "guarded",
+      "repeat": 2,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/flask/helpers.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "hook",
+            "install",
+            "--root",
+            "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo",
+            "--agent",
+            "codex"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"agent\": \"codex\",\n  \"written\": [\n    \".codex/hooks.json\"\n  ],\n  \"unchanged\": [],\n  \"capabilities\": {\n    \"pre_tool_deny\": true,\n    \"pre_edit_context\": true,\n    \"completion_gate\": true,\n    \"post_edit_rollback\": false,\n    \"feedback_only\": false\n  },\n  \"notice\": \"Review and trust project-local hooks in Codex before they execute; no trust settings were changed.\",\n  \"configuration\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.archgraph/hooks/configs/codex.json\"\n}\n",
+          "stderr": "",
+          "seconds": 0.02107612497638911
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "sync-rules"
+          ],
+          "code": 0,
+          "stdout": "Wrote owned block in CLAUDE.md\nWrote owned block in AGENTS.md\nWrote owned block in .cursorrules\nWrote owned block in .github/copilot-instructions.md\n",
+          "stderr": "",
+          "seconds": 0.028997874935157597
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend get_load_dotenv so FLASK_SKIP_DOTENV is stripped of surrounding whitespace before interpretation. Whitespace-only values use the default argument, like an unset value. Preserve case-insensitive 0/false/no behavior and all other existing behavior. Expected implementation area: src/flask/helpers.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py flask",
+            "--mode",
+            "guarded",
+            "--run-id",
+            "ac61b11ccdb448d4b6a0287b76e44288",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/fc9915cf6d88478cb4601cebc0bca900",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"ac61b11ccdb448d4b6a0287b76e44288\", \"mode\": \"guarded\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"4e4d2df3f4ba3a18729da07e1754faeed942bc2d835fde1a5f634a4be6b43a10\", \"inventory_sha256\": \"aac72f656482a1293c1efcce0470bb275533ddf00167db01ee312e8b6b081971\", \"inventory\": [{\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:post_tool_use:0:0\", \"eventName\": \"postToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo' # archgraph:managed:post\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 1, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:afbf71522c602336a8dbd6cd5bf9ee7e0473d2928761105b2e0fb82d9be03ab3\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:pre_tool_use:0:0\", \"eventName\": \"preToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo' # archgraph:managed:pre\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 0, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:36569fe26e852ceffb0f923e946bba09c4c08397bedc03524ea75c37388b3725\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:stop:0:0\", \"eventName\": \"stop\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo' # archgraph:managed:stop\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 2, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:d4c4255c0136f681a91cd02d9d0cd0a5f1e4ed7b976606419be6768d1ee992bc\", \"trustStatus\": \"trusted\"}], \"thread_id\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turn_id\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_active\", \"hook_events\": [{\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-f5ce758b-28d8-4595-bdb8-53cab195f200\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-f5ce758b-28d8-4595-bdb8-53cab195f200\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"b3ee6fa4f7f6a023f42af31cebe01fe2a57836f124be82cf46e2551a38a03dd0\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-f5ce758b-28d8-4595-bdb8-53cab195f200\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-f5ce758b-28d8-4595-bdb8-53cab195f200\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-43a290e3-f67c-4f38-94d3-5101aeec480c\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-43a290e3-f67c-4f38-94d3-5101aeec480c\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"b68ffc5b45aacd3da70ad661523a4f7d9013fdaf5dec4212169933e90dcacad2\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-43a290e3-f67c-4f38-94d3-5101aeec480c\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-43a290e3-f67c-4f38-94d3-5101aeec480c\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-6615947a-849e-40bf-b330-7ca13b707f2a\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-6615947a-849e-40bf-b330-7ca13b707f2a\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"6e0d808bdc995943ffbdbf86d275bc92a763e0cde7e67d3b2f7c4a4d7e795062\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-6615947a-849e-40bf-b330-7ca13b707f2a\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-6615947a-849e-40bf-b330-7ca13b707f2a\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-7e21413b-8a5d-458b-b088-cec80085da66\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-7e21413b-8a5d-458b-b088-cec80085da66\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"74683244b62129fd120fe3fbf8046249432b718978af319d8b9fed35c00fdd28\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-7e21413b-8a5d-458b-b088-cec80085da66\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-7e21413b-8a5d-458b-b088-cec80085da66\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-9b79d421-0bc9-4088-982a-41702b4f0202\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-9b79d421-0bc9-4088-982a-41702b4f0202\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"57ee7b5d5c9d766bbec5022322c30a0c18d0bb39ed1e9575cf4836c90fb86ba5\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-9b79d421-0bc9-4088-982a-41702b4f0202\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-9b79d421-0bc9-4088-982a-41702b4f0202\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-c781206c-ebe0-4517-b22d-b28e3687a1f5\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-c781206c-ebe0-4517-b22d-b28e3687a1f5\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"618d8ff989cbb6be3987dc0e35c57feadfa6e1709b2f46ea1b1a8ad694441893\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-c781206c-ebe0-4517-b22d-b28e3687a1f5\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-c781206c-ebe0-4517-b22d-b28e3687a1f5\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-89ef244a-b174-4f2b-a064-e3d524f89a28\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-89ef244a-b174-4f2b-a064-e3d524f89a28\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"7af36506774838606e11196108bce230e1049b462bb5cb649adbd1064a24ca4c\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-89ef244a-b174-4f2b-a064-e3d524f89a28\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-89ef244a-b174-4f2b-a064-e3d524f89a28\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-b5135249-eebe-4c92-973d-8b51fe44da75\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-b5135249-eebe-4c92-973d-8b51fe44da75\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"fbeb367e4609943d7af0245eb0de77f3df6a569696f31170afabb545ee319b8c\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-b5135249-eebe-4c92-973d-8b51fe44da75\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-b5135249-eebe-4c92-973d-8b51fe44da75\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a2-c94e-70e2-9fa6-2b1613461ebb\", \"turnId\": \"01a155a2-cb24-7dc1-a54b-6c6a7ab39c46\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": null}], \"usage\": {\"totalTokens\": 136821, \"inputTokens\": 136094, \"cachedInputTokens\": 122496, \"cacheWriteInputTokens\": 0, \"outputTokens\": 727, \"reasoningOutputTokens\": 24}}\n",
+          "stderr": "",
+          "seconds": 34.21519024996087
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"75526f46658521d279c2a493b14097898a6a6582\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"75526f46658521d279c2a493b14097898a6a6582\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 0.5486194581026211
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "flask"
+          ],
+          "code": 0,
+          "stdout": "flask: isolated feature oracle passed (not the upstream suite)\n",
+          "stderr": "",
+          "seconds": 0.028046665946021676
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_active",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "bfe4204dd29e3e2ac62026ce0e3187661cfd4f9a7670890afb2a6b2226159808"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 34.21519024996087,
+      "tokens": {
+        "total": 136821,
+        "raw": {
+          "totalTokens": 136821,
+          "inputTokens": 136094,
+          "cachedInputTokens": 122496,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 727,
+          "reasoningOutputTokens": 24
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "ac61b11ccdb448d4b6a0287b76e44288",
+        "mode": "guarded",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "4e4d2df3f4ba3a18729da07e1754faeed942bc2d835fde1a5f634a4be6b43a10",
+        "inventory_sha256": "aac72f656482a1293c1efcce0470bb275533ddf00167db01ee312e8b6b081971",
+        "inventory": [
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:post_tool_use:0:0",
+            "eventName": "postToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo' # archgraph:managed:post",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 1,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:afbf71522c602336a8dbd6cd5bf9ee7e0473d2928761105b2e0fb82d9be03ab3",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:pre_tool_use:0:0",
+            "eventName": "preToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo' # archgraph:managed:pre",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 0,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:36569fe26e852ceffb0f923e946bba09c4c08397bedc03524ea75c37388b3725",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:stop:0:0",
+            "eventName": "stop",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo' # archgraph:managed:stop",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 2,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:d4c4255c0136f681a91cd02d9d0cd0a5f1e4ed7b976606419be6768d1ee992bc",
+            "trustStatus": "trusted"
+          }
+        ],
+        "thread_id": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+        "turn_id": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_active",
+        "hook_events": [
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-f5ce758b-28d8-4595-bdb8-53cab195f200",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-f5ce758b-28d8-4595-bdb8-53cab195f200",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "b3ee6fa4f7f6a023f42af31cebe01fe2a57836f124be82cf46e2551a38a03dd0",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-f5ce758b-28d8-4595-bdb8-53cab195f200",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-f5ce758b-28d8-4595-bdb8-53cab195f200",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-43a290e3-f67c-4f38-94d3-5101aeec480c",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-43a290e3-f67c-4f38-94d3-5101aeec480c",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "b68ffc5b45aacd3da70ad661523a4f7d9013fdaf5dec4212169933e90dcacad2",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-43a290e3-f67c-4f38-94d3-5101aeec480c",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-43a290e3-f67c-4f38-94d3-5101aeec480c",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-6615947a-849e-40bf-b330-7ca13b707f2a",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-6615947a-849e-40bf-b330-7ca13b707f2a",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "6e0d808bdc995943ffbdbf86d275bc92a763e0cde7e67d3b2f7c4a4d7e795062",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-6615947a-849e-40bf-b330-7ca13b707f2a",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-6615947a-849e-40bf-b330-7ca13b707f2a",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-7e21413b-8a5d-458b-b088-cec80085da66",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-7e21413b-8a5d-458b-b088-cec80085da66",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "74683244b62129fd120fe3fbf8046249432b718978af319d8b9fed35c00fdd28",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-7e21413b-8a5d-458b-b088-cec80085da66",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-7e21413b-8a5d-458b-b088-cec80085da66",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-9b79d421-0bc9-4088-982a-41702b4f0202",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-9b79d421-0bc9-4088-982a-41702b4f0202",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "57ee7b5d5c9d766bbec5022322c30a0c18d0bb39ed1e9575cf4836c90fb86ba5",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-9b79d421-0bc9-4088-982a-41702b4f0202",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-9b79d421-0bc9-4088-982a-41702b4f0202",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-c781206c-ebe0-4517-b22d-b28e3687a1f5",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-c781206c-ebe0-4517-b22d-b28e3687a1f5",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "618d8ff989cbb6be3987dc0e35c57feadfa6e1709b2f46ea1b1a8ad694441893",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-c781206c-ebe0-4517-b22d-b28e3687a1f5",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-c781206c-ebe0-4517-b22d-b28e3687a1f5",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-89ef244a-b174-4f2b-a064-e3d524f89a28",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-89ef244a-b174-4f2b-a064-e3d524f89a28",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "7af36506774838606e11196108bce230e1049b462bb5cb649adbd1064a24ca4c",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-89ef244a-b174-4f2b-a064-e3d524f89a28",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-89ef244a-b174-4f2b-a064-e3d524f89a28",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-b5135249-eebe-4c92-973d-8b51fe44da75",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-b5135249-eebe-4c92-973d-8b51fe44da75",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "fbeb367e4609943d7af0245eb0de77f3df6a569696f31170afabb545ee319b8c",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-b5135249-eebe-4c92-973d-8b51fe44da75",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json:exec-b5135249-eebe-4c92-973d-8b51fe44da75",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a2-c94e-70e2-9fa6-2b1613461ebb",
+            "turnId": "01a155a2-cb24-7dc1-a54b-6c6a7ab39c46",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-nmvpgctj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": null
+          }
+        ],
+        "usage": {
+          "totalTokens": 136821,
+          "inputTokens": 136094,
+          "cachedInputTokens": 122496,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 727,
+          "reasoningOutputTokens": 24
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "75526f46658521d279c2a493b14097898a6a6582",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          ".cursorrules",
+          ".github/copilot-instructions.md",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "src/flask/helpers.py"
+        ],
+        "additions": 9,
+        "deletions": 9,
+        "binary_files": 0,
+        "changed_lines": 18
+      },
+      "outside_expected_area": [
+        ".cursorrules",
+        ".github/copilot-instructions.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "flask-utility",
+      "arm": "bare",
+      "repeat": 2,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/flask/helpers.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend get_load_dotenv so FLASK_SKIP_DOTENV is stripped of surrounding whitespace before interpretation. Whitespace-only values use the default argument, like an unset value. Preserve case-insensitive 0/false/no behavior and all other existing behavior. Expected implementation area: src/flask/helpers.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py flask",
+            "--mode",
+            "bare",
+            "--run-id",
+            "4d8d551fecad43048c09e0ae065d4ab6",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/6f06ef7ef2f444e7a23d3f803b49cfc1",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"4d8d551fecad43048c09e0ae065d4ab6\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-28w0e2m9/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a155a3-5216-70a3-b92a-9cded8c49fbb\", \"turn_id\": \"01a155a3-5471-7fc2-bd63-f0a6b4e25cfe\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-28w0e2m9/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 59757, \"inputTokens\": 59342, \"cachedInputTokens\": 53376, \"cacheWriteInputTokens\": 0, \"outputTokens\": 415, \"reasoningOutputTokens\": 0}}\n",
+          "stderr": "",
+          "seconds": 13.337054832954891
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"75526f46658521d279c2a493b14097898a6a6582\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"75526f46658521d279c2a493b14097898a6a6582\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 0.5840150419389829
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "flask"
+          ],
+          "code": 0,
+          "stdout": "flask: isolated feature oracle passed (not the upstream suite)\n",
+          "stderr": "",
+          "seconds": 0.031615749932825565
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "bfe4204dd29e3e2ac62026ce0e3187661cfd4f9a7670890afb2a6b2226159808"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 13.337054832954891,
+      "tokens": {
+        "total": 59757,
+        "raw": {
+          "totalTokens": 59757,
+          "inputTokens": 59342,
+          "cachedInputTokens": 53376,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 415,
+          "reasoningOutputTokens": 0
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "4d8d551fecad43048c09e0ae065d4ab6",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-28w0e2m9/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a155a3-5216-70a3-b92a-9cded8c49fbb",
+        "turn_id": "01a155a3-5471-7fc2-bd63-f0a6b4e25cfe",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-28w0e2m9/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 59757,
+          "inputTokens": 59342,
+          "cachedInputTokens": 53376,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 415,
+          "reasoningOutputTokens": 0
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "75526f46658521d279c2a493b14097898a6a6582",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/flask/helpers.py"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "binary_files": 0,
+        "changed_lines": 2
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "flask-utility",
+      "arm": "bare",
+      "repeat": 3,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/flask/helpers.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend get_load_dotenv so FLASK_SKIP_DOTENV is stripped of surrounding whitespace before interpretation. Whitespace-only values use the default argument, like an unset value. Preserve case-insensitive 0/false/no behavior and all other existing behavior. Expected implementation area: src/flask/helpers.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py flask",
+            "--mode",
+            "bare",
+            "--run-id",
+            "b14d4a1f0a134c0bb232f08029e1bb85",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/099dfba96a0d4b8db0deab8e10b1fc4d",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"b14d4a1f0a134c0bb232f08029e1bb85\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-6_sn8j89/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a155a3-89a2-78e2-b79f-a428db569c12\", \"turn_id\": \"01a155a3-8c49-7a90-8ddb-341f0d3f59c1\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-6_sn8j89/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 76369, \"inputTokens\": 75811, \"cachedInputTokens\": 71424, \"cacheWriteInputTokens\": 0, \"outputTokens\": 558, \"reasoningOutputTokens\": 0}}\n",
+          "stderr": "",
+          "seconds": 16.696885042008944
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"75526f46658521d279c2a493b14097898a6a6582\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"75526f46658521d279c2a493b14097898a6a6582\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 0.577085749944672
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "flask"
+          ],
+          "code": 0,
+          "stdout": "flask: isolated feature oracle passed (not the upstream suite)\n",
+          "stderr": "",
+          "seconds": 0.030190750025212765
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "bfe4204dd29e3e2ac62026ce0e3187661cfd4f9a7670890afb2a6b2226159808"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 16.696885042008944,
+      "tokens": {
+        "total": 76369,
+        "raw": {
+          "totalTokens": 76369,
+          "inputTokens": 75811,
+          "cachedInputTokens": 71424,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 558,
+          "reasoningOutputTokens": 0
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "b14d4a1f0a134c0bb232f08029e1bb85",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-6_sn8j89/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a155a3-89a2-78e2-b79f-a428db569c12",
+        "turn_id": "01a155a3-8c49-7a90-8ddb-341f0d3f59c1",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-6_sn8j89/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 76369,
+          "inputTokens": 75811,
+          "cachedInputTokens": 71424,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 558,
+          "reasoningOutputTokens": 0
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "75526f46658521d279c2a493b14097898a6a6582",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/flask/helpers.py"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "binary_files": 0,
+        "changed_lines": 2
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "flask-utility",
+      "arm": "guarded",
+      "repeat": 3,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "src/flask/helpers.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "hook",
+            "install",
+            "--root",
+            "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo",
+            "--agent",
+            "codex"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"agent\": \"codex\",\n  \"written\": [\n    \".codex/hooks.json\"\n  ],\n  \"unchanged\": [],\n  \"capabilities\": {\n    \"pre_tool_deny\": true,\n    \"pre_edit_context\": true,\n    \"completion_gate\": true,\n    \"post_edit_rollback\": false,\n    \"feedback_only\": false\n  },\n  \"notice\": \"Review and trust project-local hooks in Codex before they execute; no trust settings were changed.\",\n  \"configuration\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.archgraph/hooks/configs/codex.json\"\n}\n",
+          "stderr": "",
+          "seconds": 0.020509542082436383
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "sync-rules"
+          ],
+          "code": 0,
+          "stdout": "Wrote owned block in CLAUDE.md\nWrote owned block in AGENTS.md\nWrote owned block in .cursorrules\nWrote owned block in .github/copilot-instructions.md\n",
+          "stderr": "",
+          "seconds": 0.027914167032577097
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend get_load_dotenv so FLASK_SKIP_DOTENV is stripped of surrounding whitespace before interpretation. Whitespace-only values use the default argument, like an unset value. Preserve case-insensitive 0/false/no behavior and all other existing behavior. Expected implementation area: src/flask/helpers.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py flask",
+            "--mode",
+            "guarded",
+            "--run-id",
+            "dd4bec9b61b44a79862a8b1cfbd4c69f",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/a9e5474e1a5b47de8ef2dfe2d961308b",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"dd4bec9b61b44a79862a8b1cfbd4c69f\", \"mode\": \"guarded\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"9b40baac4cc3d2e4acd8dfb77dab2f103583a6f671683b8708c45117c18e522b\", \"inventory_sha256\": \"cbd3a7d60b3570a65008dcde92bc8fe274a781ea3fbbe6dbec2309a6075c24c0\", \"inventory\": [{\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:post_tool_use:0:0\", \"eventName\": \"postToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo' # archgraph:managed:post\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 1, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:741e5e9f627ab0cfe6fd67b7780b4c68cfd87218f0bdf4ff02e87fce3ed7d0f8\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:pre_tool_use:0:0\", \"eventName\": \"preToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo' # archgraph:managed:pre\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 0, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:5222c52c5e5a205807152c179b335f2309644b8e288c46fde0be373871083998\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:stop:0:0\", \"eventName\": \"stop\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo' # archgraph:managed:stop\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 2, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:fa8298e2b6076ccb43dd9a9e7abb698021705b94d5ae859861f15ee69b98ee89\", \"trustStatus\": \"trusted\"}], \"thread_id\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turn_id\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_active\", \"hook_events\": [{\"method\": \"hook/started\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-f3a11973-0c22-4744-a09a-c8b11ad97625\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-f3a11973-0c22-4744-a09a-c8b11ad97625\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"da9567c040d2ed671d67c458ae0e8a3ef0cd9801ca0394f6725afc737226bbf9\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-f3a11973-0c22-4744-a09a-c8b11ad97625\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-f3a11973-0c22-4744-a09a-c8b11ad97625\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-7eb88164-36c9-43d0-b5f8-bceda48a68f7\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-7eb88164-36c9-43d0-b5f8-bceda48a68f7\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"5b250ad6d751b270179747956ca0f1b5628a7ced2417be78ffe4f1d90f3cff0a\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-7eb88164-36c9-43d0-b5f8-bceda48a68f7\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-7eb88164-36c9-43d0-b5f8-bceda48a68f7\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-99437a8f-8d60-4082-a452-686d626129d7\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-99437a8f-8d60-4082-a452-686d626129d7\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"a11a901fa03007f2b52fdfc9dacc6f2890e5e09b6e8835b84d41e622fa3ad7a4\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-99437a8f-8d60-4082-a452-686d626129d7\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-99437a8f-8d60-4082-a452-686d626129d7\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-d0aabea1-5091-4a14-8d48-11ea61ff3c23\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-d0aabea1-5091-4a14-8d48-11ea61ff3c23\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"0b243ea18a1276ed66b7c925420048bebed75565dc1b70cd2c66de5e1830c12f\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-d0aabea1-5091-4a14-8d48-11ea61ff3c23\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-d0aabea1-5091-4a14-8d48-11ea61ff3c23\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-c1c68fd6-a732-4ca4-9640-a9309f0df3a8\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-c1c68fd6-a732-4ca4-9640-a9309f0df3a8\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": \"2b9c82507257e415be3a284ac29d8b0a8529837eac78950ac6ca9db566cc39b5\", \"verdict\": null}, {\"method\": \"hook/started\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-c1c68fd6-a732-4ca4-9640-a9309f0df3a8\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-c1c68fd6-a732-4ca4-9640-a9309f0df3a8\", \"eventName\": \"postToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": \"PASS\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155a3-ce4d-7210-b8a3-b4e105a3c530\", \"turnId\": \"01a155a3-cfd9-7852-9555-2fa8122ff6dc\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": null}], \"usage\": {\"totalTokens\": 70308, \"inputTokens\": 69766, \"cachedInputTokens\": 60032, \"cacheWriteInputTokens\": 0, \"outputTokens\": 542, \"reasoningOutputTokens\": 11}}\n",
+          "stderr": "",
+          "seconds": 22.268939209054224
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"75526f46658521d279c2a493b14097898a6a6582\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"75526f46658521d279c2a493b14097898a6a6582\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: src/flask/cli.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/ctx.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/globals.py: module __getattr__ may expose dynamic exports\nwarning: src/flask/helpers.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: src/flask/wrappers.py:10 \u2192 src/flask/__init__.py: namespace re-export cannot be narrowed\nwarning: 89 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 0.557987208943814
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "flask"
+          ],
+          "code": 0,
+          "stdout": "flask: isolated feature oracle passed (not the upstream suite)\n",
+          "stderr": "",
+          "seconds": 0.0283172499621287
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_active",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "bfe4204dd29e3e2ac62026ce0e3187661cfd4f9a7670890afb2a6b2226159808"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 22.268939209054224,
+      "tokens": {
+        "total": 70308,
+        "raw": {
+          "totalTokens": 70308,
+          "inputTokens": 69766,
+          "cachedInputTokens": 60032,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 542,
+          "reasoningOutputTokens": 11
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "dd4bec9b61b44a79862a8b1cfbd4c69f",
+        "mode": "guarded",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "9b40baac4cc3d2e4acd8dfb77dab2f103583a6f671683b8708c45117c18e522b",
+        "inventory_sha256": "cbd3a7d60b3570a65008dcde92bc8fe274a781ea3fbbe6dbec2309a6075c24c0",
+        "inventory": [
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:post_tool_use:0:0",
+            "eventName": "postToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo' # archgraph:managed:post",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 1,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:741e5e9f627ab0cfe6fd67b7780b4c68cfd87218f0bdf4ff02e87fce3ed7d0f8",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:pre_tool_use:0:0",
+            "eventName": "preToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo' # archgraph:managed:pre",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 0,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:5222c52c5e5a205807152c179b335f2309644b8e288c46fde0be373871083998",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:stop:0:0",
+            "eventName": "stop",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo' # archgraph:managed:stop",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 2,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:fa8298e2b6076ccb43dd9a9e7abb698021705b94d5ae859861f15ee69b98ee89",
+            "trustStatus": "trusted"
+          }
+        ],
+        "thread_id": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+        "turn_id": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_active",
+        "hook_events": [
+          {
+            "method": "hook/started",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-f3a11973-0c22-4744-a09a-c8b11ad97625",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-f3a11973-0c22-4744-a09a-c8b11ad97625",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "da9567c040d2ed671d67c458ae0e8a3ef0cd9801ca0394f6725afc737226bbf9",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-f3a11973-0c22-4744-a09a-c8b11ad97625",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-f3a11973-0c22-4744-a09a-c8b11ad97625",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-7eb88164-36c9-43d0-b5f8-bceda48a68f7",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-7eb88164-36c9-43d0-b5f8-bceda48a68f7",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "5b250ad6d751b270179747956ca0f1b5628a7ced2417be78ffe4f1d90f3cff0a",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-7eb88164-36c9-43d0-b5f8-bceda48a68f7",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-7eb88164-36c9-43d0-b5f8-bceda48a68f7",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-99437a8f-8d60-4082-a452-686d626129d7",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-99437a8f-8d60-4082-a452-686d626129d7",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "a11a901fa03007f2b52fdfc9dacc6f2890e5e09b6e8835b84d41e622fa3ad7a4",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-99437a8f-8d60-4082-a452-686d626129d7",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-99437a8f-8d60-4082-a452-686d626129d7",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-d0aabea1-5091-4a14-8d48-11ea61ff3c23",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-d0aabea1-5091-4a14-8d48-11ea61ff3c23",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "0b243ea18a1276ed66b7c925420048bebed75565dc1b70cd2c66de5e1830c12f",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-d0aabea1-5091-4a14-8d48-11ea61ff3c23",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-d0aabea1-5091-4a14-8d48-11ea61ff3c23",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-c1c68fd6-a732-4ca4-9640-a9309f0df3a8",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-c1c68fd6-a732-4ca4-9640-a9309f0df3a8",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": "2b9c82507257e415be3a284ac29d8b0a8529837eac78950ac6ca9db566cc39b5",
+            "verdict": null
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-c1c68fd6-a732-4ca4-9640-a9309f0df3a8",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "post-tool-use:1:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json:exec-c1c68fd6-a732-4ca4-9640-a9309f0df3a8",
+            "eventName": "postToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": "PASS"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155a3-ce4d-7210-b8a3-b4e105a3c530",
+            "turnId": "01a155a3-cfd9-7852-9555-2fa8122ff6dc",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-5y2q06rj/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": null
+          }
+        ],
+        "usage": {
+          "totalTokens": 70308,
+          "inputTokens": 69766,
+          "cachedInputTokens": 60032,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 542,
+          "reasoningOutputTokens": 11
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "75526f46658521d279c2a493b14097898a6a6582",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "src/flask/helpers.py"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "binary_files": 0,
+        "changed_lines": 2
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    }
+  ],
+  "host": {
+    "system": "Darwin",
+    "machine": "arm64",
+    "python": "3.10.0"
+  },
+  "archgraph_version": {
+    "argv": [
+      "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+      "--version"
+    ],
+    "code": 0,
+    "stdout": "archgraph 0.1.0\n",
+    "stderr": "",
+    "seconds": 0.006319958949461579
+  },
+  "summary": {
+    "bare": {
+      "runs": 3,
+      "agent_runs": 3,
+      "failed_runs": 0,
+      "comparison_eligible": 3,
+      "new_violations": {
+        "measured": 3,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "edit_blocks": {
+        "measured": 3,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "recipes_applied": {
+        "measured": 3,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "wall_seconds": {
+        "measured": 3,
+        "mean": 15.181749985980181,
+        "stdev": 1.7039871336272816
+      }
+    },
+    "guarded": {
+      "runs": 3,
+      "agent_runs": 3,
+      "failed_runs": 0,
+      "comparison_eligible": 3,
+      "new_violations": {
+        "measured": 3,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "edit_blocks": {
+        "measured": 3,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "recipes_applied": {
+        "measured": 3,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "wall_seconds": {
+        "measured": 3,
+        "mean": 25.450437319697812,
+        "stdev": 7.684905937530648
+      }
+    }
+  },
+  "per_task_summary": {
+    "flask-utility": {
+      "bare": {
+        "runs": 3,
+        "agent_runs": 3,
+        "failed_runs": 0,
+        "comparison_eligible": 3,
+        "new_violations": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "edit_blocks": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "recipes_applied": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "wall_seconds": {
+          "measured": 3,
+          "mean": 15.181749985980181,
+          "stdev": 1.7039871336272816
+        }
+      },
+      "guarded": {
+        "runs": 3,
+        "agent_runs": 3,
+        "failed_runs": 0,
+        "comparison_eligible": 3,
+        "new_violations": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "edit_blocks": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "recipes_applied": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "wall_seconds": {
+          "measured": 3,
+          "mean": 25.450437319697812,
+          "stdev": 7.684905937530648
+        }
+      }
+    }
+  },
+  "auth_file_supplied": true,
+  "publication_provenance": {
+    "name": "flask",
+    "baseline_commit": "75526f46658521d279c2a493b14097898a6a6582",
+    "upstream": "https://github.com/pallets/flask",
+    "upstream_commit": "d086db856be187255b8ec61ef409357393020f32",
+    "role": "showcase",
+    "policy": "benchmark-authored; not upstream intent",
+    "layout_sha256": "bfe4204dd29e3e2ac62026ce0e3187661cfd4f9a7670890afb2a6b2226159808",
+    "oracle": "isolated feature check; not upstream test suite",
+    "oracle_sha256_before": "843c49fcdeb3b8a34e17e92d445591b0cc4d997ea40073bc9c242e4794259eac",
+    "oracle_sha256_after": "843c49fcdeb3b8a34e17e92d445591b0cc4d997ea40073bc9c242e4794259eac",
+    "archgraph_source_commit": "8075782",
+    "archgraph_build": "debug executable frozen before paired runs",
+    "execution": "At most two repository benchmarks concurrently; arms alternate order; no warm daemon was started.",
+    "preflight_notes": []
+  }
+}

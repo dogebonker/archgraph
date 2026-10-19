@@ -1,0 +1,2145 @@
+{
+  "schema": "archgraph/paired-benchmark/v1",
+  "repo_name": "pydantic",
+  "commit": "e6b41881927425ef7eeaf1e43624f3f760e14a7a",
+  "package": "pydantic",
+  "created": "2026-10-19T19:42:06.862970+00:00",
+  "repeats": 3,
+  "binary_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+  "runner": {
+    "agent": "codex",
+    "adapter": "codex-app-server",
+    "model": "gpt-6.1-sol",
+    "trust_reviewed_archgraph": true,
+    "codex": "/Users/dan/.local/bin/codex"
+  },
+  "auth_file_supplied": true,
+  "runner_env_keys": [],
+  "tasks": [
+    {
+      "id": "pydantic-utility",
+      "prompt": "Extend unique_list with a keyword-only keep_first: bool = False option. When true, retain the first item for each name_factory result in first-name order; when false or omitted, preserve existing last-value replacement and first-name ordering. Keep tuple input and custom name_factory support; do not mutate input. Expected implementation area: pydantic/_internal/_utils.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py pydantic",
+      "area": [
+        "pydantic/_internal/_utils.py"
+      ],
+      "tests": [
+        "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+        "-B",
+        "/Users/dan/Work/archgraph/bench/cases/check.py",
+        "pydantic"
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "task": "pydantic-utility",
+      "arm": "bare",
+      "repeat": 1,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "pydantic/_internal/_utils.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend unique_list with a keyword-only keep_first: bool = False option. When true, retain the first item for each name_factory result in first-name order; when false or omitted, preserve existing last-value replacement and first-name ordering. Keep tuple input and custom name_factory support; do not mutate input. Expected implementation area: pydantic/_internal/_utils.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py pydantic",
+            "--mode",
+            "bare",
+            "--run-id",
+            "746f691655584da98c70201b03ee7caf",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/34e384d226fa47498d96885c75a29e5a",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"746f691655584da98c70201b03ee7caf\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-1ewdsmab/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a155af-8026-7333-90c3-73539af38063\", \"turn_id\": \"01a155af-8276-7702-b753-2d10625568fc\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-1ewdsmab/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 92620, \"inputTokens\": 91959, \"cachedInputTokens\": 83200, \"cacheWriteInputTokens\": 0, \"outputTokens\": 661, \"reasoningOutputTokens\": 8}}\n",
+          "stderr": "",
+          "seconds": 17.699353166972287
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "pydantic",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\",\n      \"kind\": \"forbidden-edge\",\n      \"subject\": \"pydantic/_internal/_utils.py \u2192 pydantic/main.py\",\n      \"evidence\": {\n        \"edge\": {\n          \"from\": \"pydantic/_internal/_utils.py\",\n          \"to\": \"pydantic/main.py\",\n          \"kind\": \"type\",\n          \"weight\": 0.1,\n          \"specifier\": \"..main\",\n          \"line\": 33,\n          \"names\": [\n            \"BaseModel\"\n          ],\n          \"verdict\": \"forbidden\",\n          \"rule\": \"utility-no-outer-api\"\n        }\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"extract_interface\",\n            \"file\": \"pydantic/_internal/_utils.py\",\n            \"line\": 33,\n            \"from\": \"pydantic/_internal/_utils.py\",\n            \"to\": \"pydantic/_internal/ports/dependency.py\",\n            \"detail\": {\n              \"operation\": \"extract_contract\",\n              \"interface_location\": \"pydantic/_internal/ports/dependency.py\",\n              \"dependency\": \"pydantic/main.py\",\n              \"symbols\": [\n                \"BaseModel\"\n              ],\n              \"consumer_layer\": null\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\"\n            ],\n            \"absent_edges\": [\n              {\n                \"from\": \"pydantic/_internal/_utils.py\",\n                \"to\": \"pydantic/main.py\"\n              }\n            ]\n          }\n        },\n        \"confidence\": \"medium\",\n        \"risk_notes\": [\n          \"Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.\",\n          \"Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 1.8733815420418978
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "pydantic"
+          ],
+          "code": 0,
+          "stdout": "pydantic: isolated feature oracle passed (not the upstream suite)\n",
+          "stderr": "",
+          "seconds": 0.03688033402431756
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "3dade9eeeeaa7c1d44fa1b3c14c5de4aac34fe0efab902fbc2cf6673fe96d861"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 17.699353166972287,
+      "tokens": {
+        "total": 92620,
+        "raw": {
+          "totalTokens": 92620,
+          "inputTokens": 91959,
+          "cachedInputTokens": 83200,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 661,
+          "reasoningOutputTokens": 8
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "746f691655584da98c70201b03ee7caf",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-1ewdsmab/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a155af-8026-7333-90c3-73539af38063",
+        "turn_id": "01a155af-8276-7702-b753-2d10625568fc",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-1ewdsmab/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 92620,
+          "inputTokens": 91959,
+          "cachedInputTokens": 83200,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 661,
+          "reasoningOutputTokens": 8
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "e6b41881927425ef7eeaf1e43624f3f760e14a7a",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711",
+            "kind": "forbidden-edge",
+            "subject": "pydantic/_internal/_utils.py \u2192 pydantic/main.py",
+            "evidence": {
+              "edge": {
+                "from": "pydantic/_internal/_utils.py",
+                "to": "pydantic/main.py",
+                "kind": "type",
+                "weight": 0.1,
+                "specifier": "..main",
+                "line": 33,
+                "names": [
+                  "BaseModel"
+                ],
+                "verdict": "forbidden",
+                "rule": "utility-no-outer-api"
+              }
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "extract_interface",
+                  "file": "pydantic/_internal/_utils.py",
+                  "line": 33,
+                  "from": "pydantic/_internal/_utils.py",
+                  "to": "pydantic/_internal/ports/dependency.py",
+                  "detail": {
+                    "operation": "extract_contract",
+                    "interface_location": "pydantic/_internal/ports/dependency.py",
+                    "dependency": "pydantic/main.py",
+                    "symbols": [
+                      "BaseModel"
+                    ],
+                    "consumer_layer": null
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711"
+                  ],
+                  "absent_edges": [
+                    {
+                      "from": "pydantic/_internal/_utils.py",
+                      "to": "pydantic/main.py"
+                    }
+                  ]
+                }
+              },
+              "confidence": "medium",
+              "risk_notes": [
+                "Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.",
+                "Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "pydantic/_internal/_utils.py"
+        ],
+        "additions": 7,
+        "deletions": 4,
+        "binary_files": 0,
+        "changed_lines": 11
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "pydantic-utility",
+      "arm": "guarded",
+      "repeat": 1,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "pydantic/_internal/_utils.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "hook",
+            "install",
+            "--root",
+            "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo",
+            "--agent",
+            "codex",
+            "--package",
+            "pydantic"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"agent\": \"codex\",\n  \"written\": [\n    \".codex/hooks.json\"\n  ],\n  \"unchanged\": [],\n  \"capabilities\": {\n    \"pre_tool_deny\": true,\n    \"pre_edit_context\": true,\n    \"completion_gate\": true,\n    \"post_edit_rollback\": false,\n    \"feedback_only\": false\n  },\n  \"notice\": \"Review and trust project-local hooks in Codex before they execute; no trust settings were changed.\",\n  \"configuration\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.archgraph/hooks/configs/codex.json\"\n}\n",
+          "stderr": "",
+          "seconds": 0.023381875013001263
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "sync-rules"
+          ],
+          "code": 0,
+          "stdout": "Wrote owned block in CLAUDE.md\nWrote owned block in AGENTS.md\nWrote owned block in .cursorrules\nWrote owned block in .github/copilot-instructions.md\n",
+          "stderr": "",
+          "seconds": 0.03312266699504107
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend unique_list with a keyword-only keep_first: bool = False option. When true, retain the first item for each name_factory result in first-name order; when false or omitted, preserve existing last-value replacement and first-name ordering. Keep tuple input and custom name_factory support; do not mutate input. Expected implementation area: pydantic/_internal/_utils.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py pydantic",
+            "--mode",
+            "guarded",
+            "--run-id",
+            "ec0777332446424da2ad75daf576b727",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/907111e698ea48fcae33b163b210e339",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"ec0777332446424da2ad75daf576b727\", \"mode\": \"guarded\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"2db38e3472dccff8d5cd1159525eb7aa828fba724f114af55f7395bcc7b84414\", \"inventory_sha256\": \"969dad566e56616c56cd1812908104ef0bb40b844d013926318aeec3d16b7723\", \"inventory\": [{\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:post_tool_use:0:0\", \"eventName\": \"postToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo' # archgraph:managed:post\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 1, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:d362563f731df67708251a7ac9f91934aba3c105ca5b1820b53130a6b8d07709\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:pre_tool_use:0:0\", \"eventName\": \"preToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo' # archgraph:managed:pre\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 0, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:f0825f8211ed0a9edf8fae3efac8ef087d7cac8532b063a92751cb85b9f56173\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:stop:0:0\", \"eventName\": \"stop\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo' # archgraph:managed:stop\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 2, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:3c01e5a61ce955493c831eecb74607c5d6a054ebdbcf4009ab94b42c5226cd14\", \"trustStatus\": \"trusted\"}], \"thread_id\": \"01a155af-ce94-74b2-b04e-5c899fd834c1\", \"turn_id\": \"01a155af-d035-7722-82bc-8735e8d8d781\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"unknown\", \"hook_events\": [{\"method\": \"hook/started\", \"threadId\": \"01a155af-ce94-74b2-b04e-5c899fd834c1\", \"turnId\": \"01a155af-d035-7722-82bc-8735e8d8d781\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-4f555425-d6f8-4780-9b59-2a38b466278c\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155af-ce94-74b2-b04e-5c899fd834c1\", \"turnId\": \"01a155af-d035-7722-82bc-8735e8d8d781\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-4f555425-d6f8-4780-9b59-2a38b466278c\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"status\": \"blocked\", \"snapshot\": null, \"verdict\": \"UNAVAILABLE\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155af-ce94-74b2-b04e-5c899fd834c1\", \"turnId\": \"01a155af-d035-7722-82bc-8735e8d8d781\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-8df30b9a-9f21-4a4e-97d8-4a734242df22\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155af-ce94-74b2-b04e-5c899fd834c1\", \"turnId\": \"01a155af-d035-7722-82bc-8735e8d8d781\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-8df30b9a-9f21-4a4e-97d8-4a734242df22\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"status\": \"blocked\", \"snapshot\": null, \"verdict\": \"UNAVAILABLE\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155af-ce94-74b2-b04e-5c899fd834c1\", \"turnId\": \"01a155af-d035-7722-82bc-8735e8d8d781\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-145d59d5-b2f3-4e41-9ef9-82b78423f8d7\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155af-ce94-74b2-b04e-5c899fd834c1\", \"turnId\": \"01a155af-d035-7722-82bc-8735e8d8d781\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-145d59d5-b2f3-4e41-9ef9-82b78423f8d7\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"status\": \"blocked\", \"snapshot\": null, \"verdict\": \"UNAVAILABLE\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155af-ce94-74b2-b04e-5c899fd834c1\", \"turnId\": \"01a155af-d035-7722-82bc-8735e8d8d781\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155af-ce94-74b2-b04e-5c899fd834c1\", \"turnId\": \"01a155af-d035-7722-82bc-8735e8d8d781\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": null}], \"usage\": {\"totalTokens\": 86676, \"inputTokens\": 86360, \"cachedInputTokens\": 77312, \"cacheWriteInputTokens\": 0, \"outputTokens\": 316, \"reasoningOutputTokens\": 28}}\n",
+          "stderr": "",
+          "seconds": 14.39953095803503
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "pydantic",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\",\n      \"kind\": \"forbidden-edge\",\n      \"subject\": \"pydantic/_internal/_utils.py \u2192 pydantic/main.py\",\n      \"evidence\": {\n        \"edge\": {\n          \"from\": \"pydantic/_internal/_utils.py\",\n          \"to\": \"pydantic/main.py\",\n          \"kind\": \"type\",\n          \"weight\": 0.1,\n          \"specifier\": \"..main\",\n          \"line\": 33,\n          \"names\": [\n            \"BaseModel\"\n          ],\n          \"verdict\": \"forbidden\",\n          \"rule\": \"utility-no-outer-api\"\n        }\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"extract_interface\",\n            \"file\": \"pydantic/_internal/_utils.py\",\n            \"line\": 33,\n            \"from\": \"pydantic/_internal/_utils.py\",\n            \"to\": \"pydantic/_internal/ports/dependency.py\",\n            \"detail\": {\n              \"operation\": \"extract_contract\",\n              \"interface_location\": \"pydantic/_internal/ports/dependency.py\",\n              \"dependency\": \"pydantic/main.py\",\n              \"symbols\": [\n                \"BaseModel\"\n              ],\n              \"consumer_layer\": null\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\"\n            ],\n            \"absent_edges\": [\n              {\n                \"from\": \"pydantic/_internal/_utils.py\",\n                \"to\": \"pydantic/main.py\"\n              }\n            ]\n          }\n        },\n        \"confidence\": \"medium\",\n        \"risk_notes\": [\n          \"Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.\",\n          \"Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 1.8220785000594333
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "pydantic"
+          ],
+          "code": 1,
+          "stdout": "",
+          "stderr": "Traceback (most recent call last):\n  File \"/Users/dan/Work/archgraph/bench/cases/check.py\", line 75, in <module>\n    main(sys.argv[1])\n    ~~~~^^^^^^^^^^^^^\n  File \"/Users/dan/Work/archgraph/bench/cases/check.py\", line 50, in main\n    assert parameter is not None, 'keep_first keyword is missing'\n           ^^^^^^^^^^^^^^^^^^^^^\nAssertionError: keep_first keyword is missing\n",
+          "seconds": 0.03753062500618398
+        }
+      ],
+      "errors": [
+        "expected touched area unchanged; feature work unverified",
+        "project tests failed"
+      ],
+      "hook_activation": "unknown",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "3dade9eeeeaa7c1d44fa1b3c14c5de4aac34fe0efab902fbc2cf6673fe96d861"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 14.39953095803503,
+      "tokens": {
+        "total": 86676,
+        "raw": {
+          "totalTokens": 86676,
+          "inputTokens": 86360,
+          "cachedInputTokens": 77312,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 316,
+          "reasoningOutputTokens": 28
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "ec0777332446424da2ad75daf576b727",
+        "mode": "guarded",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "2db38e3472dccff8d5cd1159525eb7aa828fba724f114af55f7395bcc7b84414",
+        "inventory_sha256": "969dad566e56616c56cd1812908104ef0bb40b844d013926318aeec3d16b7723",
+        "inventory": [
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:post_tool_use:0:0",
+            "eventName": "postToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo' # archgraph:managed:post",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 1,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:d362563f731df67708251a7ac9f91934aba3c105ca5b1820b53130a6b8d07709",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:pre_tool_use:0:0",
+            "eventName": "preToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo' # archgraph:managed:pre",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 0,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:f0825f8211ed0a9edf8fae3efac8ef087d7cac8532b063a92751cb85b9f56173",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:stop:0:0",
+            "eventName": "stop",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo' # archgraph:managed:stop",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 2,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:3c01e5a61ce955493c831eecb74607c5d6a054ebdbcf4009ab94b42c5226cd14",
+            "trustStatus": "trusted"
+          }
+        ],
+        "thread_id": "01a155af-ce94-74b2-b04e-5c899fd834c1",
+        "turn_id": "01a155af-d035-7722-82bc-8735e8d8d781",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "unknown",
+        "hook_events": [
+          {
+            "method": "hook/started",
+            "threadId": "01a155af-ce94-74b2-b04e-5c899fd834c1",
+            "turnId": "01a155af-d035-7722-82bc-8735e8d8d781",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-4f555425-d6f8-4780-9b59-2a38b466278c",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155af-ce94-74b2-b04e-5c899fd834c1",
+            "turnId": "01a155af-d035-7722-82bc-8735e8d8d781",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-4f555425-d6f8-4780-9b59-2a38b466278c",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "status": "blocked",
+            "snapshot": null,
+            "verdict": "UNAVAILABLE"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155af-ce94-74b2-b04e-5c899fd834c1",
+            "turnId": "01a155af-d035-7722-82bc-8735e8d8d781",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-8df30b9a-9f21-4a4e-97d8-4a734242df22",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155af-ce94-74b2-b04e-5c899fd834c1",
+            "turnId": "01a155af-d035-7722-82bc-8735e8d8d781",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-8df30b9a-9f21-4a4e-97d8-4a734242df22",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "status": "blocked",
+            "snapshot": null,
+            "verdict": "UNAVAILABLE"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155af-ce94-74b2-b04e-5c899fd834c1",
+            "turnId": "01a155af-d035-7722-82bc-8735e8d8d781",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-145d59d5-b2f3-4e41-9ef9-82b78423f8d7",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155af-ce94-74b2-b04e-5c899fd834c1",
+            "turnId": "01a155af-d035-7722-82bc-8735e8d8d781",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json:exec-145d59d5-b2f3-4e41-9ef9-82b78423f8d7",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "status": "blocked",
+            "snapshot": null,
+            "verdict": "UNAVAILABLE"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155af-ce94-74b2-b04e-5c899fd834c1",
+            "turnId": "01a155af-d035-7722-82bc-8735e8d8d781",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155af-ce94-74b2-b04e-5c899fd834c1",
+            "turnId": "01a155af-d035-7722-82bc-8735e8d8d781",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-l18qt9z5/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": null
+          }
+        ],
+        "usage": {
+          "totalTokens": 86676,
+          "inputTokens": 86360,
+          "cachedInputTokens": 77312,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 316,
+          "reasoningOutputTokens": 28
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": false,
+      "new_violations": 0,
+      "architecture": {
+        "base": "e6b41881927425ef7eeaf1e43624f3f760e14a7a",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711",
+            "kind": "forbidden-edge",
+            "subject": "pydantic/_internal/_utils.py \u2192 pydantic/main.py",
+            "evidence": {
+              "edge": {
+                "from": "pydantic/_internal/_utils.py",
+                "to": "pydantic/main.py",
+                "kind": "type",
+                "weight": 0.1,
+                "specifier": "..main",
+                "line": 33,
+                "names": [
+                  "BaseModel"
+                ],
+                "verdict": "forbidden",
+                "rule": "utility-no-outer-api"
+              }
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "extract_interface",
+                  "file": "pydantic/_internal/_utils.py",
+                  "line": 33,
+                  "from": "pydantic/_internal/_utils.py",
+                  "to": "pydantic/_internal/ports/dependency.py",
+                  "detail": {
+                    "operation": "extract_contract",
+                    "interface_location": "pydantic/_internal/ports/dependency.py",
+                    "dependency": "pydantic/main.py",
+                    "symbols": [
+                      "BaseModel"
+                    ],
+                    "consumer_layer": null
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711"
+                  ],
+                  "absent_edges": [
+                    {
+                      "from": "pydantic/_internal/_utils.py",
+                      "to": "pydantic/main.py"
+                    }
+                  ]
+                }
+              },
+              "confidence": "medium",
+              "risk_notes": [
+                "Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.",
+                "Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [],
+        "additions": 0,
+        "deletions": 0,
+        "binary_files": 0,
+        "changed_lines": 0
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": false,
+      "tests_pass": false
+    },
+    {
+      "task": "pydantic-utility",
+      "arm": "guarded",
+      "repeat": 2,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "pydantic/_internal/_utils.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "hook",
+            "install",
+            "--root",
+            "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo",
+            "--agent",
+            "codex",
+            "--package",
+            "pydantic"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"agent\": \"codex\",\n  \"written\": [\n    \".codex/hooks.json\"\n  ],\n  \"unchanged\": [],\n  \"capabilities\": {\n    \"pre_tool_deny\": true,\n    \"pre_edit_context\": true,\n    \"completion_gate\": true,\n    \"post_edit_rollback\": false,\n    \"feedback_only\": false\n  },\n  \"notice\": \"Review and trust project-local hooks in Codex before they execute; no trust settings were changed.\",\n  \"configuration\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.archgraph/hooks/configs/codex.json\"\n}\n",
+          "stderr": "",
+          "seconds": 0.02021562505979091
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "sync-rules"
+          ],
+          "code": 0,
+          "stdout": "Wrote owned block in CLAUDE.md\nWrote owned block in AGENTS.md\nWrote owned block in .cursorrules\nWrote owned block in .github/copilot-instructions.md\n",
+          "stderr": "",
+          "seconds": 0.029145707958377898
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend unique_list with a keyword-only keep_first: bool = False option. When true, retain the first item for each name_factory result in first-name order; when false or omitted, preserve existing last-value replacement and first-name ordering. Keep tuple input and custom name_factory support; do not mutate input. Expected implementation area: pydantic/_internal/_utils.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py pydantic",
+            "--mode",
+            "guarded",
+            "--run-id",
+            "28bc45ef9f27444f9d4c9e60252b5f22",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/34f14879e9e843b79b3f9162ca8dd0a7",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"28bc45ef9f27444f9d4c9e60252b5f22\", \"mode\": \"guarded\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"c372bd065de4456663469914968c664cc43bf66c0ad9812969bbb91630d8746f\", \"inventory_sha256\": \"99508f42d2789fb5a224bda156dfcfcaca4521eaaff8b5ab15002f054c71ab08\", \"inventory\": [{\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:post_tool_use:0:0\", \"eventName\": \"postToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo' # archgraph:managed:post\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 1, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:84bcb65112f598a82f2f04250b882a73fd17b8036f190b08cb3e282c4bfc0ae9\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:pre_tool_use:0:0\", \"eventName\": \"preToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo' # archgraph:managed:pre\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 0, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:df76e1c7a57c64b6bc601d862bd1d453abfc8289caec6dfca34ccf5db2a813c2\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:stop:0:0\", \"eventName\": \"stop\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo' # archgraph:managed:stop\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 2, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:03e899594c73888840eb133f8e6eef8fbb2af0857f5aa913620ed61b7710cadf\", \"trustStatus\": \"trusted\"}], \"thread_id\": \"01a155b0-0fee-7bf0-979b-72998d81981e\", \"turn_id\": \"01a155b0-11a1-73b1-a0b0-400b79fad8ae\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"unknown\", \"hook_events\": [{\"method\": \"hook/started\", \"threadId\": \"01a155b0-0fee-7bf0-979b-72998d81981e\", \"turnId\": \"01a155b0-11a1-73b1-a0b0-400b79fad8ae\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-66c24424-dbac-429c-869d-f9ac5f0996ef\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155b0-0fee-7bf0-979b-72998d81981e\", \"turnId\": \"01a155b0-11a1-73b1-a0b0-400b79fad8ae\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-66c24424-dbac-429c-869d-f9ac5f0996ef\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"status\": \"blocked\", \"snapshot\": null, \"verdict\": \"UNAVAILABLE\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155b0-0fee-7bf0-979b-72998d81981e\", \"turnId\": \"01a155b0-11a1-73b1-a0b0-400b79fad8ae\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-59659748-c369-438f-86e5-8c6d2bcbf82f\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155b0-0fee-7bf0-979b-72998d81981e\", \"turnId\": \"01a155b0-11a1-73b1-a0b0-400b79fad8ae\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-59659748-c369-438f-86e5-8c6d2bcbf82f\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"status\": \"blocked\", \"snapshot\": null, \"verdict\": \"UNAVAILABLE\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155b0-0fee-7bf0-979b-72998d81981e\", \"turnId\": \"01a155b0-11a1-73b1-a0b0-400b79fad8ae\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-a7010763-16dd-4e6a-b678-c8c5928fe90d\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155b0-0fee-7bf0-979b-72998d81981e\", \"turnId\": \"01a155b0-11a1-73b1-a0b0-400b79fad8ae\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-a7010763-16dd-4e6a-b678-c8c5928fe90d\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"status\": \"blocked\", \"snapshot\": null, \"verdict\": \"UNAVAILABLE\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155b0-0fee-7bf0-979b-72998d81981e\", \"turnId\": \"01a155b0-11a1-73b1-a0b0-400b79fad8ae\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155b0-0fee-7bf0-979b-72998d81981e\", \"turnId\": \"01a155b0-11a1-73b1-a0b0-400b79fad8ae\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": null}], \"usage\": {\"totalTokens\": 75449, \"inputTokens\": 75100, \"cachedInputTokens\": 71296, \"cacheWriteInputTokens\": 0, \"outputTokens\": 349, \"reasoningOutputTokens\": 27}}\n",
+          "stderr": "",
+          "seconds": 16.51295429095626
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "pydantic",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\",\n      \"kind\": \"forbidden-edge\",\n      \"subject\": \"pydantic/_internal/_utils.py \u2192 pydantic/main.py\",\n      \"evidence\": {\n        \"edge\": {\n          \"from\": \"pydantic/_internal/_utils.py\",\n          \"to\": \"pydantic/main.py\",\n          \"kind\": \"type\",\n          \"weight\": 0.1,\n          \"specifier\": \"..main\",\n          \"line\": 33,\n          \"names\": [\n            \"BaseModel\"\n          ],\n          \"verdict\": \"forbidden\",\n          \"rule\": \"utility-no-outer-api\"\n        }\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"extract_interface\",\n            \"file\": \"pydantic/_internal/_utils.py\",\n            \"line\": 33,\n            \"from\": \"pydantic/_internal/_utils.py\",\n            \"to\": \"pydantic/_internal/ports/dependency.py\",\n            \"detail\": {\n              \"operation\": \"extract_contract\",\n              \"interface_location\": \"pydantic/_internal/ports/dependency.py\",\n              \"dependency\": \"pydantic/main.py\",\n              \"symbols\": [\n                \"BaseModel\"\n              ],\n              \"consumer_layer\": null\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\"\n            ],\n            \"absent_edges\": [\n              {\n                \"from\": \"pydantic/_internal/_utils.py\",\n                \"to\": \"pydantic/main.py\"\n              }\n            ]\n          }\n        },\n        \"confidence\": \"medium\",\n        \"risk_notes\": [\n          \"Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.\",\n          \"Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 1.8967269170098007
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "pydantic"
+          ],
+          "code": 1,
+          "stdout": "",
+          "stderr": "Traceback (most recent call last):\n  File \"/Users/dan/Work/archgraph/bench/cases/check.py\", line 75, in <module>\n    main(sys.argv[1])\n    ~~~~^^^^^^^^^^^^^\n  File \"/Users/dan/Work/archgraph/bench/cases/check.py\", line 50, in main\n    assert parameter is not None, 'keep_first keyword is missing'\n           ^^^^^^^^^^^^^^^^^^^^^\nAssertionError: keep_first keyword is missing\n",
+          "seconds": 0.03756970795802772
+        }
+      ],
+      "errors": [
+        "expected touched area unchanged; feature work unverified",
+        "project tests failed"
+      ],
+      "hook_activation": "unknown",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "3dade9eeeeaa7c1d44fa1b3c14c5de4aac34fe0efab902fbc2cf6673fe96d861"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 16.51295429095626,
+      "tokens": {
+        "total": 75449,
+        "raw": {
+          "totalTokens": 75449,
+          "inputTokens": 75100,
+          "cachedInputTokens": 71296,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 349,
+          "reasoningOutputTokens": 27
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "28bc45ef9f27444f9d4c9e60252b5f22",
+        "mode": "guarded",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "c372bd065de4456663469914968c664cc43bf66c0ad9812969bbb91630d8746f",
+        "inventory_sha256": "99508f42d2789fb5a224bda156dfcfcaca4521eaaff8b5ab15002f054c71ab08",
+        "inventory": [
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:post_tool_use:0:0",
+            "eventName": "postToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo' # archgraph:managed:post",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 1,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:84bcb65112f598a82f2f04250b882a73fd17b8036f190b08cb3e282c4bfc0ae9",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:pre_tool_use:0:0",
+            "eventName": "preToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo' # archgraph:managed:pre",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 0,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:df76e1c7a57c64b6bc601d862bd1d453abfc8289caec6dfca34ccf5db2a813c2",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:stop:0:0",
+            "eventName": "stop",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo' # archgraph:managed:stop",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 2,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:03e899594c73888840eb133f8e6eef8fbb2af0857f5aa913620ed61b7710cadf",
+            "trustStatus": "trusted"
+          }
+        ],
+        "thread_id": "01a155b0-0fee-7bf0-979b-72998d81981e",
+        "turn_id": "01a155b0-11a1-73b1-a0b0-400b79fad8ae",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "unknown",
+        "hook_events": [
+          {
+            "method": "hook/started",
+            "threadId": "01a155b0-0fee-7bf0-979b-72998d81981e",
+            "turnId": "01a155b0-11a1-73b1-a0b0-400b79fad8ae",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-66c24424-dbac-429c-869d-f9ac5f0996ef",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155b0-0fee-7bf0-979b-72998d81981e",
+            "turnId": "01a155b0-11a1-73b1-a0b0-400b79fad8ae",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-66c24424-dbac-429c-869d-f9ac5f0996ef",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "status": "blocked",
+            "snapshot": null,
+            "verdict": "UNAVAILABLE"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155b0-0fee-7bf0-979b-72998d81981e",
+            "turnId": "01a155b0-11a1-73b1-a0b0-400b79fad8ae",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-59659748-c369-438f-86e5-8c6d2bcbf82f",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155b0-0fee-7bf0-979b-72998d81981e",
+            "turnId": "01a155b0-11a1-73b1-a0b0-400b79fad8ae",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-59659748-c369-438f-86e5-8c6d2bcbf82f",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "status": "blocked",
+            "snapshot": null,
+            "verdict": "UNAVAILABLE"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155b0-0fee-7bf0-979b-72998d81981e",
+            "turnId": "01a155b0-11a1-73b1-a0b0-400b79fad8ae",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-a7010763-16dd-4e6a-b678-c8c5928fe90d",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155b0-0fee-7bf0-979b-72998d81981e",
+            "turnId": "01a155b0-11a1-73b1-a0b0-400b79fad8ae",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json:exec-a7010763-16dd-4e6a-b678-c8c5928fe90d",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "status": "blocked",
+            "snapshot": null,
+            "verdict": "UNAVAILABLE"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155b0-0fee-7bf0-979b-72998d81981e",
+            "turnId": "01a155b0-11a1-73b1-a0b0-400b79fad8ae",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155b0-0fee-7bf0-979b-72998d81981e",
+            "turnId": "01a155b0-11a1-73b1-a0b0-400b79fad8ae",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-rv3a127k/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": null
+          }
+        ],
+        "usage": {
+          "totalTokens": 75449,
+          "inputTokens": 75100,
+          "cachedInputTokens": 71296,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 349,
+          "reasoningOutputTokens": 27
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": false,
+      "new_violations": 0,
+      "architecture": {
+        "base": "e6b41881927425ef7eeaf1e43624f3f760e14a7a",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711",
+            "kind": "forbidden-edge",
+            "subject": "pydantic/_internal/_utils.py \u2192 pydantic/main.py",
+            "evidence": {
+              "edge": {
+                "from": "pydantic/_internal/_utils.py",
+                "to": "pydantic/main.py",
+                "kind": "type",
+                "weight": 0.1,
+                "specifier": "..main",
+                "line": 33,
+                "names": [
+                  "BaseModel"
+                ],
+                "verdict": "forbidden",
+                "rule": "utility-no-outer-api"
+              }
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "extract_interface",
+                  "file": "pydantic/_internal/_utils.py",
+                  "line": 33,
+                  "from": "pydantic/_internal/_utils.py",
+                  "to": "pydantic/_internal/ports/dependency.py",
+                  "detail": {
+                    "operation": "extract_contract",
+                    "interface_location": "pydantic/_internal/ports/dependency.py",
+                    "dependency": "pydantic/main.py",
+                    "symbols": [
+                      "BaseModel"
+                    ],
+                    "consumer_layer": null
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711"
+                  ],
+                  "absent_edges": [
+                    {
+                      "from": "pydantic/_internal/_utils.py",
+                      "to": "pydantic/main.py"
+                    }
+                  ]
+                }
+              },
+              "confidence": "medium",
+              "risk_notes": [
+                "Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.",
+                "Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [],
+        "additions": 0,
+        "deletions": 0,
+        "binary_files": 0,
+        "changed_lines": 0
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": false,
+      "tests_pass": false
+    },
+    {
+      "task": "pydantic-utility",
+      "arm": "bare",
+      "repeat": 2,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "pydantic/_internal/_utils.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend unique_list with a keyword-only keep_first: bool = False option. When true, retain the first item for each name_factory result in first-name order; when false or omitted, preserve existing last-value replacement and first-name ordering. Keep tuple input and custom name_factory support; do not mutate input. Expected implementation area: pydantic/_internal/_utils.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py pydantic",
+            "--mode",
+            "bare",
+            "--run-id",
+            "3ef5c13825fe4ca988c2a4eda657f107",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/e20eaf90738c43279cfdc3d0bdc4c5dd",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"3ef5c13825fe4ca988c2a4eda657f107\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-99db_aab/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a155b0-59aa-7610-b5ec-4c372230200e\", \"turn_id\": \"01a155b0-5b36-7f63-90d2-81e0a3efc640\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-99db_aab/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 90487, \"inputTokens\": 89852, \"cachedInputTokens\": 81920, \"cacheWriteInputTokens\": 0, \"outputTokens\": 635, \"reasoningOutputTokens\": 9}}\n",
+          "stderr": "",
+          "seconds": 19.527539790957235
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "pydantic",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\",\n      \"kind\": \"forbidden-edge\",\n      \"subject\": \"pydantic/_internal/_utils.py \u2192 pydantic/main.py\",\n      \"evidence\": {\n        \"edge\": {\n          \"from\": \"pydantic/_internal/_utils.py\",\n          \"to\": \"pydantic/main.py\",\n          \"kind\": \"type\",\n          \"weight\": 0.1,\n          \"specifier\": \"..main\",\n          \"line\": 33,\n          \"names\": [\n            \"BaseModel\"\n          ],\n          \"verdict\": \"forbidden\",\n          \"rule\": \"utility-no-outer-api\"\n        }\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"extract_interface\",\n            \"file\": \"pydantic/_internal/_utils.py\",\n            \"line\": 33,\n            \"from\": \"pydantic/_internal/_utils.py\",\n            \"to\": \"pydantic/_internal/ports/dependency.py\",\n            \"detail\": {\n              \"operation\": \"extract_contract\",\n              \"interface_location\": \"pydantic/_internal/ports/dependency.py\",\n              \"dependency\": \"pydantic/main.py\",\n              \"symbols\": [\n                \"BaseModel\"\n              ],\n              \"consumer_layer\": null\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\"\n            ],\n            \"absent_edges\": [\n              {\n                \"from\": \"pydantic/_internal/_utils.py\",\n                \"to\": \"pydantic/main.py\"\n              }\n            ]\n          }\n        },\n        \"confidence\": \"medium\",\n        \"risk_notes\": [\n          \"Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.\",\n          \"Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 1.7633745420025662
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "pydantic"
+          ],
+          "code": 0,
+          "stdout": "pydantic: isolated feature oracle passed (not the upstream suite)\n",
+          "stderr": "",
+          "seconds": 0.029727166052907705
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "3dade9eeeeaa7c1d44fa1b3c14c5de4aac34fe0efab902fbc2cf6673fe96d861"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 19.527539790957235,
+      "tokens": {
+        "total": 90487,
+        "raw": {
+          "totalTokens": 90487,
+          "inputTokens": 89852,
+          "cachedInputTokens": 81920,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 635,
+          "reasoningOutputTokens": 9
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "3ef5c13825fe4ca988c2a4eda657f107",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-99db_aab/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a155b0-59aa-7610-b5ec-4c372230200e",
+        "turn_id": "01a155b0-5b36-7f63-90d2-81e0a3efc640",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-99db_aab/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 90487,
+          "inputTokens": 89852,
+          "cachedInputTokens": 81920,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 635,
+          "reasoningOutputTokens": 9
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "e6b41881927425ef7eeaf1e43624f3f760e14a7a",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711",
+            "kind": "forbidden-edge",
+            "subject": "pydantic/_internal/_utils.py \u2192 pydantic/main.py",
+            "evidence": {
+              "edge": {
+                "from": "pydantic/_internal/_utils.py",
+                "to": "pydantic/main.py",
+                "kind": "type",
+                "weight": 0.1,
+                "specifier": "..main",
+                "line": 33,
+                "names": [
+                  "BaseModel"
+                ],
+                "verdict": "forbidden",
+                "rule": "utility-no-outer-api"
+              }
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "extract_interface",
+                  "file": "pydantic/_internal/_utils.py",
+                  "line": 33,
+                  "from": "pydantic/_internal/_utils.py",
+                  "to": "pydantic/_internal/ports/dependency.py",
+                  "detail": {
+                    "operation": "extract_contract",
+                    "interface_location": "pydantic/_internal/ports/dependency.py",
+                    "dependency": "pydantic/main.py",
+                    "symbols": [
+                      "BaseModel"
+                    ],
+                    "consumer_layer": null
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711"
+                  ],
+                  "absent_edges": [
+                    {
+                      "from": "pydantic/_internal/_utils.py",
+                      "to": "pydantic/main.py"
+                    }
+                  ]
+                }
+              },
+              "confidence": "medium",
+              "risk_notes": [
+                "Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.",
+                "Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "pydantic/_internal/_utils.py"
+        ],
+        "additions": 6,
+        "deletions": 4,
+        "binary_files": 0,
+        "changed_lines": 10
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "pydantic-utility",
+      "arm": "bare",
+      "repeat": 3,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "pydantic/_internal/_utils.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend unique_list with a keyword-only keep_first: bool = False option. When true, retain the first item for each name_factory result in first-name order; when false or omitted, preserve existing last-value replacement and first-name ordering. Keep tuple input and custom name_factory support; do not mutate input. Expected implementation area: pydantic/_internal/_utils.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py pydantic",
+            "--mode",
+            "bare",
+            "--run-id",
+            "738cdd80c6224475b55bf53c98598f51",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/20cc26c29f40467c8223c586f9dc7bf1",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"738cdd80c6224475b55bf53c98598f51\", \"mode\": \"bare\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-fm_nzo1x/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"absent\", \"inventory_sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\", \"inventory\": [], \"thread_id\": \"01a155b0-ae59-7a51-ba04-0109d00bd498\", \"turn_id\": \"01a155b0-b099-79b0-bd67-0aa9c8c7127e\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-fm_nzo1x/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"verified_absent\", \"hook_events\": [], \"usage\": {\"totalTokens\": 89221, \"inputTokens\": 88563, \"cachedInputTokens\": 80640, \"cacheWriteInputTokens\": 0, \"outputTokens\": 658, \"reasoningOutputTokens\": 7}}\n",
+          "stderr": "",
+          "seconds": 18.953977291006595
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "pydantic",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\",\n      \"kind\": \"forbidden-edge\",\n      \"subject\": \"pydantic/_internal/_utils.py \u2192 pydantic/main.py\",\n      \"evidence\": {\n        \"edge\": {\n          \"from\": \"pydantic/_internal/_utils.py\",\n          \"to\": \"pydantic/main.py\",\n          \"kind\": \"type\",\n          \"weight\": 0.1,\n          \"specifier\": \"..main\",\n          \"line\": 33,\n          \"names\": [\n            \"BaseModel\"\n          ],\n          \"verdict\": \"forbidden\",\n          \"rule\": \"utility-no-outer-api\"\n        }\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"extract_interface\",\n            \"file\": \"pydantic/_internal/_utils.py\",\n            \"line\": 33,\n            \"from\": \"pydantic/_internal/_utils.py\",\n            \"to\": \"pydantic/_internal/ports/dependency.py\",\n            \"detail\": {\n              \"operation\": \"extract_contract\",\n              \"interface_location\": \"pydantic/_internal/ports/dependency.py\",\n              \"dependency\": \"pydantic/main.py\",\n              \"symbols\": [\n                \"BaseModel\"\n              ],\n              \"consumer_layer\": null\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\"\n            ],\n            \"absent_edges\": [\n              {\n                \"from\": \"pydantic/_internal/_utils.py\",\n                \"to\": \"pydantic/main.py\"\n              }\n            ]\n          }\n        },\n        \"confidence\": \"medium\",\n        \"risk_notes\": [\n          \"Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.\",\n          \"Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 1.7709049170371145
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "pydantic"
+          ],
+          "code": 0,
+          "stdout": "pydantic: isolated feature oracle passed (not the upstream suite)\n",
+          "stderr": "",
+          "seconds": 0.034552792087197304
+        }
+      ],
+      "errors": [],
+      "hook_activation": "verified_absent",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "3dade9eeeeaa7c1d44fa1b3c14c5de4aac34fe0efab902fbc2cf6673fe96d861"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 18.953977291006595,
+      "tokens": {
+        "total": 89221,
+        "raw": {
+          "totalTokens": 89221,
+          "inputTokens": 88563,
+          "cachedInputTokens": 80640,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 658,
+          "reasoningOutputTokens": 7
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "738cdd80c6224475b55bf53c98598f51",
+        "mode": "bare",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-fm_nzo1x/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "absent",
+        "inventory_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "inventory": [],
+        "thread_id": "01a155b0-ae59-7a51-ba04-0109d00bd498",
+        "turn_id": "01a155b0-b099-79b0-bd67-0aa9c8c7127e",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-fm_nzo1x/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "verified_absent",
+        "hook_events": [],
+        "usage": {
+          "totalTokens": 89221,
+          "inputTokens": 88563,
+          "cachedInputTokens": 80640,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 658,
+          "reasoningOutputTokens": 7
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": true,
+      "new_violations": 0,
+      "architecture": {
+        "base": "e6b41881927425ef7eeaf1e43624f3f760e14a7a",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711",
+            "kind": "forbidden-edge",
+            "subject": "pydantic/_internal/_utils.py \u2192 pydantic/main.py",
+            "evidence": {
+              "edge": {
+                "from": "pydantic/_internal/_utils.py",
+                "to": "pydantic/main.py",
+                "kind": "type",
+                "weight": 0.1,
+                "specifier": "..main",
+                "line": 33,
+                "names": [
+                  "BaseModel"
+                ],
+                "verdict": "forbidden",
+                "rule": "utility-no-outer-api"
+              }
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "extract_interface",
+                  "file": "pydantic/_internal/_utils.py",
+                  "line": 33,
+                  "from": "pydantic/_internal/_utils.py",
+                  "to": "pydantic/_internal/ports/dependency.py",
+                  "detail": {
+                    "operation": "extract_contract",
+                    "interface_location": "pydantic/_internal/ports/dependency.py",
+                    "dependency": "pydantic/main.py",
+                    "symbols": [
+                      "BaseModel"
+                    ],
+                    "consumer_layer": null
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711"
+                  ],
+                  "absent_edges": [
+                    {
+                      "from": "pydantic/_internal/_utils.py",
+                      "to": "pydantic/main.py"
+                    }
+                  ]
+                }
+              },
+              "confidence": "medium",
+              "risk_notes": [
+                "Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.",
+                "Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [
+          "pydantic/_internal/_utils.py"
+        ],
+        "additions": 7,
+        "deletions": 4,
+        "binary_files": 0,
+        "changed_lines": 11
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": true,
+      "tests_pass": true
+    },
+    {
+      "task": "pydantic-utility",
+      "arm": "guarded",
+      "repeat": 3,
+      "model": "gpt-6.1-sol",
+      "seed": null,
+      "expected_area": [
+        "pydantic/_internal/_utils.py"
+      ],
+      "commands": [
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "hook",
+            "install",
+            "--root",
+            "/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo",
+            "--agent",
+            "codex",
+            "--package",
+            "pydantic"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"agent\": \"codex\",\n  \"written\": [\n    \".codex/hooks.json\"\n  ],\n  \"unchanged\": [],\n  \"capabilities\": {\n    \"pre_tool_deny\": true,\n    \"pre_edit_context\": true,\n    \"completion_gate\": true,\n    \"post_edit_rollback\": false,\n    \"feedback_only\": false\n  },\n  \"notice\": \"Review and trust project-local hooks in Codex before they execute; no trust settings were changed.\",\n  \"configuration\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.archgraph/hooks/configs/codex.json\"\n}\n",
+          "stderr": "",
+          "seconds": 0.024912833934649825
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "sync-rules"
+          ],
+          "code": 0,
+          "stdout": "Wrote owned block in CLAUDE.md\nWrote owned block in AGENTS.md\nWrote owned block in .cursorrules\nWrote owned block in .github/copilot-instructions.md\n",
+          "stderr": "",
+          "seconds": 0.03431395802181214
+        },
+        {
+          "argv": [
+            "/Users/dan/.pyenv/versions/3.10.0/bin/python3",
+            "/Users/dan/Work/archgraph/bench/codex_app_server.py",
+            "--model",
+            "gpt-6.1-sol",
+            "--prompt",
+            "Extend unique_list with a keyword-only keep_first: bool = False option. When true, retain the first item for each name_factory result in first-name order; when false or omitted, preserve existing last-value replacement and first-name ordering. Keep tuple input and custom name_factory support; do not mutate input. Expected implementation area: pydantic/_internal/_utils.py. Do not change the benchmark oracle or layout.yaml. Run the isolated feature check: /opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -B /Users/dan/Work/archgraph/bench/cases/check.py pydantic",
+            "--mode",
+            "guarded",
+            "--run-id",
+            "848b59f10d5e467ebb64cc52145bc175",
+            "--archgraph",
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--archgraph-sha256",
+            "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+            "--artifact-dir",
+            "/Users/dan/Work/archgraph/bench/results/.private-events/1e8224b661844d3698f5e4d615f31fe3",
+            "--trust-reviewed-archgraph",
+            "--auth-file",
+            "[REDACTED]",
+            "--codex",
+            "/Users/dan/.local/bin/codex"
+          ],
+          "code": 0,
+          "stdout": "{\"schema\": \"archgraph/benchmark-runner/v1\", \"run_id\": \"848b59f10d5e467ebb64cc52145bc175\", \"mode\": \"guarded\", \"model\": \"gpt-6.1-sol\", \"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo\", \"codex_version\": \"codex-cli 0.163.0\", \"archgraph_sha256\": \"67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52\", \"hook_config_sha256\": \"ab2a67d789755e05120695f2c851eb96137821e05c5ed88587c80d6e64c88a75\", \"inventory_sha256\": \"c6d830207b6ebbc32c72775bd8df1c5d6abd79e63f86e8318aeda49327a4e476\", \"inventory\": [{\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:post_tool_use:0:0\", \"eventName\": \"postToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo' # archgraph:managed:post\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 1, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:ef12f5bde2152746932e2b7a82ae3eaabc01b30129c3898be5de7beec4ce3394\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:pre_tool_use:0:0\", \"eventName\": \"preToolUse\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo' # archgraph:managed:pre\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 0, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:8b70a16064c42c45ad3fa996fa64784165dfe5abe4226059963e80db772b6c75\", \"trustStatus\": \"trusted\"}, {\"key\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:stop:0:0\", \"eventName\": \"stop\", \"handlerType\": \"command\", \"command\": \"'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo' # archgraph:managed:stop\", \"async\": false, \"matcher\": null, \"timeoutSec\": 10, \"statusMessage\": null, \"additionalContextLimit\": null, \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json\", \"source\": \"project\", \"pluginId\": null, \"displayOrder\": 2, \"enabled\": true, \"isManaged\": false, \"currentHash\": \"sha256:4ee6cf06e3c695582d87925dc29f4a7163023b31fb4d3f82d35767b061c05da0\", \"trustStatus\": \"trusted\"}], \"thread_id\": \"01a155b1-014f-7162-b903-026359f78b0c\", \"turn_id\": \"01a155b1-0329-7400-a31f-12e4d5e3be7a\", \"turn_status\": \"completed\", \"effective_settings\": {\"cwd\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo\", \"model\": \"gpt-6.1-sol\", \"modelProvider\": \"openai\", \"approvalPolicy\": \"never\", \"sandbox\": {\"type\": \"workspaceWrite\", \"writableRoots\": [], \"networkAccess\": false, \"excludeTmpdirEnvVar\": false, \"excludeSlashTmp\": false}}, \"mcp_servers\": [], \"activation\": \"unknown\", \"hook_events\": [{\"method\": \"hook/started\", \"threadId\": \"01a155b1-014f-7162-b903-026359f78b0c\", \"turnId\": \"01a155b1-0329-7400-a31f-12e4d5e3be7a\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:exec-e498375d-998e-4147-8a7a-0e7bba6218c3\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155b1-014f-7162-b903-026359f78b0c\", \"turnId\": \"01a155b1-0329-7400-a31f-12e4d5e3be7a\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:exec-e498375d-998e-4147-8a7a-0e7bba6218c3\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json\", \"status\": \"blocked\", \"snapshot\": null, \"verdict\": \"UNAVAILABLE\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155b1-014f-7162-b903-026359f78b0c\", \"turnId\": \"01a155b1-0329-7400-a31f-12e4d5e3be7a\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:exec-1b1cff68-9eca-4f3c-ae0d-952dde36d4c4\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155b1-014f-7162-b903-026359f78b0c\", \"turnId\": \"01a155b1-0329-7400-a31f-12e4d5e3be7a\", \"id\": \"pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:exec-1b1cff68-9eca-4f3c-ae0d-952dde36d4c4\", \"eventName\": \"preToolUse\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json\", \"status\": \"blocked\", \"snapshot\": null, \"verdict\": \"UNAVAILABLE\"}, {\"method\": \"hook/started\", \"threadId\": \"01a155b1-014f-7162-b903-026359f78b0c\", \"turnId\": \"01a155b1-0329-7400-a31f-12e4d5e3be7a\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json\", \"status\": \"running\", \"snapshot\": null, \"verdict\": null}, {\"method\": \"hook/completed\", \"threadId\": \"01a155b1-014f-7162-b903-026359f78b0c\", \"turnId\": \"01a155b1-0329-7400-a31f-12e4d5e3be7a\", \"id\": \"stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json\", \"eventName\": \"stop\", \"sourcePath\": \"/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json\", \"status\": \"completed\", \"snapshot\": null, \"verdict\": null}], \"usage\": {\"totalTokens\": 61428, \"inputTokens\": 61137, \"cachedInputTokens\": 54400, \"cacheWriteInputTokens\": 0, \"outputTokens\": 291, \"reasoningOutputTokens\": 37}}\n",
+          "stderr": "",
+          "seconds": 16.340326959034428
+        },
+        {
+          "argv": [
+            "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--engine",
+            "native",
+            "--symbols",
+            "--package",
+            "pydantic",
+            "--tool",
+            "check_diff",
+            "--arguments",
+            "{\"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\", \"brief\": false}"
+          ],
+          "code": 0,
+          "stdout": "{\n  \"base\": \"e6b41881927425ef7eeaf1e43624f3f760e14a7a\",\n  \"new_forbidden\": [],\n  \"new_cycles\": [],\n  \"grown_cycles\": [],\n  \"findings\": [\n    {\n      \"finding_id\": \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\",\n      \"kind\": \"forbidden-edge\",\n      \"subject\": \"pydantic/_internal/_utils.py \u2192 pydantic/main.py\",\n      \"evidence\": {\n        \"edge\": {\n          \"from\": \"pydantic/_internal/_utils.py\",\n          \"to\": \"pydantic/main.py\",\n          \"kind\": \"type\",\n          \"weight\": 0.1,\n          \"specifier\": \"..main\",\n          \"line\": 33,\n          \"names\": [\n            \"BaseModel\"\n          ],\n          \"verdict\": \"forbidden\",\n          \"rule\": \"utility-no-outer-api\"\n        }\n      },\n      \"suggestion\": null,\n      \"recipe\": {\n        \"steps\": [\n          {\n            \"kind\": \"extract_interface\",\n            \"file\": \"pydantic/_internal/_utils.py\",\n            \"line\": 33,\n            \"from\": \"pydantic/_internal/_utils.py\",\n            \"to\": \"pydantic/_internal/ports/dependency.py\",\n            \"detail\": {\n              \"operation\": \"extract_contract\",\n              \"interface_location\": \"pydantic/_internal/ports/dependency.py\",\n              \"dependency\": \"pydantic/main.py\",\n              \"symbols\": [\n                \"BaseModel\"\n              ],\n              \"consumer_layer\": null\n            },\n            \"mechanical\": false\n          }\n        ],\n        \"expected\": {\n          \"pairs_removed\": null,\n          \"cycle_size_after\": null,\n          \"new_cycles\": null,\n          \"instability_delta\": {}\n        },\n        \"verify\": {\n          \"predicate\": \"recipe_deltas_match && all(structured)\",\n          \"structured\": {\n            \"findings_absent\": [\n              \"ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711\"\n            ],\n            \"absent_edges\": [\n              {\n                \"from\": \"pydantic/_internal/_utils.py\",\n                \"to\": \"pydantic/main.py\"\n              }\n            ]\n          }\n        },\n        \"confidence\": \"medium\",\n        \"risk_notes\": [\n          \"Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.\",\n          \"Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark.\"\n        ]\n      }\n    }\n  ],\n  \"limitations\": [\n    \"Recipes use current findings; semantic code changes require review.\"\n  ],\n  \"base_selection\": \"explicit\",\n  \"policy\": {\n    \"comparison\": \"current rules applied to both snapshots\",\n    \"changed_from_base\": false\n  }\n}\n",
+          "stderr": "warning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\nwarning: Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.\nwarning: pydantic/__init__.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/__init__.py: module __getattr__ may expose dynamic exports\nwarning: pydantic/__init__.py: star-import symbol exports cannot all be enumerated statically\nwarning: pydantic/_internal/_validators.py: dynamic import calls may be rebound; runtime execution is not modeled\nwarning: pydantic/annotated_handlers.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/dataclasses.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/config.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/json.py: dynamic __all__ cannot be enumerated\nwarning: pydantic/deprecated/tools.py: dynamic __all__ cannot be enumerated\nwarning: 142 unresolved collector reference(s) reported by tree-sitter-python; explicit import accounting is reported separately\n",
+          "seconds": 1.7985018329927698
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+            "-B",
+            "/Users/dan/Work/archgraph/bench/cases/check.py",
+            "pydantic"
+          ],
+          "code": 1,
+          "stdout": "",
+          "stderr": "Traceback (most recent call last):\n  File \"/Users/dan/Work/archgraph/bench/cases/check.py\", line 75, in <module>\n    main(sys.argv[1])\n    ~~~~^^^^^^^^^^^^^\n  File \"/Users/dan/Work/archgraph/bench/cases/check.py\", line 50, in main\n    assert parameter is not None, 'keep_first keyword is missing'\n           ^^^^^^^^^^^^^^^^^^^^^\nAssertionError: keep_first keyword is missing\n",
+          "seconds": 0.03810141596477479
+        }
+      ],
+      "errors": [
+        "expected touched area unchanged; feature work unverified",
+        "project tests failed"
+      ],
+      "hook_activation": "unknown",
+      "reviewed_policy": {
+        "kind": "file",
+        "sha256": "3dade9eeeeaa7c1d44fa1b3c14c5de4aac34fe0efab902fbc2cf6673fe96d861"
+      },
+      "configuration_cleanup": {
+        "removed_configs": [],
+        "rule_blocks_updated": []
+      },
+      "isolation_overrides": [],
+      "seed_supported": false,
+      "agent_exit": 0,
+      "wall_seconds": 16.340326959034428,
+      "tokens": {
+        "total": 61428,
+        "raw": {
+          "totalTokens": 61428,
+          "inputTokens": 61137,
+          "cachedInputTokens": 54400,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 291,
+          "reasoningOutputTokens": 37
+        },
+        "source": "Codex thread/tokenUsage/updated total"
+      },
+      "activation_evidence": {
+        "schema": "archgraph/benchmark-runner/v1",
+        "run_id": "848b59f10d5e467ebb64cc52145bc175",
+        "mode": "guarded",
+        "model": "gpt-6.1-sol",
+        "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo",
+        "codex_version": "codex-cli 0.163.0",
+        "archgraph_sha256": "67e5ac4fe800772c2d2ab21930027187d62913ab96a2694195677216bb979a52",
+        "hook_config_sha256": "ab2a67d789755e05120695f2c851eb96137821e05c5ed88587c80d6e64c88a75",
+        "inventory_sha256": "c6d830207b6ebbc32c72775bd8df1c5d6abd79e63f86e8318aeda49327a4e476",
+        "inventory": [
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:post_tool_use:0:0",
+            "eventName": "postToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event post --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo' # archgraph:managed:post",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 1,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:ef12f5bde2152746932e2b7a82ae3eaabc01b30129c3898be5de7beec4ce3394",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:pre_tool_use:0:0",
+            "eventName": "preToolUse",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event pre --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo' # archgraph:managed:pre",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 0,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:8b70a16064c42c45ad3fa996fa64784165dfe5abe4226059963e80db772b6c75",
+            "trustStatus": "trusted"
+          },
+          {
+            "key": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:stop:0:0",
+            "eventName": "stop",
+            "handlerType": "command",
+            "command": "'/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen' hook run --agent codex --event stop --root '/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo' # archgraph:managed:stop",
+            "async": false,
+            "matcher": null,
+            "timeoutSec": 10,
+            "statusMessage": null,
+            "additionalContextLimit": null,
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json",
+            "source": "project",
+            "pluginId": null,
+            "displayOrder": 2,
+            "enabled": true,
+            "isManaged": false,
+            "currentHash": "sha256:4ee6cf06e3c695582d87925dc29f4a7163023b31fb4d3f82d35767b061c05da0",
+            "trustStatus": "trusted"
+          }
+        ],
+        "thread_id": "01a155b1-014f-7162-b903-026359f78b0c",
+        "turn_id": "01a155b1-0329-7400-a31f-12e4d5e3be7a",
+        "turn_status": "completed",
+        "effective_settings": {
+          "cwd": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "approvalPolicy": "never",
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": false,
+            "excludeSlashTmp": false
+          }
+        },
+        "mcp_servers": [],
+        "activation": "unknown",
+        "hook_events": [
+          {
+            "method": "hook/started",
+            "threadId": "01a155b1-014f-7162-b903-026359f78b0c",
+            "turnId": "01a155b1-0329-7400-a31f-12e4d5e3be7a",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:exec-e498375d-998e-4147-8a7a-0e7bba6218c3",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155b1-014f-7162-b903-026359f78b0c",
+            "turnId": "01a155b1-0329-7400-a31f-12e4d5e3be7a",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:exec-e498375d-998e-4147-8a7a-0e7bba6218c3",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json",
+            "status": "blocked",
+            "snapshot": null,
+            "verdict": "UNAVAILABLE"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155b1-014f-7162-b903-026359f78b0c",
+            "turnId": "01a155b1-0329-7400-a31f-12e4d5e3be7a",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:exec-1b1cff68-9eca-4f3c-ae0d-952dde36d4c4",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155b1-014f-7162-b903-026359f78b0c",
+            "turnId": "01a155b1-0329-7400-a31f-12e4d5e3be7a",
+            "id": "pre-tool-use:0:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json:exec-1b1cff68-9eca-4f3c-ae0d-952dde36d4c4",
+            "eventName": "preToolUse",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json",
+            "status": "blocked",
+            "snapshot": null,
+            "verdict": "UNAVAILABLE"
+          },
+          {
+            "method": "hook/started",
+            "threadId": "01a155b1-014f-7162-b903-026359f78b0c",
+            "turnId": "01a155b1-0329-7400-a31f-12e4d5e3be7a",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json",
+            "status": "running",
+            "snapshot": null,
+            "verdict": null
+          },
+          {
+            "method": "hook/completed",
+            "threadId": "01a155b1-014f-7162-b903-026359f78b0c",
+            "turnId": "01a155b1-0329-7400-a31f-12e4d5e3be7a",
+            "id": "stop:2:/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json",
+            "eventName": "stop",
+            "sourcePath": "/private/var/folders/sm/qqmp_0r506l_w5qb7294p0wm0000gn/T/archgraph-paired-ahtqkzdx/repo/.codex/hooks.json",
+            "status": "completed",
+            "snapshot": null,
+            "verdict": null
+          }
+        ],
+        "usage": {
+          "totalTokens": 61428,
+          "inputTokens": 61137,
+          "cachedInputTokens": 54400,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 291,
+          "reasoningOutputTokens": 37
+        }
+      },
+      "policy_changed": false,
+      "comparison_eligible": false,
+      "new_violations": 0,
+      "architecture": {
+        "base": "e6b41881927425ef7eeaf1e43624f3f760e14a7a",
+        "new_forbidden": [],
+        "new_cycles": [],
+        "grown_cycles": [],
+        "findings": [
+          {
+            "finding_id": "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711",
+            "kind": "forbidden-edge",
+            "subject": "pydantic/_internal/_utils.py \u2192 pydantic/main.py",
+            "evidence": {
+              "edge": {
+                "from": "pydantic/_internal/_utils.py",
+                "to": "pydantic/main.py",
+                "kind": "type",
+                "weight": 0.1,
+                "specifier": "..main",
+                "line": 33,
+                "names": [
+                  "BaseModel"
+                ],
+                "verdict": "forbidden",
+                "rule": "utility-no-outer-api"
+              }
+            },
+            "suggestion": null,
+            "recipe": {
+              "steps": [
+                {
+                  "kind": "extract_interface",
+                  "file": "pydantic/_internal/_utils.py",
+                  "line": 33,
+                  "from": "pydantic/_internal/_utils.py",
+                  "to": "pydantic/_internal/ports/dependency.py",
+                  "detail": {
+                    "operation": "extract_contract",
+                    "interface_location": "pydantic/_internal/ports/dependency.py",
+                    "dependency": "pydantic/main.py",
+                    "symbols": [
+                      "BaseModel"
+                    ],
+                    "consumer_layer": null
+                  },
+                  "mechanical": false
+                }
+              ],
+              "expected": {
+                "pairs_removed": null,
+                "cycle_size_after": null,
+                "new_cycles": null,
+                "instability_delta": {}
+              },
+              "verify": {
+                "predicate": "recipe_deltas_match && all(structured)",
+                "structured": {
+                  "findings_absent": [
+                    "ag-8a6a808f6eb67cf6fb60d2fa11b2197a95246a3eada22849f61826350cedd711"
+                  ],
+                  "absent_edges": [
+                    {
+                      "from": "pydantic/_internal/_utils.py",
+                      "to": "pydantic/main.py"
+                    }
+                  ]
+                }
+              },
+              "confidence": "medium",
+              "risk_notes": [
+                "Define the contract in the consumer's allowed layer, replace the forbidden dependency with that contract, and inject its implementation from composition code. Interface contents require agent work.",
+                "Policy reason: Keep the utility independent of the package outer API in this synthetic benchmark."
+              ]
+            }
+          }
+        ],
+        "limitations": [
+          "Recipes use current findings; semantic code changes require review."
+        ],
+        "base_selection": "explicit",
+        "policy": {
+          "comparison": "current rules applied to both snapshots",
+          "changed_from_base": false
+        }
+      },
+      "edit_blocks": 0,
+      "distinct_blocked_findings": 0,
+      "fires": [],
+      "raw_receipt_files": [],
+      "raw_receipt_file_count": 0,
+      "recipes_applied": 0,
+      "verified_recipe_receipts": [],
+      "diff": {
+        "files": [],
+        "additions": 0,
+        "deletions": 0,
+        "binary_files": 0,
+        "changed_lines": 0
+      },
+      "outside_expected_area": [],
+      "expected_area_touched": false,
+      "tests_pass": false
+    }
+  ],
+  "host": {
+    "system": "Darwin",
+    "machine": "arm64",
+    "python": "3.10.0"
+  },
+  "archgraph_version": {
+    "argv": [
+      "/private/tmp/archgraph-LIVE-guarded-smoke-lt15g0js/archgraph-frozen",
+      "--version"
+    ],
+    "code": 0,
+    "stdout": "archgraph 0.1.0\n",
+    "stderr": "",
+    "seconds": 0.010186041938140988
+  },
+  "summary": {
+    "bare": {
+      "runs": 3,
+      "agent_runs": 3,
+      "failed_runs": 0,
+      "comparison_eligible": 3,
+      "new_violations": {
+        "measured": 3,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "edit_blocks": {
+        "measured": 3,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "recipes_applied": {
+        "measured": 3,
+        "mean": 0,
+        "stdev": 0.0
+      },
+      "wall_seconds": {
+        "measured": 3,
+        "mean": 18.72695674964537,
+        "stdev": 0.9349975014294569
+      }
+    },
+    "guarded": {
+      "runs": 3,
+      "agent_runs": 3,
+      "failed_runs": 3,
+      "comparison_eligible": 0,
+      "new_violations": {
+        "measured": 0,
+        "mean": null,
+        "stdev": null
+      },
+      "edit_blocks": {
+        "measured": 0,
+        "mean": null,
+        "stdev": null
+      },
+      "recipes_applied": {
+        "measured": 0,
+        "mean": null,
+        "stdev": null
+      },
+      "wall_seconds": {
+        "measured": 0,
+        "mean": null,
+        "stdev": null
+      }
+    }
+  },
+  "per_task_summary": {
+    "pydantic-utility": {
+      "bare": {
+        "runs": 3,
+        "agent_runs": 3,
+        "failed_runs": 0,
+        "comparison_eligible": 3,
+        "new_violations": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "edit_blocks": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "recipes_applied": {
+          "measured": 3,
+          "mean": 0,
+          "stdev": 0.0
+        },
+        "wall_seconds": {
+          "measured": 3,
+          "mean": 18.72695674964537,
+          "stdev": 0.9349975014294569
+        }
+      },
+      "guarded": {
+        "runs": 3,
+        "agent_runs": 3,
+        "failed_runs": 3,
+        "comparison_eligible": 0,
+        "new_violations": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "edit_blocks": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "recipes_applied": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        },
+        "wall_seconds": {
+          "measured": 0,
+          "mean": null,
+          "stdev": null
+        }
+      }
+    }
+  },
+  "publication_provenance": {
+    "name": "pydantic",
+    "baseline_commit": "e6b41881927425ef7eeaf1e43624f3f760e14a7a",
+    "upstream": "https://github.com/pydantic/pydantic",
+    "upstream_commit": "5adfeaaaea947f81f0f01868604f219084ec151a",
+    "role": "public substitute; Perf tasks unavailable",
+    "policy": "benchmark-authored; not upstream intent",
+    "layout_sha256": "3dade9eeeeaa7c1d44fa1b3c14c5de4aac34fe0efab902fbc2cf6673fe96d861",
+    "oracle": "isolated feature check; not upstream test suite",
+    "oracle_sha256_before": "843c49fcdeb3b8a34e17e92d445591b0cc4d997ea40073bc9c242e4794259eac",
+    "oracle_sha256_after": "843c49fcdeb3b8a34e17e92d445591b0cc4d997ea40073bc9c242e4794259eac",
+    "archgraph_source_commit": "8075782",
+    "archgraph_build": "debug executable frozen before paired runs",
+    "execution": "At most two repository benchmarks concurrently; arms alternate order; no warm daemon was started.",
+    "preflight_notes": [
+      "Generic directory check requires explicit collection support for this monorepo; benchmark commands select --package pydantic."
+    ]
+  }
+}

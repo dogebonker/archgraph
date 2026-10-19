@@ -96,6 +96,8 @@ For a declared service inventory, `archgraph services services.yaml` reports HTT
 
 ## Acting on the evidence
 
+For agent efficacy claims, use the [paired benchmark harness](https://github.com/dogebonker/archgraph/tree/main/bench): matching models, three runs per arm, native hook activation evidence, and an independent feature oracle. Retain failures and zero-benefit results. A scripted block/repair demo proves the loop works; it does not establish that agents produce better changes. The public synthetic cases use isolated feature checks, not full upstream suites.
+
 Related skills take the next step:
 
 - [archgraph-context](../archgraph-context/SKILL.md): before editing, prepares a token-budgeted reading plan from a saved scan, with constraints first and export summaries for large or distant files.
