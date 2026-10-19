@@ -310,6 +310,7 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
             let written = edge.original_to.as_deref().unwrap_or(&edge.to);
             let boundary =
                 rules.and_then(|r| Some((r, r.public_for(written)?, r.public_globs(written)?)));
+            let declared = boundary.is_some();
             let (outside, bypass, expected) =
                 if let Some((rules, (_, entries), (pattern, globs))) = boundary {
                     let inside = rules.bound_match(&pattern, &edge.from);
@@ -332,7 +333,23 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
                     .collect::<BTreeSet<_>>()
                     .into_iter()
                     .collect();
-                deep_imports.push(DeepImport { from: edge.from.clone(), to: edge.to.clone(), symbols: names, suggestion: format!("Import through {}; re-export the required symbols there or declare a boundary rule.", expected.join(", ")) });
+                let suggestion = if declared {
+                    format!(
+                        "Import through {}; re-export the required symbols there or declare a boundary rule.",
+                        expected.join(", ")
+                    )
+                } else {
+                    format!(
+                        "Observed entrypoint convention: {}. No public boundary is declared; this direct import is informational, not a violation or a repair instruction.",
+                        expected.join(", ")
+                    )
+                };
+                deep_imports.push(DeepImport {
+                    from: edge.from.clone(),
+                    to: edge.to.clone(),
+                    symbols: names,
+                    suggestion,
+                });
             }
         }
         deep_imports.sort_by(|a, b| (&a.from, &a.to).cmp(&(&b.from, &b.to)));

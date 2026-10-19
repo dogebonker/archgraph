@@ -155,6 +155,7 @@ fn diff_distinguishes_grown_cycles_and_schemas_validate() {
     )
     .unwrap();
     assert_eq!(out["grown_cycles"].as_array().unwrap().len(), 1);
+    assert_eq!(out["new_cyclic_imports"].as_array().unwrap().len(), 2);
     validate("check_diff", &out);
     let output = tool(
         &old,

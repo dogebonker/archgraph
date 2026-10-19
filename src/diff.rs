@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::model::{
-    Cycle, CycleLevel, Diff, Document, Edge, Module, ModuleDelta, SCHEMA, Snapshot, Verdict,
+    Cycle, CycleLevel, Diff, Document, Edge, Link, Module, ModuleDelta, SCHEMA, Snapshot, Verdict,
 };
 
 pub fn diff(old: &Document, new: &Document) -> Diff {
@@ -74,6 +74,10 @@ pub fn diff(old: &Document, new: &Document) -> Diff {
         added_modules: missing(&is, &was),
         removed_modules: missing(&was, &is),
         new_cycles: cycles_only_in(new, old),
+        new_cyclic_imports: crate::graph::new_cyclic_import_pairs(old, new)
+            .into_iter()
+            .map(|(from, to)| Link { from, to })
+            .collect(),
         resolved_cycles: cycles_only_in(old, new),
         new_forbidden: only_in(new, old, Verdict::Forbidden),
         resolved_forbidden: only_in(old, new, Verdict::Forbidden),
@@ -94,11 +98,12 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
         _ => format!("**archgraph diff: fail** ({})", failed.join(", ")),
     };
     out += &format!(
-        ": {}, {}, {}, {}.\n",
+        ": {}, {}, {}, {}, {}.\n",
         count(d.new_forbidden.len(), "new forbidden import"),
         count(d.new_unplanned.len(), "new unplanned import"),
-        count(d.new_cycles.len(), "new cycle"),
-        count(d.resolved_cycles.len(), "resolved cycle"),
+        count(d.new_cyclic_imports.len(), "new cyclic import"),
+        count(d.new_cycles.len(), "new dependency component"),
+        count(d.resolved_cycles.len(), "resolved dependency component"),
     );
     for (title, edges) in [
         ("New forbidden imports", &d.new_forbidden),
@@ -113,9 +118,18 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
             out += &format!("- {} → {} ({})\n", esc(&e.from), esc(&e.to), esc(rule));
         }
     }
+    if !d.new_cyclic_imports.is_empty() {
+        out += &format!(
+            "\n### New cyclic runtime imports ({})\n\n",
+            d.new_cyclic_imports.len()
+        );
+        for edge in &d.new_cyclic_imports {
+            out += &format!("- {} → {}\n", esc(&edge.from), esc(&edge.to));
+        }
+    }
     for (title, cycles) in [
-        ("New cycles", &d.new_cycles),
-        ("Resolved cycles", &d.resolved_cycles),
+        ("New dependency components", &d.new_cycles),
+        ("Resolved dependency components", &d.resolved_cycles),
     ] {
         if cycles.is_empty() {
             continue;

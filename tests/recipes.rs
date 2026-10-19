@@ -266,6 +266,14 @@ fn deep_import_recipe_reexports_then_retargets_written_boundary() {
         }],
         limitations: vec![],
     });
+    doc.config.rules = Some(
+        serde_json::from_value(json!({
+            "path":"layout.yaml", "sha256":"fixture", "doc": {
+                "version":1, "public":[{"module":"domain/**", "entries":["domain/index.ts"]}]
+            }
+        }))
+        .unwrap(),
+    );
     recipes::attach(&mut doc).unwrap();
     let recipe = doc
         .findings
@@ -650,4 +658,128 @@ fn reattaching_recipes_keeps_expected_deltas_ids_and_ranking_identical() {
     let before = serde_json::to_value(&doc).unwrap();
     recipes::attach(&mut doc).unwrap();
     assert_eq!(before, serde_json::to_value(&doc).unwrap());
+}
+
+#[test]
+fn fastapi_folder_coupling_is_observation_without_a_cut_recipe() {
+    let doc = document(
+        Language::Python,
+        &["app/main.py", "app/deps.py", "routes/orders.py"],
+        &[
+            ("app/main.py", "routes/orders.py"),
+            ("routes/orders.py", "app/deps.py"),
+        ],
+    );
+    assert!(!doc.cycles.is_empty(), "keep folder coupling visible");
+    assert!(!doc.findings.iter().any(|f| f.kind == FindingKind::Cycle));
+    let diagnostic = doc
+        .diagnostics
+        .iter()
+        .find(|d| d.finding.kind == FindingKind::Cycle)
+        .unwrap();
+    assert!(diagnostic.finding.recipe.is_none());
+    assert!(diagnostic.reason.to_lowercase().contains("folder"));
+    let error = recipes::recipe_for(&doc, &diagnostic.finding.finding_id).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("observation has no repair recipe")
+    );
+}
+
+#[test]
+fn inferred_facades_are_observations_until_a_public_boundary_is_declared() {
+    use archgraph::surface::{DeepImport, ModuleSurface, SurfaceReport};
+    let mut doc = document(
+        Language::Python,
+        &["app/main.py", "domain/__init__.py", "domain/model.py"],
+        &[("app/main.py", "domain/model.py")],
+    );
+    doc.surface = Some(SurfaceReport {
+        schema: archgraph::model::SCHEMA.into(),
+        kind: "surface".into(),
+        max_symbols: 50,
+        complete: true,
+        modules: vec![ModuleSurface {
+            module: "domain".into(),
+            entrypoints: vec!["domain/__init__.py".into()],
+            exported: vec![],
+            used_externally: vec![],
+            could_be_internal: vec![],
+            deep_imports: vec![DeepImport {
+                from: "app/main.py".into(),
+                to: "domain/model.py".into(),
+                symbols: vec!["Model".into()],
+                suggestion: "inferred".into(),
+            }],
+            oversized: false,
+        }],
+        limitations: vec![],
+    });
+    recipes::attach(&mut doc).unwrap();
+    assert!(
+        !doc.findings
+            .iter()
+            .any(|f| f.kind == FindingKind::DeepImport)
+    );
+    assert!(
+        doc.diagnostics
+            .iter()
+            .any(|d| d.finding.kind == FindingKind::DeepImport && d.reason.contains("declared"))
+    );
+}
+
+#[test]
+fn a_real_cycle_does_not_turn_neighboring_router_wiring_into_a_repair() {
+    let doc = document(
+        Language::Python,
+        &[
+            "app/main.py",
+            "app/deps.py",
+            "app/loop.py",
+            "routes_a/router.py",
+            "routes_b/router.py",
+            "routes_c/router.py",
+            "routes_a/loop.py",
+        ],
+        &[
+            ("app/main.py", "routes_a/router.py"),
+            ("app/main.py", "routes_b/router.py"),
+            ("app/main.py", "routes_c/router.py"),
+            ("routes_a/router.py", "app/deps.py"),
+            ("routes_b/router.py", "app/deps.py"),
+            ("routes_c/router.py", "app/deps.py"),
+            ("app/loop.py", "routes_a/loop.py"),
+            ("routes_a/loop.py", "app/loop.py"),
+        ],
+    );
+    let cyclic = archgraph::graph::cycle_import_pairs(&doc);
+    let fixes: Vec<_> = doc
+        .findings
+        .iter()
+        .filter(|f| f.kind == FindingKind::Cycle)
+        .collect();
+    assert!(!fixes.is_empty());
+    for fix in fixes {
+        for step in &fix.recipe.as_ref().unwrap().steps {
+            assert_eq!(step.kind, StepKind::CutImport);
+            assert!(cyclic.contains(&(step.from.clone(), step.to.clone())));
+        }
+    }
+}
+
+#[test]
+fn all_kinds_does_not_make_type_only_imports_runtime_cycle_evidence() {
+    let mut doc = document(
+        Language::Typescript,
+        &["a/a.ts", "b/b.ts"],
+        &[("a/a.ts", "b/b.ts"), ("b/b.ts", "a/a.ts")],
+    );
+    doc.config.all_kinds = true;
+    for edge in &mut doc.edges {
+        edge.kind = EdgeKind::Type;
+    }
+    assert!(archgraph::graph::cycle_import_pairs(&doc).is_empty());
+    recipes::attach(&mut doc).unwrap();
+    assert!(!doc.findings.iter().any(|f| f.kind == FindingKind::Cycle));
 }

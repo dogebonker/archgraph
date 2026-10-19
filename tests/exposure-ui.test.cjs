@@ -110,12 +110,13 @@ test('ring integrates camera bounds, hit testing, search, selection and module c
 test('external rule verdicts contribute separate assessment counts and a real package/file next step', () => {
   const { context, run } = setup({ external_nodes: [packageNode], external_edges: [packageEdge,
     { ...packageEdge, kind: 'runtime', line: 8 }, { ...packageEdge, verdict: 'unplanned', line: 9 }] });
-  vm.runInContext('const bad = [], next = [];', context);
+  vm.runInContext('const bad = [], coverage = [], next = [];', context);
   const start = script.indexOf('  for (const verdict of ["forbidden", "unplanned"]) {');
   const end = script.indexOf('    const groups = ruleGroups(verdict);', start);
   vm.runInContext(script.slice(start, end) + '\n}', context);
   assert.match(run('bad.map(row => row.parts.filter(p => typeof p === "string").join("")).join(" ")'), /2 recorded external imports are forbidden/);
-  assert.match(run('bad.map(row => row.parts.filter(p => typeof p === "string").join("")).join(" ")'), /1 recorded external import is unplanned/);
+  assert.match(run('coverage.map(row => row.parts.filter(p => typeof p === "string").join("")).join(" ")'), /1 recorded external import is unplanned/);
+  assert.equal(run('bad.length'), 1);
   assert.equal(run('bad[0].touch'), 1);
   assert.equal(run('next.length'), 1); assert.equal(run('next[0][1].f'), 0);
   vm.runInContext(fragment('function refTarget(p)', 'function sentence('), context);
@@ -128,4 +129,76 @@ test('forbidden external imports mark only their source module red and empty ass
   vm.runInContext(fragment('const forbiddenMod =', '/* ---------- assessment:'), context);
   assert.equal(run('modSignal[0]'), 'forbidden'); assert.equal(run('modHealth[0]'), 'red');
   assert.match(html, /\.assess li\.empty\s*\{[^}]*display:\s*block/);
+});
+
+test('Violations filter excludes uncovered imports at both file and module levels', () => {
+  const context = vm.createContext({ hiddenMods: [false, false], files: [{ mod: 0 }, { mod: 1 }] });
+  vm.runInContext(fragment('const filt =', 'const same ='), context);
+  vm.runInContext('filt.problems = true', context);
+  for (const tone of ['neutral', 'unplanned', 'forbidden']) {
+    context.edge = { a: 0, b: 1, tone, kind: 'runtime', v: { forbidden: tone === 'forbidden' ? 1 : 0 } };
+    assert.equal(vm.runInContext('showFE(edge)', context), tone === 'forbidden');
+    assert.equal(vm.runInContext('showME(edge)', context), tone === 'forbidden');
+  }
+  vm.runInContext('filt.problems = false', context);
+  context.edge.tone = 'unplanned';
+  assert.equal(vm.runInContext('showFE(edge)', context), true);
+});
+
+test('folder coupling alone is advisory rather than red repair advice', () => {
+  const { context, run } = setup();
+  Object.assign(context, { N: 1, edges: [], findings: [], modCycle: [0], findingsOfModule: [[]] });
+  context.doc.cycles = [{ level: 'module', break: [{ from: 'domain/a.ts' }], members: ['domain'] }];
+  vm.runInContext(fragment('const forbiddenMod =', '/* ---------- assessment:'), context);
+  assert.equal(run('modHealth[0]'), 'amber');
+  assert.doesNotMatch(fragment('const KIND_ADVICE =', 'function advice('), /cannot be changed|Remove or invert/);
+  assert.doesNotMatch(fragment('  modCycles.forEach(c => {', '  const moves = ofKind('), /remove or invert|by removing|drop the re-export|"Move "/);
+});
+
+test('diagnostics remain informational, render reason as text and tolerate older documents', () => {
+  const { context, run, panel } = setup();
+  vm.runInContext(fragment('/* ---------- diagnostic observations', '/* ---------- end diagnostic observations'), context);
+  run('diagnosticContext()');
+  assert.equal(panel.children.length, 0);
+  context.doc.diagnostics = [{ finding: { kind: 'cycle', subject: 'app ↔ api', evidence: { members: ['app', 'api'] } }, reason: '<img src=x onerror=alert(1)>' }];
+  run('diagnosticContext()');
+  assert.match(panel.textContent, /Observations without a fix/);
+  assert.match(panel.textContent, /app ↔ api/);
+  assert.match(panel.textContent, /<img src=x onerror=alert\(1\)>/);
+  assert.doesNotMatch(panel.textContent, /remove imports|Violation/);
+});
+
+test('folder cycles remain inspectable without an actionable finding', () => {
+  const context = vm.createContext({ observations: [], modCycles: [{ members: ['app', 'api'] }],
+    modIndex: new Map([['app', 0], ['api', 1]]), cycleFinding: () => -1,
+    names: list => list.map(i => ['app', 'api'][i]) });
+  const start = script.indexOf('  modCycles.forEach(c => {');
+  const end = script.indexOf('  if (fileCycles.length)', start);
+  vm.runInContext(script.slice(start, end), context);
+  const text = vm.runInContext('observations[0].join("")', context);
+  assert.match(text, /reciprocal folder dependencies/);
+  assert.match(text, /without a circular file import/);
+  assert.match(text, /No policy violation is implied/);
+});
+
+test('uncovered internal imports go to coverage rather than findings to repair', () => {
+  const context = vm.createContext({ bad: [], coverage: [], next: [], externalEdges: [],
+    edges: [{ a: 0, b: 1 }], ruleGroups: verdict => verdict === 'unplanned' ? [['unnamed', [0]]] : [],
+    count: (n, one, many) => `${n} ${n === 1 ? one : many}` });
+  const start = script.indexOf('  for (const verdict of ["forbidden", "unplanned"]) {');
+  const end = script.indexOf('  const unstable =', start);
+  vm.runInContext(script.slice(start, end), context);
+  assert.equal(vm.runInContext('bad.length', context), 0);
+  assert.equal(vm.runInContext('next.length', context), 0);
+  assert.equal(vm.runInContext('coverage.length', context), 1);
+  assert.match(vm.runInContext('coverage[0].parts[1]', context), /not a violation/);
+});
+
+test('file-cycle counts state their recorded scope and point to the full file graph', () => {
+  const header = fragment('  stat(doc.cycles.filter(c => c.level === "file")', '  stat(forbidden,');
+  assert.match(header, /within-module file cycle/);
+  assert.doesNotMatch(header, /"file import cycle"/);
+  const observations = fragment('  modCycles.forEach(c => {', '  if (fileCycles.length)');
+  assert.match(observations, /Cross-module circular file imports may be summarized as folder loops/);
+  assert.match(observations, /--granularity file/);
 });

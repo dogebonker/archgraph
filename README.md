@@ -1,10 +1,12 @@
-# archgraph: architecture enforcement derived from the import graph
+# archgraph: check architecture rules against the code’s import graph
 
 ## Install and initialize
 
 ```sh
 cargo +stable install --git https://github.com/dogebonker/archgraph --locked && archgraph init --preset layered --scope internal
 ```
+
+The graph shows dependencies; your rules decide which are allowed. Folder-level coupling and inferred surfaces are observations, not automatic repair instructions.
 
 Builds current `main` with stable Rust. No architecture docs required: infer a reviewable draft from existing imports, or start with one of five reasoned presets. Reads TypeScript, JavaScript, Python, Go, Rust, Java and Elixir; the native engine remains experimental.
 

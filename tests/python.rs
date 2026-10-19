@@ -106,13 +106,18 @@ fn py_cycles_mapping_barrels_and_cycle() {
         .collect();
     // repo.py imports core/__init__.py, but only service.py of core imports it: not misplaced.
     // core/__init__.py cannot move without its package, and cli.py is alone in its module.
-    assert_eq!(kinds, [("cycle", "core, db"), ("seam", ".")]);
-    assert_eq!(findings[0]["evidence"], doc["cycles"][0]);
+    assert_eq!(kinds, [("seam", ".")]);
+    let cycle = common::finding(&doc, "cycle", "core, db");
+    assert_eq!(cycle["evidence"], doc["cycles"][0]);
+    assert!(
+        cycle.get("recipe").is_none(),
+        "folder/re-export coupling is not an actionable cut"
+    );
     // repo.py has degree 3, above the 90th percentile (2), so it is a hub and left out.
     // Q(clusters) = 3/4 - (6/8)^2 + 1/4 - (2/8)^2; Q(folders) = -18/64. The clusters hold 6 of
     // the 9 non-barrel files, at least half.
     assert_eq!(
-        findings[1]["evidence"],
+        findings[0]["evidence"],
         json!({ "modularity": 0.375, "folder_modularity": -0.2813,
                 "hubs": ["mypkg/db/repo.py"], "via_barrel": true, "clusters": [
                     { "files": ["mypkg/api/handlers.py", "mypkg/api/schemas.py", "mypkg/cli.py",

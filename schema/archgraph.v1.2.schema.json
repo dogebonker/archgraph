@@ -3329,6 +3329,12 @@
             "$ref": "#/$defs/cycle"
           }
         },
+        "new_cyclic_imports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        },
         "resolved_cycles": {
           "type": "array",
           "items": {

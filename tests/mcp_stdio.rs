@@ -350,11 +350,11 @@ fn stdio_tools_conform_fix_cycle_and_keep_deterministic_bounded_results() {
     let data = &diff["structuredContent"]["data"];
     assert_ne!(diff["isError"], true, "{diff}");
     assert!(!data["new_cycles"].as_array().unwrap().is_empty(), "{data}");
-    assert!(
-        !data["new_forbidden"].as_array().unwrap().is_empty(),
-        "{data}"
-    );
+    // The new concrete-cycle witnesses share the hard response cap with edge
+    // details. Omission must retain full counts, not imply a clean policy.
+    assert!(data["new_forbidden"].as_array().unwrap().len() <= 1);
     assert_eq!(diff["structuredContent"]["counts"]["new_forbidden"], 1);
+    assert_eq!(diff["structuredContent"]["counts"]["new_cyclic_imports"], 2);
     assert_eq!(diff["structuredContent"]["truncated"], true);
 
     let id = data["findings"]

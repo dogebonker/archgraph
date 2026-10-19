@@ -545,10 +545,10 @@ ul.wi-findings .path { color: var(--label2); margin-top: 2px; }
       <span class="thumb" id="thumb"></span>
       <button type="button" class="tbtn" id="t-all" role="radio" aria-checked="true" title="Show all imports">
         <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="17" r="2"/><circle cx="18" cy="7" r="2"/><circle cx="17" cy="17.5" r="1.5"/><path d="M7.6 15.8l8.8-7.6M8 17.2h7.5"/></svg><span class="lbl">All</span></button>
-      <button type="button" class="tbtn" id="t-problems" role="radio" aria-checked="false" title="Show only forbidden and unplanned imports">
+      <button type="button" class="tbtn" id="t-problems" role="radio" aria-checked="false" title="Show only imports forbidden by an explicit policy">
         <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.6 17.4L17.4 6.6"/></svg><span class="lbl">Violations</span></button>
-      <button type="button" class="tbtn" id="t-cycles" role="radio" aria-checked="false" title="Show only imports in a cycle">
-        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95"/><path d="M19 4.5v4h-4"/></svg><span class="lbl">Cycles</span></button>
+      <button type="button" class="tbtn" id="t-cycles" role="radio" aria-checked="false" title="Show reciprocal folder dependencies and recorded file import cycles">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95"/><path d="M19 4.5v4h-4"/></svg><span class="lbl">Dependency loops</span></button>
     </div>
     <div class="tools glass capsule">
       <button type="button" class="tbtn" id="t-types" aria-pressed="false" aria-label="Hide type-only imports" title="Hide type-only imports">
@@ -568,7 +568,7 @@ ul.wi-findings .path { color: var(--label2); margin-top: 2px; }
           <div class="legend">
             <h2>Modules</h2>
             <span><i class="sw h red"></i>forbidden import</span>
-            <span><i class="sw h red"></i>imports to cut to break a cycle</span>
+            <span><i class="sw h amber"></i>candidate graph cuts (review first)</span>
             <span><i class="sw h amber"></i>in a cycle</span>
             <span><i class="sw h amber"></i>has a finding</span>
             <span><i class="sw h grey"></i>no issues found</span>
@@ -577,7 +577,7 @@ ul.wi-findings .path { color: var(--label2); margin-top: 2px; }
             <h2>Imports</h2>
             <span><i class="sw ln"></i>allowed or no rules</span>
             <span><i class="sw ln forbidden"></i>forbidden</span>
-            <span><i class="sw ln unplanned"></i>unplanned</span>
+            <span><i class="sw ln unplanned"></i>uncovered by policy</span>
             <span><i class="sw ln dash"></i>type-only</span>
             <span><i class="sw ring"></i>in a cycle</span>
             <span><i class="sw ln in"></i>importers of the selection</span>
@@ -777,7 +777,7 @@ $("stats-text").textContent =
   `${count(doc.cycles.length, "cycle", "cycles")}, ${count(forbidden, "forbidden import", "forbidden imports")}, ` +
   `${count(doc.findings.length, "finding", "findings")}. ` +
   `${doc.source.language} via ${doc.source.collector.name}${commit}; ` +
-  (doc.config.rules ? `rules ${doc.config.rules.path}.` : "no rules.");
+  (doc.config.rules ? `rules ${doc.config.rules.path}.` : "no policy loaded; dependency observations are not policy violations.");
 {
   const meta = $("meta");
   const field = (label, value, cls, opt) => {
@@ -801,7 +801,8 @@ $("stats-text").textContent =
   stat(mods.length, count(mods.length, "module", "modules"));
   stat(doc.edges.length, count(doc.edges.length, "internal import edge", "internal import edges"));
   if (doc.external_edges?.length) stat(doc.external_edges.length, count(doc.external_edges.length, "recorded external import", "recorded external imports"));
-  stat(doc.cycles.length, count(doc.cycles.length, "cycle", "cycles"), doc.cycles.length > 0);
+  stat(doc.cycles.filter(c => c.level === "module").length, count(doc.cycles.filter(c => c.level === "module").length, "folder dependency loop", "folder dependency loops"));
+  stat(doc.cycles.filter(c => c.level === "file").length, count(doc.cycles.filter(c => c.level === "file").length, "within-module file cycle", "within-module file cycles"));
   stat(forbidden, `${forbidden} forbidden`, forbidden > 0);
   stat(doc.findings.length, count(doc.findings.length, "finding", "findings"));
 }
@@ -1140,7 +1141,7 @@ relayoutAll();
 const KIND_TEXT = {
   "cycle-via-grabbag": "A folder cycle shrinks or disappears when loosely related helper files are separated.",
   "reexport-cycle": "A re-export chain loops back to a facade before reaching a definition.",
-  "cycle": "Runtime import cycles (type-only and dynamic imports left out), with the fewest imports to remove.",
+  "cycle": "Runtime dependency loops. Folder-level loops can be normal application wiring; inspect the file imports before changing code.",
   "hidden-coupling": "Files in different modules changed together without importing each other.",
   "internals-reach": "Modules whose public entry other modules import past.",
   "misplaced-file": "Files the module that imports them would hold better.",
@@ -1153,8 +1154,8 @@ const KIND_TEXT = {
 const KIND_ADVICE = {
   "cycle-via-grabbag": ["Grouping independent helper files into one module creates misleading cycle membership.", "Split the folder along the listed files and consumers; genuine residual cycles still need their own cuts."],
   "reexport-cycle": ["A forwarding loop prevents reliable named-import resolution.", "Point the facade at the defining file and re-scan."],
-  "cycle": ["Modules in a cycle cannot be changed, tested or split off alone: a change can come back around.",
-    "Remove or invert the lighter side of a two-way pair (or an import of the break), re-scan, repeat while the cycle remains."],
+  "cycle": ["Folder-level reciprocal dependencies do not prove a circular file import or an architecture defect.",
+    "Inspect the original file imports and declared boundaries. Keep intentional application wiring; consider a cut only when it addresses a verified problem."],
   "hidden-coupling": ["Something the imports do not show links these files, so changing one quietly needs the other.",
     "Find what links them (events, DI, shared data), then make it an explicit import or move the files together."],
   "internals-reach": ["Importers depend on a module's internals, which it may change without warning.",
@@ -1171,7 +1172,10 @@ const KIND_ADVICE = {
     "Depend on an abstraction the stable module owns, or move the code it needs."],
 };
 function advice(kind, f) {
-  const a = kind === "misplaced-file" && f && f.evidence.ownership && f.evidence.ownership.assessment === "conflicts" ? [
+  const a = kind === "cycle" && f?.evidence?.level === "file" ? [
+    "A runtime import chain returns to the same file. Its behavior depends on the language and initialization order.",
+    "Inspect the import chain and verify initialization behavior before selecting a cut or inversion."]
+    : kind === "misplaced-file" && f && f.evidence.ownership && f.evidence.ownership.assessment === "conflicts" ? [
     "Dependencies point toward another module, while declared ownership marks a different team boundary.",
     "Review the ownership boundary with the named owners before proposing a move."]
     : kind === "misplaced-file" && f && !f.suggestion ? [KIND_ADVICE[kind][0],
@@ -1313,8 +1317,7 @@ function hotspotStepPriority(parts) {
 }
 
 /* Ring colour comes only from what archgraph checked, the strongest signal first. Red: either end
-   of a forbidden import, or the module an import to cut (a cycle's break set) or a registrar move
-   changes. Amber: the other members of a module cycle, and any module a finding names. Grey: none.
+   of a forbidden import. Amber: folder-cycle members, candidate cuts and any module a finding names. Grey: none.
    Cohesion and link counts are shown as numbers, not colour: nearly every real folder has cohesion
    near 0, and being imported a lot marks stable code, not a problem. */
 const forbiddenMod = new Uint8Array(N), cutMod = new Uint8Array(N);
@@ -1325,8 +1328,8 @@ for (const c of doc.cycles) if (c.level === "module") {
   for (const r of c.registrar_moves || []) if (modIndex.has(r.module)) cutMod[modIndex.get(r.module)] = 1;
 }
 const modSignal = mods.map((m, i) => forbiddenMod[i] ? "forbidden" : cutMod[i] ? "cut" : modCycle[i] >= 0 ? "cycle" : findingsOfModule[i].length ? "finding" : "none");
-const RING = { forbidden: "red", cut: "red", cycle: "amber", finding: "amber", none: "grey" };
-const HEALTH_TEXT = { forbidden: "forbidden import", cut: "imports to cut to break a cycle", cycle: "in a cycle", finding: "has a finding", none: "no issues found" };
+const RING = { forbidden: "red", cut: "amber", cycle: "amber", finding: "amber", none: "grey" };
+const HEALTH_TEXT = { forbidden: "forbidden import", cut: "candidate graph cuts (review first)", cycle: "in a cycle", finding: "has a finding", none: "no issues found" };
 const modHealth = modSignal.map(k => RING[k]);
 
 /* ---------- assessment: what holds up, what hurts, what to do next ----------
@@ -1434,7 +1437,7 @@ const ruleGroups = verdict => {
 };
 
 const assessment = (() => {
-  const good = [], bad = [], next = [];
+  const good = [], bad = [], coverage = [], observations = [], next = [];
   const rules = doc.config.rules, E = edges.length, nForb = doc.summary.forbidden, nUnpl = doc.summary.unplanned;
 
   /* What holds up */
@@ -1464,7 +1467,7 @@ const assessment = (() => {
       /* Only a majority is worth a count here: a minority would be bad news in the good list. */
       cohesive.length > judged.length / 2 ? ` (${cohesive.length} of ${judged.length} modules with ${REAL_SIZE} or more files).` : "."]);
   }
-  if (!modCycles.length && mods.length > 1) good.push(["No cycles between modules: each module can be read, tested and changed after the modules it imports."]);
+  if (!modCycles.length && mods.length > 1) good.push(["No runtime dependency loops between the configured modules were found."]);
   else if (N - inModCycle.size >= N / 2) good.push([`${N - inModCycle.size} of ${N} modules are in no module cycle.`]);
   const entriesChecked = rules ? !!(rules.doc.public && rules.doc.public.length) : doc.source.language === "typescript" && files.some(f => f.barrel);
   if (entriesChecked && !ofKind("internals-reach").length) good.push(["No import reaches past a module's public entry."]);
@@ -1472,28 +1475,18 @@ const assessment = (() => {
   if (doc.cochange && !ofKind("hidden-coupling").length) good.push([`No files in different modules changed together without an import between them, over ${nf(doc.cochange.commits)} commits.`]);
 
   /* What hurts, each with the number of files it touches */
-  modCycles.forEach((c, n) => {
-    const ms = c.members.map(id => modIndex.get(id)).filter(i => i !== undefined), touch = filesIn(ms), j = cycleFinding(c);
-    const label = `${c.members.length} of ${N} modules`;
-    if (n === 0 && c.members.length > 2) {
-      const tw = c.two_way || [], cut = firstCut(c);
-      const parts = [j >= 0 ? { fd: j, label } : label, `, holding ${nf(touch)} of ${nf(F)} files, are tied in one import cycle: through some chain of runtime imports each depends on all the others, so none can be changed, tested or split off alone.`];
-      if (tw.length) parts.push(` ${tw.length === 1 ? "One pair imports" : tw.length + " pairs import"} each other directly${cut && cut.lone ? `, ${cut.lone} of them through a single import on one side` : ""}: the lighter sides are where to start.`);
-      bad.push({ parts, touch });
-    } else {
-      const cutLabel = `${count(c.break.length, "import", "imports")} to cut`;
-      const parts = [...names(ms, i => ({ m: i })), c.members.length === 2 ? " import each other (" : " import each other in a cycle (", j >= 0 ? { fd: j, label: cutLabel } : cutLabel, ")."];
-      bad.push({ parts, touch });
-    }
+  modCycles.forEach(c => {
+    const ms = c.members.map(id => modIndex.get(id)).filter(i => i !== undefined), j = cycleFinding(c);
+    observations.push([...names(ms, i => ({ m: i })), " have reciprocal folder dependencies. ",
+      j >= 0 ? { fd: j, label: "Inspect the file imports" } : "Inspect the file imports",
+      ": application registration and dependency injection can produce this pattern without a circular file import. No policy violation is implied. Cross-module circular file imports may be summarized as folder loops; use --granularity file to inspect the full file graph."]);
   });
   if (fileCycles.length) {
     const big = fileCycles[0], j = cycleFinding(big), touch = fileCycles.reduce((s, c) => s + c.members.length, 0);
-    const where = mods[files[fileIndex.get(big.members[0])].mod].id;
-    const bigLabel = count(big.members.length, "file", "files");
-    const ofIts = `${big.members.length} of its files`;
-    bad.push({ touch, parts: fileCycles.length === 1
-      ? [`${where} has an import cycle between `, j >= 0 ? { fd: j, label: ofIts } : ofIts, "."]
-      : [`${fileCycles.length} import cycles run between files inside a module, the largest through `, j >= 0 ? { fd: j, label: bigLabel } : bigLabel, ` of ${where}.`] });
+    const label = count(big.members.length, "file", "files");
+    bad.push({ touch, parts: [`${count(fileCycles.length, "within-module runtime file cycle", "within-module runtime file cycles")} recorded; `,
+      j >= 0 ? { fd: j, label: `inspect the ${label} in the largest` } : `inspect the ${label} in the largest`,
+      ". Verify initialization behavior and the intended dependency direction before choosing a fix."] });
   }
   const hubs = ids(N).filter(i => roleOf(i) === "hub").sort((a, b) => mods[b].ca * lessStable[b].length - mods[a].ca * lessStable[a].length);
   if (hubs.length) {
@@ -1512,7 +1505,7 @@ const assessment = (() => {
     const external = externalEdges.filter(edge => edge.verdict === verdict);
     if (external.length) {
       const first = external[0], target = { pkg: externalById.get(first.to), label: `pkg:${externalNodes[externalById.get(first.to)].package}` };
-      bad.push({ touch: new Set(external.map(edge => edge.from)).size,
+      (verdict === "forbidden" ? bad : coverage).push({ touch: new Set(external.map(edge => edge.from)).size,
         parts: [`${count(external.length, "recorded external import is", "recorded external imports are")} ${verdict}; `,
           "inspect ", target, verdict === "forbidden" ? ` (first rule: ${first.rule || "no named rule"}).` : ": no rule covers these package dependencies."] });
       if (verdict === "forbidden") next.push([`Review the ${count(external.length, "forbidden external import", "forbidden external imports")}, starting with `,
@@ -1523,8 +1516,8 @@ const assessment = (() => {
     const total = groups.reduce((s, g) => s + g[1].length, 0), touched = new Set();
     for (const [, l] of groups) for (const e of l) { touched.add(edges[e].a); touched.add(edges[e].b); }
     if (verdict === "unplanned") {
-      bad.push({ touch: touched.size, parts: [{ e: groups[0][1][0], label: count(total, "internal import is unplanned", "internal imports are unplanned") },
-        `: no rule covers ${total === 1 ? "it" : "them"}, so either the rules are incomplete or the import is unexpected.`] });
+      coverage.push({ touch: touched.size, parts: [{ e: groups[0][1][0], label: count(total, "internal import is uncovered", "internal imports are uncovered") },
+        `: no rule covers ${total === 1 ? "it" : "them"}. This is a policy coverage gap, not a violation.`] });
       continue;
     }
     const parts = [`${count(total, "import is", "imports are")} forbidden: `];
@@ -1586,49 +1579,9 @@ const assessment = (() => {
       : [`Fix the ${l.length} imports forbidden by ${rule}, starting with `, imp, "."]);
   }
   modCycles.forEach(c => {
-    const j = cycleFinding(c), cut = firstCut(c);
-    const cyc = j >= 0 ? { fd: j, label: `the ${c.members.length}-module cycle` } : `the ${c.members.length}-module cycle`;
-    /* A registrar alone forming the other side of several pairs, with its simulated move. It
-       leads only when it removes more two-way pairs than a single-import cut would (one) and the
-       cycle shrinks (RegistrarMove::leads in src/model.rs); the others follow the cut. */
-    const regMove = r => {
-      const fi = fileIndex.get(r.file), dest = r.to.slice(0, r.to.lastIndexOf("/") + 1) || r.to;
-      return ["Move ", fi !== undefined ? { f: fi, label: short(r.file) } : short(r.file), ` to ${short(dest)}: it alone forms the other side of ${count(r.pairs, "two-way pair", "two-way pairs")} in `, cyc,
-        ` (${r.module} ↔ ${r.with.slice(0, 3).join(", ")}${r.with.length > 3 ? ` and ${r.with.length - 3} more` : ""}); the move removes ${count(r.pairs_removed, "two-way pair", "two-way pairs")}, ` +
-        (!r.cycle_after ? `the cycle of ${r.cycle_before} modules goes` : r.cycle_after < r.cycle_before ? `the cycle drops from ${r.cycle_before} to ${r.cycle_after} modules`
-          : r.cycle_after === r.cycle_before ? `the cycle stays at ${r.cycle_before} modules`
-          : `the cycle goes from ${r.cycle_before} to ${r.cycle_after} modules (the file's new folder stays in it)`) + ", and adds no new cycle."];
-    };
-    const singleCut = cut && cut.p.imports === 1 ? 1 : 0;
-    const placedMoves = (c.registrar_moves || []).filter(r => r.to && r.pairs_removed > 0);
-    const leading = placedMoves.filter(r => r.pairs_removed > singleCut && r.cycle_after < r.cycle_before);
-    for (const r of leading) next.push(regMove(r));
-    const trailing = () => { for (const r of placedMoves.filter(r => !leading.includes(r))) next.push(regMove(r)); };
-    if (cut && cut.e !== undefined) {
-      const { p } = cut, e = edges[cut.e];
-      const lone = p.imports === 1;
-      /* An internal barrel re-exporting the other module's file: drop the re-export. */
-      if (e.kind === "reexport" && files[e.a].barrel) {
-        next.push([lone ? "Cut " : "Start on ", cyc, " where it is thinnest: drop the re-export of ", { e: e.i, label: short(files[e.b].path) }, ` from ${short(files[e.a].path)}`,
-          `, ${p.from}'s only way into ${p.to}, while ${p.to} imports ${p.from} ${times(p.reverse_imports)}. Its importers then import ${short(files[e.b].path)} directly.`]);
-        trailing();
-        return;
-      }
-      next.push([lone ? "Cut " : "Start on ", cyc, " where it is thinnest: remove or invert ", { e: e.i, label: `${short(files[e.a].path)} → ${short(files[e.b].path)}` },
-        lone ? `, the only import from ${p.from} into ${p.to}, while ${p.to} imports ${p.from} ${times(p.reverse_imports)}.`
-          : `: ${p.from} imports ${p.to} ${times(p.imports)}, against ${times(p.reverse_imports)} back.`,
-        cut.lone > 1 ? ` ${count(cut.lone - 1, "more pair has", "more pairs have")} a single import on one side; re-scan after each cut.` : " Re-scan after the cut."]);
-      trailing();
-    } else if (c.break.length) {
-      /* Prefer a break import into a package entry or the root index: a version or registry
-         lookup in the public API, not part of it. */
-      const root = doc.config.source_root === "." ? "" : doc.config.source_root + "/";
-      const entryLike = l => (doc.package_entries || []).includes(l.to) ||
-        /^(index\.[cm]?[jt]sx?|__init__\.py)$/.test(l.to.startsWith(root) ? l.to.slice(root.length) : "\0");
-      const e = edgeOf(c.break.find(entryLike) || c.break[0]);
-      if (e !== undefined) next.push(["Start on ", cyc, " by removing or inverting ", { e, label: `${short(files[edges[e].a].path)} → ${short(files[edges[e].b].path)}` }, "."]);
-      trailing();
-    } else trailing();
+    const j = cycleFinding(c);
+    next.push([j >= 0 ? { fd: j, label: "Inspect reciprocal folder dependencies" } : "Inspect reciprocal folder dependencies",
+      ` across ${c.members.length} modules before changing code. Verify file-level evidence and intended boundaries; registration wiring may be intentional.`]);
   });
   const moves = ofKind("misplaced-file").filter(fd => fd.f.simulation).sort((p, q) => cohesionGain(q) - cohesionGain(p));
   for (const fd of moves.slice(0, 2)) {
@@ -1662,7 +1615,7 @@ const assessment = (() => {
   /* The generic advice comes after every concrete step. */
   if (!doc.config.rules && N > 2) next.push(["Write a layout.yaml with layers and public entries for the boundaries you agree on, so archgraph check can hold them in CI."]);
   if (doc.hotspots) next.sort((a, b) => hotspotStepPriority(b) - hotspotStepPriority(a));
-  return { good, bad, next: next.slice(0, MAX_NEXT) };
+  return { good, bad, coverage, observations, next: next.slice(0, MAX_NEXT) };
 })();
 
 /* One paragraph per module: its role, what is good, what is risky, the next step a finding names. */
@@ -1690,10 +1643,10 @@ function diagnosis(i) {
     unpl = out_.reduce((s, me) => s + me.v.unplanned, 0) + external.filter(edge => edge.verdict === "unplanned").length;
   if (doc.config.rules && !forb && !unpl && m.ce) good.push("every import out of it is allowed by a rule");
   const c = modCycles.find(c => c.members.includes(m.id));
-  if (c) risky.push(`it is one of the ${c.members.length} modules in an import cycle`);
+  if (c) say(`It participates in reciprocal dependencies across ${c.members.length} folders; this alone does not establish a circular file import or defect.`);
   if (role !== "collection" && m.files >= REAL_SIZE && m.ca > 0 && cx !== null && cx < LOOSE_MAX) risky.push(`most imports of its files go to other modules (cohesion ${n2(cx)}${notCounting}), so it may hold several modules' worth of code`);
   if (forb) risky.push(`${count(forb, "import", "imports")} out of it ${forb === 1 ? "is" : "are"} forbidden`);
-  if (unpl) risky.push(`${count(unpl, "import", "imports")} out of it ${unpl === 1 ? "is" : "are"} unplanned`);
+  if (unpl) say(`Policy coverage: ${count(unpl, "outgoing import is", "outgoing imports are")} uncovered; no violation is implied.`);
   const unst = ofKind("unstable-dependency").filter(fd => fd.f.evidence.from === m.id);
   if (unst.length) risky.push(`it imports the more volatile ${listed(unst.map(fd => fd.f.evidence.to))}`);
   const reach = ofKind("internals-reach").filter(fd => fd.f.evidence.module === m.id);
@@ -1712,7 +1665,7 @@ function diagnosis(i) {
   const sink = pick("sink-split").find(fd => fd.f.subject === m.id);
   if (mv) say({ b: "Next:" }, " ", { fd: mv.i, label: mv.f.evidence.ownership?.assessment === "conflicts"
     ? `review ownership of ${short(mv.f.subject)} before proposing a move` : `move ${short(mv.f.subject)} into ${mv.f.evidence.target_module}` }, ".");
-  else if (cutHere) say({ b: "Next:" }, " ", { e: cutHere.e, label: `cut ${short(files[edges[cutHere.e].a].path)} → ${short(files[edges[cutHere.e].b].path)}` }, `, the lighter side of ${cutHere.p.from} and ${cutHere.p.to} importing each other.`);
+  else if (cutHere) say({ b: "Next:" }, " ", { e: cutHere.e, label: `inspect ${short(files[edges[cutHere.e].a].path)} → ${short(files[edges[cutHere.e].b].path)}` }, ", and verify whether this is intentional wiring before changing it.");
   else if (sink) say({ b: "Next:" }, " ", { fd: sink.i, label: `split it along its ${sink.f.evidence.components.length} groups of importers` }, ".");
   else if (unst.length) say({ b: "Next:" }, " ", { fd: unst[0].i, label: `untie it from ${unst[0].f.evidence.to}` }, ".");
   else if (reach.length) say({ b: "Next:" }, " ", { fd: reach[0].i, label: "point those imports at its entry" }, ".");
@@ -1726,10 +1679,10 @@ let focused = false, overlay = { moves: [], links: [] };
 let hover = null, kb = null, sel = null;
 const hiddenMods = new Uint8Array(N);
 const filt = { problems: false, cycles: false, types: false };
-const showME = me => !(hiddenMods[me.a] || hiddenMods[me.b]) && (!filt.problems || me.tone !== "neutral") &&
+const showME = me => !(hiddenMods[me.a] || hiddenMods[me.b]) && (!filt.problems || me.tone === "forbidden") &&
   (!filt.cycles || me.cycle) && (!filt.types || !me.typeOnly);
 const showFE = e => !(e.me && (hiddenMods[files[e.a].mod] || hiddenMods[files[e.b].mod])) &&
-  (!filt.problems || e.tone !== "neutral") && (!filt.cycles || e.cycle) && (!filt.types || (e.kind !== "type" && e.kind !== "type-reexport"));
+  (!filt.problems || e.tone === "forbidden") && (!filt.cycles || e.cycle) && (!filt.types || (e.kind !== "type" && e.kind !== "type-reexport"));
 const same = (p, q) => p === q || (p && q && p.type === q.type && p.i === q.i);
 const raise = (arr, j, s) => { if (arr[j] < s) arr[j] = s; };
 
@@ -3868,6 +3821,22 @@ function peekbar() {
   }
   return bar;
 }
+/* ---------- diagnostic observations ---------- */
+function diagnosticContext() {
+  const rows = doc.diagnostics || [];
+  if (!rows.length) return;
+  const detail = el("details", { class: "kind" });
+  detail.append(el("summary", {}, `Observations without a fix (${rows.length})`),
+    el("p", { class: "muted" }, "These observations do not establish a policy violation or justify removing imports."));
+  for (const row of rows) {
+    const item = el("div");
+    item.append(el("h3", {}, `${row.finding.kind}: ${row.finding.subject}`), el("p", {}, row.reason));
+    if (row.finding.evidence?.members?.length) item.append(el("p", { class: "muted" }, row.finding.evidence.members.join(" → ")));
+    detail.append(item);
+  }
+  panel.append(detail);
+}
+/* ---------- end diagnostic observations ---------- */
 function overview() {
   panel.append(peekbar());
   panel.append(el("h2", {}, "Assessment"));
@@ -3899,7 +3868,7 @@ function overview() {
   if (ofKind("small-repo").length) panel.append(el("p", { class: "note" }, "Few files or modules: read the lines below as hints, the signal is weak."));
   if (doc.source.collector.type_marking === "unavailable") panel.append(el("p", { class: "note" }, "Type-only imports could not be told apart in this repository, so some cycles may include imports TypeScript removes."));
   if (foundations.length && !hasOutgoingTo) panel.append(el("p", { class: "note" }, "This scan has no outgoing_to per module (an older archgraph), so cohesion here also counts imports of foundations. Rescan to judge it without them."));
-  const MARK = { good: "holds", bad: "hurts", next: "next" };
+  const MARK = { good: "holds", bad: "hurts", info: "next", next: "next" };
   const section = (title, cls, items, empty) => {
     const h = el("h3", { class: cls }, title);
     h.prepend(icon(MARK[cls]));
@@ -3914,8 +3883,11 @@ function overview() {
     panel.append(list);
   };
   section("What holds up", "good", assessment.good, "Checked rules, stable foundations, cohesion, cycles and entries: none stands out as solid.");
-  section("What hurts", "bad", assessment.bad.map(b => b.parts), "Checked cycles, hubs, cohesion, rules, unstable imports, co-change and entries: nothing stands out.");
+  section("Policy coverage (informational)", "info", assessment.coverage.map(b => b.parts), "No uncovered imports recorded. Coverage does not establish correctness.");
+  section("Folder dependencies (informational)", "info", assessment.observations, "No reciprocal folder dependencies recorded. Cross-module circular file imports may be summarized as folder loops; use --granularity file to inspect the full file graph.");
+  section("Findings to review", "bad", assessment.bad.map(b => b.parts), "Checked cycles, hubs, cohesion, rules, unstable imports, co-change and entries: nothing stands out.");
   section("What to do next", "next", assessment.next, "No finding suggests a change.");
+  diagnosticContext();
   panel.append(el("h3", {}, findings.length ? "All findings" : "No findings"));
   const byKind = new Map();
   for (const fd of findings) { if (!byKind.has(fd.f.kind)) byKind.set(fd.f.kind, []); byKind.get(fd.f.kind).push(fd); }
@@ -4241,7 +4213,7 @@ function findingPanel(j) {
   if (f.kind === "cycle") {
     line(`${ev.level === "module" ? "Modules" : "Files"} in the cycle: ${ev.members.length}. ` +
       `${ev.exact ? "The break is the smallest." : "The break is a heuristic, not proven smallest."}`);
-    const breakHead = el("h3", {}, `Break: remove ${count(ev.break.length, "import", "imports")}`);
+    const breakHead = el("h3", {}, `Candidate graph cut: ${count(ev.break.length, "import", "imports")} (review before changing code)`);
     const linkEdges = links => links.map(edgeOf).filter(x => x !== undefined);
     const ul = importList(linkEdges(ev.break));
     const twoWay = [];

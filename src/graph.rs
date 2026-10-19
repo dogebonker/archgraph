@@ -457,6 +457,82 @@ fn cyclic_parts<'a>(edges: &[(&'a str, &'a str, usize)]) -> Vec<(Vec<&'a str>, V
     parts
 }
 
+/// Concrete imports participating in a cycle, independent of display-folder grouping.
+/// Go compiles directories as packages: two files need not import each other for a
+/// package import cycle to exist. Other languages use the scanned file graph.
+pub fn cycle_import_pairs(doc: &crate::model::Document) -> BTreeSet<(String, String)> {
+    let packages = doc.source.language == crate::model::Language::Go;
+    let unit = |path: &str| {
+        if packages {
+            crate::modules::dir_of(path)
+        } else {
+            path
+        }
+        .to_owned()
+    };
+    let edges: Vec<_> = doc
+        .edges
+        .iter()
+        .filter(|edge| edge.kind.is_runtime())
+        .filter(|edge| !packages || unit(&edge.from) != unit(&edge.to))
+        .collect();
+    let units: Vec<_> = edges
+        .iter()
+        .map(|edge| (unit(&edge.from), unit(&edge.to)))
+        .collect();
+    let pairs: Vec<_> = units
+        .iter()
+        .map(|(from, to)| (from.as_str(), to.as_str()))
+        .collect();
+    let components = components(&pairs);
+    let membership: BTreeMap<_, _> = components
+        .iter()
+        .enumerate()
+        .flat_map(|(index, members)| members.iter().map(move |member| (*member, index)))
+        .collect();
+    edges
+        .into_iter()
+        .zip(&units)
+        .filter(|(_, (from, to))| {
+            membership
+                .get(from.as_str())
+                .is_some_and(|component| membership.get(to.as_str()) == Some(component))
+        })
+        .map(|(edge, _)| (edge.from.clone(), edge.to.clone()))
+        .collect()
+}
+
+/// Newly cyclic imports with concrete file witnesses. Go comparison identities are
+/// physical package directories, so changing the representative file or adding a
+/// second import to existing cyclic packages does not turn old debt into a block.
+pub fn new_cyclic_import_pairs(
+    before: &crate::model::Document,
+    after: &crate::model::Document,
+) -> BTreeSet<(String, String)> {
+    let identity = |doc: &crate::model::Document, from: &str, to: &str| {
+        if doc.source.language == crate::model::Language::Go {
+            (
+                crate::modules::dir_of(from).to_owned(),
+                crate::modules::dir_of(to).to_owned(),
+            )
+        } else {
+            (from.to_owned(), to.to_owned())
+        }
+    };
+    let old: BTreeSet<_> = cycle_import_pairs(before)
+        .iter()
+        .map(|(from, to)| identity(before, from, to))
+        .collect();
+    let mut seen = BTreeSet::new();
+    cycle_import_pairs(after)
+        .into_iter()
+        .filter(|(from, to)| {
+            let pair = identity(after, from, to);
+            !old.contains(&pair) && seen.insert(pair)
+        })
+        .collect()
+}
+
 /// The SCCs over named nodes that hold a cycle: two or more nodes, or one importing itself.
 pub(crate) fn components<'a>(pairs: &[(&'a str, &'a str)]) -> Vec<BTreeSet<&'a str>> {
     let names: Vec<&str> = pairs

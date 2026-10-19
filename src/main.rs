@@ -596,7 +596,7 @@ fn diff(args: DiffArgs) -> Result<ExitCode> {
         .iter()
         .filter_map(|f| match f {
             FailOn::Forbidden => (!d.new_forbidden.is_empty()).then_some("new-forbidden"),
-            FailOn::Cycles => (!d.new_cycles.is_empty()).then_some("new-cycles"),
+            FailOn::Cycles => (!d.new_cyclic_imports.is_empty()).then_some("new-cycles"),
             FailOn::Unplanned => (!d.new_unplanned.is_empty()).then_some("new-unplanned"),
         })
         .collect();

@@ -845,6 +845,8 @@ pub struct Diff {
     pub added_modules: Vec<String>,
     pub removed_modules: Vec<String>,
     pub new_cycles: Vec<Cycle>,
+    /// Newly cyclic concrete runtime imports; display-folder reciprocity alone is advisory.
+    pub new_cyclic_imports: Vec<Link>,
     pub resolved_cycles: Vec<Cycle>,
     pub new_forbidden: Vec<Edge>,
     pub resolved_forbidden: Vec<Edge>,

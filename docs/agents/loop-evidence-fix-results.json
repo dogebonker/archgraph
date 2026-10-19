@@ -1,0 +1,513 @@
+{
+  "binary_sha256": "8eb38577ac27c58daccb9da4ea302509c5937ae9db8b6238800bde04f1e5dc28",
+  "fixture": {
+    "blocked": {
+      "schema": "archgraph/edit-check/v1",
+      "verdict": "BLOCK",
+      "violations": [
+        {
+          "file": "src/domain/a.ts",
+          "finding_id": "ag-67931d1f6a5bfa60c7903493fc31bebc5ffd8d282a660b66cf3089da240c2a4b",
+          "kind": "forbidden-edge",
+          "recipe": {
+            "confidence": "medium",
+            "expected": {
+              "cycle_size_after": 0,
+              "instability_delta": {
+                "adapters": null,
+                "domain": null
+              },
+              "new_cycles": 0,
+              "pairs_removed": 0
+            },
+            "risk_notes": [
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
+              "Policy reason: Domain logic must not depend on adapter implementations."
+            ],
+            "steps": [
+              {
+                "detail": {
+                  "edge_kind": "runtime",
+                  "operation": "remove_import",
+                  "original_to": null,
+                  "specifier": "../adapters/b",
+                  "target": "src/adapters/b.ts"
+                },
+                "file": "src/domain/a.ts",
+                "from": "src/domain/a.ts",
+                "kind": "cut_import",
+                "line": 2,
+                "mechanical": true,
+                "to": "src/adapters/b.ts"
+              }
+            ],
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "absent_edges": [
+                  {
+                    "from": "src/domain/a.ts",
+                    "to": "src/adapters/b.ts"
+                  }
+                ],
+                "baseline_id": "ag-67931d1f6a5bfa60c7903493fc31bebc5ffd8d282a660b66cf3089da240c2a4b",
+                "expected": {
+                  "cycle_size_after": 0,
+                  "instability_delta": {
+                    "adapters": null,
+                    "domain": null
+                  },
+                  "new_cycles": 0,
+                  "pairs_removed": 0
+                }
+              }
+            }
+          },
+          "rule": "domain-no-adapters"
+        }
+      ]
+    },
+    "capture": {
+      "context": "snapshot=aa6432e055050595ed5d5cc17dd4c0edd7a936025d286db175099113b9a38d2f\nStatic evidence;files:1;unscanned:0;imports:0;importers:0;rules:2;unknown_modules:0;unclassified:0;modules:domain;layers:src/**;forbid:src/domain/**->src/adapters/**",
+      "snapshot": "aa6432e055050595ed5d5cc17dd4c0edd7a936025d286db175099113b9a38d2f"
+    },
+    "fires": {
+      "rules": [
+        {
+          "count": 2,
+          "rule": "domain-no-adapters"
+        }
+      ],
+      "total": 2
+    },
+    "fixed": {
+      "schema": "archgraph/edit-check/v1",
+      "verdict": "PASS",
+      "violations": []
+    },
+    "kind": "scripted CLI session; no live agent host",
+    "preexisting_unchanged": {
+      "schema": "archgraph/edit-check/v1",
+      "verdict": "PASS",
+      "violations": []
+    },
+    "unchanged_repair_blocked": {
+      "schema": "archgraph/edit-check/v1",
+      "verdict": "BLOCK",
+      "violations": [
+        {
+          "file": "src/domain/a.ts",
+          "finding_id": "ag-67931d1f6a5bfa60c7903493fc31bebc5ffd8d282a660b66cf3089da240c2a4b",
+          "kind": "forbidden-edge",
+          "recipe": {
+            "confidence": "medium",
+            "expected": {
+              "cycle_size_after": 0,
+              "instability_delta": {
+                "adapters": null,
+                "domain": null
+              },
+              "new_cycles": 0,
+              "pairs_removed": 0
+            },
+            "risk_notes": [
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
+              "Policy reason: Domain logic must not depend on adapter implementations."
+            ],
+            "steps": [
+              {
+                "detail": {
+                  "edge_kind": "runtime",
+                  "operation": "remove_import",
+                  "original_to": null,
+                  "specifier": "../adapters/b",
+                  "target": "src/adapters/b.ts"
+                },
+                "file": "src/domain/a.ts",
+                "from": "src/domain/a.ts",
+                "kind": "cut_import",
+                "line": 2,
+                "mechanical": true,
+                "to": "src/adapters/b.ts"
+              }
+            ],
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "absent_edges": [
+                  {
+                    "from": "src/domain/a.ts",
+                    "to": "src/adapters/b.ts"
+                  }
+                ],
+                "baseline_id": "ag-67931d1f6a5bfa60c7903493fc31bebc5ffd8d282a660b66cf3089da240c2a4b",
+                "expected": {
+                  "cycle_size_after": 0,
+                  "instability_delta": {
+                    "adapters": null,
+                    "domain": null
+                  },
+                  "new_cycles": 0,
+                  "pairs_removed": 0
+                }
+              }
+            }
+          },
+          "rule": "domain-no-adapters"
+        }
+      ]
+    }
+  },
+  "host": {
+    "cpus": 14,
+    "machine": "arm64",
+    "platform": "macOS-26.2-arm64-arm-64bit"
+  },
+  "latency": {
+    "all_samples_meet_targets": true,
+    "cold": {
+      "max_ms": 573.52,
+      "p50_ms": 534.323,
+      "p95_ms": 573.52
+    },
+    "cold_samples_ms": [
+      520.9410419920459,
+      534.3227499397472,
+      573.5201250063255
+    ],
+    "files": 2000,
+    "fixture_commit": "77be956b6a333746eab9f5213262bef9cbc8985b",
+    "initial_edges": 1999,
+    "mcp_check_diff": {
+      "cold": {
+        "max_ms": 498.627,
+        "p50_ms": 488.264,
+        "p95_ms": 498.627
+      },
+      "cold_samples_ms": [
+        488.26404195278883,
+        498.62700002267957,
+        477.94333402998745
+      ],
+      "transport": "mcp-call CLI bridge; stdio envelope/host scheduling excluded",
+      "warm": {
+        "max_ms": 242.853,
+        "p50_ms": 235.422,
+        "p95_ms": 242.853
+      },
+      "warm_samples_ms": [
+        242.8527920274064,
+        234.1887499205768,
+        235.4217499960214
+      ]
+    },
+    "modules": 100,
+    "repeats": 3,
+    "thresholds_ms": {
+      "cold": 3000,
+      "warm": 300
+    },
+    "timing": "whole hook check subprocess after a new forbidden import: freshness, graph diff, recipe, audit and response; capture and repair excluded",
+    "warm": {
+      "max_ms": 229.4,
+      "p50_ms": 223.385,
+      "p95_ms": 229.4
+    },
+    "warm_daemon_status": [
+      {
+        "after_check": {
+          "cached_snapshots": 2,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 2,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 1,
+          "refresh_ms": 60.181625000000004,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 31.284958000000003,
+            "collect_ms": 13.482292,
+            "full_scan_ms": 0.0,
+            "normalize_ms": 1.001417,
+            "provenance_ms": 6.261583,
+            "publish_ms": 7.864583
+          }
+        },
+        "before_edit": {
+          "cached_snapshots": 1,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 1,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 2000,
+          "refresh_ms": 573.036083,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 43.288458000000006,
+            "collect_ms": 145.238625,
+            "full_scan_ms": 264.363792,
+            "normalize_ms": 36.312334,
+            "provenance_ms": 0.0,
+            "publish_ms": 9.700709
+          }
+        }
+      },
+      {
+        "after_check": {
+          "cached_snapshots": 2,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 4,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 1,
+          "refresh_ms": 57.404166,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 30.526958,
+            "collect_ms": 11.762584,
+            "full_scan_ms": 0.0,
+            "normalize_ms": 1.011625,
+            "provenance_ms": 5.3155,
+            "publish_ms": 8.067792
+          }
+        },
+        "before_edit": {
+          "cached_snapshots": 2,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 3,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 1,
+          "refresh_ms": 59.193459,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 16.6445,
+            "collect_ms": 12.074458,
+            "full_scan_ms": 0.0,
+            "normalize_ms": 0.997625,
+            "provenance_ms": 21.465457999999998,
+            "publish_ms": 7.3274170000000005
+          }
+        }
+      },
+      {
+        "after_check": {
+          "cached_snapshots": 2,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 6,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 1,
+          "refresh_ms": 58.358624999999996,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 30.99775,
+            "collect_ms": 12.338667,
+            "full_scan_ms": 0.0,
+            "normalize_ms": 1.047375,
+            "provenance_ms": 6.387292,
+            "publish_ms": 6.737583
+          }
+        },
+        "before_edit": {
+          "cached_snapshots": 2,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 5,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 1,
+          "refresh_ms": 58.640084,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 17.085,
+            "collect_ms": 12.564542,
+            "full_scan_ms": 0.0,
+            "normalize_ms": 1.004,
+            "provenance_ms": 20.364416,
+            "publish_ms": 6.890750000000001
+          }
+        }
+      },
+      {
+        "after_check": {
+          "cached_snapshots": 2,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 8,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 1,
+          "refresh_ms": 58.481584000000005,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 31.275084000000003,
+            "collect_ms": 12.364999999999998,
+            "full_scan_ms": 0.0,
+            "normalize_ms": 0.993916,
+            "provenance_ms": 5.993209,
+            "publish_ms": 6.973625
+          }
+        },
+        "before_edit": {
+          "cached_snapshots": 2,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 7,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 1,
+          "refresh_ms": 57.830416,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 16.730834,
+            "collect_ms": 11.783874999999998,
+            "full_scan_ms": 0.0,
+            "normalize_ms": 0.9772080000000001,
+            "provenance_ms": 21.055625000000003,
+            "publish_ms": 6.540542
+          }
+        }
+      },
+      {
+        "after_check": {
+          "cached_snapshots": 2,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 10,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 1,
+          "refresh_ms": 56.704917,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 30.821084,
+            "collect_ms": 12.108875,
+            "full_scan_ms": 0.0,
+            "normalize_ms": 0.987791,
+            "provenance_ms": 5.477792,
+            "publish_ms": 6.5365
+          }
+        },
+        "before_edit": {
+          "cached_snapshots": 2,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 9,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 1,
+          "refresh_ms": 61.553959,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 16.724292000000002,
+            "collect_ms": 14.233917,
+            "full_scan_ms": 0.0,
+            "normalize_ms": 1.020333,
+            "provenance_ms": 21.296834,
+            "publish_ms": 7.538042
+          }
+        }
+      },
+      {
+        "after_check": {
+          "cached_snapshots": 2,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 12,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 1,
+          "refresh_ms": 57.665959,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 31.152917,
+            "collect_ms": 11.735125,
+            "full_scan_ms": 0.0,
+            "normalize_ms": 1.032959,
+            "provenance_ms": 5.756125,
+            "publish_ms": 6.979
+          }
+        },
+        "before_edit": {
+          "cached_snapshots": 2,
+          "cycles": 0,
+          "fallback_reason": null,
+          "files": 2000,
+          "generation": 11,
+          "kind": "status",
+          "modules": 100,
+          "parsed_files": 1,
+          "refresh_ms": 58.585041999999994,
+          "root": "<benchmark-work>/fixture-2k",
+          "running": true,
+          "schema": "archgraph/daemon/v1",
+          "snapshot_limit": 2,
+          "timings": {
+            "analyze_ms": 16.425166,
+            "collect_ms": 11.623125,
+            "full_scan_ms": 0.0,
+            "normalize_ms": 0.96475,
+            "provenance_ms": 21.314542,
+            "publish_ms": 7.471416
+          }
+        }
+      }
+    ],
+    "warm_samples_ms": [
+      229.40004197880626,
+      220.56841605808586,
+      223.384500015527
+    ]
+  },
+  "schema": "archgraph/edit-loop-benchmark/v1"
+}

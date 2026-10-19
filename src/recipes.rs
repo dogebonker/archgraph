@@ -156,6 +156,9 @@ pub fn stable_id(finding: &Finding) -> String {
 }
 
 pub fn recipe_for<'a>(doc: &'a Document, id: &str) -> Result<&'a Recipe> {
+    if let Some(diagnostic) = doc.diagnostics.iter().find(|d| d.finding.finding_id == id) {
+        bail!("observation has no repair recipe: {}", diagnostic.reason);
+    }
     doc.findings
         .iter()
         .find(|f| f.finding_id == id)
@@ -241,11 +244,13 @@ pub fn attach(doc: &mut Document) -> Result<()> {
     }
     findings.sort_by(|a, b| (a.kind, &a.subject).cmp(&(b.kind, &b.subject)));
     findings.dedup_by(|a, b| stable_id(a) == stable_id(b));
+    let cycle_pairs = crate::graph::cycle_import_pairs(doc);
+    let rules = crate::rules::compile(&doc.config)?;
     let mut generated = Vec::new();
     let mut diagnostics = Vec::new();
     for mut f in findings {
         f.finding_id = stable_id(&f);
-        match generate(doc, &f)? {
+        match generate(doc, &f, &cycle_pairs, rules.as_ref())? {
             Some(mut recipe) => {
                 if let Evidence::ForbiddenEdge { edge } = &f.evidence
                     && let Some(rules) = &doc.config.rules
@@ -263,7 +268,21 @@ pub fn attach(doc: &mut Document) -> Result<()> {
             }
             None => {
                 f.recipe = None;
-                diagnostics.push(Diagnostic{finding:f,reason:"Evidence does not determine a safe, concrete graph edit; inspect its evidence before changing architecture.".into()});
+                let reason = match &f.evidence {
+                    Evidence::Cycle(c) if c.level == crate::model::CycleLevel::Module => {
+                        "Folder dependencies alone do not establish a policy violation or an import to remove. Inspect concrete cyclic file/package imports and declared architecture before changing wiring."
+                    }
+                    Evidence::DeepImport { .. } => {
+                        "An inferred entrypoint is an observation, not a declared public boundary. Declare the intended public entries before requesting a facade repair."
+                    }
+                    _ => {
+                        "Evidence does not determine a safe, concrete graph edit; inspect its evidence before changing architecture."
+                    }
+                };
+                diagnostics.push(Diagnostic {
+                    finding: f,
+                    reason: reason.into(),
+                });
             }
         }
     }
@@ -389,7 +408,32 @@ fn cut_recipe(doc: &Document, edges: Vec<&Edge>, scope: Vec<String>) -> Option<R
     Some(recipe(steps,Confidence::Medium,Predicate{absent_edges,scope,..Predicate::default()},vec!["Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.".into()]))
 }
 
-fn generate(doc: &Document, f: &Finding) -> Result<Option<Recipe>> {
+fn generate(
+    doc: &Document,
+    f: &Finding,
+    cycle_pairs: &BTreeSet<(String, String)>,
+    rules: Option<&crate::rules::Compiled>,
+) -> Result<Option<Recipe>> {
+    if let Evidence::Cycle(cycle) = &f.evidence {
+        let in_scope = |path: &str| match cycle.level {
+            crate::model::CycleLevel::File => cycle.members.iter().any(|member| member == path),
+            crate::model::CycleLevel::Module => doc
+                .files
+                .iter()
+                .any(|file| file.path == path && cycle.members.contains(&file.module)),
+        };
+        if !cycle_pairs
+            .iter()
+            .any(|(from, to)| in_scope(from) && in_scope(to))
+        {
+            return Ok(None);
+        }
+    }
+    if let Evidence::DeepImport { to, .. } = &f.evidence
+        && rules.and_then(|rules| rules.public_for(to)).is_none()
+    {
+        return Ok(None);
+    }
     if let Some(s) = &f.suggestion {
         return Ok(Some(recipe(vec![move_step(&s.move_to)],Confidence::High,Predicate{files_present:vec![s.move_to.to.clone()],files_absent:vec![s.move_to.file.clone()],..Predicate::default()},vec!["Import-level simulation does not prove build configuration or runtime behavior; run language checks and tests.".into()])));
     }
@@ -407,6 +451,8 @@ fn generate(doc: &Document, f: &Finding) -> Result<Option<Recipe>> {
                     && module(&e.to) == Some(to)
                     && (doc.config.all_kinds || e.kind.is_runtime())
                     && cycle_cuttable(doc, e)
+                    && (!matches!(f.evidence, Evidence::Cycle(_))
+                        || cycle_pairs.contains(&(e.from.clone(), e.to.clone())))
             })
             .collect::<Vec<_>>()
     };
@@ -419,15 +465,7 @@ fn generate(doc: &Document, f: &Finding) -> Result<Option<Recipe>> {
                     .filter(|p| !edges_between(&p.from, &p.to).is_empty())
                     .min_by_key(|p| (p.imports, &p.from, &p.to))
             });
-            if let Some(m) = c
-                .registrar_moves
-                .iter()
-                .filter(|m| m.to.is_some() && m.leads(cut.is_some_and(|p| p.imports == 1)))
-                .max_by_key(|m| m.pairs_removed)
-            {
-                let to = m.to.clone().expect("filtered");
-                Some(recipe(vec![move_step(&Move{file:m.file.clone(),to:to.clone()})],Confidence::High,Predicate{files_present:vec![to],files_absent:vec![m.file.clone()],scope:c.members.clone(),..Predicate::default()},vec!["Registrar relocation needs build/runtime validation after imports are rewritten.".into()]))
-            } else if let Some(p) = cut {
+            if let Some(p) = cut {
                 let mut proposal =
                     cut_recipe(doc, edges_between(&p.from, &p.to), c.members.clone());
                 if p.even
@@ -453,6 +491,7 @@ fn generate(doc: &Document, f: &Finding) -> Result<Option<Recipe>> {
                     })
                     .filter(|e| {
                         cycle_cuttable(doc, e)
+                            && cycle_pairs.contains(&(e.from.clone(), e.to.clone()))
                             && !doc.files.iter().any(|f| f.path == e.from && f.barrel)
                     })
                     .collect();

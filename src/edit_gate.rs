@@ -1,5 +1,5 @@
 //! Pure pre-edit/post-edit enforcement; existing violations remain advisory.
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -122,65 +122,47 @@ pub fn check(before: &Document, after: &Document, options: &Options) -> Result<R
             json!({"to":edge.to,"kind":edge.kind}), recipe,
             &format!("Remove or redirect the import {} → {} to satisfy {rule}; preserve its callers and verify with project tests.", edge.from, edge.to)));
     }
-    for cycle in &after.cycles {
-        let members: BTreeSet<_> = cycle.members.iter().collect();
-        if before.cycles.iter().any(|old| {
-            old.level == cycle.level && members.iter().all(|member| old.members.contains(member))
-        }) {
-            continue;
-        }
-        let module_of: BTreeMap<_, _> = after
-            .files
-            .iter()
-            .map(|file| (&file.path, &file.module))
-            .collect();
-        let witness = after
-            .edges
-            .iter()
-            .filter(|edge| edge.kind.is_runtime())
-            .filter(|edge| match cycle.level {
-                CycleLevel::File => members.contains(&edge.from) && members.contains(&edge.to),
-                CycleLevel::Module => {
-                    module_of
-                        .get(&edge.from)
-                        .is_some_and(|m| members.contains(m))
-                        && module_of.get(&edge.to).is_some_and(|m| members.contains(m))
-                        && module_of.get(&edge.from) != module_of.get(&edge.to)
-                }
-            })
-            .min_by_key(|edge| (&edge.from, &edge.to));
-        // Module components can lack source edges in older persisted documents.
-        let file = witness
-            .map(|edge| edge.from.as_str())
-            .or_else(|| {
-                after
-                    .files
-                    .iter()
-                    .filter(|file| members.contains(&file.module) || members.contains(&file.path))
-                    .map(|file| file.path.as_str())
-                    .min()
-            })
-            .unwrap_or("");
+    // Folder aggregation can turn main -> router -> deps into app <-> api even
+    // though no import returns to its starting file. Only newly cyclic runtime
+    // import pairs enforce this implicit rule. Comparing pairs also catches a
+    // real file cycle added inside an already reciprocal module component.
+    let new_cycles = crate::graph::new_cyclic_import_pairs(before, after);
+    let module_of: BTreeMap<_, _> = after
+        .files
+        .iter()
+        .map(|file| (&file.path, &file.module))
+        .collect();
+    for (from, to) in &new_cycles {
         let recipe = after
             .findings
             .iter()
-            .find_map(|finding| match &finding.evidence {
-                Evidence::Cycle(candidate)
-                    if candidate.level == cycle.level
-                        && candidate.members.iter().collect::<BTreeSet<_>>() == members =>
-                {
-                    finding
-                        .recipe
-                        .as_ref()
-                        .map(|recipe| (finding.finding_id.clone(), recipe))
-                }
-                _ => None,
+            .filter_map(|finding| {
+                let Evidence::Cycle(candidate) = &finding.evidence else {
+                    return None;
+                };
+                let contains = match candidate.level {
+                    CycleLevel::File => {
+                        candidate.members.contains(from) && candidate.members.contains(to)
+                    }
+                    CycleLevel::Module => {
+                        module_of
+                            .get(from)
+                            .is_some_and(|m| candidate.members.contains(m))
+                            && module_of
+                                .get(to)
+                                .is_some_and(|m| candidate.members.contains(m))
+                    }
+                };
+                contains.then_some((candidate.level != CycleLevel::File, finding))
             })
+            .filter(|(_, finding)| finding.recipe.is_some())
+            .min_by_key(|(module_level, finding)| (*module_level, &finding.finding_id))
+            .map(|(_, finding)| (finding.finding_id.clone(), finding.recipe.as_ref().unwrap()))
             .map(|(id, recipe)| serde_json::to_value(recipe).map(|value| (id, value)))
             .transpose()?;
-        violations.push(violation("cycle", "acyclic", file,
-            json!({"level":cycle.level,"members":members}), recipe,
-            "Break the newly introduced cyclic component by redirecting an internal dependency or moving responsibility; preserve behavior and run project tests."));
+        violations.push(violation("cycle", "acyclic", from,
+            json!({"from":from,"to":to}), recipe,
+            "Break the newly introduced runtime import cycle by redirecting an internal dependency or moving responsibility; preserve behavior and run project tests."));
     }
     if !options.scope.is_empty() {
         for file in &options.changed_files {
@@ -349,17 +331,108 @@ mod tests {
         );
     }
 
+    fn imports(pairs: &[(&str, &str)]) -> Document {
+        let template = document();
+        let files = [
+            "app/main.py",
+            "app/deps.py",
+            "venues/api/router.py",
+            "app/old.py",
+            "venues/api/old.py",
+            "infra/extra.py",
+        ]
+        .map(String::from)
+        .to_vec();
+        let mut source = template.source;
+        source.language = crate::model::Language::Python;
+        crate::analyze(
+            source,
+            template.config,
+            files,
+            pairs
+                .iter()
+                .map(|(from, to)| Edge {
+                    from: (*from).into(),
+                    to: (*to).into(),
+                    ..Edge::default()
+                })
+                .collect(),
+            vec![],
+            None,
+        )
+        .unwrap()
+    }
+
     #[test]
-    fn new_grown_and_merged_cycles_block_but_subsets_pass() {
-        let mut before = document();
-        let mut after = before.clone();
-        after.cycles.push(cycle(&["app/a.ts", "domain/b.ts"]));
+    fn fastapi_composition_dag_does_not_block() {
+        let before = imports(&[]);
+        let after = imports(&[
+            ("app/main.py", "venues/api/router.py"),
+            ("venues/api/router.py", "app/deps.py"),
+        ]);
+        assert!(after.cycles.iter().any(|c| c.level == CycleLevel::Module));
         assert_eq!(
             check(&before, &after, &Options::default()).unwrap().verdict,
-            "BLOCK"
+            "PASS"
         );
-        before = after.clone();
-        after.cycles[0].members.push("infra/c.ts".into());
+    }
+
+    #[test]
+    fn new_file_cycle_blocks_inside_preexisting_module_cycle() {
+        let before = imports(&[
+            ("app/main.py", "venues/api/router.py"),
+            ("venues/api/router.py", "app/deps.py"),
+        ]);
+        let mut pairs = before
+            .edges
+            .iter()
+            .map(|e| (e.from.as_str(), e.to.as_str()))
+            .collect::<Vec<_>>();
+        pairs.push(("venues/api/router.py", "app/main.py"));
+        let after = imports(&pairs);
+        let report = check(&before, &after, &Options::default()).unwrap();
+        assert_eq!(report.verdict, "BLOCK");
+        assert!(report.violations.iter().all(|v| v.kind == "cycle"));
+        assert_eq!(
+            check(&after, &after, &Options::default()).unwrap().verdict,
+            "PASS"
+        );
+        assert_eq!(
+            check(&after, &before, &Options::default()).unwrap().verdict,
+            "PASS"
+        );
+    }
+
+    #[test]
+    fn existing_file_cycle_does_not_block_unrelated_composition_edges() {
+        let before = imports(&[
+            ("app/old.py", "venues/api/old.py"),
+            ("venues/api/old.py", "app/old.py"),
+        ]);
+        let after = imports(&[
+            ("app/old.py", "venues/api/old.py"),
+            ("venues/api/old.py", "app/old.py"),
+            ("app/main.py", "venues/api/router.py"),
+            ("venues/api/router.py", "app/deps.py"),
+        ]);
+        assert_eq!(
+            check(&before, &after, &Options::default()).unwrap().verdict,
+            "PASS"
+        );
+    }
+
+    #[test]
+    fn growing_file_cycle_blocks_but_removing_members_passes() {
+        let before = imports(&[
+            ("app/main.py", "venues/api/router.py"),
+            ("venues/api/router.py", "app/main.py"),
+        ]);
+        let after = imports(&[
+            ("app/main.py", "venues/api/router.py"),
+            ("venues/api/router.py", "app/main.py"),
+            ("venues/api/router.py", "infra/extra.py"),
+            ("infra/extra.py", "app/main.py"),
+        ]);
         assert_eq!(
             check(&before, &after, &Options::default()).unwrap().verdict,
             "BLOCK"
@@ -368,10 +441,42 @@ mod tests {
             check(&after, &before, &Options::default()).unwrap().verdict,
             "PASS"
         );
-        before.cycles.push(cycle(&["infra/c.ts"]));
+    }
+
+    #[test]
+    fn go_package_cycles_block_without_file_cycles_but_old_package_debt_passes() {
+        let go = |pairs: &[(&str, &str)]| {
+            let mut doc = imports(pairs);
+            doc.source.language = crate::model::Language::Go;
+            for file in &mut doc.files {
+                file.path = file.path.replace(".py", ".go");
+            }
+            for edge in &mut doc.edges {
+                edge.from = edge.from.replace(".py", ".go");
+                edge.to = edge.to.replace(".py", ".go");
+            }
+            doc
+        };
+        // Go's compilation unit is a physical directory, independent of which
+        // file the collector uses to represent an import into that package.
+        let before = go(&[
+            ("app/main.py", "venues/api/router.py"),
+            ("venues/api/old.py", "app/deps.py"),
+        ]);
+        assert_eq!(
+            check(&go(&[]), &before, &Options::default())
+                .unwrap()
+                .verdict,
+            "BLOCK"
+        );
+        let after = go(&[
+            ("app/main.py", "venues/api/old.py"),
+            ("venues/api/old.py", "app/deps.py"),
+            ("app/old.py", "venues/api/router.py"),
+        ]);
         assert_eq!(
             check(&before, &after, &Options::default()).unwrap().verdict,
-            "BLOCK"
+            "PASS"
         );
     }
 

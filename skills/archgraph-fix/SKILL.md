@@ -10,6 +10,8 @@ metadata:
 
 ## Input-quality interpretation
 
+Folder loops are dependency observations, not proof of circular file imports or defects. Normal app → router → dependency wiring must remain intact. Implicit cycle gates compare newly cyclic concrete file imports (physical compiler packages for Go), not display-folder SCCs. Inferred facade bypasses remain diagnostic until a public boundary is declared. Never cut an import merely to improve a graph metric; preserve callers and behavior.
+
 Check the saved source root, grouping depth and collector limitations before comparing SCC counts. Native Rust excludes definite test-only references and keeps containment structural; unknown cfg, macro expansion and type resolution remain incomplete. Its cycles measure source coupling, not initialization failure. A shared state container is a hub; do not attribute an entire component to it without a counterfactual. Rust/Java/Elixir semantic cuts stay non-mechanical. For Python, empty initializers do not establish a facade, and unresolved installed dependencies need actual package metadata. Explicit layout policies remain authoritative. Restart a running daemon and rescan after a collector upgrade.
 
 ## MCP tools

@@ -140,6 +140,66 @@ fn fail_on_new_cycles_exits_1_on_a_new_cycle() {
 }
 
 #[test]
+fn cycle_failure_uses_file_evidence_without_hiding_module_observations() {
+    let edges = [
+        ("app/main.ts".to_owned(), "api/router.ts".to_owned()),
+        ("api/router.ts".to_owned(), "app/deps.ts".to_owned()),
+    ];
+    let (dir, input) = synthetic("diff-composition", 3, &edges);
+    let (dag, stdout, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let dag_path = write_tmp("diff/composition-dag.json", &stdout);
+    let mut empty = dag.clone();
+    empty["edges"] = json!([]);
+    let empty_path = write_tmp("diff/composition-empty.json", &empty.to_string());
+    let (observations, code) =
+        run_json(&["diff", &empty_path, &dag_path, "--fail-on", "new-cycles"]);
+    assert_eq!(code, Some(0));
+    assert!(!observations["new_cycles"].as_array().unwrap().is_empty());
+    assert_eq!(observations["new_cyclic_imports"], json!([]));
+
+    let mut cyclic = dag;
+    cyclic["edges"].as_array_mut().unwrap().push(json!({
+        "from":"api/router.ts", "to":"app/main.ts", "kind":"runtime", "weight":1.0,
+    }));
+    let cyclic_path = write_tmp("diff/composition-cyclic.json", &cyclic.to_string());
+    // The display-folder SCC already existed; the new concrete cycle still fails.
+    let (actual, code) = run_json(&["diff", &dag_path, &cyclic_path, "--fail-on", "new-cycles"]);
+    assert_eq!(code, Some(1));
+    assert_eq!(actual["new_cycles"], json!([]));
+    assert_eq!(
+        actual["new_cyclic_imports"],
+        json!([
+            {"from":"api/router.ts", "to":"app/main.ts"},
+            {"from":"app/main.ts", "to":"api/router.ts"},
+        ])
+    );
+    let (markdown, _, _) = diff(&[
+        &dag_path,
+        &cyclic_path,
+        "--format",
+        "markdown",
+        "--fail-on",
+        "new-cycles",
+    ]);
+    assert!(
+        markdown.contains("### New cyclic runtime imports (2)"),
+        "{markdown}"
+    );
+    assert!(
+        markdown.contains("api/router.ts → app/main.ts"),
+        "{markdown}"
+    );
+    let (_, code) = run_json(&["diff", &cyclic_path, &dag_path, "--fail-on", "new-cycles"]);
+    assert_eq!(code, Some(0));
+}
+
+#[test]
 fn a_grown_cycle_is_a_new_cycle() {
     // old: x <-> y. new: z joins it through y -> z -> x.
     let pairs = |edges: &[(&str, &str)]| -> Vec<(String, String)> {
@@ -225,7 +285,7 @@ fn markdown_summary_lists_cycles_and_moved_metrics() {
     assert_eq!(code, Some(0));
     assert!(md.starts_with("**archgraph diff: pass**"), "{md}");
     for part in [
-        "### Resolved cycles (1)",
+        "### Resolved dependency components (1)",
         "- module: a, b, c",
         "| module | cohesion | instability |",
         // a: instability 0.5 -> 1; c: 0.5 -> 0 (cohesion 0 -> undefined is not a move).
@@ -236,7 +296,7 @@ fn markdown_summary_lists_cycles_and_moved_metrics() {
         assert!(md.contains(part), "{part:?} missing from\n{md}");
     }
     assert!(!md.contains("| f |"), "unchanged module listed:\n{md}");
-    assert!(!md.contains("### New cycles"), "{md}");
+    assert!(!md.contains("### New dependency components"), "{md}");
 
     let (md, _, code) = diff(&[
         &new,
@@ -252,7 +312,7 @@ fn markdown_summary_lists_cycles_and_moved_metrics() {
         "{md}"
     );
     assert!(
-        md.contains("### New cycles (1)\n\n- module: a, b, c"),
+        md.contains("### New dependency components (1)\n\n- module: a, b, c"),
         "{md}"
     );
 }

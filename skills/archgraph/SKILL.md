@@ -1,6 +1,6 @@
 ---
 name: archgraph
-description: Derives architecture enforcement from a TypeScript/JavaScript, Python, Go, Rust, Java or Elixir repository's import graph. Use to initialize reasoned policies without architecture docs, install per-edit agent checks, synchronize agent rule files, inspect fix recipes, or review boundaries, cycles and file moves with graph evidence. Also supports budgeted context, ADR rule proposals with provenance, and before/after architecture comparisons.
+description: Checks declared architecture rules against the import graph of a TypeScript/JavaScript, Python, Go, Rust, Java or Elixir repository. Use to initialize reasoned policies without architecture docs, install per-edit agent checks, synchronize agent rule files, inspect fix recipes, or review boundaries, cycles and file moves with graph evidence. Also supports budgeted context, ADR rule proposals with provenance, and before/after architecture comparisons.
 license: MIT OR Apache-2.0
 metadata:
   compatibility: Needs the archgraph binary on PATH (install.sh, npx archgraph-cli, or cargo install). TypeScript/JavaScript scans need dependency-cruiser 18.4.0 and typescript 6.0.3 installed in the scanned repository (run through npx), or installed elsewhere and passed with --depcruise. Python scans need a Python with grimp 3.17. Go scans need Go 1.21 or later (tested with 1.27.1). Elixir scans need Elixir 1.14+ / OTP 25+ (`--elixir <path>`); no Mix build or dependency installation runs.
@@ -9,6 +9,8 @@ metadata:
 # archgraph
 
 ## Input-quality interpretation
+
+Folder loops are dependency observations, not proof of circular file imports or defects. Normal app → router → dependency wiring must remain intact. Implicit cycle gates compare newly cyclic concrete file imports (physical compiler packages for Go), not display-folder SCCs. Inferred facade bypasses remain diagnostic until a public boundary is declared. Never cut an import merely to improve a graph metric; preserve callers and behavior.
 
 Check the saved source root, grouping depth and collector limitations before comparing SCC counts. Native Rust excludes definite test-only references and keeps containment structural; unknown cfg, macro expansion and type resolution remain incomplete. Its cycles measure source coupling, not initialization failure. A shared state container is a hub; do not attribute an entire component to it without a counterfactual. Rust/Java/Elixir semantic cuts stay non-mechanical. For Python, empty initializers do not establish a facade, and unresolved installed dependencies need actual package metadata. Explicit layout policies remain authoritative. Restart a running daemon and rescan after a collector upgrade.
 

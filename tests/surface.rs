@@ -232,6 +232,11 @@ fn deep_imports_list_importers_and_required_symbols_and_surface_threshold_is_str
     assert!(
         billing.deep_imports[0]
             .suggestion
+            .contains("No public boundary is declared")
+    );
+    assert!(
+        billing.deep_imports[0]
+            .suggestion
             .contains("src/billing/index.ts")
     );
     assert!(billing.could_be_internal.is_empty());

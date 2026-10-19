@@ -162,6 +162,24 @@
                       "type": "object"
                     },
                     "type": "array"
+                  },
+                  "new_cyclic_imports": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "from",
+                        "to"
+                      ],
+                      "properties": {
+                        "from": {
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        }
+                      }
+                    }
                   }
                 },
                 "required": [

@@ -297,7 +297,7 @@ pub fn call(
             }
             grown.sort_by_key(Value::to_string);
             Ok(
-                json!({"base":a.base,"new_forbidden":diff.new_forbidden,"new_cycles":new_cycles(old,doc,&[]),"grown_cycles":grown,"findings":findings(doc),"limitations":["Recipes use current findings; semantic code changes require review."]}),
+                json!({"base":a.base,"new_forbidden":diff.new_forbidden,"new_cyclic_imports":diff.new_cyclic_imports,"new_cycles":new_cycles(old,doc,&[]),"grown_cycles":grown,"findings":findings(doc),"limitations":["Module cycles describe display-folder coupling; new_cyclic_imports supplies concrete runtime cycle evidence. Recipes use current findings; semantic code changes require review."]}),
             )
         }
         "propose" => {
@@ -599,10 +599,10 @@ pub fn schemas() -> Vec<ToolSchema> {
         ),
         schema(
             "check_diff",
-            "Compare the current scan with a Git base or pre-edit snapshot; report new forbidden imports, new/grown cycles and stable finding IDs.",
+            "Compare the current scan with a Git base or pre-edit snapshot; report new forbidden imports, concrete newly cyclic imports, advisory folder cycles and stable finding IDs.",
             json!({"base":{"type":"string","minLength":1},"snapshot":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Pre-edit capture ID; mutually exclusive with base."}}),
             &[],
-            json!({"type":"object","required":["new_forbidden","new_cycles","grown_cycles","findings"],"properties":{"new_forbidden":array(json!({"type":"object","required":["from","to"]})),"new_cycles":array(cycle.clone()),"grown_cycles":array(object(json!({"before":cycle.clone(),"after":cycle.clone()}),&["before","after"])),"findings":array(finding.clone())}}),
+            json!({"type":"object","required":["new_forbidden","new_cycles","grown_cycles","findings"],"properties":{"new_forbidden":array(json!({"type":"object","required":["from","to"]})),"new_cyclic_imports":array(json!({"type":"object","required":["from","to"],"properties":{"from":{"type":"string"},"to":{"type":"string"}}})),"new_cycles":array(cycle.clone()),"grown_cycles":array(object(json!({"before":cycle.clone(),"after":cycle.clone()}),&["before","after"])),"findings":array(finding.clone())}}),
         ),
         schema(
             "propose",

@@ -173,87 +173,45 @@
           }
         }
       },
-      "findings": [
-        {
-          "finding_id": "ag-441baf17b9cd033b2f55e70387ae6aebf08245ab5b5cfea7de05c23da5e8444a",
-          "recipe": {
-            "steps": [
-              {
-                "kind": "cut_import",
-                "file": "a/one.ts",
-                "from": "a/one.ts",
-                "to": "b/two.ts",
-                "detail": {
-                  "operation": "remove_import",
-                  "target": "b/two.ts",
-                  "specifier": null,
-                  "edge_kind": "runtime",
-                  "original_to": null
-                },
-                "mechanical": false
-              }
-            ],
-            "expected": {
-              "pairs_removed": null,
-              "cycle_size_after": null,
-              "new_cycles": null,
-              "instability_delta": {}
-            },
-            "verify": {
-              "predicate": "recipe_deltas_match && all(structured)",
-              "structured": {
-                "absent_edges": [
-                  {
-                    "from": "a/one.ts",
-                    "to": "b/two.ts"
-                  }
-                ],
-                "scope": [
-                  "a",
-                  "b"
-                ]
-              }
-            },
-            "confidence": "low",
-            "risk_notes": [
-              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
-              "Both dependency directions are balanced; neither side is architecturally preferred. Confirm this cut preserves behavior before applying."
-            ]
-          },
-          "kind": "cycle",
-          "subject": "a, b",
-          "evidence": {
-            "level": "module",
-            "members": [
-              "a",
-              "b"
-            ],
-            "exact": true,
-            "break": [
-              {
-                "from": "a/one.ts",
-                "to": "b/two.ts"
-              }
-            ],
-            "two_way": [
-              {
-                "from": "a",
-                "to": "b",
-                "imports": 1,
-                "reverse_imports": 1,
-                "even": true,
-                "edges": [
-                  {
-                    "from": "a/one.ts",
-                    "to": "b/two.ts"
-                  }
-                ]
-              }
-            ]
-          }
-        }
-      ],
+      "findings": [],
       "diagnostics": [
+        {
+          "finding": {
+            "finding_id": "ag-441baf17b9cd033b2f55e70387ae6aebf08245ab5b5cfea7de05c23da5e8444a",
+            "kind": "cycle",
+            "subject": "a, b",
+            "evidence": {
+              "level": "module",
+              "members": [
+                "a",
+                "b"
+              ],
+              "exact": true,
+              "break": [
+                {
+                  "from": "a/one.ts",
+                  "to": "b/two.ts"
+                }
+              ],
+              "two_way": [
+                {
+                  "from": "a",
+                  "to": "b",
+                  "imports": 1,
+                  "reverse_imports": 1,
+                  "even": true,
+                  "edges": [
+                    {
+                      "from": "a/one.ts",
+                      "to": "b/two.ts"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "reason": "Folder dependencies alone do not establish a policy violation or an import to remove. Inspect concrete cyclic file/package imports and declared architecture before changing wiring."
+        },
         {
           "finding": {
             "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
@@ -1506,87 +1464,45 @@
           }
         }
       },
-      "findings": [
-        {
-          "finding_id": "ag-441baf17b9cd033b2f55e70387ae6aebf08245ab5b5cfea7de05c23da5e8444a",
-          "recipe": {
-            "steps": [
-              {
-                "kind": "cut_import",
-                "file": "a/one.ts",
-                "from": "a/one.ts",
-                "to": "b/two.ts",
-                "detail": {
-                  "operation": "remove_import",
-                  "target": "b/two.ts",
-                  "specifier": null,
-                  "edge_kind": "type",
-                  "original_to": null
-                },
-                "mechanical": false
-              }
-            ],
-            "expected": {
-              "pairs_removed": null,
-              "cycle_size_after": null,
-              "new_cycles": null,
-              "instability_delta": {}
-            },
-            "verify": {
-              "predicate": "recipe_deltas_match && all(structured)",
-              "structured": {
-                "absent_edges": [
-                  {
-                    "from": "a/one.ts",
-                    "to": "b/two.ts"
-                  }
-                ],
-                "scope": [
-                  "a",
-                  "b"
-                ]
-              }
-            },
-            "confidence": "low",
-            "risk_notes": [
-              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
-              "Both dependency directions are balanced; neither side is architecturally preferred. Confirm this cut preserves behavior before applying."
-            ]
-          },
-          "kind": "cycle",
-          "subject": "a, b",
-          "evidence": {
-            "level": "module",
-            "members": [
-              "a",
-              "b"
-            ],
-            "exact": true,
-            "break": [
-              {
-                "from": "a/one.ts",
-                "to": "b/two.ts"
-              }
-            ],
-            "two_way": [
-              {
-                "from": "a",
-                "to": "b",
-                "imports": 1,
-                "reverse_imports": 1,
-                "even": true,
-                "edges": [
-                  {
-                    "from": "a/one.ts",
-                    "to": "b/two.ts"
-                  }
-                ]
-              }
-            ]
-          }
-        }
-      ],
+      "findings": [],
       "diagnostics": [
+        {
+          "finding": {
+            "finding_id": "ag-441baf17b9cd033b2f55e70387ae6aebf08245ab5b5cfea7de05c23da5e8444a",
+            "kind": "cycle",
+            "subject": "a, b",
+            "evidence": {
+              "level": "module",
+              "members": [
+                "a",
+                "b"
+              ],
+              "exact": true,
+              "break": [
+                {
+                  "from": "a/one.ts",
+                  "to": "b/two.ts"
+                }
+              ],
+              "two_way": [
+                {
+                  "from": "a",
+                  "to": "b",
+                  "imports": 1,
+                  "reverse_imports": 1,
+                  "even": true,
+                  "edges": [
+                    {
+                      "from": "a/one.ts",
+                      "to": "b/two.ts"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "reason": "Folder dependencies alone do not establish a policy violation or an import to remove. Inspect concrete cyclic file/package imports and declared architecture before changing wiring."
+        },
         {
           "finding": {
             "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
@@ -3594,84 +3510,6 @@
       },
       "findings": [
         {
-          "finding_id": "ag-4ba52e29cb1b31ecbbab67fcbafca8f6bb8b81843d93e9ca1c04d619973ed2ce",
-          "recipe": {
-            "steps": [
-              {
-                "kind": "cut_import",
-                "file": "domain/model.ts",
-                "from": "domain/model.ts",
-                "to": "ui/helper.ts",
-                "detail": {
-                  "operation": "remove_import",
-                  "target": "ui/helper.ts",
-                  "specifier": null,
-                  "edge_kind": "runtime",
-                  "original_to": null
-                },
-                "mechanical": false
-              }
-            ],
-            "expected": {
-              "pairs_removed": null,
-              "cycle_size_after": null,
-              "new_cycles": null,
-              "instability_delta": {}
-            },
-            "verify": {
-              "predicate": "recipe_deltas_match && all(structured)",
-              "structured": {
-                "absent_edges": [
-                  {
-                    "from": "domain/model.ts",
-                    "to": "ui/helper.ts"
-                  }
-                ],
-                "scope": [
-                  "domain",
-                  "ui"
-                ]
-              }
-            },
-            "confidence": "low",
-            "risk_notes": [
-              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
-              "Both dependency directions are balanced; neither side is architecturally preferred. Confirm this cut preserves behavior before applying."
-            ]
-          },
-          "kind": "cycle",
-          "subject": "domain, ui",
-          "evidence": {
-            "level": "module",
-            "members": [
-              "domain",
-              "ui"
-            ],
-            "exact": true,
-            "break": [
-              {
-                "from": "domain/model.ts",
-                "to": "ui/helper.ts"
-              }
-            ],
-            "two_way": [
-              {
-                "from": "domain",
-                "to": "ui",
-                "imports": 1,
-                "reverse_imports": 1,
-                "even": true,
-                "edges": [
-                  {
-                    "from": "domain/model.ts",
-                    "to": "ui/helper.ts"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        {
           "finding_id": "ag-d0fb07d3a8258fbc39dc660d4b783194bc234e11a62cab32535ac9f4b00e2938",
           "recipe": {
             "steps": [
@@ -3863,6 +3701,43 @@
         }
       ],
       "diagnostics": [
+        {
+          "finding": {
+            "finding_id": "ag-4ba52e29cb1b31ecbbab67fcbafca8f6bb8b81843d93e9ca1c04d619973ed2ce",
+            "kind": "cycle",
+            "subject": "domain, ui",
+            "evidence": {
+              "level": "module",
+              "members": [
+                "domain",
+                "ui"
+              ],
+              "exact": true,
+              "break": [
+                {
+                  "from": "domain/model.ts",
+                  "to": "ui/helper.ts"
+                }
+              ],
+              "two_way": [
+                {
+                  "from": "domain",
+                  "to": "ui",
+                  "imports": 1,
+                  "reverse_imports": 1,
+                  "even": true,
+                  "edges": [
+                    {
+                      "from": "domain/model.ts",
+                      "to": "ui/helper.ts"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "reason": "Folder dependencies alone do not establish a policy violation or an import to remove. Inspect concrete cyclic file/package imports and declared architecture before changing wiring."
+        },
         {
           "finding": {
             "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",

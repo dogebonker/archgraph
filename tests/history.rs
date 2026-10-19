@@ -803,8 +803,15 @@ fn history_cli_defaults_to_monthly_appends_from_cache_and_compares_release_refs(
         String::from_utf8_lossy(&out.stderr)
     );
     let markdown = String::from_utf8(out.stdout).unwrap();
-    assert!(markdown.contains("1 new cycle"), "{markdown}");
-    assert!(markdown.contains("0 resolved cycles"), "{markdown}");
+    assert!(
+        markdown.contains("1 new dependency component"),
+        "{markdown}"
+    );
+    assert!(markdown.contains("2 new cyclic imports"), "{markdown}");
+    assert!(
+        markdown.contains("0 resolved dependency components"),
+        "{markdown}"
+    );
     assert_eq!(
         read_history(),
         second,
