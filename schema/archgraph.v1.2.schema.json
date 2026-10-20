@@ -2122,6 +2122,13 @@
               "import_lines": {
                 "description": "Go: new (importer, imported folder) pairs across folders after this slice's moves. Other languages: import records, or edges when the collector keeps none, whose importer or target moves.",
                 "$ref": "#/$defs/count"
+              },
+              "new_cycles": {
+                "description": "Go only: imports in package cycles that applying every pending move together would create, with a file in one of this slice's source or destination folders. Absent when empty.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/link"
+                }
               }
             }
           }

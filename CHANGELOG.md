@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Go: each pending slice in `target.moves` lists `new_cycles`, the imports in package cycles that applying every pending move together would create, and `check` appends `, N imports in new package cycles` to its `move` line. A move that cannot be applied leaves a note in `target.notes`.
 - `layout.yaml` gains `moves` (`from` glob, `to` folder, first match wins). `check` prints the files and import lines each slice still has to move and `N of M slices moved`; the scan document's `target` gains optional `moves`, `progress.moved` and `notes` (a move rule matching no file). An older archgraph rejects a `layout.yaml` with `moves`.
 - `check` reports a verdict per claim, forbid rules sharing an `id` with a `reason`: `holds`, `holds in N of M slices` (a slice is one `<name>` value with files on both sides of a rule), `broken` with the imports, or `vacuous` when no slice counts, plus the slices that conform. Claims see every import regardless of which rule `check` attributes it to. Scan documents and `check --brief` gain an optional `target`.
 - Go scans group packages by folder depth 2 by default, like other languages, instead of making each package a module; nested packages show as sub-discs of their folder on the map. `--depth 99` restores one module per package, and saved Go scans with `package_modules` keep their grouping when re-scanned. Java keeps one module per package.

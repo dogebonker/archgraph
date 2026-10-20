@@ -368,6 +368,26 @@ fn a_brace_claim_flags_a_moved_handler_importing_an_unmoved_repository() {
 }
 
 #[test]
+fn moves_list_package_cycles_for_go_only() {
+    // A file cycle that moves as a whole is the same cycle at new paths, not a new one.
+    let doc = edges_scan(
+        "target-ts-cycles",
+        &[
+            ("src/m/a/app/x.ts", "src/m/a/app/y.ts"),
+            ("src/m/a/app/y.ts", "src/m/a/app/x.ts"),
+        ],
+        "version: 1\nmoves:\n  - { from: \"src/m/<name>/app/**\", to: \"src/app/<name>/\" }\n",
+    );
+    assert_eq!(
+        doc["target"]["moves"],
+        json!([{ "slice": "a",
+                 "files": [{ "file": "src/m/a/app/x.ts", "to": "src/app/a/x.ts" },
+                           { "file": "src/m/a/app/y.ts", "to": "src/app/a/y.ts" }],
+                 "import_lines": 2 }])
+    );
+}
+
+#[test]
 fn default_forbidden_makes_unplanned_imports_forbidden() {
     let base = std::fs::read_to_string(layout("ts-fda")).unwrap();
     let rules = write_tmp(

@@ -695,6 +695,65 @@ fn go_import_lines_count_new_importer_and_package_pairs() {
     assert_eq!(
         doc["target"]["moves"],
         json!([{ "slice": "*", "files": [{ "file": "server/server.go", "to": "core/server.go" }],
-                 "import_lines": 3 }])
+                 "import_lines": 3,
+                 // handle.go imports server.go, which imports base.go back in server/.
+                 "new_cycles": [{ "from": "core/server.go", "to": "server/base.go" },
+                                { "from": "server/handle.go", "to": "core/server.go" }] }])
+    );
+    let saved = write_tmp("go-moves.json", &doc.to_string());
+    let stdout = String::from_utf8(archgraph(&["check", &saved]).stdout).unwrap();
+    assert!(
+        stdout.contains("move *: 1 file, 3 import lines, 2 imports in new package cycles\n"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn go_moves_creating_no_cycle_or_landing_on_a_file_still_report_their_cost() {
+    // open.go only imports its own package, so core/ never imports back.
+    let rules = write_tmp(
+        "rules/go-moves-open.yaml",
+        "version: 1\nmoves:\n  - { from: \"store/open.go\", to: \"core/\" }\n",
+    );
+    let (doc, _, _) = scan_recorded("go-resolve", &["--rules", &rules]);
+    assert_eq!(
+        doc["target"]["moves"],
+        json!([{ "slice": "*", "files": [{ "file": "store/open.go", "to": "core/open.go" }],
+                 "import_lines": 2 }])
+    );
+    assert_eq!(doc["target"].get("notes"), None);
+    // b/x.go already exists, so the moves cannot be simulated.
+    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("go-move-onto");
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    let dump = write_tmp(
+        "go-move-onto.json",
+        r#"{ "go_version": "1.27.1", "unresolved": 0, "modules": ["."],
+             "files": [{ "path": "a/x.go", "generated": false },
+                       { "path": "b/x.go", "generated": false },
+                       { "path": "c/c.go", "generated": false }],
+             "edges": [{ "from": "a/x.go", "to": "c/c.go" }] }"#,
+    );
+    let rules = write_tmp(
+        "rules/go-moves-onto.yaml",
+        "version: 1\nmoves:\n  - { from: \"a/x.go\", to: \"b/\" }\n",
+    );
+    let (doc, _, _) = scan(&[
+        root.to_str().unwrap(),
+        "--language",
+        "go",
+        "--collector-input",
+        &dump,
+        "--rules",
+        &rules,
+    ]);
+    assert_eq!(
+        doc["target"]["moves"],
+        json!([{ "slice": "*", "files": [{ "file": "a/x.go", "to": "b/x.go" }],
+                 "import_lines": 0 }])
+    );
+    assert_eq!(
+        doc["target"]["notes"],
+        json!(["moves not simulated: b/x.go already exists"])
     );
 }

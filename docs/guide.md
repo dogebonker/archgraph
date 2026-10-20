@@ -988,6 +988,8 @@ target: 16 of 18 slices conform, 0 of 23 slices moved
 
 `check` prints a `move` line per slice with files left to move, with the import lines to rewrite: for Go, new (importer, imported folder) pairs across folders once that slice's files move; for other languages, the import records (or edges, when the collector keeps none) whose importer or target moves. The scan document's `target.moves` lists every slice with its files and destinations, and `target.notes` names a move rule that matches no file.
 
+For Go, archgraph also applies every pending move together and lists the imports that would sit in new package cycles as `new_cycles` (`, 2 imports in new package cycles` on the `move` line): one cycle between two packages shows at least two imports. A cycle belongs to each slice with a source or destination folder on either side of it, so a cycle that needs two slices to move is listed under both. When the moves cannot be applied, such as a destination that already exists, `target.notes` says why and the other move fields still report. Other languages report no `new_cycles`.
+
 Write each claim side over both locations, as in the claim above, so it keeps holding while a slice is half moved: a moved handler importing an unmoved repository still breaks it. Keep the target root free of files: with `{internal/<name>/handler*.go,...}`, a file `internal/app/handler.go` binds a slice `app`. An archgraph older than `moves` rejects a `layout.yaml` that has it, so pin the archgraph version in CI before adding it.
 
 ## Findings

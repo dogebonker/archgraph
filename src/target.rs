@@ -28,6 +28,10 @@ pub struct SliceMove {
     /// Files still to move, with their destinations.
     pub files: Vec<Move>,
     pub import_lines: usize,
+    /// Go package cycles that applying every pending move would create, touching this slice's
+    /// source or destination folders.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub new_cycles: Vec<Link>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -190,14 +194,39 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
             .count(),
         of: captured.count(),
     });
+    let all: Vec<Move> = pending.values().flatten().cloned().collect();
+    let cycles = if doc.source.language == Language::Go && !all.is_empty() {
+        match crate::simulate::apply(doc, Some(rules), &all) {
+            Ok(after) => crate::graph::new_cyclic_import_pairs(doc, &after),
+            Err(err) => {
+                notes.push(format!("moves not simulated: {err:#}"));
+                BTreeSet::new()
+            }
+        }
+    } else {
+        BTreeSet::new()
+    };
     let moves = pending
         .into_iter()
         .map(|(value, mut files)| {
             files.sort_by(|a, b| a.file.cmp(&b.file));
+            let dirs: HashSet<&str> = files
+                .iter()
+                .flat_map(|m| [dir_of(&m.file), dir_of(&m.to)])
+                .collect();
+            let new_cycles = cycles
+                .iter()
+                .filter(|(from, to)| dirs.contains(dir_of(from)) || dirs.contains(dir_of(to)))
+                .map(|(from, to)| Link {
+                    from: from.clone(),
+                    to: to.clone(),
+                })
+                .collect();
             SliceMove {
                 slice: value.unwrap_or_else(|| "*".into()),
                 import_lines: import_lines(doc, &files),
                 files,
+                new_cycles,
             }
         })
         .collect();
@@ -302,11 +331,18 @@ pub fn text(report: &Report) -> String {
     }
     for slice in report.moves.iter().filter(|m| !m.files.is_empty()) {
         out += &format!(
-            "move {}: {}, {}\n",
+            "move {}: {}, {}",
             slice.slice,
             crate::diff::count(slice.files.len(), "file"),
             crate::diff::count(slice.import_lines, "import line")
         );
+        if !slice.new_cycles.is_empty() {
+            out += &format!(
+                ", {}",
+                crate::diff::count(slice.new_cycles.len(), "import") + " in new package cycles"
+            );
+        }
+        out += "\n";
     }
     for note in &report.notes {
         out += &format!("note: {note}\n");
