@@ -90,6 +90,8 @@ test('the move list previews chained moves together and exports one script, comm
   assert.equal(s.$('whatif-rules').value,
     'app/helper.ts: leaves layer "app/**", enters layer "domain/**", enters forbid no-infra from "domain/**"\n' +
     'infra/db.ts: leaves forbid no-infra to "infra/**", enters layer "domain/**", enters forbid no-infra from "domain/**"');
+  assert.equal(s.$('whatif-moves').value, 'moves:   # exact paths, first match wins: keep these above other moves\n' +
+    '  - { from: "app/helper.ts", to: "domain/" }\n  - { from: "infra/db.ts", to: "domain/store/" }');
   assert.deepEqual(s.files.filter(f => f.path.startsWith('domain/')).map(f => f.path).sort(), ['domain/helper.ts', 'domain/model.ts', 'domain/store/db.ts']);
   assert.equal(JSON.stringify(s.doc), before);
   // Remove one item: the preview and export keep the rest, and focus stays in the list.
@@ -103,6 +105,7 @@ test('the move list previews chained moves together and exports one script, comm
   // Clear all restores the original graph and empties the list.
   s.$('whatif-clear').listeners.click();
   assert.deepEqual(listed(), []); assert.equal(s.context.whatifResult, null);
+  assert.equal(s.$('whatif-moves').value, '');
   assert(s.$('whatif-plan').hidden); assert(s.$('whatif-commands').hidden);
   assert.equal(s.files.find(f => f.path.endsWith('db.ts')).path, 'infra/db.ts');
   // Only the first matching layer counts, and a capture glob shifts when its bound value changes.
@@ -110,6 +113,17 @@ test('the move list previews chained moves together and exports one script, comm
   assert.equal(s.run('whatifRuleShifts([{ file: "src/a/x.ts", to: "src/b/x.ts" }])'),
     'src/a/x.ts: leaves layer "src/a/**", leaves forbid own from "src/<d>/**" (<d> = a), ' +
     'enters layer "src/**", enters forbid own from "src/<d>/**" (<d> = b)');
+});
+test('layout moves match the exact path, and say when a move cannot be written as one', () => {
+  const s = setup(), layout = (file, to) => s.run(`whatifLayoutMoves([{ file: ${JSON.stringify(file)}, to: ${JSON.stringify(to)} }])`);
+  const head = 'moves:   # exact paths, first match wins: keep these above other moves\n';
+  assert.equal(s.run('whatifLayoutMoves([])'), '');
+  assert.equal(layout('app/[id].ts', 'web/[id].ts'), head + '  - { from: "app/[[]id[]].ts", to: "web/" }');
+  assert.equal(layout('a/x.ts', 'x.ts'), head + '  # a/x.ts → x.ts: not expressible as a move rule');
+  assert.equal(layout('p/[q]/x.ts', 'r/x.ts'), head + '  # p/[q]/x.ts → r/x.ts: not expressible as a move rule');
+  assert.equal(layout('p/<q>/x.ts', 'r/x.ts'), head + '  # p/<q>/x.ts → r/x.ts: not expressible as a move rule');
+  assert.equal(layout('p/x.ts', 'r/{s}/x.ts'), head + '  # p/x.ts → r/{s}/x.ts: not expressible as a move rule');
+  assert.equal(layout('p/x.ts', 'r/y.ts'), head + '  # p/x.ts → r/y.ts: not expressible as a move rule');
 });
 test('invalid moves invalidate earlier results instead of retaining success or commands', () => {
   const s = setup();

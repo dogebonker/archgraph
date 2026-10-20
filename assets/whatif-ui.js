@@ -2,7 +2,7 @@
 const whatifUI = {
   box: $("whatif-panel"), file: $("whatif-file"), folder: $("whatif-folder"),
   status: $("whatif-status"), result: $("whatif-result"), graph: $("whatif-graph"),
-  commands: $("whatif-commands"), cli: $("whatif-cli"), git: $("whatif-git"), rules: $("whatif-rules"),
+  commands: $("whatif-commands"), cli: $("whatif-cli"), git: $("whatif-git"), rules: $("whatif-rules"), moves: $("whatif-moves"),
   plan: $("whatif-plan"), list: $("whatif-list"), add: $("whatif-add")
 };
 const whatifOriginal = { stats: [...$("stats").childNodes], text: $("stats-text").textContent,
@@ -19,6 +19,19 @@ function whatifCommands() {
   const fresh = [...new Set(moves.map(m => dirname(m.to)))].filter(d => d && !known.has(d));
   whatifUI.git.value = ["set -e", ...(fresh.length ? [`mkdir -p -- ${fresh.map(q).join(" ")}`] : []), ...moves.map(m => `git mv -- ${q(m.file)} ${q(m.to)}`)].join("\n");
   whatifUI.rules.value = whatifRuleShifts(moves);
+  whatifUI.moves.value = whatifLayoutMoves(moves);
+}
+/* Each move as a layout `moves` rule matching the exact path. Rust keeps the source's literal folders and the file name,
+   so a rule cannot express a root destination, a rename, glob characters or captures in a folder, or a capture anywhere. */
+function whatifLayoutMoves(moves) {
+  if (!moves.length) return "";
+  const glob = /[*?[\]{}]/, rows = moves.map(({ file, to }) => {
+    const from = file.split("/"), name = from.pop(), dir = dirname(to);
+    if (!dir || /[<>]/.test(file) || from.some(d => glob.test(d)) || glob.test(dir) || name !== to.split("/").pop())
+      return `  # ${file} → ${to}: not expressible as a move rule`;
+    return `  - { from: ${JSON.stringify([...from, name.replace(/[*?[\]{}]/g, "[$&]")].join("/"))}, to: ${JSON.stringify(dir + "/")} }`;
+  });
+  return ["moves:   # exact paths, first match wins: keep these above other moves", ...rows].join("\n");
 }
 /* The layer (first matching glob, as the checker reads it) and forbid globs each moved file stops and starts
    matching; a capture glob shifts when the bound value changes. */
@@ -105,7 +118,7 @@ function clearWhatif() {
   $("stats").replaceChildren(...whatifOriginal.stats);
   $("stats-text").textContent = whatifOriginal.text;
   whatifUI.result.replaceChildren(); whatifUI.commands.hidden = true;
-  whatifUI.cli.value = ""; whatifUI.git.value = ""; whatifUI.rules.value = "";
+  whatifUI.cli.value = ""; whatifUI.git.value = ""; whatifUI.rules.value = ""; whatifUI.moves.value = "";
   whatifUI.status.textContent = "Preview cleared; original graph restored.";
   buildGrid(); applyFocus(); redraw();
 }
@@ -356,3 +369,4 @@ whatifUI.graph.addEventListener("input", whatifCommands);
 $("whatif-copy-cli").addEventListener("click", () => whatifCopy(whatifUI.cli));
 $("whatif-copy-git").addEventListener("click", () => whatifCopy(whatifUI.git));
 $("whatif-copy-rules").addEventListener("click", () => whatifCopy(whatifUI.rules));
+$("whatif-copy-moves").addEventListener("click", () => whatifCopy(whatifUI.moves));

@@ -324,6 +324,35 @@ fn moves_report_pending_files_import_lines_and_slices_moved() {
 }
 
 #[test]
+fn exported_exact_moves_check_as_one_slice_with_the_destinations_the_preview_showed() {
+    // The what-if "Copy layout moves" output for app/[id].ts and app/helper.ts moved to web/.
+    let rules = "version: 1\nmoves:   # exact paths, first match wins: keep these above other moves\n\
+         \x20 - { from: \"app/[[]id[]].ts\", to: \"web/\" }\n\
+         \x20 - { from: \"app/helper.ts\", to: \"web/\" }\n";
+    let doc = edges_scan(
+        "target-exported-moves",
+        &[
+            ("app/[id].ts", "app/helper.ts"),
+            ("lib/a.ts", "app/helper.ts"),
+        ],
+        rules,
+    );
+    assert_eq!(
+        doc["target"]["moves"],
+        json!([{ "slice": "*",
+                 "files": [
+                     { "file": "app/[id].ts", "to": "web/[id].ts" },
+                     { "file": "app/helper.ts", "to": "web/helper.ts" }
+                 ],
+                 "import_lines": 2, "names": null }])
+    );
+    assert_eq!(
+        doc["target"]["progress"]["moved"],
+        json!({ "done": 0, "of": 0 })
+    );
+}
+
+#[test]
 fn a_brace_claim_flags_a_moved_handler_importing_an_unmoved_repository() {
     let both = |role: &str| format!("{{src/m/<name>/{role}*.ts,src/app/<name>/{role}/*.ts}}");
     let rules = format!(

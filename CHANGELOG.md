@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- The map's what-if panel gains a "Copy layout moves" export: the move list as `layout.yaml` `moves` entries on exact paths, with a comment for any move a rule cannot express.
 - The map's what-if preview accepts layouts written for a target (`moves`, rule `source`, `layer-reason`, `early-smells`, a `<name>` capture inside braces) instead of reporting "Rules preview incomplete", and leaves undecided imports unflagged when the rules only forbid.
 - The map no longer flags undecided imports as unplanned when the rules only forbid (claims, with or without moves): there such an import is not a coverage gap. Verdicts and `check` output are unchanged.
 - MCP gains a `target` tool returning the scan's `target` (or `null`), and the archgraph-rules skill gains a step for drafting a target from a deck, markdown or ADR: claims as `forbid` rules sharing an id, `moves` for planned relocations, and claims archgraph cannot check reported as outside it.
