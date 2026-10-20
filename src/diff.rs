@@ -82,6 +82,16 @@ pub fn diff(old: &Document, new: &Document) -> Diff {
         new_forbidden: only_in(new, old, Verdict::Forbidden),
         resolved_forbidden: only_in(old, new, Verdict::Forbidden),
         new_unplanned: only_in(new, old, Verdict::Unplanned),
+        target: match (&old.target, &new.target) {
+            (None, None) => None,
+            (o, n) => {
+                let none = crate::target::Report::default();
+                Some(crate::target::delta(
+                    o.as_ref().unwrap_or(&none),
+                    n.as_ref().unwrap_or(&none),
+                ))
+            }
+        },
     }
 }
 
@@ -142,6 +152,29 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
             };
             let members: Vec<String> = c.members.iter().map(|m| esc(m)).collect();
             out += &format!("- {level}: {}\n", members.join(", "));
+        }
+    }
+    if let Some(t) = &d.target {
+        out += &format!(
+            "\n### Target\n\nConforming slices: {} → {}\n",
+            t.conforming[0], t.conforming[1]
+        );
+        if let Some([a, b]) = t.moved {
+            out += &format!("\nSlices moved: {a} → {b}\n");
+        }
+        if !t.newly_broken.is_empty() {
+            out += &format!("\nNewly broken ({}):\n\n", t.newly_broken.len());
+        }
+        for b in &t.newly_broken {
+            for link in &b.imports {
+                out += &format!(
+                    "- {}, slice {}: {} → {}\n",
+                    esc(&b.claim),
+                    esc(&b.slice),
+                    esc(&link.from),
+                    esc(&link.to)
+                );
+            }
         }
     }
     let change = |pair: [Option<f64>; 2]| match pair {

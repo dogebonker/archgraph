@@ -10,7 +10,7 @@ use crate::model::{Document, Edge, Language, Link, Move};
 use crate::modules::dir_of;
 use crate::rules::Compiled;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct Report {
     pub claims: Vec<Claim>,
     /// Every slice a move rule touches; a slice with no `files` has moved.
@@ -75,7 +75,7 @@ pub struct Slice {
     pub broken: Vec<Link>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct Progress {
     /// Captured slices that hold in every claim bound to them.
     pub conforming: Count,
@@ -84,10 +84,28 @@ pub struct Progress {
     pub moved: Option<Count>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize)]
 pub struct Count {
     pub done: usize,
     pub of: usize,
+}
+
+/// What changed in the target between two scans, `[old, new]` per count.
+#[derive(Debug, Clone, Serialize)]
+pub struct Delta {
+    /// Captured slices that hold in every claim bound to them.
+    pub conforming: [usize; 2],
+    /// Slices with no file left to move; only when both scans have `moves`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moved: Option<[usize; 2]>,
+    pub newly_broken: Vec<NewlyBroken>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct NewlyBroken {
+    pub claim: String,
+    pub slice: String,
+    pub imports: Vec<Link>,
 }
 
 type Files = BTreeSet<String>;
@@ -338,6 +356,37 @@ fn import_lines(doc: &Document, moves: &[Move]) -> usize {
             .iter()
             .filter(|e| moved(&e.from) || moved(&e.to))
             .count(),
+    }
+}
+
+/// Slices broken in `new` that were not broken in `old`, with their imports.
+pub fn delta(old: &Report, new: &Report) -> Delta {
+    let was_broken = |claim: &str, slice: &str| {
+        old.claims
+            .iter()
+            .filter(|c| c.id == claim)
+            .flat_map(|c| &c.slices)
+            .any(|s| s.slice == slice && !s.broken.is_empty())
+    };
+    let newly_broken = new
+        .claims
+        .iter()
+        .flat_map(|c| c.slices.iter().map(move |s| (c, s)))
+        .filter(|(c, s)| !s.broken.is_empty() && !was_broken(&c.id, &s.slice))
+        .map(|(c, s)| NewlyBroken {
+            claim: c.id.clone(),
+            slice: s.slice.clone(),
+            imports: s.broken.clone(),
+        })
+        .collect();
+    Delta {
+        conforming: [old.progress.conforming.done, new.progress.conforming.done],
+        moved: old
+            .progress
+            .moved
+            .zip(new.progress.moved)
+            .map(|(a, b)| [a.done, b.done]),
+        newly_broken,
     }
 }
 

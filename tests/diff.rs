@@ -404,3 +404,59 @@ fn markdown_lists_at_most_twenty_moved_modules() {
     assert!(md.contains("\nand 2 more\n"), "{md}");
     assert!(md.contains("Modules: 1 added, 0 removed."), "{md}");
 }
+
+/// Two slices under one captured claim; `extra` is the head's added import.
+fn target_scan(name: &str, extra: &[(&str, &str)]) -> String {
+    let mut edges: Vec<(String, String)> = [
+        ("src/m/a/app/x.ts", "src/shared/id.ts"),
+        ("src/m/a/domain/d.ts", "src/shared/id.ts"),
+        ("src/m/b/app/y.ts", "src/shared/id.ts"),
+        ("src/m/b/domain/e.ts", "src/shared/id.ts"),
+    ]
+    .iter()
+    .chain(extra)
+    .map(|(f, t)| (f.to_string(), t.to_string()))
+    .collect();
+    edges.sort();
+    let (dir, input) = synthetic(name, 5, &edges);
+    let rules = write_tmp(
+        &format!("diff/{name}.yaml"),
+        "version: 1\nforbid:\n\
+         \x20 - { id: app-no-domain, from: \"src/m/<name>/app/**\", to: \"src/m/<name>/domain/**\", reason: \"apps never reach a domain\" }\n",
+    );
+    let (_, stdout, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+        "--rules",
+        &rules,
+    ]);
+    write_tmp(&format!("diff/{name}.json"), &stdout)
+}
+
+#[test]
+fn markdown_reports_target_progress_and_newly_broken_slices() {
+    let old = target_scan("target-old", &[]);
+    let new = target_scan("target-new", &[("src/m/b/app/y.ts", "src/m/b/domain/e.ts")]);
+    let (markdown, _, code) = diff(&[&old, &new, "--format", "markdown"]);
+    assert_eq!(code, Some(0));
+    assert!(markdown.contains("\n### Target\n"), "{markdown}");
+    assert!(markdown.contains("Conforming slices: 2 → 1"), "{markdown}");
+    assert!(
+        markdown.contains("- app-no-domain, slice b: src/m/b/app/y.ts → src/m/b/domain/e.ts"),
+        "{markdown}"
+    );
+    let (doc, _) = run_json(&["diff", &old, &new]);
+    common::validate(&doc);
+    assert_eq!(doc["target"]["conforming"], json!([2, 1]));
+    // T16: the same diff fails the gate.
+    let (_, _, code) = diff(&[&old, &new, "--fail-on", "new-forbidden"]);
+    assert_eq!(code, Some(1));
+    let (markdown, _, _) = diff(&[&old, &old, "--format", "markdown"]);
+    assert!(markdown.contains("Conforming slices: 2 → 2"), "{markdown}");
+    let plain = before_after("ts-cycles", &[], "src/c/z.ts", "src/a/x.ts");
+    let (markdown, _, _) = diff(&[&plain.0, &plain.1, "--format", "markdown"]);
+    assert!(!markdown.contains("### Target"), "{markdown}");
+}

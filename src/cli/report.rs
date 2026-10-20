@@ -239,6 +239,13 @@ fn summary(
             };
         }
     }
+    if let Some(target) = &doc.target {
+        out += &format!(
+            "\n{}\n{}",
+            heading("Target"),
+            archgraph::target::text(target)
+        );
+    }
     out += &format!("\n{}\n", heading("Cycles"));
     if !doc.type_only_cycles.is_empty() {
         out += &format!(

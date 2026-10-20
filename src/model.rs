@@ -894,6 +894,9 @@ pub struct Diff {
     pub new_forbidden: Vec<Edge>,
     pub resolved_forbidden: Vec<Edge>,
     pub new_unplanned: Vec<Edge>,
+    /// Claim progress and newly broken slices; absent when neither scan has a target.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target: Option<crate::target::Delta>,
 }
 
 #[derive(Debug, Clone, Serialize)]

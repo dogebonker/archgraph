@@ -3630,6 +3630,61 @@
           "items": {
             "$ref": "#/$defs/edge"
           }
+        },
+        "target": {
+          "description": "Claim progress between the scans, absent when neither has a target. Slices broken in new that were not broken in old are listed with their imports.",
+          "type": "object",
+          "required": [
+            "conforming",
+            "newly_broken"
+          ],
+          "properties": {
+            "conforming": {
+              "description": "[old, new] captured slices that hold in every claim bound to them.",
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "moved": {
+              "description": "[old, new] slices with no file left to move; present when both scans have moves.",
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "newly_broken": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "claim",
+                  "slice",
+                  "imports"
+                ],
+                "properties": {
+                  "claim": {
+                    "type": "string"
+                  },
+                  "slice": {
+                    "type": "string"
+                  },
+                  "imports": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/link"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
