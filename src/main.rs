@@ -550,15 +550,12 @@ fn show_excludes() -> Result<()> {
 fn simulate(args: Simulate) -> Result<()> {
     let moves: Vec<archgraph::model::Move> = args
         .moves
-        .chunks(2)
-        .map(|pair| match pair {
-            [file, to] => Ok(archgraph::model::Move {
-                file: file.clone(),
-                to: to.clone(),
-            }),
-            _ => bail!("--move takes one file and one destination"),
+        .chunks_exact(2)
+        .map(|pair| archgraph::model::Move {
+            file: pair[0].clone(),
+            to: pair[1].clone(),
         })
-        .collect::<Result<_>>()?;
+        .collect();
     let mut input = read_scan(&args.graph)?;
     input.hydrate_config();
     let mut config = input.config;

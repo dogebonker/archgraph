@@ -1441,6 +1441,54 @@ fn report_on_a_composition_root_in_a_shared_folder() {
         assert!(stdout.contains(line), "{line:?} missing from\n{stdout}");
     }
     assert!(!stdout.contains("break the"), "{stdout}");
+    // The move resolves every x/api -> app pair, and no file cycle backs the module cycle: no
+    // recipe proposes cutting an x/api -> app import.
+    let (dir, input) = synthetic("composition-root", edges.len() + 1, &edges);
+    let (raw, _, _) = common::scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+    ]);
+    let finding = raw["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|d| &d["finding"])
+        .find(|f| f["kind"] == "cycle")
+        .unwrap();
+    assert!(finding.get("recipe").is_none(), "{finding:#}");
+
+    // A second, uneven pair (a/api -> e once, back four times) stays in the cycle: the break
+    // line names only its import, not the app/main.ts imports the move already takes out.
+    let mut extra = edges.clone();
+    extra.extend((1..=4).map(|i| (format!("e/y{i}.ts"), "a/api/z.ts".to_owned())));
+    extra.push(("a/api/w.ts".to_owned(), "e/v.ts".to_owned()));
+    let (_, stdout) = report_of("composition-root-extra-pair", &extra);
+    assert!(
+        stdout.contains("  break the 5-module cycle: cut 1 import from a/api/w.ts (1)\n"),
+        "{stdout}"
+    );
+
+    // Two composition roots in one grouping cycle: two moves, one grouping sentence.
+    let mut two = edges.clone();
+    for m in ["d", "e", "f"] {
+        two.push((format!("{m}/api/x.ts"), "srv/lib.ts".to_owned()));
+        two.push((format!("{m}/api/x.ts"), "srv/util.ts".to_owned()));
+        two.push(("srv/boot.ts".to_owned(), format!("{m}/api/x.ts")));
+    }
+    two.extend(
+        [
+            ("srv/lib.ts", "app/routing.ts"),
+            ("app/deps.ts", "srv/lib2.ts"),
+            ("srv/boot.ts", "srv/lib.ts"),
+        ]
+        .map(|(f, t)| (f.to_owned(), t.to_owned())),
+    );
+    let (_, stdout) = report_of("two-composition-roots", &two);
+    assert_eq!(stdout.matches("comes from grouping").count(), 1, "{stdout}");
+    assert_eq!(stdout.matches("\n  move ").count(), 2, "{stdout}");
 
     // app/deps.ts importing a/api/x.ts closes a file cycle across modules: no grouping, no move,
     // and the report shows the break set grouped by importing file.
@@ -1466,6 +1514,21 @@ fn report_on_a_composition_root_in_a_shared_folder() {
     assert!(doc["cycles"][0].get("registrar_moves").is_none());
     assert!(
         stdout.contains("  cycle of a, b comes from grouping: no file-level cycle; moving files between these modules can end it without cutting imports\n"),
+        "{stdout}"
+    );
+    // Five such pairs: three lines, then a count.
+    let pairs: Vec<(String, String)> = (0..5)
+        .flat_map(|i| {
+            [
+                (format!("a{i}/x.ts"), format!("b{i}/y.ts")),
+                (format!("b{i}/z.ts"), format!("a{i}/w.ts")),
+            ]
+        })
+        .collect();
+    let (_, stdout) = report_of("grouping-pairs", &pairs);
+    assert_eq!(stdout.matches("comes from grouping").count(), 3, "{stdout}");
+    assert!(
+        stdout.contains("  and 2 more grouping cycles\n"),
         "{stdout}"
     );
 

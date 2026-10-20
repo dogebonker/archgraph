@@ -294,15 +294,19 @@ fn summary(
                 .iter()
                 .map(|f| (f.path.as_str(), f.module.as_str()))
                 .collect();
+            // Go imports packages: files are not imported one by one, and moving one file does
+            // not change the folder grouping a package cycle comes from.
+            let go = doc.source.language == Language::Go;
+            let placed = |r: &&archgraph::model::RegistrarMove| {
+                r.to.is_some() && r.pairs_removed.is_some_and(|n| n > 0)
+            };
             let mut trailing = String::new();
             for c in &module_cycles {
-                for r in &c.registrar_moves {
+                let mut grouping = c.grouping == Some(true);
+                for r in c.registrar_moves.iter().filter(placed) {
                     let (Some(to), Some(removed)) = (&r.to, r.pairs_removed) else {
                         continue;
                     };
-                    if removed <= 0 {
-                        continue;
-                    }
                     let out = if r.leads(single_cut(c)) {
                         &mut out
                     } else {
@@ -317,13 +321,13 @@ fn summary(
                         (Some(b), Some(a)) => format!("the cycle goes from {b} to {a} modules"),
                         _ => String::new(),
                     };
-                    if c.grouping == Some(true) {
-                        // Files of the moved file's module that the other members import.
+                    // Once per cycle: files of the moved file's module the other members import.
+                    if std::mem::take(&mut grouping) {
                         let mut shared: Vec<&str> = doc
                             .edges
                             .iter()
                             .filter(|e| {
-                                e.kind.is_runtime()
+                                (doc.config.all_kinds || e.kind.is_runtime())
                                     && module_of.get(e.to.as_str()) == Some(&r.module.as_str())
                             })
                             .filter(|e| {
@@ -336,19 +340,23 @@ fn summary(
                         shared.sort();
                         shared.dedup();
                         shared.truncate(3);
-                        *out += &format!(
-                            "  cycle comes from grouping: no file-level cycle; {} shares {} with {}\n",
-                            r.file,
-                            r.module,
-                            shared.join(", ")
-                        );
+                        *out += "  cycle comes from grouping: no file-level cycle";
+                        if !shared.is_empty() {
+                            *out += &format!(
+                                "; {} shares {} with {}",
+                                r.file,
+                                r.module,
+                                shared.join(", ")
+                            );
+                        }
+                        *out += "\n";
                     }
                     *out += &format!(
                         "  move {} to {to}: removes {}; {cycle}; no new cycle\n",
                         r.file,
                         count(removed as usize, "two-way pair")
                     );
-                    if r.entrypoint {
+                    if r.entrypoint && !go {
                         *out += &format!(
                             "  nothing imports {}: update deploy and config references to its path\n",
                             r.file
@@ -357,20 +365,33 @@ fn summary(
                 }
             }
             // Grouping cycles without a move to print: say so before any cut.
-            for c in module_cycles.iter().filter(|c| {
-                c.grouping == Some(true)
-                    && !c
-                        .registrar_moves
-                        .iter()
-                        .any(|r| r.to.is_some() && r.pairs_removed.is_some_and(|n| n > 0))
-            }) {
+            let unmoved: Vec<_> = module_cycles
+                .iter()
+                .filter(|c| {
+                    c.grouping == Some(true) && !c.registrar_moves.iter().any(|r| placed(&r))
+                })
+                .collect();
+            for c in unmoved.iter().take(3) {
                 let more = match c.members.len().saturating_sub(3) {
                     0 => String::new(),
                     n => format!(" and {}", count(n, "more module")),
                 };
+                let names = c.members[..c.members.len().min(3)].join(", ");
+                out += &if go {
+                    format!(
+                        "  cycle of {names}{more} comes from module grouping: packages are acyclic; the cycle exists only at folder depth {}; change --depth or the module grouping\n",
+                        doc.config.depth
+                    )
+                } else {
+                    format!(
+                        "  cycle of {names}{more} comes from grouping: no file-level cycle; moving files between these modules can end it without cutting imports\n"
+                    )
+                };
+            }
+            if unmoved.len() > 3 {
                 out += &format!(
-                    "  cycle of {}{more} comes from grouping: no file-level cycle; moving files between these modules can end it without cutting imports\n",
-                    c.members[..c.members.len().min(3)].join(", ")
+                    "  and {}\n",
+                    count(unmoved.len() - 3, "more grouping cycle")
                 );
             }
             let lightest = module_cycles
@@ -387,10 +408,22 @@ fn summary(
                 .iter()
                 .any(|c| c.two_way.iter().flatten().next().is_some());
             out += &match lightest {
-                // The cycle holding the lightest pair: its break set, by importing file.
+                // The cycle holding the lightest pair: its break set, by importing file, less the
+                // imports of files a printed move takes out.
                 Some((c, _)) => {
+                    let moved: std::collections::BTreeSet<&str> = c
+                        .registrar_moves
+                        .iter()
+                        .filter(placed)
+                        .map(|r| r.file.as_str())
+                        .collect();
+                    let links: Vec<_> = c
+                        .break_set
+                        .iter()
+                        .filter(|l| !moved.contains(l.from.as_str()))
+                        .collect();
                     let mut by_file: BTreeMap<&str, usize> = BTreeMap::new();
-                    for link in &c.break_set {
+                    for link in &links {
                         *by_file.entry(link.from.as_str()).or_default() += 1;
                     }
                     let mut by_file: Vec<_> = by_file.into_iter().collect();
@@ -404,13 +437,17 @@ fn summary(
                         0 => String::new(),
                         n => format!(" and {}", count(n, "more file")),
                     };
-                    format!(
-                        "  break the {}-module cycle{}: cut {} from {}{more}\n",
-                        c.members.len(),
-                        if c.exact { "" } else { " (approximate)" },
-                        count(c.break_set.len(), "import"),
-                        top.join(", ")
-                    )
+                    if links.is_empty() {
+                        String::new()
+                    } else {
+                        format!(
+                            "  break the {}-module cycle{}: cut {} from {}{more}\n",
+                            c.members.len(),
+                            if c.exact { "" } else { " (approximate)" },
+                            count(links.len(), "import"),
+                            top.join(", ")
+                        )
+                    }
                 }
                 // The move is the step: no other cut remains.
                 None if moved => String::new(),
