@@ -955,6 +955,21 @@ Verdict per import, first match wins:
 
 `default: forbidden` turns the rules into a whitelist. An archgraph older than this key reads a scan document whose embedded rules carry it and ignores the key (unknown keys in embedded rules are tolerated), so its `check` reports those imports as unplanned and exits 0. Pin the archgraph version wherever a whitelist gates CI.
 
+### Claims
+
+Forbid rules sharing an `id`, at least one with a `reason`, form a claim, such as a target architecture's "Dependencies point inward". A claim is judged per slice, one value of its `<name>` capture (rules without a capture form the slice `*`), against every import, whichever rule first decides that import's verdict. A slice counts only when one of the claim's rules has files on both sides in it, so a slice that cannot break is left out. The verdict is `holds`, `holds_in` (some slices break), `broken` or `vacuous` (no slice counts, so the claim protects nothing). A rule side that matches no file adds a note. `check` prints a line per claim with up to 20 breaking imports, then `target: N of M slices conform`: the captured slices that hold in every claim counting them. The scan document and `check --brief` carry the same as `target`. Exit codes stay those of the forbidden imports.
+
+```yaml
+forbid:
+  - { id: layered, reason: "Dependencies point inward (slide 8)",
+      from: "{internal/<name>/handler*.go,internal/app/<name>/handler/*.go}",
+      to: "{internal/<name>/repository*.go,internal/app/<name>/repository/*.go}" }
+```
+
+```text
+claim layered: holds in 16 of 18 slices; broken in interview, sop reason="Dependencies point inward (slide 8)"
+```
+
 ## Findings
 
 | kind | when | suggestion |

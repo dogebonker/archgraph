@@ -41,6 +41,7 @@ pub mod simulate;
 pub mod surface;
 pub mod symbols;
 pub mod sync_rules;
+pub mod target;
 pub mod tour;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -272,6 +273,9 @@ fn analyze_inner(
     findings::place_registrars(&mut doc, rules.as_ref(), owners.as_ref());
     doc.cochange = cochange;
     doc.findings = findings::find(&doc, rules.as_ref(), owners.as_ref());
+    doc.target = rules
+        .as_ref()
+        .and_then(|rules| target::analyze(&doc, rules));
     resolution::attach(&mut doc);
     recipes::attach(&mut doc)?;
     Ok(doc)
@@ -499,6 +503,7 @@ fn build_inner(
         symbols: None,
         surface: None,
         package_splits: None,
+        target: None,
     };
     if owners.is_some() {
         for module in &mut doc.modules {

@@ -58,6 +58,9 @@ pub struct Document {
     pub surface: Option<crate::surface::SurfaceReport>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub package_splits: Option<crate::package_splits::Report>,
+    /// Claim verdicts, when the rules state a claim.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target: Option<crate::target::Report>,
 }
 
 /// The parts of a scan document that every other subcommand recomputes the rest from.

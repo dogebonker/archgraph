@@ -1,7 +1,7 @@
 //! layout.yaml: parsing, glob compilation and edge verdicts.
 
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::fs;
 use std::path::Path;
 
@@ -10,7 +10,7 @@ use globset::{GlobBuilder, GlobMatcher};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::model::{Config, Edge, EdgeKind, RulesRef, Verdict};
+use crate::model::{Config, Edge, EdgeKind, Link, RulesRef, Verdict};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Rules {
@@ -178,6 +178,9 @@ impl Rules {
                 reasons.extend(rule.reason.as_deref());
             }
         }
+        // Rules sharing an id (one claim) often repeat its reason: print each once.
+        let mut seen = HashSet::new();
+        reasons.retain(|r| seen.insert(*r));
         reasons
     }
 
@@ -200,6 +203,8 @@ impl Rules {
                 sources.extend(rule.source.as_deref());
             }
         }
+        let mut seen = HashSet::new();
+        sources.retain(|s| seen.insert(*s));
         sources
     }
 }
@@ -393,6 +398,14 @@ impl Pattern {
 type Reached<'a> = HashMap<(usize, Option<String>, &'a str), Option<Vec<String>>>;
 
 type CompiledForbid = (String, Pattern, String, bool, Option<Vec<EdgeKind>>);
+
+/// One forbid rule in one slice: files matching `from`, targets matching `to`, imports it forbids.
+#[derive(Debug, Default)]
+pub struct SliceEvidence {
+    pub from: Vec<String>,
+    pub to: Vec<String>,
+    pub hits: Vec<Link>,
+}
 
 pub struct Compiled {
     categories: BTreeMap<String, Vec<GlobMatcher>>,
@@ -837,18 +850,64 @@ impl Compiled {
         }
     }
 
-    /// The first matching rule; strict entrypoint boundaries precede permissive allows.
-    fn verdict<'a>(
+    /// Per forbid rule, the files and targets on each side and the imports it forbids, by bound
+    /// capture. Every rule sees every import, whichever rule `verdict` gives it to.
+    pub fn forbid_slices(
         &self,
-        e: &'a Edge,
-        module_of: &BTreeMap<String, String>,
+        files: &[&str],
+        edges: &[&Edge],
         externals: &BTreeMap<String, String>,
-        adjacency: &HashMap<&'a str, Vec<(&'a str, EdgeKind)>>,
-        reached: &mut Reached<'a>,
-    ) -> (Verdict, String, Option<Vec<String>>) {
-        use Verdict::*;
-        let written = e.original_to.as_deref().unwrap_or(&e.to);
-        let matches_target = |selector: &str, target: &str| match externals.get(target) {
+    ) -> Vec<BTreeMap<Option<String>, SliceEvidence>> {
+        let mut adjacency: HashMap<&str, Vec<(&str, EdgeKind)>> = HashMap::new();
+        for e in edges {
+            adjacency.entry(&e.from).or_default().push((&e.to, e.kind));
+        }
+        let mut reached: Reached = HashMap::new();
+        let targets: Vec<&str> = files
+            .iter()
+            .copied()
+            .chain(externals.keys().map(String::as_str))
+            .collect();
+        (0..self.forbid.len())
+            .map(|i| {
+                let (_, from, to, _, _) = &self.forbid[i];
+                let mut slices: BTreeMap<Option<String>, SliceEvidence> = BTreeMap::new();
+                for file in files {
+                    if let Some(value) = self.bind(from, file) {
+                        slices.entry(value).or_default().from.push(file.to_string());
+                    }
+                }
+                for (value, slice) in &mut slices {
+                    let to = from.bound_glob(to, value.as_deref());
+                    slice.to = targets
+                        .iter()
+                        .filter(|t| self.matches_target(externals, &to, t))
+                        .map(|t| t.to_string())
+                        .collect();
+                }
+                for e in edges {
+                    if let Some((value, _)) =
+                        self.forbids(i, e, externals, &adjacency, &mut reached)
+                    {
+                        slices.entry(value).or_default().hits.push(Link {
+                            from: e.from.clone(),
+                            to: e.original_to.as_deref().unwrap_or(&e.to).to_owned(),
+                        });
+                    }
+                }
+                slices
+            })
+            .collect()
+    }
+
+    /// Whether `target` (a file, or an external node by its package) matches `selector`.
+    fn matches_target(
+        &self,
+        externals: &BTreeMap<String, String>,
+        selector: &str,
+        target: &str,
+    ) -> bool {
+        match externals.get(target) {
             Some(package) => {
                 if let Some(pattern) = selector.strip_prefix("pkg:") {
                     self.bound_match(pattern, package)
@@ -865,25 +924,58 @@ impl Compiled {
                     && !selector.starts_with("category:")
                     && self.bound_match(selector, target)
             }
-        };
-        for (i, (name, from, to, reachable, kinds)) in self.forbid.iter().enumerate() {
-            if !includes_kind(kinds, e.kind) {
-                continue;
-            }
-            let Some(value) = self.bind(from, &e.from) else {
-                continue;
-            };
-            let to = from.bound_glob(to, value.as_deref());
-            if matches_target(&to, written) {
-                return (Forbidden, name.clone(), None);
-            }
-            if *reachable {
-                let path = reached.entry((i, value, e.to.as_str())).or_insert_with(|| {
-                    shortest_path(&e.to, adjacency, kinds, |f| matches_target(&to, f))
-                });
-                if let Some(path) = path {
-                    return (Forbidden, name.clone(), Some(path.clone()));
-                }
+        }
+    }
+
+    /// `Some((capture, reach))` when forbid rule `i` matches `e`; `reach` is the import path
+    /// for a reachable hit.
+    fn forbids<'a>(
+        &self,
+        i: usize,
+        e: &'a Edge,
+        externals: &BTreeMap<String, String>,
+        adjacency: &HashMap<&'a str, Vec<(&'a str, EdgeKind)>>,
+        reached: &mut Reached<'a>,
+    ) -> Option<(Option<String>, Option<Vec<String>>)> {
+        let (_, from, to, reachable, kinds) = &self.forbid[i];
+        if !includes_kind(kinds, e.kind) {
+            return None;
+        }
+        let value = self.bind(from, &e.from)?;
+        let to = from.bound_glob(to, value.as_deref());
+        if self.matches_target(externals, &to, e.original_to.as_deref().unwrap_or(&e.to)) {
+            return Some((value, None));
+        }
+        if !*reachable {
+            return None;
+        }
+        let path = reached
+            .entry((i, value.clone(), e.to.as_str()))
+            .or_insert_with(|| {
+                shortest_path(&e.to, adjacency, kinds, |f| {
+                    self.matches_target(externals, &to, f)
+                })
+            })
+            .clone()?;
+        Some((value, Some(path)))
+    }
+
+    /// The first matching rule; strict entrypoint boundaries precede permissive allows.
+    fn verdict<'a>(
+        &self,
+        e: &'a Edge,
+        module_of: &BTreeMap<String, String>,
+        externals: &BTreeMap<String, String>,
+        adjacency: &HashMap<&'a str, Vec<(&'a str, EdgeKind)>>,
+        reached: &mut Reached<'a>,
+    ) -> (Verdict, String, Option<Vec<String>>) {
+        use Verdict::*;
+        let written = e.original_to.as_deref().unwrap_or(&e.to);
+        let matches_target =
+            |selector: &str, target: &str| self.matches_target(externals, selector, target);
+        for i in 0..self.forbid.len() {
+            if let Some((_, reach)) = self.forbids(i, e, externals, adjacency, reached) {
+                return (Forbidden, self.forbid[i].0.clone(), reach);
             }
         }
         for (module, entry) in &self.entrypoints {

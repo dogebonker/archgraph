@@ -86,6 +86,7 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
                 "schema": SCHEMA, "kind": "check", "summary": doc.summary,
                 "cycles": doc.cycles, "forbidden": forbidden, "unplanned": unplanned,
                 "surface": doc.surface,
+                "target": doc.target,
                 "early_smells": smells,
                 "reasons": forbidden.iter().map(|edge| serde_json::json!({"from":edge.from,"to":edge.to,"reasons":reasons(&doc, edge.rule.as_deref().unwrap_or_default()),"sources":sources(&doc, edge.rule.as_deref().unwrap_or_default())})).collect::<Vec<_>>(),
             }),
@@ -143,6 +144,9 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
         );
     }
     println!("{forbidden} forbidden, {unplanned} unplanned");
+    if let Some(target) = &doc.target {
+        print!("{}", archgraph::target::text(target));
+    }
     for finding in &smells.violations {
         println!(
             "{} {}: {} reason={:?}",

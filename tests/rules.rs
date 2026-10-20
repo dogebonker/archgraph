@@ -1,8 +1,8 @@
 mod common;
 
 use common::{
-    archgraph, finding, fixture, layout, scan_file, scan_recorded, stable, validate, verdicts,
-    write_tmp,
+    archgraph, finding, fixture, layout, scan, scan_file, scan_recorded, stable, synthetic,
+    validate, verdicts, write_tmp,
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -160,7 +160,14 @@ fn ts_fda_check_prints_violations_and_exits_one() {
          via src/domains/checkout/client.ts -> src/domains/checkout/model.server.ts reason=\"browser graph never reaches server code\"\n\
          forbidden src/domains/checkout/index.ts -> src/domains/checkout/model.server.ts (browser-no-server) reason=\"browser graph never reaches server code\"\n\
          forbidden src/shared/format.ts -> src/domains/cart/types.ts (shared-no-domain) reason=\"shared imports no domain\"\n\
-         5 forbidden, 1 unplanned\n"
+         5 forbidden, 1 unplanned\n\
+         claim shared-no-domain: broken reason=\"shared imports no domain\"\n\
+         \x20 src/shared/format.ts -> src/domains/cart/types.ts\n\
+         claim browser-no-server: broken reason=\"browser graph never reaches server code\"\n\
+         \x20 src/domains/checkout/client.ts -> src/domains/checkout/model.server.ts\n\
+         \x20 src/domains/checkout/controller.ts -> src/domains/checkout/client.ts\n\
+         \x20 src/domains/checkout/index.ts -> src/domains/checkout/model.server.ts\n\
+         target: 0 of 0 slices conform\n"
     );
 
     // check recomputes through the scan pipeline: a rule-less scan checked with rules equals a
@@ -172,6 +179,85 @@ fn ts_fda_check_prints_violations_and_exits_one() {
     validate(&serde_json::from_str(&checked).unwrap());
     let (_, with_rules, _) = scan_recorded("ts-fda", &["--rules", &layout("ts-fda")]);
     assert_eq!(stable(&checked), stable(&with_rules));
+}
+
+/// Slice a imports its domain, b has both sides and holds, c has only a domain.
+fn sliced_scan(name: &str, rules: &str) -> serde_json::Value {
+    let edges = [
+        ("src/m/a/app/x.ts", "src/m/a/domain/d.ts"),
+        ("src/m/b/app/y.ts", "src/shared/id.ts"),
+        ("src/m/b/domain/e.ts", "src/shared/id.ts"),
+        ("src/m/c/domain/f.ts", "src/shared/id.ts"),
+    ]
+    .map(|(f, t)| (f.to_owned(), t.to_owned()));
+    let (dir, input) = synthetic(name, 6, &edges);
+    let rules = write_tmp(&format!("rules/{name}.yaml"), rules);
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+        "--rules",
+        &rules,
+    ]);
+    doc
+}
+
+#[test]
+fn a_claim_reports_a_verdict_over_its_bound_slices() {
+    let doc = sliced_scan(
+        "target-claims",
+        "version: 1\nforbid:\n\
+         \x20 - { id: app-no-domain, from: \"src/m/<name>/app/**\", to: \"src/m/<name>/domain/**\", reason: \"apps never reach a domain\" }\n\
+         \x20 - { id: nowhere, from: \"src/nowhere/**\", to: \"src/nowhere/**\", reason: \"nothing\" }\n\
+         \x20 - { id: app-no-infra, from: \"src/m/<name>/app/**\", to: \"src/m/<name>/infra/**\", reason: \"no infra\" }\n\
+         \x20 - { id: unclaimed, from: \"src/m/*/app/**\", to: \"src/m/*/domain/**\" }\n",
+    );
+    assert_eq!(
+        doc["target"],
+        json!({
+            "claims": [
+                { "id": "app-no-domain", "reason": "apps never reach a domain", "source": null,
+                  "verdict": "holds_in",
+                  "slices": [
+                      { "slice": "a", "files": ["src/m/a/app/x.ts", "src/m/a/domain/d.ts"],
+                        "broken": [{ "from": "src/m/a/app/x.ts", "to": "src/m/a/domain/d.ts" }] },
+                      { "slice": "b", "files": ["src/m/b/app/y.ts", "src/m/b/domain/e.ts"],
+                        "broken": [] }
+                  ],
+                  "notes": [] },
+                { "id": "nowhere", "reason": "nothing", "source": null, "verdict": "vacuous",
+                  "slices": [], "notes": ["forbid[1] `from` matches no file"] },
+                { "id": "app-no-infra", "reason": "no infra", "source": null, "verdict": "vacuous",
+                  "slices": [], "notes": ["forbid[2] `to` matches no file"] }
+            ],
+            "progress": { "conforming": { "done": 1, "of": 2 } }
+        })
+    );
+}
+
+#[test]
+fn an_earlier_rule_catching_the_import_leaves_the_claim_broken() {
+    let doc = sliced_scan(
+        "target-first-match",
+        "version: 1\nforbid:\n\
+         \x20 - { from: \"src/m/*/app/**\", to: \"src/m/*/domain/**\" }\n\
+         \x20 - { id: app-no-domain, from: \"src/m/a/app/**\", to: \"src/m/a/domain/**\", reason: \"apps never reach a domain\" }\n",
+    );
+    let edge = verdicts(&doc)
+        .into_iter()
+        .find(|r| r.0 == "src/m/a/app/x.ts")
+        .unwrap();
+    assert_eq!(
+        (edge.2.as_str(), edge.3.as_str()),
+        ("forbidden", "forbid[0]")
+    );
+    assert_eq!(doc["target"]["claims"][0]["verdict"], "broken");
+    assert_eq!(
+        doc["target"]["claims"][0]["slices"][0]["broken"],
+        json!([{ "from": "src/m/a/app/x.ts", "to": "src/m/a/domain/d.ts" }])
+    );
 }
 
 #[test]

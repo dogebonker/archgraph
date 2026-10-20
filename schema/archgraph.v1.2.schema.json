@@ -1922,6 +1922,9 @@
         "package_splits": {
           "$ref": "#/$defs/package-splits"
         },
+        "target": {
+          "$ref": "#/$defs/target"
+        },
         "external_exposure": {
           "$ref": "#/$defs/external-exposure"
         },
@@ -2004,6 +2007,108 @@
         },
         "resolution_reason": {
           "type": "string"
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "claims",
+        "progress"
+      ],
+      "properties": {
+        "claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "reason",
+              "source",
+              "verdict",
+              "slices",
+              "notes"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "source": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "verdict": {
+                "enum": [
+                  "holds",
+                  "holds_in",
+                  "broken",
+                  "vacuous"
+                ]
+              },
+              "slices": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "slice",
+                    "files",
+                    "broken"
+                  ],
+                  "properties": {
+                    "slice": {
+                      "type": "string"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "broken": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/link"
+                      }
+                    }
+                  }
+                }
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "progress": {
+          "type": "object",
+          "required": [
+            "conforming"
+          ],
+          "properties": {
+            "conforming": {
+              "type": "object",
+              "required": [
+                "done",
+                "of"
+              ],
+              "properties": {
+                "done": {
+                  "$ref": "#/$defs/count"
+                },
+                "of": {
+                  "$ref": "#/$defs/count"
+                }
+              }
+            }
+          }
         }
       }
     },
