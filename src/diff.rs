@@ -115,6 +115,20 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
         count(d.new_cycles.len(), "new dependency component"),
         count(d.resolved_cycles.len(), "resolved dependency component"),
     );
+    if let Some(t) = &d.target {
+        let [old, new] = t.conforming;
+        out += &format!("\nTarget: {} of {} slices conform", new.done, new.of);
+        if old != new {
+            out += &format!(" (was {} of {})", old.done, old.of);
+        }
+        if let Some([_, m]) = t.moved {
+            out += &format!(", {} of {} slices moved", m.done, m.of);
+        }
+        if !t.newly_broken.is_empty() {
+            out += &format!(", {}", count(t.newly_broken.len(), "newly broken slice"));
+        }
+        out += ".\n";
+    }
     for (title, edges) in [
         ("New forbidden imports", &d.new_forbidden),
         ("New unplanned imports", &d.new_unplanned),
@@ -154,17 +168,8 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
             out += &format!("- {level}: {}\n", members.join(", "));
         }
     }
-    if let Some(t) = &d.target {
-        out += &format!(
-            "\n### Target\n\nConforming slices: {} → {}\n",
-            t.conforming[0], t.conforming[1]
-        );
-        if let Some([a, b]) = t.moved {
-            out += &format!("\nSlices moved: {a} → {b}\n");
-        }
-        if !t.newly_broken.is_empty() {
-            out += &format!("\nNewly broken ({}):\n\n", t.newly_broken.len());
-        }
+    if let Some(t) = d.target.as_ref().filter(|t| !t.newly_broken.is_empty()) {
+        out += &format!("\n### Newly broken slices ({})\n\n", t.newly_broken.len());
         for b in &t.newly_broken {
             for link in &b.imports {
                 out += &format!(

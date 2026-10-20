@@ -3645,8 +3645,19 @@
               "minItems": 2,
               "maxItems": 2,
               "items": {
-                "type": "integer",
-                "minimum": 0
+                "type": "object",
+                "required": [
+                  "done",
+                  "of"
+                ],
+                "properties": {
+                  "done": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "of": {
+                    "$ref": "#/$defs/count"
+                  }
+                }
               }
             },
             "moved": {
@@ -3655,8 +3666,19 @@
               "minItems": 2,
               "maxItems": 2,
               "items": {
-                "type": "integer",
-                "minimum": 0
+                "type": "object",
+                "required": [
+                  "done",
+                  "of"
+                ],
+                "properties": {
+                  "done": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "of": {
+                    "$ref": "#/$defs/count"
+                  }
+                }
               }
             },
             "newly_broken": {

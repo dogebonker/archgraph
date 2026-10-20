@@ -84,7 +84,7 @@ pub struct Progress {
     pub moved: Option<Count>,
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 pub struct Count {
     pub done: usize,
     pub of: usize,
@@ -94,10 +94,10 @@ pub struct Count {
 #[derive(Debug, Clone, Serialize)]
 pub struct Delta {
     /// Captured slices that hold in every claim bound to them.
-    pub conforming: [usize; 2],
+    pub conforming: [Count; 2],
     /// Slices with no file left to move; only when both scans have `moves`.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub moved: Option<[usize; 2]>,
+    pub moved: Option<[Count; 2]>,
     pub newly_broken: Vec<NewlyBroken>,
 }
 
@@ -384,12 +384,12 @@ pub fn delta(old: &Report, new: &Report) -> Delta {
         })
         .collect();
     Delta {
-        conforming: [old.progress.conforming.done, new.progress.conforming.done],
+        conforming: [old.progress.conforming, new.progress.conforming],
         moved: old
             .progress
             .moved
             .zip(new.progress.moved)
-            .map(|(a, b)| [a.done, b.done]),
+            .map(|(a, b)| [a, b]),
         newly_broken,
     }
 }

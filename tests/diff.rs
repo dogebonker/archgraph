@@ -422,7 +422,9 @@ fn target_scan(name: &str, extra: &[(&str, &str)]) -> String {
     let rules = write_tmp(
         &format!("diff/{name}.yaml"),
         "version: 1\nforbid:\n\
-         \x20 - { id: app-no-domain, from: \"src/m/<name>/app/**\", to: \"src/m/<name>/domain/**\", reason: \"apps never reach a domain\" }\n",
+         \x20 - { id: app-no-domain, from: \"src/m/<name>/app/**\", to: \"src/m/<name>/domain/**\", reason: \"apps never reach a domain\" }\n\
+         moves:\n\
+         \x20 - { from: \"src/m/<name>/app/**\", to: \"src/app/<name>/\" }\n",
     );
     let (_, stdout, _) = scan(&[
         &dir,
@@ -442,21 +444,41 @@ fn markdown_reports_target_progress_and_newly_broken_slices() {
     let new = target_scan("target-new", &[("src/m/b/app/y.ts", "src/m/b/domain/e.ts")]);
     let (markdown, _, code) = diff(&[&old, &new, "--format", "markdown"]);
     assert_eq!(code, Some(0));
-    assert!(markdown.contains("\n### Target\n"), "{markdown}");
-    assert!(markdown.contains("Conforming slices: 2 → 1"), "{markdown}");
+    assert!(
+        markdown.contains(
+            "\nTarget: 1 of 2 slices conform (was 2 of 2), 0 of 2 slices moved, 1 newly broken slice.\n"
+        ),
+        "{markdown}"
+    );
+    assert!(
+        markdown.contains("### Newly broken slices (1)"),
+        "{markdown}"
+    );
+    assert!(!markdown.contains("Conforming slices"), "{markdown}");
     assert!(
         markdown.contains("- app-no-domain, slice b: src/m/b/app/y.ts → src/m/b/domain/e.ts"),
         "{markdown}"
     );
     let (doc, _) = run_json(&["diff", &old, &new]);
     common::validate(&doc);
-    assert_eq!(doc["target"]["conforming"], json!([2, 1]));
+    assert_eq!(
+        doc["target"]["conforming"],
+        json!([{"done": 2, "of": 2}, {"done": 1, "of": 2}])
+    );
+    assert_eq!(
+        doc["target"]["moved"],
+        json!([{"done": 0, "of": 2}, {"done": 0, "of": 2}])
+    );
     // T16: the same diff fails the gate.
     let (_, _, code) = diff(&[&old, &new, "--fail-on", "new-forbidden"]);
     assert_eq!(code, Some(1));
     let (markdown, _, _) = diff(&[&old, &old, "--format", "markdown"]);
-    assert!(markdown.contains("Conforming slices: 2 → 2"), "{markdown}");
+    assert!(
+        markdown.contains("\nTarget: 2 of 2 slices conform, 0 of 2 slices moved.\n"),
+        "{markdown}"
+    );
+    assert!(!markdown.contains("Newly broken"), "{markdown}");
     let plain = before_after("ts-cycles", &[], "src/c/z.ts", "src/a/x.ts");
     let (markdown, _, _) = diff(&[&plain.0, &plain.1, "--format", "markdown"]);
-    assert!(!markdown.contains("### Target"), "{markdown}");
+    assert!(!markdown.contains("Target:"), "{markdown}");
 }
