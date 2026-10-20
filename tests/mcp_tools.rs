@@ -48,6 +48,23 @@ fn tool(doc: &Document, name: &str, args: Value) -> Value {
 fn cycle() -> Document {
     document(&[("src/a/a.ts", "src/b/b.ts"), ("src/b/b.ts", "src/a/a.ts")])
 }
+fn with_claim() -> Document {
+    let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","cruised":3},"git":{"commit":"test","dirty":false},"generated_at":"1970-01-01T00:00:00Z"})).unwrap();
+    let config: Config = serde_json::from_value(json!({"depth":1,"source_root":"src","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"fixture","doc":{"version":1,"forbid":[{"id":"no-b","from":"src/a/**","to":"src/b/**","reason":"a never uses b"}]}}})).unwrap();
+    archgraph::analyze(
+        source,
+        config,
+        vec!["src/a/a.ts".into(), "src/b/b.ts".into()],
+        vec![Edge {
+            from: "src/a/a.ts".into(),
+            to: "src/b/b.ts".into(),
+            ..Default::default()
+        }],
+        Vec::new(),
+        None,
+    )
+    .unwrap()
+}
 fn validate(name: &str, value: &Value) {
     let schema = schemas().into_iter().find(|s| s.name == name).unwrap();
     let validator = jsonschema::validator_for(&schema.output).unwrap();
@@ -359,4 +376,14 @@ fn explain_modules_report_all_layers_and_unclassified_members() {
     assert_eq!(unclassified["layer"], Value::Null);
     assert_eq!(unclassified["layer_status"], "unclassified");
     assert_eq!(unclassified["layers"], json!([]));
+}
+
+#[test]
+fn target_returns_claim_verdicts_or_null() {
+    let with = tool(&with_claim(), "target", json!({}));
+    assert_eq!(with["claims"][0]["verdict"], "broken");
+    validate("target", &with);
+    let without = tool(&cycle(), "target", json!({}));
+    assert_eq!(without, Value::Null);
+    validate("target", &without);
 }

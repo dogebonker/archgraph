@@ -228,6 +228,7 @@ impl Client {
                 "propose",
                 "rules",
                 "simulate",
+                "target",
                 "verify"
             ]
         );
@@ -334,6 +335,7 @@ fn stdio_tools_conform_fix_cycle_and_keep_deterministic_bounded_results() {
     assert!(context["entries"].is_array());
     let rules = c.ok("rules", json!({"paths":["src/b/b.ts"]}));
     assert_eq!(rules["forbid"][0]["reason"], "keep b independent of a");
+    assert_eq!(c.ok("target", json!({})), Value::Null);
     let explain = c.ok("explain", json!({"path":"src/a/a.ts"}));
     assert!(explain["summary"].as_str().unwrap().contains("imports:"));
     let simulation=c.ok("simulate",json!({"moves":[{"from":"src/a/a.ts","to":"src/a/renamed.ts"},{"from":"src/b/b.ts","to":"src/b/renamed.ts"}]}));

@@ -109,6 +109,13 @@ struct RulesArgs {
     brief: bool,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TargetArgs {
+    #[serde(default = "yes")]
+    brief: bool,
+}
+
 fn parse<T: serde::de::DeserializeOwned>(value: Value) -> Result<T> {
     serde_json::from_value(value)
         .context("invalid tool arguments: use tools/list for the accepted fields and types")
@@ -160,6 +167,9 @@ pub fn validate(name: &str, arguments: &Value) -> Result<()> {
             if a.paths.is_empty() {
                 bail!("paths must contain at least one repository-relative path");
             }
+        }
+        "target" => {
+            let _: TargetArgs = parse(arguments.clone())?;
         }
         _ => bail!("unknown tool {name:?}: use tools/list for available tools"),
     }
@@ -425,6 +435,11 @@ pub fn call(
             }
             relevant(doc, &a.paths)
         }
+        "target" => {
+            let a: TargetArgs = parse(arguments)?;
+            let _ = a.brief;
+            Ok(serde_json::to_value(&doc.target)?)
+        }
         _ => bail!("unknown tool {name:?}: use tools/list for available tools"),
     }
 }
@@ -657,6 +672,13 @@ pub fn schemas() -> Vec<ToolSchema> {
             json!({"paths":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}}}),
             &["paths"],
             json!({"type":"object"}),
+        ),
+        schema(
+            "target",
+            "Return the target check: a verdict per claim, slice progress and pending move cost, or null when the rules state no claim or move.",
+            json!({}),
+            &[],
+            json!({"anyOf":[{"type":"null"},inline_schema(&graph_schema["$defs"]["target"],&graph_schema["$defs"])]}),
         ),
     ];
     tools
