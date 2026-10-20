@@ -248,7 +248,7 @@ Every phase verifies with `cargo fmt --check && cargo clippy --locked --all-targ
   `check --brief`, since the MCP result cap of 2,000 bytes (`mcp.rs:397`) trims `moves` first), `skills/archgraph/SKILL.md:19`.
 - Tests: `tests/mcp_tools.rs` via `tool()` (`:36`): a doc with a claim returns `claims[0].verdict`;
   a doc without rules returns `null`, no error; `tests/mcp_stdio.rs:235` tools list and schema.
-- Verify: plus `cargo run --locked -- sync-rules . --check`.
+- Verify: the MCP stdio contract test covers the tool list (`sync-rules . --check` needs a root `layout.yaml`, which this repository has none of).
 - Commit: `feat(mcp): add a target tool and document drafting a target from a proposal`
 
 ## ADR-worthy decisions

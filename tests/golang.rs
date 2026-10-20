@@ -821,3 +821,65 @@ fn saved_bound_pairs_must_name_scanned_files_and_plain_names() {
         "control characters",
     );
 }
+
+#[test]
+fn a_go_types_scan_saved_before_bound_pairs_leaves_names_unknown() {
+    // Saved before pairs carried names: the collector lists bound files only.
+    let (mut doc, ..) = scan_recorded("go-resolve", &[]);
+    let collector = &mut doc["source"]["collector"];
+    collector["bound_files"] = json!(["store/db.go", "store/open.go"]);
+    collector.as_object_mut().unwrap().remove("bound");
+    let saved = write_tmp("go-legacy-bound/scan.json", &doc.to_string());
+    let rules = write_tmp(
+        "go-legacy-bound/layout.yaml",
+        "version: 1\nmoves:\n  - { from: \"store/open.go\", to: \"core/\" }\n",
+    );
+    let output = format!(
+        "{}/go-legacy-bound/checked.json",
+        env!("CARGO_TARGET_TMPDIR")
+    );
+    let out = archgraph(&["check", &saved, "--rules", &rules, "-o", &output]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let checked: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&output).unwrap()).unwrap();
+    assert_eq!(checked["target"]["moves"][0]["names"], json!(null));
+    assert_eq!(
+        checked["target"]["notes"],
+        json!(["names to export unknown: the scan predates bound pairs, rescan to list them"])
+    );
+}
+
+#[test]
+fn report_summary_prints_the_target_block() {
+    // The push path of the action shows `report`'s summary: the target block must be in it.
+    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("go-target-report");
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    let rules = write_tmp(
+        "go-target-report.yaml",
+        "version: 1\nmoves:\n  - { from: \"<name>/**\", to: \"core/<name>/\" }\n",
+    );
+    let input = common::fixture("go-cycles").join("go.json");
+    let out = archgraph(&[
+        "report",
+        root.to_str().unwrap(),
+        "--language",
+        "go",
+        "--rules",
+        &rules,
+        "--collector-input",
+        input.to_str().unwrap(),
+    ]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains(
+            "Target\nmove api: 3 files, 1 import line\nmove store: 2 files, 1 import line\n\
+             target: 0 of 0 slices conform, 0 of 2 slices moved\n"
+        ),
+        "{stdout}"
+    );
+}

@@ -237,12 +237,16 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
     } else {
         BTreeSet::new()
     };
-    let go_types = doc.source.collector.name == "go-types";
+    // Names come only from go-types pairs; a go-types scan saved before pairs carried them has
+    // only `bound_files`, and an empty list there would read as nothing to export.
+    let legacy = !doc.source.collector.bound_files.is_empty();
+    let go_types = doc.source.collector.name == "go-types" && !legacy;
     if doc.source.language == Language::Go && !go_types && !all.is_empty() {
-        notes.push(format!(
-            "names to export unknown for {}",
-            doc.source.collector.name
-        ));
+        notes.push(if legacy && doc.source.collector.name == "go-types" {
+            "names to export unknown: the scan predates bound pairs, rescan to list them".to_owned()
+        } else {
+            format!("names to export unknown for {}", doc.source.collector.name)
+        });
     }
     let moves = pending
         .into_iter()
