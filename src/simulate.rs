@@ -176,22 +176,27 @@ pub fn simulate(
         file: file.to_owned(),
         to: to.to_owned(),
     }];
-    let after = apply(doc, rules, &moves)?;
+    simulate_moves(doc, rules, &moves)
+}
+
+/// The `simulate` document for `moves`, applied together.
+pub fn simulate_moves(
+    doc: &Document,
+    rules: Option<&Compiled>,
+    moves: &[Move],
+) -> Result<Simulation> {
+    let after = apply(doc, rules, moves)?;
     // A moved edge is the same edge under its old name.
-    let old_name = |path: &str| {
-        if path == to {
-            file.to_owned()
-        } else {
-            path.to_owned()
-        }
-    };
-    let new_name = |path: &str| {
-        if path == file {
-            to.to_owned()
-        } else {
-            path.to_owned()
-        }
-    };
+    let old_names: HashMap<&str, &str> = moves
+        .iter()
+        .map(|m| (m.to.as_str(), m.file.as_str()))
+        .collect();
+    let new_names: HashMap<&str, &str> = moves
+        .iter()
+        .map(|m| (m.file.as_str(), m.to.as_str()))
+        .collect();
+    let old_name = |path: &str| old_names.get(path).copied().unwrap_or(path).to_owned();
+    let new_name = |path: &str| new_names.get(path).copied().unwrap_or(path).to_owned();
     let forbidden = |d: &Document| -> Vec<Edge> {
         d.edges
             .iter()
@@ -209,20 +214,30 @@ pub fn simulate(
         .iter()
         .map(|e| (e.from.clone(), e.to.clone(), e.kind))
         .collect();
-    let module = after
-        .files
+    let mut moved: Vec<MovedFile> = moves
         .iter()
-        .find(|f| f.path == to)
-        .map(|f| f.module.clone())
-        .unwrap_or_default();
+        .map(|m| MovedFile {
+            file: m.file.clone(),
+            to: m.to.clone(),
+            module: after
+                .files
+                .iter()
+                .find(|f| f.path == m.to)
+                .map(|f| f.module.clone())
+                .unwrap_or_default(),
+        })
+        .collect();
+    let Some(first) = moved.first().cloned() else {
+        bail!("no move given");
+    };
+    if moved.len() == 1 {
+        moved.clear();
+    }
     Ok(Simulation {
         schema: SCHEMA,
         kind: "simulation",
-        move_to: MovedFile {
-            file: file.to_owned(),
-            to: to.to_owned(),
-            module,
-        },
+        move_to: first,
+        moves: moved,
         before: doc.summary.clone(),
         after: after.summary.clone(),
         new_forbidden: is

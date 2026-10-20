@@ -800,8 +800,11 @@ pub struct ModuleSummary {
 pub struct Simulation {
     pub schema: &'static str,
     pub kind: &'static str,
+    /// The first move; `moves` lists every move when there is more than one.
     #[serde(rename = "move")]
     pub move_to: MovedFile,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub moves: Vec<MovedFile>,
     pub before: Summary,
     pub after: Summary,
     pub new_forbidden: Vec<Edge>,

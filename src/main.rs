@@ -337,7 +337,8 @@ enum Format {
 struct Simulate {
     /// Scan document
     graph: PathBuf,
-    /// The file to move and its destination path; the destination decides module and layer
+    /// The file to move and its destination path; the destination decides module and layer.
+    /// Repeat to apply several moves together
     #[arg(long = "move", num_args = 2, value_names = ["FILE", "DEST"], required = true, allow_hyphen_values = true)]
     moves: Vec<String>,
     /// Rules replacing the ones embedded in the document
@@ -547,9 +548,17 @@ fn show_excludes() -> Result<()> {
 }
 
 fn simulate(args: Simulate) -> Result<()> {
-    let [file, to] = args.moves.as_slice() else {
-        bail!("--move takes one file and one destination");
-    };
+    let moves: Vec<archgraph::model::Move> = args
+        .moves
+        .chunks(2)
+        .map(|pair| match pair {
+            [file, to] => Ok(archgraph::model::Move {
+                file: file.clone(),
+                to: to.clone(),
+            }),
+            _ => bail!("--move takes one file and one destination"),
+        })
+        .collect::<Result<_>>()?;
     let mut input = read_scan(&args.graph)?;
     input.hydrate_config();
     let mut config = input.config;
@@ -574,7 +583,10 @@ fn simulate(args: Simulate) -> Result<()> {
         owners.as_ref(),
     );
     archgraph::exposure::validate(&doc)?;
-    write(None, &simulate::simulate(&doc, rules.as_ref(), file, to)?)
+    write(
+        None,
+        &simulate::simulate_moves(&doc, rules.as_ref(), &moves)?,
+    )
 }
 
 fn render(args: Render) -> Result<()> {

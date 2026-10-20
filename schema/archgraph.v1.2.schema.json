@@ -3391,6 +3391,30 @@
             }
           }
         },
+        "moves": {
+          "description": "Every move in order, present only when more than one was applied; `move` is the first.",
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": [
+              "file",
+              "to",
+              "module"
+            ],
+            "properties": {
+              "file": {
+                "$ref": "#/$defs/path"
+              },
+              "to": {
+                "$ref": "#/$defs/path"
+              },
+              "module": {
+                "type": "string"
+              }
+            }
+          }
+        },
         "before": {
           "$ref": "#/$defs/summary"
         },
