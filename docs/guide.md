@@ -970,6 +970,26 @@ forbid:
 claim layered: holds in 16 of 18 slices; broken in interview, sop reason="Dependencies point inward (slide 8)"
 ```
 
+### Moves
+
+`moves` maps today's paths to the target's, first match wins, for move cost and progress; verdicts never read it. `from` is a file glob that may capture `<name>`; `to` is a folder ending in `/`, without globs, that may use only that capture. A file goes to the bound `to` plus its path below the literal leading folders of `from`, so `internal/<name>/**` keeps subfolders. A slice has moved when no file still matches a `from`; the total counts every slice with a file matching a `from` or already below a `to`.
+
+```yaml
+moves:
+  - { from: "internal/<name>/handler*.go",    to: "internal/app/<name>/handler/" }
+  - { from: "internal/<name>/service*.go",    to: "internal/app/<name>/service/" }
+  - { from: "internal/<name>/repository*.go", to: "internal/app/<name>/repository/" }
+```
+
+```text
+move project: 3 files, 9 import lines
+target: 16 of 18 slices conform, 0 of 23 slices moved
+```
+
+`check` prints a `move` line per slice with files left to move, with the import lines to rewrite: for Go, new (importer, imported folder) pairs across folders once that slice's files move; for other languages, the import records (or edges, when the collector keeps none) whose importer or target moves. The scan document's `target.moves` lists every slice with its files and destinations, and `target.notes` names a move rule that matches no file.
+
+Write each claim side over both locations, as in the claim above, so it keeps holding while a slice is half moved: a moved handler importing an unmoved repository still breaks it. Keep the target root free of files: with `{internal/<name>/handler*.go,...}`, a file `internal/app/handler.go` binds a slice `app`. An archgraph older than `moves` rejects a `layout.yaml` that has it, so pin the archgraph version in CI before adding it.
+
 ## Findings
 
 | kind | when | suggestion |

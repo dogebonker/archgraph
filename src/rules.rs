@@ -10,7 +10,7 @@ use globset::{GlobBuilder, GlobMatcher};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::model::{Config, Edge, EdgeKind, Link, RulesRef, Verdict};
+use crate::model::{Config, Edge, EdgeKind, Link, Move, RulesRef, Verdict};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Rules {
@@ -58,6 +58,9 @@ pub struct Rules {
     /// The verdict for an import no other step decides; absent means `unplanned`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default: Option<Fallback>,
+    /// Where files go in the target, first match wins; only for cost and progress.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub moves: Vec<MoveRule>,
 }
 
 /// Relative contribution of each import kind to coupling and cohesion.
@@ -141,6 +144,13 @@ pub struct Forbid {
     pub source: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kinds: Option<Vec<EdgeKind>>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct MoveRule {
+    pub from: String,
+    /// A folder ending in `/`, which may use `from`'s capture.
+    pub to: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -275,6 +285,7 @@ fn known_keys() -> serde_json::Value {
         exclude: vec!["excluded/**".into()],
         include: vec!["included/**".into()],
         default: Some(Fallback::Forbidden),
+        moves: vec![MoveRule::default()],
         ..Rules::default()
     })
     .expect("rules serialize")
@@ -399,6 +410,14 @@ type Reached<'a> = HashMap<(usize, Option<String>, &'a str), Option<Vec<String>>
 
 type CompiledForbid = (String, Pattern, String, bool, Option<Vec<EdgeKind>>);
 
+/// One move rule in one slice: files still matching `from` with their destinations, and the
+/// number of files already below `to`.
+#[derive(Debug, Default)]
+pub struct MoveEvidence {
+    pub pending: Vec<Move>,
+    pub arrived: usize,
+}
+
 /// One forbid rule in one slice: files matching `from`, targets matching `to`, imports it forbids.
 #[derive(Debug, Default)]
 pub struct SliceEvidence {
@@ -416,6 +435,8 @@ pub struct Compiled {
     /// (name, from, to, reachable); `to` may use only `from`'s capture, bound to the importer.
     forbid: Vec<CompiledForbid>,
     allow: Vec<(String, Pattern, String, Option<Vec<EdgeKind>>)>,
+    /// (from, to, `to` + `**`).
+    moves: Vec<(Pattern, String, Pattern)>,
     /// Step 7 gives forbidden (rule `default`) instead of unplanned.
     default_forbidden: bool,
     /// Globs with a capture bound, compiled on first use.
@@ -500,7 +521,8 @@ impl Compiled {
                     .into_iter()
                     .chain(a.id.iter())
                     .chain(a.reason.iter())
-            }));
+            }))
+            .chain(rules.moves.iter().flat_map(|m| [&m.from, &m.to]));
         for s in strings {
             if s.chars().any(char::is_control) {
                 bail!("{s:?} holds a control character; rules strings must be one plain line");
@@ -596,6 +618,28 @@ impl Compiled {
             }
             layers.push(glob(layer)?);
         }
+        let mut moves = Vec::new();
+        for (i, m) in rules.moves.iter().enumerate() {
+            if m.from.starts_with("pkg:") || m.from.starts_with("category:") {
+                bail!("moves[{i}].from must be a file glob, not a package selector");
+            }
+            let from = Pattern::new(&m.from).with_context(|| format!("moves[{i}].from"))?;
+            from.check_template(&m.to)
+                .with_context(|| format!("moves[{i}].to"))?;
+            if m.to.contains(['*', '?', '[', ']', '{', '}'])
+                || !m
+                    .to
+                    .strip_suffix('/')
+                    .is_some_and(|dir| crate::collect::is_relative_path(dir, false))
+            {
+                bail!(
+                    "moves[{i}].to must be a folder ending in `/` without globs: {:?}",
+                    m.to
+                );
+            }
+            let arrived = Pattern::new(&format!("{}**", m.to))?;
+            moves.push((from, m.to.clone(), arrived));
+        }
         Ok(Compiled {
             modules,
             layers,
@@ -628,6 +672,7 @@ impl Compiled {
                     ))
                 })
                 .collect::<Result<_>>()?,
+            moves,
             categories,
             default_forbidden: rules.default == Some(Fallback::Forbidden),
             bound: RefCell::default(),
@@ -898,6 +943,44 @@ impl Compiled {
                 slices
             })
             .collect()
+    }
+
+    /// Per move rule, by bound capture: the files still matching `from` (first matching rule
+    /// wins) with their destinations, and the files already below the bound `to`. A destination
+    /// is the bound `to` plus the file's path below the literal leading folders of `from`.
+    pub(crate) fn resolve_moves(
+        &self,
+        files: &[&str],
+    ) -> Vec<BTreeMap<Option<String>, MoveEvidence>> {
+        let mut out: Vec<BTreeMap<Option<String>, MoveEvidence>> =
+            self.moves.iter().map(|_| BTreeMap::new()).collect();
+        for file in files {
+            let first = self
+                .moves
+                .iter()
+                .enumerate()
+                .find_map(|(i, (from, _, _))| Some((i, self.bind(from, file)?)));
+            if let Some((i, value)) = first {
+                let (from, to, _) = &self.moves[i];
+                let bound = from.instance(&from.raw, value.as_deref());
+                let segments: Vec<&str> = bound.split('/').collect();
+                let literal = segments[..segments.len() - 1]
+                    .iter()
+                    .take_while(|s| !s.contains(['*', '?', '[', ']', '{', '}']))
+                    .count();
+                let below = file.split('/').skip(literal).collect::<Vec<_>>().join("/");
+                out[i].entry(value.clone()).or_default().pending.push(Move {
+                    file: file.to_string(),
+                    to: from.instance(to, value.as_deref()) + &below,
+                });
+            }
+            for (i, (_, _, arrived)) in self.moves.iter().enumerate() {
+                if let Some(value) = self.bind(arrived, file) {
+                    out[i].entry(value).or_default().arrived += 1;
+                }
+            }
+        }
+        out
     }
 
     /// Whether `target` (a file, or an external node by its package) matches `selector`.

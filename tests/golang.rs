@@ -682,3 +682,19 @@ fn go_scans_report_no_seam() {
         doc["findings"]
     );
 }
+
+#[test]
+fn go_import_lines_count_new_importer_and_package_pairs() {
+    // server.go leaves server/: main.go and handle.go gain an import of core/, server.go gains one
+    // of server/ (base.go), and its import of store/ stays as it was.
+    let rules = write_tmp(
+        "rules/go-moves.yaml",
+        "version: 1\nmoves:\n  - { from: \"server/server.go\", to: \"core/\" }\n",
+    );
+    let (doc, _, _) = scan_recorded("go-resolve", &["--rules", &rules]);
+    assert_eq!(
+        doc["target"]["moves"],
+        json!([{ "slice": "*", "files": [{ "file": "server/server.go", "to": "core/server.go" }],
+                 "import_lines": 3 }])
+    );
+}

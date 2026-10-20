@@ -183,14 +183,28 @@ fn ts_fda_check_prints_violations_and_exits_one() {
 
 /// Slice a imports its domain, b has both sides and holds, c has only a domain.
 fn sliced_scan(name: &str, rules: &str) -> serde_json::Value {
-    let edges = [
-        ("src/m/a/app/x.ts", "src/m/a/domain/d.ts"),
-        ("src/m/b/app/y.ts", "src/shared/id.ts"),
-        ("src/m/b/domain/e.ts", "src/shared/id.ts"),
-        ("src/m/c/domain/f.ts", "src/shared/id.ts"),
-    ]
-    .map(|(f, t)| (f.to_owned(), t.to_owned()));
-    let (dir, input) = synthetic(name, 6, &edges);
+    edges_scan(
+        name,
+        &[
+            ("src/m/a/app/x.ts", "src/m/a/domain/d.ts"),
+            ("src/m/b/app/y.ts", "src/shared/id.ts"),
+            ("src/m/b/domain/e.ts", "src/shared/id.ts"),
+            ("src/m/c/domain/f.ts", "src/shared/id.ts"),
+        ],
+        rules,
+    )
+}
+
+/// A TypeScript scan of `edges` between files that need not exist, with `rules`.
+fn edges_scan(name: &str, edges: &[(&str, &str)], rules: &str) -> serde_json::Value {
+    let edges: Vec<(String, String)> = edges
+        .iter()
+        .map(|(f, t)| (f.to_string(), t.to_string()))
+        .collect();
+    let mut files: Vec<&String> = edges.iter().flat_map(|(f, t)| [f, t]).collect();
+    files.sort();
+    files.dedup();
+    let (dir, input) = synthetic(name, files.len(), &edges);
     let rules = write_tmp(&format!("rules/{name}.yaml"), rules);
     let (doc, _, _) = scan(&[
         &dir,
@@ -257,6 +271,99 @@ fn an_earlier_rule_catching_the_import_leaves_the_claim_broken() {
     assert_eq!(
         doc["target"]["claims"][0]["slices"][0]["broken"],
         json!([{ "from": "src/m/a/app/x.ts", "to": "src/m/a/domain/d.ts" }])
+    );
+}
+
+#[test]
+fn moves_report_pending_files_import_lines_and_slices_moved() {
+    let rules = "version: 1\nmoves:\n\
+         \x20 - { from: \"src/m/<name>/app/**\", to: \"src/app/<name>/\" }\n\
+         \x20 - { from: \"src/old/<name>/**\", to: \"src/new/<name>/\" }\n";
+    let doc = edges_scan(
+        "target-moves",
+        &[
+            // Slice a has not moved: a moved importer, a moved target, and both.
+            ("src/m/a/app/x.ts", "src/shared/id.ts"),
+            ("src/shared/util.ts", "src/m/a/app/sub/y.ts"),
+            ("src/m/a/app/x.ts", "src/m/a/app/sub/y.ts"),
+            // Slice b is already at its target.
+            ("src/app/b/z.ts", "src/shared/id.ts"),
+        ],
+        rules,
+    );
+    assert_eq!(
+        doc["target"],
+        json!({
+            "claims": [],
+            "moves": [
+                { "slice": "a",
+                  "files": [
+                      { "file": "src/m/a/app/sub/y.ts", "to": "src/app/a/sub/y.ts" },
+                      { "file": "src/m/a/app/x.ts", "to": "src/app/a/x.ts" }
+                  ],
+                  "import_lines": 3 },
+                { "slice": "b", "files": [], "import_lines": 0 }
+            ],
+            "progress": { "conforming": { "done": 0, "of": 0 }, "moved": { "done": 1, "of": 2 } },
+            "notes": ["moves[1] matches no file"]
+        })
+    );
+    let saved = write_tmp("target-moves.json", &doc.to_string());
+    let (stdout, _, code) = check(&[&saved]);
+    assert_eq!(code, Some(0));
+    assert_eq!(
+        stdout,
+        "unplanned src/app/b/z.ts -> src/shared/id.ts (none)\n\
+         unplanned src/m/a/app/x.ts -> src/shared/id.ts (none)\n\
+         unplanned src/shared/util.ts -> src/m/a/app/sub/y.ts (none)\n\
+         0 forbidden, 3 unplanned\n\
+         move a: 2 files, 3 import lines\n\
+         note: moves[1] matches no file\n\
+         target: 0 of 0 slices conform, 1 of 2 slices moved\n"
+    );
+}
+
+#[test]
+fn a_brace_claim_flags_a_moved_handler_importing_an_unmoved_repository() {
+    let both = |role: &str| format!("{{src/m/<name>/{role}*.ts,src/app/<name>/{role}/*.ts}}");
+    let rules = format!(
+        "version: 1\nforbid:\n\
+         \x20 - {{ id: layered, from: \"{}\", to: \"{}\", reason: \"inward\" }}\n\
+         moves:\n\
+         \x20 - {{ from: \"src/m/<name>/handler*.ts\", to: \"src/app/<name>/handler/\" }}\n\
+         \x20 - {{ from: \"src/m/<name>/repository*.ts\", to: \"src/app/<name>/repository/\" }}\n",
+        both("handler"),
+        both("repository"),
+    );
+    let doc = edges_scan(
+        "target-mid-migration",
+        &[
+            // u has not moved, v has, w moved its handler only.
+            ("src/m/u/handler.ts", "src/shared/id.ts"),
+            ("src/m/u/repository.ts", "src/shared/id.ts"),
+            ("src/app/v/handler/handler.ts", "src/shared/id.ts"),
+            ("src/app/v/repository/repository.ts", "src/shared/id.ts"),
+            ("src/app/w/handler/handler.ts", "src/m/w/repository.ts"),
+        ],
+        &rules,
+    );
+    assert_eq!(
+        doc["target"]["claims"][0],
+        json!({ "id": "layered", "reason": "inward", "source": null, "verdict": "holds_in",
+                "slices": [
+                    { "slice": "u", "files": ["src/m/u/handler.ts", "src/m/u/repository.ts"],
+                      "broken": [] },
+                    { "slice": "v",
+                      "files": ["src/app/v/handler/handler.ts", "src/app/v/repository/repository.ts"],
+                      "broken": [] },
+                    { "slice": "w", "files": ["src/app/w/handler/handler.ts", "src/m/w/repository.ts"],
+                      "broken": [{ "from": "src/app/w/handler/handler.ts", "to": "src/m/w/repository.ts" }] }
+                ],
+                "notes": [] })
+    );
+    assert_eq!(
+        doc["target"]["progress"],
+        json!({ "conforming": { "done": 2, "of": 3 }, "moved": { "done": 1, "of": 3 } })
     );
 }
 
@@ -627,6 +734,43 @@ fn rules_errors() {
     let (code, stderr) = scan_with(&unbound);
     assert_eq!(code, Some(2));
     assert!(stderr.contains("<b>"), "{stderr}");
+
+    // A move's `to` is one folder per slice, written without globs.
+    for (name, rule, expected) in [
+        (
+            "glob",
+            "{ from: \"src/<name>/*.ts\", to: \"lib/<name>/*/\" }",
+            "moves[0].to must be a folder ending in `/` without globs",
+        ),
+        (
+            "slash",
+            "{ from: \"src/<name>/*.ts\", to: \"lib/<name>\" }",
+            "moves[0].to must be a folder ending in `/` without globs",
+        ),
+        (
+            "capture",
+            "{ from: \"src/<name>/*.ts\", to: \"lib/<other>/\" }",
+            "`lib/<other>/` uses <other>, which `src/<name>/*.ts` does not bind",
+        ),
+        (
+            "pkg",
+            "{ from: \"pkg:x\", to: \"lib/\" }",
+            "moves[0].from must be a file glob",
+        ),
+        (
+            "key",
+            "{ from: \"src/<name>/*.ts\", to: \"lib/<name>/\", into: \"x\" }",
+            "unknown field `into` in moves[0]",
+        ),
+    ] {
+        let path = write_tmp(
+            &format!("rules/moves-{name}.yaml"),
+            &format!("version: 1\nmoves:\n  - {rule}\n"),
+        );
+        let (code, stderr) = scan_with(&path);
+        assert_eq!(code, Some(2), "{name}: {stderr}");
+        assert!(stderr.contains(expected), "{name}: {stderr}");
+    }
 }
 
 /// ts-modmono's layout plus `extra` lines.

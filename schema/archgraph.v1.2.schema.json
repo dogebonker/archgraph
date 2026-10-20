@@ -2087,6 +2087,45 @@
             }
           }
         },
+        "moves": {
+          "description": "Every slice a move rule touches, absent without moves. A slice whose files is empty has moved.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "slice",
+              "files",
+              "import_lines"
+            ],
+            "properties": {
+              "slice": {
+                "type": "string"
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "file",
+                    "to"
+                  ],
+                  "properties": {
+                    "file": {
+                      "$ref": "#/$defs/path"
+                    },
+                    "to": {
+                      "$ref": "#/$defs/path"
+                    }
+                  }
+                }
+              },
+              "import_lines": {
+                "description": "Go: new (importer, imported folder) pairs across folders after this slice's moves. Other languages: import records, or edges when the collector keeps none, whose importer or target moves.",
+                "$ref": "#/$defs/count"
+              }
+            }
+          }
+        },
         "progress": {
           "type": "object",
           "required": [
@@ -2107,7 +2146,30 @@
                   "$ref": "#/$defs/count"
                 }
               }
+            },
+            "moved": {
+              "description": "Captured slices with no file left to move, of those with a file matching a move's from or already below its to. Absent without moves.",
+              "type": "object",
+              "required": [
+                "done",
+                "of"
+              ],
+              "properties": {
+                "done": {
+                  "$ref": "#/$defs/count"
+                },
+                "of": {
+                  "$ref": "#/$defs/count"
+                }
+              }
             }
+          }
+        },
+        "notes": {
+          "description": "Notes on the whole target, such as a move rule matching no file. Absent when empty.",
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       }
@@ -2437,6 +2499,28 @@
                     "reexport"
                   ]
                 }
+              }
+            }
+          }
+        },
+        "moves": {
+          "description": "Where files go in the target, first match wins; used for move cost and progress only, never for verdicts.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "from": {
+                "type": "string",
+                "minLength": 1
+              },
+              "to": {
+                "description": "A folder ending in /, without globs, that may use from's capture. A file goes to to plus its path below the literal leading folders of from.",
+                "type": "string",
+                "minLength": 2
               }
             }
           }

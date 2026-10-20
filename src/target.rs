@@ -1,17 +1,33 @@
 //! The target check: one verdict per claim (forbid rules sharing an `id`, one with a `reason`),
-//! per slice (a value of the rules' `<name>` capture), and the slices that conform.
+//! per slice (a value of the rules' `<name>` capture), the slices that conform, and what the
+//! `moves` still pending cost per slice.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use serde::Serialize;
 
-use crate::model::{Document, Edge, Link};
+use crate::model::{Document, Edge, Language, Link, Move};
+use crate::modules::dir_of;
 use crate::rules::Compiled;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Report {
     pub claims: Vec<Claim>,
+    /// Every slice a move rule touches; a slice with no `files` has moved.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub moves: Vec<SliceMove>,
     pub progress: Progress,
+    /// Notes on the whole target, such as a move rule matching no file.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SliceMove {
+    pub slice: String,
+    /// Files still to move, with their destinations.
+    pub files: Vec<Move>,
+    pub import_lines: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -46,6 +62,9 @@ pub struct Slice {
 pub struct Progress {
     /// Captured slices that hold in every claim bound to them.
     pub conforming: Count,
+    /// Captured slices with no file left to move, when the rules have `moves`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moved: Option<Count>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -57,9 +76,10 @@ pub struct Count {
 type Files = BTreeSet<String>;
 type Imports = BTreeSet<(String, String)>;
 
-/// `None` when the rules state no claim.
+/// `None` when the rules state no claim and no move.
 pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
-    let forbid = &doc.config.rules.as_ref()?.doc.forbid;
+    let policy = &doc.config.rules.as_ref()?.doc;
+    let forbid = &policy.forbid;
     let mut ids: Vec<&str> = Vec::new();
     for rule in forbid {
         if let Some(id) = rule.id.as_deref()
@@ -73,7 +93,7 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
             .iter()
             .any(|r| r.id.as_deref() == Some(id) && r.reason.is_some())
     });
-    if ids.is_empty() {
+    if ids.is_empty() && policy.moves.is_empty() {
         return None;
     }
     let files: Vec<&str> = doc.files.iter().map(|f| f.path.as_str()).collect();
@@ -152,18 +172,90 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
             }
         })
         .collect();
+    let mut notes = Vec::new();
+    let mut pending: BTreeMap<Option<String>, Vec<Move>> = BTreeMap::new();
+    for (i, slices) in rules.resolve_moves(&files).into_iter().enumerate() {
+        if slices.is_empty() {
+            notes.push(format!("moves[{i}] matches no file"));
+        }
+        for (value, evidence) in slices {
+            pending.entry(value).or_default().extend(evidence.pending);
+        }
+    }
+    let captured = pending.iter().filter(|(value, _)| value.is_some());
+    let moved = (!policy.moves.is_empty()).then(|| Count {
+        done: captured
+            .clone()
+            .filter(|(_, files)| files.is_empty())
+            .count(),
+        of: captured.count(),
+    });
+    let moves = pending
+        .into_iter()
+        .map(|(value, mut files)| {
+            files.sort_by(|a, b| a.file.cmp(&b.file));
+            SliceMove {
+                slice: value.unwrap_or_else(|| "*".into()),
+                import_lines: import_lines(doc, &files),
+                files,
+            }
+        })
+        .collect();
     Some(Report {
         claims,
+        moves,
         progress: Progress {
             conforming: Count {
                 done: conforming.values().filter(|held| **held).count(),
                 of: conforming.len(),
             },
+            moved,
         },
+        notes,
     })
 }
 
-/// The `check` lines: a verdict per claim with up to 20 broken imports, then progress.
+/// The import lines `moves` rewrite. Go: (importer, imported folder) pairs across folders after
+/// the moves that were not there before. Other languages: import records (edges when the
+/// collector keeps none) whose importer or target moves.
+fn import_lines(doc: &Document, moves: &[Move]) -> usize {
+    let renamed: HashMap<&str, &str> = moves
+        .iter()
+        .map(|m| (m.file.as_str(), m.to.as_str()))
+        .collect();
+    let moved = |path: &str| renamed.contains_key(path);
+    if doc.source.language == Language::Go {
+        let rename = |path| renamed.get(path).copied().unwrap_or(path);
+        let pairs = |after: bool| -> HashSet<(&str, &str)> {
+            doc.edges
+                .iter()
+                .filter_map(|e| {
+                    let (from, to) = if after {
+                        (rename(&e.from), rename(&e.to))
+                    } else {
+                        (e.from.as_str(), e.to.as_str())
+                    };
+                    (dir_of(from) != dir_of(to)).then(|| (rename(&e.from), dir_of(to)))
+                })
+                .collect()
+        };
+        return pairs(true).difference(&pairs(false)).count();
+    }
+    match &doc.imports {
+        Some(imports) => imports
+            .iter()
+            .filter(|i| moved(&i.from) || i.targets.iter().any(|t| moved(t)))
+            .count(),
+        None => doc
+            .edges
+            .iter()
+            .filter(|e| moved(&e.from) || moved(&e.to))
+            .count(),
+    }
+}
+
+/// The `check` lines: a verdict per claim with up to 20 broken imports, the pending moves, notes,
+/// then progress.
 pub fn text(report: &Report) -> String {
     let mut out = String::new();
     for claim in &report.claims {
@@ -208,7 +300,21 @@ pub fn text(report: &Report) -> String {
             out += &format!("  note: {note}\n");
         }
     }
+    for slice in report.moves.iter().filter(|m| !m.files.is_empty()) {
+        out += &format!(
+            "move {}: {}, {}\n",
+            slice.slice,
+            crate::diff::count(slice.files.len(), "file"),
+            crate::diff::count(slice.import_lines, "import line")
+        );
+    }
+    for note in &report.notes {
+        out += &format!("note: {note}\n");
+    }
     let Count { done, of } = report.progress.conforming;
-    out += &format!("target: {done} of {of} slices conform\n");
-    out
+    out += &format!("target: {done} of {of} slices conform");
+    if let Some(Count { done, of }) = report.progress.moved {
+        out += &format!(", {done} of {of} slices moved");
+    }
+    out + "\n"
 }
