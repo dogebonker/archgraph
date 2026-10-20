@@ -1457,6 +1457,18 @@ fn report_on_a_composition_root_in_a_shared_folder() {
     );
     assert!(!stdout.contains("comes from grouping"), "{stdout}");
 
+    // Two modules importing each other through different files, with no registrar to move: the
+    // report still names the grouping.
+    let pair =
+        [("a/x.ts", "b/y.ts"), ("b/z.ts", "a/w.ts")].map(|(f, t)| (f.to_owned(), t.to_owned()));
+    let (doc, stdout) = report_of("grouping-pair", &pair);
+    assert_eq!(doc["cycles"][0]["grouping"], true);
+    assert!(doc["cycles"][0].get("registrar_moves").is_none());
+    assert!(
+        stdout.contains("  cycle of a, b comes from grouping: no file-level cycle; moving files between these modules can end it without cutting imports\n"),
+        "{stdout}"
+    );
+
     // 17 modules in a ring, plus one lighter pair: over 16 module edges the break set is a
     // heuristic, and the report says so.
     let mut ring: Vec<(String, String)> = (0..17)

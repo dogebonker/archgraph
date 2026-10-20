@@ -7494,7 +7494,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "grouping": false
         }
       ],
       "type_only_cycles": [],
@@ -7610,7 +7611,8 @@
                   }
                 ]
               }
-            ]
+            ],
+            "grouping": false
           }
         },
         {

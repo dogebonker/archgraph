@@ -351,7 +351,7 @@ forbidden src/shared/format.ts -> src/domains/cart/types.ts (shared-no-domain)
 2 forbidden, 1 unplanned
 ```
 
-**simulate** compares forbidden imports, unplanned imports, cycles and module metrics before and after moving one file (`kind: simulation`, with full `before` and `after` summaries). The destination path decides the new module and layer.
+**simulate** compares forbidden imports, unplanned imports, cycles and module metrics before and after moving one or more files (`kind: simulation`, with full `before` and `after` summaries). Repeat `--move FILE DEST` to apply several moves together. The destination path decides the new module and layer.
 
 ```sh
 archgraph simulate graph.json --move src/utils/dates.ts src/calendar/dates.ts

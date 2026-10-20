@@ -356,6 +356,23 @@ fn summary(
                     }
                 }
             }
+            // Grouping cycles without a move to print: say so before any cut.
+            for c in module_cycles.iter().filter(|c| {
+                c.grouping == Some(true)
+                    && !c
+                        .registrar_moves
+                        .iter()
+                        .any(|r| r.to.is_some() && r.pairs_removed.is_some_and(|n| n > 0))
+            }) {
+                let more = match c.members.len().saturating_sub(3) {
+                    0 => String::new(),
+                    n => format!(" and {}", count(n, "more module")),
+                };
+                out += &format!(
+                    "  cycle of {}{more} comes from grouping: no file-level cycle; moving files between these modules can end it without cutting imports\n",
+                    c.members[..c.members.len().min(3)].join(", ")
+                );
+            }
             let lightest = module_cycles
                 .iter()
                 .flat_map(|c| c.two_way.iter().flatten().map(move |t| (c, t)))
