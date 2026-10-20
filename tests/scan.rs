@@ -1373,6 +1373,71 @@ fn a_fan_out_registrar_side_is_not_the_cut() {
 }
 
 #[test]
+fn report_on_a_composition_root_in_a_shared_folder() {
+    // Three api modules import app/deps.ts and app/routing.ts; only app/main.ts, which nothing
+    // imports, imports them back. No file cycle: the cycle is main.ts sharing the app folder.
+    let mut edges = vec![("app/main.ts".to_owned(), "app/deps.ts".to_owned())];
+    for m in ["a", "b", "c"] {
+        edges.push((format!("{m}/api/x.ts"), "app/deps.ts".to_owned()));
+        edges.push((format!("{m}/api/x.ts"), "app/routing.ts".to_owned()));
+        edges.push(("app/main.ts".to_owned(), format!("{m}/api/x.ts")));
+    }
+    let report_of = |name: &str, edges: &[(String, String)]| {
+        let (dir, input) = synthetic(name, edges.len() + 1, edges);
+        let (doc, _, _) = scan(&[
+            &dir,
+            "--collector-input",
+            &input,
+            "--language",
+            "typescript",
+        ]);
+        let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("report/{name}"));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let (stdout, stderr, _) = report(&[
+            root.to_str().unwrap(),
+            "--language",
+            "typescript",
+            "--collector-input",
+            &input,
+        ]);
+        (doc, stdout + &stderr)
+    };
+    // The break set, not the lightest pair a/api -> app: every import to cut is main.ts's.
+    let (_, stdout) = report_of("composition-root", &edges);
+    assert!(
+        stdout.contains("  break the 4-module cycle: cut 3 imports from app/main.ts (3)\n"),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("lightest two-way cut"), "{stdout}");
+
+    // app/deps.ts importing a/api/x.ts closes a file cycle across modules: the break set is
+    // grouped by importing file.
+    let mut cyclic = edges.clone();
+    cyclic.push(("app/deps.ts".to_owned(), "a/api/x.ts".to_owned()));
+    let (_, stdout) = report_of("composition-root-cycle", &cyclic);
+    assert!(
+        stdout.contains(
+            "  break the 4-module cycle: cut 4 imports from a/api/x.ts (2), app/main.ts (2)\n"
+        ),
+        "{stdout}"
+    );
+
+    // 17 modules in a ring, plus one lighter pair: over 16 module edges the break set is a
+    // heuristic, and the report says so.
+    let mut ring: Vec<(String, String)> = (0..17)
+        .map(|i| (format!("m{i}/x.ts"), format!("m{}/x.ts", (i + 1) % 17)))
+        .collect();
+    ring.extend((0..3).map(|i| (format!("m1/y{i}.ts"), "m0/x.ts".to_owned())));
+    let (doc, stdout) = report_of("ring-17", &ring);
+    assert_eq!(doc["cycles"][0]["exact"], false);
+    assert!(
+        stdout.contains("  break the 17-module cycle (approximate): cut "),
+        "{stdout}"
+    );
+}
+
+#[test]
 fn a_near_even_two_way_pair_names_no_lighter_side() {
     // a -> b once, b -> a twice: both sides are tiny and close, a mutual dependency rather
     // than a soft side. 1 against 3 still has a lighter side.

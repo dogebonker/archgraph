@@ -321,9 +321,9 @@ fn summary(
             }
             let lightest = module_cycles
                 .iter()
-                .flat_map(|c| c.two_way.iter().flatten())
-                .filter(|t| !t.registry && !t.entry && !t.even && !t.resolved_by_move)
-                .min_by_key(|t| (t.imports, t.reverse_imports));
+                .flat_map(|c| c.two_way.iter().flatten().map(move |t| (c, t)))
+                .filter(|(_, t)| !t.registry && !t.entry && !t.even && !t.resolved_by_move)
+                .min_by_key(|(_, t)| (t.imports, t.reverse_imports));
             let moved = module_cycles.iter().any(|c| {
                 c.registrar_moves
                     .iter()
@@ -333,13 +333,31 @@ fn summary(
                 .iter()
                 .any(|c| c.two_way.iter().flatten().next().is_some());
             out += &match lightest {
-                Some(t) => format!(
-                    "  lightest two-way cut: {} -> {}, {} ({} the other way)\n",
-                    t.from,
-                    t.to,
-                    count(t.imports, "import"),
-                    t.reverse_imports
-                ),
+                // The cycle holding the lightest pair: its break set, by importing file.
+                Some((c, _)) => {
+                    let mut by_file: BTreeMap<&str, usize> = BTreeMap::new();
+                    for link in &c.break_set {
+                        *by_file.entry(link.from.as_str()).or_default() += 1;
+                    }
+                    let mut by_file: Vec<_> = by_file.into_iter().collect();
+                    by_file.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+                    let top: Vec<String> = by_file
+                        .iter()
+                        .take(3)
+                        .map(|(file, n)| format!("{file} ({n})"))
+                        .collect();
+                    let more = match by_file.len().saturating_sub(3) {
+                        0 => String::new(),
+                        n => format!(" and {}", count(n, "more file")),
+                    };
+                    format!(
+                        "  break the {}-module cycle{}: cut {} from {}{more}\n",
+                        c.members.len(),
+                        if c.exact { "" } else { " (approximate)" },
+                        count(c.break_set.len(), "import"),
+                        top.join(", ")
+                    )
+                }
                 // The move is the step: no other cut remains.
                 None if moved => String::new(),
                 None if pairs => {
