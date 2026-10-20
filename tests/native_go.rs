@@ -236,3 +236,50 @@ fn native_go_names_a_missing_go_executable() {
         "{error:#}"
     );
 }
+
+#[test]
+#[cfg(unix)]
+fn native_go_binds_every_file_and_leaves_names_unknown() {
+    let fixture = Fixture::new(&[
+        ("go.mod", "module example.test/app\n\ngo 1.21\n"),
+        ("a.go", "package app\nfunc A() int { return helper() }\n"),
+        ("b.go", "package app\nfunc helper() int { return 1 }\n"),
+        (
+            "layout.yaml",
+            "version: 1\nmoves:\n  - { from: \"b.go\", to: \"lib/\" }\n",
+        ),
+    ]);
+    let executable = metadata_go(
+        &fixture,
+        &[
+            serde_json::json!({"Dir":fixture.path(),"ImportPath":"example.test/app","Name":"app","GoFiles":["a.go","b.go"]}),
+        ],
+    );
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        .args([
+            "scan",
+            fixture.path().to_str().unwrap(),
+            "--engine",
+            "native",
+        ])
+        .args(["--go", &executable, "--rules"])
+        .arg(fixture.path().join("layout.yaml"))
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let doc: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(
+        doc["source"]["collector"]["bound_files"],
+        serde_json::json!(["a.go", "b.go"])
+    );
+    assert_eq!(doc["source"]["collector"].get("bound"), None);
+    assert_eq!(doc["target"]["moves"][0]["names"], serde_json::Value::Null);
+    assert_eq!(
+        doc["target"]["notes"],
+        serde_json::json!(["names to export unknown for tree-sitter-go"])
+    );
+}

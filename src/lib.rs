@@ -164,6 +164,18 @@ pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
             bail!("written import destination must be a relative path inside the scan root");
         }
     }
+    for pair in &input.source.collector.bound {
+        if !paths.contains(pair.from.as_str()) || !paths.contains(pair.to.as_str()) {
+            bail!(
+                "bound pair {} -> {} names a file outside the scan",
+                pair.from,
+                pair.to
+            );
+        }
+        if pair.names.iter().any(|n| n.chars().any(char::is_control)) {
+            bail!("bound names must not contain control characters");
+        }
+    }
     resolution::validate(input.imports.as_deref(), &input.files)?;
     resolution::validate_external_identities(
         &input.source,

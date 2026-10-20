@@ -28,10 +28,23 @@ pub struct SliceMove {
     /// Files still to move, with their destinations.
     pub files: Vec<Move>,
     pub import_lines: usize,
+    /// Go: the unexported names to export, those of bound pairs whose files land in different
+    /// folders; `None` when the collector cannot tell (native Go, other languages).
+    pub names: Option<Vec<Name>>,
+    /// Go: bound pairs (a method and its type, platform variants) the moves split.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub together: Vec<Link>,
     /// Go package cycles that applying every pending move would create, touching this slice's
     /// source or destination folders.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub new_cycles: Vec<Link>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Name {
+    pub name: String,
+    pub declared_in: String,
+    pub used_by: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -206,6 +219,13 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
     } else {
         BTreeSet::new()
     };
+    let go_types = doc.source.collector.name == "go-types";
+    if doc.source.language == Language::Go && !go_types && !all.is_empty() {
+        notes.push(format!(
+            "names to export unknown for {}",
+            doc.source.collector.name
+        ));
+    }
     let moves = pending
         .into_iter()
         .map(|(value, mut files)| {
@@ -222,9 +242,47 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
                     to: to.clone(),
                 })
                 .collect();
+            let renamed: HashMap<&str, &str> = files
+                .iter()
+                .map(|m| (m.file.as_str(), m.to.as_str()))
+                .collect();
+            let split: Vec<_> = doc
+                .source
+                .collector
+                .bound
+                .iter()
+                .filter(|p| {
+                    let after = |path| renamed.get(path).copied().unwrap_or(path);
+                    dir_of(after(&p.from)) != dir_of(after(&p.to))
+                })
+                .collect();
+            let mut names: BTreeMap<(&str, &str), Vec<String>> = BTreeMap::new();
+            for p in &split {
+                for name in &p.names {
+                    names.entry((name, &p.to)).or_default().push(p.from.clone());
+                }
+            }
             SliceMove {
                 slice: value.unwrap_or_else(|| "*".into()),
                 import_lines: import_lines(doc, &files),
+                names: go_types.then(|| {
+                    names
+                        .into_iter()
+                        .map(|((name, declared_in), used_by)| Name {
+                            name: name.to_owned(),
+                            declared_in: declared_in.to_owned(),
+                            used_by,
+                        })
+                        .collect()
+                }),
+                together: split
+                    .iter()
+                    .filter(|p| p.together)
+                    .map(|p| Link {
+                        from: p.from.clone(),
+                        to: p.to.clone(),
+                    })
+                    .collect(),
                 files,
                 new_cycles,
             }
@@ -336,6 +394,9 @@ pub fn text(report: &Report) -> String {
             crate::diff::count(slice.files.len(), "file"),
             crate::diff::count(slice.import_lines, "import line")
         );
+        if let Some(names) = slice.names.as_ref().filter(|n| !n.is_empty()) {
+            out += &format!(", {} to export", crate::diff::count(names.len(), "name"));
+        }
         if !slice.new_cycles.is_empty() {
             out += &format!(
                 ", {}",

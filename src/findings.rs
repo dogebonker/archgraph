@@ -96,7 +96,7 @@ struct Graph<'a> {
     /// Files that are public API, never proposed for a move: what a package.json publishes and
     /// re-exports; in Python, every module without a leading underscore below the package.
     public: HashSet<&'a str>,
-    /// Go files bound to their package by methods (`source.collector.bound_files`): never moved.
+    /// Go files bound to their package (`source.collector.bound_paths()`): never moved.
     bound: HashSet<&'a str>,
     /// Per file: the number of other modules it imports at runtime.
     fanout: BTreeMap<&'a str, usize>,
@@ -318,13 +318,7 @@ pub fn find(
         offered,
         public,
         consuming: &consuming,
-        bound: doc
-            .source
-            .collector
-            .bound_files
-            .iter()
-            .map(String::as_str)
-            .collect(),
+        bound: doc.source.collector.bound_paths().into_iter().collect(),
         fanout: {
             let mut into: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
             for e in doc.edges.iter().filter(|e| e.kind.is_runtime()) {
@@ -1315,7 +1309,7 @@ pub fn place_registrars(
     let before_pairs = pairs(doc);
     let before_cycles = module_cycles(doc);
     let (bound, go_modules) = (
-        &doc.source.collector.bound_files,
+        doc.source.collector.bound_paths(),
         &doc.source.collector.go_modules,
     );
     let other_module =
@@ -1326,7 +1320,7 @@ pub fn place_registrars(
         for r in c
             .registrar_moves
             .iter()
-            .filter(|r| !bound.contains(&r.file))
+            .filter(|r| !bound.contains(r.file.as_str()))
         {
             let (dir, name) = r.file.rsplit_once('/').unwrap_or(("", &r.file));
             let stem = name.split('.').next().unwrap_or(name);

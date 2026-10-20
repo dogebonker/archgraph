@@ -331,7 +331,14 @@ pub(super) fn scan_doc(
         imports.retain(|i| kept.contains(&i.from));
     }
     if args.engine != collect::Engine::Native {
-        raw.collector.bound_files = go::bound_files(&bound, &raw.files);
+        let all = bound.len();
+        raw.collector.bound = go::bound_pairs(bound, &raw.files);
+        if raw.collector.bound.len() < all {
+            raw.collector.limitations.push(format!(
+                "Go: {} with an excluded file (a test, generated code) are left out, so moving their other file may need more names exported",
+                crate::diff::count(all - raw.collector.bound.len(), "bound pair")
+            ));
+        }
     }
     if let Some(n) = raw.collector.unresolved.filter(|&n| n > 0) {
         if raw.imports.is_some() {

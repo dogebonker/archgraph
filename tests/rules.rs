@@ -301,8 +301,8 @@ fn moves_report_pending_files_import_lines_and_slices_moved() {
                       { "file": "src/m/a/app/sub/y.ts", "to": "src/app/a/sub/y.ts" },
                       { "file": "src/m/a/app/x.ts", "to": "src/app/a/x.ts" }
                   ],
-                  "import_lines": 3 },
-                { "slice": "b", "files": [], "import_lines": 0 }
+                  "import_lines": 3, "names": null },
+                { "slice": "b", "files": [], "import_lines": 0, "names": null }
             ],
             "progress": { "conforming": { "done": 0, "of": 0 }, "moved": { "done": 1, "of": 2 } },
             "notes": ["moves[1] matches no file"]
@@ -383,7 +383,7 @@ fn moves_list_package_cycles_for_go_only() {
         json!([{ "slice": "a",
                  "files": [{ "file": "src/m/a/app/x.ts", "to": "src/app/a/x.ts" },
                            { "file": "src/m/a/app/y.ts", "to": "src/app/a/y.ts" }],
-                 "import_lines": 2 }])
+                 "import_lines": 2, "names": null }])
     );
 }
 

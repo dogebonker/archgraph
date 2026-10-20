@@ -33,11 +33,18 @@ fn go_references_resolve_to_the_declaring_files() {
         doc["source"]["collector"],
         json!({ "name": "go-types", "version": "1.27.1", "cruised": 23, "unresolved": 2,
                 "main_packages": ["cmd/tool"],
-                // Methods of a type in another file, or unexported names of another file:
-                // none of these files could leave its package and still compile.
-                "bound_files": ["server/base.go", "server/handle.go", "server/server.go",
-                                "store/db.go", "store/native.go", "store/open.go", "store/size.go",
-                                "store/sys_linux.go", "store/sys_windows.go"],
+                // Methods of a type in another file (`together`), or unexported names of another
+                // file: none of these files could leave its package and still compile. A field
+                // is named by its struct type, also as a composite-literal key.
+                "bound": [
+                    { "from": "server/handle.go", "to": "server/server.go", "names": ["Server.db"],
+                      "together": true },
+                    { "from": "server/server.go", "to": "server/base.go", "names": ["base"] },
+                    { "from": "store/open.go", "to": "store/db.go", "names": ["DB.values"] },
+                    { "from": "store/size.go", "to": "store/native.go", "names": ["native"] },
+                    { "from": "store/size.go", "to": "store/sys_linux.go", "names": ["pageSize"] },
+                    { "from": "store/size.go", "to": "store/sys_windows.go", "names": ["pageSize"] },
+                    { "from": "store/sys_linux.go", "to": "store/sys_windows.go", "together": true }],
                 "go_modules": ["."] })
     );
     assert!(
@@ -157,15 +164,16 @@ fn go_misplaced_file_moves_to_its_only_users() {
     // tax.go calls util.go's unexported round, and notify_*.go are one function per platform;
     // pub/money.go is public API (outside internal/).
     assert_eq!(
-        doc["source"]["collector"]["bound_files"],
+        doc["source"]["collector"]["bound"],
         json!([
-            "internal/report/notify_linux.go",
-            "internal/report/notify_other.go",
-            "internal/report/notify_windows.go",
-            "internal/report/percent.go",
-            "internal/report/rate.go",
-            "internal/report/tax.go",
-            "internal/report/util.go"
+            { "from": "internal/report/notify_other.go", "to": "internal/report/notify_linux.go",
+              "together": true },
+            { "from": "internal/report/notify_other.go", "to": "internal/report/notify_windows.go",
+              "together": true },
+            { "from": "internal/report/percent.go", "to": "internal/report/rate.go",
+              "together": true },
+            { "from": "internal/report/tax.go", "to": "internal/report/util.go",
+              "names": ["round"] }
         ])
     );
     let misplaced: Vec<&Value> = doc["findings"]
@@ -262,34 +270,31 @@ fn go_excludes_tests_generated_code_and_vendor_and_joins_replaced_modules() {
         ]
     );
     // app.go is bound to app_test.go (a method of Runner) and wire_gen.go (unexported wired),
-    // both excluded here: so it is not bound.
+    // both excluded here: so it is not bound, and a limitation says so.
     let bound = [
-        "app/chain/a_linux.go",
-        "app/chain/b_windows.go",
-        "app/chain/c_darwin.go",
-        "app/flag.go",
-        "app/probe_other.go",
-        "app/probe_windows.go",
+        json!({ "from": "app/chain/a_linux.go", "to": "app/chain/b_windows.go", "together": true }),
+        json!({ "from": "app/chain/c_darwin.go", "to": "app/chain/b_windows.go", "together": true }),
+        json!({ "from": "app/flag.go", "to": "app/probe_other.go", "names": ["probe"] }),
+        json!({ "from": "app/flag.go", "to": "app/probe_windows.go", "names": ["probe"] }),
+        json!({ "from": "app/probe_other.go", "to": "app/probe_windows.go", "together": true }),
     ];
-    assert_eq!(doc["source"]["collector"]["bound_files"], json!(bound));
+    assert_eq!(doc["source"]["collector"]["bound"], json!(bound));
+    assert_eq!(
+        doc["source"]["collector"]["limitations"],
+        json!([
+            "Go: 2 bound pairs with an excluded file (a test, generated code) are left out, so moving their other file may need more names exported"
+        ])
+    );
     let excludes = doc["config"]["excludes"].as_array().unwrap();
     for glob in ["**/*.pb.go", "**/*_test.go"] {
         assert!(excludes.contains(&json!(glob)), "{glob}");
     }
 
     let (doc, _, _) = scan_recorded("go-excludes", &["--include-tests"]);
+    let test_pair = json!({ "from": "app/app_test.go", "to": "app/app.go", "together": true });
     assert_eq!(
-        doc["source"]["collector"]["bound_files"],
-        json!([
-            "app/app.go",
-            "app/app_test.go",
-            "app/chain/a_linux.go",
-            "app/chain/b_windows.go",
-            "app/chain/c_darwin.go",
-            "app/flag.go",
-            "app/probe_other.go",
-            "app/probe_windows.go"
-        ])
+        doc["source"]["collector"]["bound"],
+        json!([std::slice::from_ref(&test_pair), &bound[..]].concat())
     );
     assert_eq!(
         files(&doc),
@@ -327,19 +332,10 @@ fn go_excludes_tests_generated_code_and_vendor_and_joins_replaced_modules() {
 
     // Generated files (by their `Code generated ... DO NOT EDIT.` header) come back too.
     let (doc, _, _) = scan_recorded("go-excludes", &["--no-default-excludes"]);
+    let wire_pair = json!({ "from": "app/app.go", "to": "app/wire_gen.go", "names": ["wired"] });
     assert_eq!(
-        doc["source"]["collector"]["bound_files"],
-        json!([
-            "app/app.go",
-            "app/app_test.go",
-            "app/chain/a_linux.go",
-            "app/chain/b_windows.go",
-            "app/chain/c_darwin.go",
-            "app/flag.go",
-            "app/probe_other.go",
-            "app/probe_windows.go",
-            "app/wire_gen.go"
-        ])
+        doc["source"]["collector"]["bound"],
+        json!([&[wire_pair, test_pair], &bound[..]].concat())
     );
     assert_eq!(
         files(&doc),
@@ -696,6 +692,11 @@ fn go_import_lines_count_new_importer_and_package_pairs() {
         doc["target"]["moves"],
         json!([{ "slice": "*", "files": [{ "file": "server/server.go", "to": "core/server.go" }],
                  "import_lines": 3,
+                 "names": [{ "name": "Server.db", "declared_in": "server/server.go",
+                             "used_by": ["server/handle.go"] },
+                           { "name": "base", "declared_in": "server/base.go",
+                             "used_by": ["server/server.go"] }],
+                 "together": [{ "from": "server/handle.go", "to": "server/server.go" }],
                  // handle.go imports server.go, which imports base.go back in server/.
                  "new_cycles": [{ "from": "core/server.go", "to": "server/base.go" },
                                 { "from": "server/handle.go", "to": "core/server.go" }] }])
@@ -703,7 +704,9 @@ fn go_import_lines_count_new_importer_and_package_pairs() {
     let saved = write_tmp("go-moves.json", &doc.to_string());
     let stdout = String::from_utf8(archgraph(&["check", &saved]).stdout).unwrap();
     assert!(
-        stdout.contains("move *: 1 file, 3 import lines, 2 imports in new package cycles\n"),
+        stdout.contains(
+            "move *: 1 file, 3 import lines, 2 names to export, 2 imports in new package cycles\n"
+        ),
         "{stdout}"
     );
 }
@@ -719,7 +722,9 @@ fn go_moves_creating_no_cycle_or_landing_on_a_file_still_report_their_cost() {
     assert_eq!(
         doc["target"]["moves"],
         json!([{ "slice": "*", "files": [{ "file": "store/open.go", "to": "core/open.go" }],
-                 "import_lines": 2 }])
+                 "import_lines": 2,
+                 "names": [{ "name": "DB.values", "declared_in": "store/db.go",
+                             "used_by": ["store/open.go"] }] }])
     );
     assert_eq!(doc["target"].get("notes"), None);
     // b/x.go already exists, so the moves cannot be simulated.
@@ -750,10 +755,69 @@ fn go_moves_creating_no_cycle_or_landing_on_a_file_still_report_their_cost() {
     assert_eq!(
         doc["target"]["moves"],
         json!([{ "slice": "*", "files": [{ "file": "a/x.go", "to": "b/x.go" }],
-                 "import_lines": 0 }])
+                 "import_lines": 0, "names": [] }])
     );
     assert_eq!(
         doc["target"]["notes"],
         json!(["moves not simulated: b/x.go already exists"])
+    );
+}
+
+#[test]
+fn go_moves_list_the_unexported_names_to_export() {
+    let moved = |name: &str, moves: &str| {
+        let rules = write_tmp(
+            &format!("rules/go-names-{name}.yaml"),
+            &format!("version: 1\nmoves:\n{moves}"),
+        );
+        scan_recorded("go-resolve", &["--rules", &rules]).0["target"]["moves"][0].clone()
+    };
+    // handle.go selects the field db of Server: one qualified name, never a bare `db` beside it,
+    // and it holds a method of Server, so it moves with server.go.
+    let handle = moved(
+        "handle",
+        "  - { from: \"server/handle.go\", to: \"api/\" }\n",
+    );
+    assert_eq!(
+        handle["names"],
+        json!([{ "name": "Server.db", "declared_in": "server/server.go",
+                 "used_by": ["server/handle.go"] }])
+    );
+    assert_eq!(
+        handle["together"],
+        json!([{ "from": "server/handle.go", "to": "server/server.go" }])
+    );
+    // open.go fills DB's unexported field values: moved alone it needs it exported, moved with
+    // db.go into one folder it needs nothing.
+    let open = moved("open", "  - { from: \"store/open.go\", to: \"core/\" }\n");
+    assert_eq!(
+        open["names"],
+        json!([{ "name": "DB.values", "declared_in": "store/db.go", "used_by": ["store/open.go"] }])
+    );
+    let both = moved(
+        "both",
+        "  - { from: \"store/{open,db}.go\", to: \"core/\" }\n",
+    );
+    assert_eq!(both["files"].as_array().unwrap().len(), 2);
+    assert_eq!(both["names"], json!([]));
+    assert_eq!(both.get("together"), None);
+}
+
+#[test]
+fn saved_bound_pairs_must_name_scanned_files_and_plain_names() {
+    let (doc, ..) = scan_recorded("go-resolve", &[]);
+    let rejects = |edit: &dyn Fn(&mut serde_json::Value), message: &str| {
+        let mut saved = doc.clone();
+        edit(&mut saved["source"]["collector"]["bound"][0]);
+        let error = archgraph::validate_scan(&serde_json::from_value(saved).unwrap()).unwrap_err();
+        assert!(error.to_string().contains(message), "{error}");
+    };
+    rejects(
+        &|pair| pair["to"] = json!("nowhere.go"),
+        "names a file outside the scan",
+    );
+    rejects(
+        &|pair| pair["names"] = json!(["Server.db\nforged"]),
+        "control characters",
     );
 }

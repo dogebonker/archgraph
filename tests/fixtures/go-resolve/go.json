@@ -2,31 +2,51 @@
  "bound": [
   {
    "from": "server/handle.go",
-   "to": "server/server.go"
+   "to": "server/server.go",
+   "names": [
+    "Server.db"
+   ],
+   "together": true
   },
   {
    "from": "server/server.go",
-   "to": "server/base.go"
+   "to": "server/base.go",
+   "names": [
+    "base"
+   ]
   },
   {
    "from": "store/open.go",
-   "to": "store/db.go"
+   "to": "store/db.go",
+   "names": [
+    "DB.values"
+   ]
   },
   {
    "from": "store/size.go",
-   "to": "store/native.go"
+   "to": "store/native.go",
+   "names": [
+    "native"
+   ]
   },
   {
    "from": "store/size.go",
-   "to": "store/sys_linux.go"
+   "to": "store/sys_linux.go",
+   "names": [
+    "pageSize"
+   ]
   },
   {
    "from": "store/size.go",
-   "to": "store/sys_windows.go"
+   "to": "store/sys_windows.go",
+   "names": [
+    "pageSize"
+   ]
   },
   {
    "from": "store/sys_linux.go",
-   "to": "store/sys_windows.go"
+   "to": "store/sys_windows.go",
+   "together": true
   }
  ],
  "edges": [

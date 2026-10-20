@@ -1,6 +1,6 @@
 //! Schema `archgraph/v1.2`; v1/v1.1 remain readable. See schema/archgraph.v1.2.schema.json.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -156,18 +156,48 @@ pub struct Collector {
     /// are commands, never public API. Absent otherwise.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub main_packages: Vec<String>,
-    /// Go: files that cannot leave their package and still compile, sorted: a file declaring a
-    /// method of a type declared in another file, or using an unexported name another file
-    /// declares, and that other file, when both are scanned. None of them is proposed for a
-    /// move. Absent otherwise.
+    /// Native Go: every file, since tree-sitter cannot tell which files could leave their
+    /// package and still compile. None of them is proposed for a move. Absent otherwise.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub bound_files: Vec<String>,
+    /// Go: pairs of scanned files of one package that cannot be split across packages and still
+    /// compile, sorted. Their files are never proposed for a move. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bound: Vec<BoundPair>,
     /// Go: the directories holding a go.mod (`.` for the root), sorted. No move is proposed
     /// from one Go module into another. Absent otherwise.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub go_modules: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub limitations: Vec<String>,
+}
+
+impl Collector {
+    /// The files that cannot leave their package: `bound_files` and the files of every pair.
+    pub fn bound_paths(&self) -> BTreeSet<&str> {
+        self.bound_files
+            .iter()
+            .map(String::as_str)
+            .chain(
+                self.bound
+                    .iter()
+                    .flat_map(|p| [p.from.as_str(), p.to.as_str()]),
+            )
+            .collect()
+    }
+}
+
+/// `from` uses unexported `names` that `to` declares (`Server.db` for a field or method), or
+/// one holds a method of the other's type or both declare one name for different platforms
+/// (`together`): split across packages, they would not compile.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BoundPair {
+    pub from: String,
+    pub to: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub names: Vec<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub together: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

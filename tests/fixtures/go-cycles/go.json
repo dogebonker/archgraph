@@ -2,7 +2,10 @@
  "bound": [
   {
    "from": "api/handler/handler.go",
-   "to": "api/handler/route.go"
+   "to": "api/handler/route.go",
+   "names": [
+    "route"
+   ]
   }
  ],
  "edges": [

@@ -9,7 +9,7 @@ use globset::GlobSet;
 use serde::Deserialize;
 
 use super::RawGraph;
-use crate::model::{Collector, Edge, EdgeKind};
+use crate::model::{BoundPair, Collector, Edge, EdgeKind};
 
 const DUMP: &str = include_str!("go_dump.go");
 
@@ -37,7 +37,7 @@ struct Dump {
     modules: Vec<String>,
     /// Pairs of files of one package that cannot be split across packages and still compile.
     #[serde(default)]
-    bound: Vec<DumpEdge>,
+    bound: Vec<BoundPair>,
 }
 
 #[derive(Deserialize)]
@@ -144,8 +144,8 @@ pub struct Parsed {
     pub raw: RawGraph,
     pub generated: Vec<String>,
     pub test_support: Vec<String>,
-    /// Pairs of files that cannot be split across packages, for `bound_files` once excludes ran.
-    pub bound: Vec<(String, String)>,
+    /// Pairs of files that cannot be split across packages, for `bound` once excludes ran.
+    pub bound: Vec<BoundPair>,
     /// The test support left out without --include-tests, sorted: `dir/` for a package left out
     /// whole, else each file.
     pub left_out: Vec<String>,
@@ -234,26 +234,21 @@ pub fn parse(json: &[u8]) -> Result<Parsed> {
         edges,
         collector,
     };
-    let bound = dump.bound.into_iter().map(|e| (e.from, e.to)).collect();
     Ok(Parsed {
         raw,
         generated,
         test_support,
-        bound,
+        bound: dump.bound,
         left_out,
     })
 }
 
-/// The files of the `bound` pairs whose two files are both in `files`, sorted: a file bound only
-/// to an excluded one (a test, generated code) moves freely in the graph that is analyzed.
-pub fn bound_files(bound: &[(String, String)], files: &[String]) -> Vec<String> {
+/// The `bound` pairs whose two files are both in `files`: a file bound only to an excluded one
+/// (a test, generated code) moves freely in the graph that is analyzed.
+pub fn bound_pairs(bound: Vec<BoundPair>, files: &[String]) -> Vec<BoundPair> {
     let kept: std::collections::HashSet<&str> = files.iter().map(String::as_str).collect();
-    let mut out: Vec<String> = bound
-        .iter()
-        .filter(|(a, b)| kept.contains(a.as_str()) && kept.contains(b.as_str()))
-        .flat_map(|(a, b)| [a.clone(), b.clone()])
-        .collect();
-    out.sort();
-    out.dedup();
-    out
+    bound
+        .into_iter()
+        .filter(|p| kept.contains(p.from.as_str()) && kept.contains(p.to.as_str()))
+        .collect()
 }

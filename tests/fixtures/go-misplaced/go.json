@@ -2,19 +2,25 @@
  "bound": [
   {
    "from": "internal/report/notify_other.go",
-   "to": "internal/report/notify_linux.go"
+   "to": "internal/report/notify_linux.go",
+   "together": true
   },
   {
    "from": "internal/report/notify_other.go",
-   "to": "internal/report/notify_windows.go"
+   "to": "internal/report/notify_windows.go",
+   "together": true
   },
   {
    "from": "internal/report/percent.go",
-   "to": "internal/report/rate.go"
+   "to": "internal/report/rate.go",
+   "together": true
   },
   {
    "from": "internal/report/tax.go",
-   "to": "internal/report/util.go"
+   "to": "internal/report/util.go",
+   "names": [
+    "round"
+   ]
   }
  ],
  "edges": [

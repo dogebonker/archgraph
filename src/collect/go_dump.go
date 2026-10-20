@@ -65,6 +65,17 @@ type edge struct {
 	To   string `json:"to"`
 }
 
+// A bound pair: the unexported names `From` uses from `To`, qualified by their type for fields
+// and methods (`Server.db`; a promoted field or method is named by the type it is selected on),
+// and whether one file holds a method of the other's type or the two declare the same name for
+// different platforms: such files move together or not at all.
+type pair struct {
+	edge
+	Names    []string `json:"names,omitempty"`
+	Together bool     `json:"together,omitempty"`
+	names    map[string]bool
+}
+
 var (
 	root  string
 	fset  = token.NewFileSet()
@@ -76,7 +87,7 @@ var (
 	// Pairs of files of one package that cannot be split across packages and still compile:
 	// a method and its type's file, and a file using an unexported name and the file declaring
 	// it.
-	bound = map[edge]bool{}
+	bound = map[edge]*pair{}
 	// The package of each file.
 	byFile = map[string]*pkg{}
 )
@@ -220,13 +231,37 @@ func main() {
 		"go_version": strings.TrimPrefix(runtime.Version(), "go"),
 		"files":      files,
 		"edges":      sorted(edges),
-		"bound":      sorted(bound),
+		"bound":      pairs(),
 		"unresolved": unresolved,
 		"modules":    rels,
 		"imports":    importRecords(all, dirs),
 	}); err != nil {
 		fail(err)
 	}
+}
+
+// The bound pairs sorted, each with its names sorted.
+func pairs() []*pair {
+	out := []*pair{}
+	for _, p := range bound {
+		for n := range p.names {
+			p.Names = append(p.Names, n)
+		}
+		sort.Strings(p.Names)
+		out = append(out, p)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].From < out[j].From || out[i].From == out[j].From && out[i].To < out[j].To
+	})
+	return out
+}
+
+func bind(from, to string) *pair {
+	e := edge{from, to}
+	if bound[e] == nil {
+		bound[e] = &pair{edge: e, names: map[string]bool{}}
+	}
+	return bound[e]
 }
 
 func fail(err error) {
@@ -520,7 +555,7 @@ func index(p *pkg) {
 		// all. Every file may declare init.
 		if key != "init" && key != "_" {
 			for _, other := range declFiles[1:] {
-				bound[edge{declFiles[0], other}] = true
+				bind(declFiles[0], other).Together = true
 			}
 		}
 		methodFiles := declFiles
@@ -531,7 +566,7 @@ func index(p *pkg) {
 		for _, mf := range methodFiles {
 			for _, tf := range p.decls[typ] {
 				if mf != tf {
-					bound[edge{mf, tf}] = true
+					bind(mf, tf).Together = true
 				}
 			}
 		}
@@ -574,7 +609,11 @@ func (imp) Import(path string) (*types.Package, error) {
 	return nil, fmt.Errorf("%s is not loaded", path)
 }
 
-var info = &types.Info{Uses: map[*ast.Ident]types.Object{}, Selections: map[*ast.SelectorExpr]*types.Selection{}}
+var info = &types.Info{
+	Types:      map[ast.Expr]types.TypeAndValue{},
+	Uses:       map[*ast.Ident]types.Object{},
+	Selections: map[*ast.SelectorExpr]*types.Selection{},
+}
 
 func check(p *pkg) *types.Package {
 	if p.types != nil {
@@ -596,12 +635,16 @@ func references(p *pkg, edges map[edge]bool) int {
 	for _, f := range p.files {
 		from := rel(f)
 		reached := map[*pkg]bool{}
+		// Field and method names qualified by their type, set on an identifier by the selector
+		// or composite literal holding it, which ast.Inspect visits first.
+		qualified := map[*ast.Ident]string{}
+		var name string
 		link := func(to string, q *pkg, obj types.Object) {
 			reached[q] = true
 			if to != from {
 				edges[edge{from, to}] = true
 				if q == p && !obj.Exported() {
-					bound[edge{from, to}] = true
+					bind(from, to).names[name] = true
 				}
 			}
 		}
@@ -610,13 +653,32 @@ func references(p *pkg, edges map[edge]bool) int {
 			switch n := n.(type) {
 			case *ast.Ident:
 				obj = info.Uses[n]
+				name = qualified[n]
 			case *ast.SelectorExpr:
+				// The selected object is also recorded as the use of n.Sel, linked there.
 				if s := info.Selections[n]; s != nil {
-					obj = s.Obj()
+					if t := typeName(s.Recv()); t != "" {
+						qualified[n.Sel] = t + "." + n.Sel.Name
+					}
+				}
+			case *ast.CompositeLit:
+				if t := typeName(info.Types[n].Type); t != "" {
+					for _, e := range n.Elts {
+						if kv, ok := e.(*ast.KeyValueExpr); ok {
+							if id, ok := kv.Key.(*ast.Ident); ok {
+								qualified[id] = t + "." + id.Name
+							}
+						}
+					}
 				}
 			}
 			if obj == nil || obj.Pkg() == nil {
 				return true
+			}
+			if name == "" {
+				if name = key(obj); name == "" {
+					name = obj.Name()
+				}
 			}
 			q := byPath[obj.Pkg().Path()]
 			if q == nil {
@@ -656,6 +718,18 @@ func references(p *pkg, edges map[edge]bool) int {
 		}
 	}
 	return unresolved
+}
+
+// The name of a named type or of the type a pointer points to, "" for anything else (an alias
+// too: types.Unalias needs Go 1.22), whose fields and methods keep their bare names.
+func typeName(t types.Type) string {
+	if ptr, ok := t.(*types.Pointer); ok {
+		t = ptr.Elem()
+	}
+	if named, ok := t.(*types.Named); ok {
+		return named.Obj().Name()
+	}
+	return ""
 }
 
 // The index key of a package-level object or method, "" for anything else.

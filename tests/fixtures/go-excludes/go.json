@@ -2,31 +2,44 @@
  "bound": [
   {
    "from": "app/app.go",
-   "to": "app/wire_gen.go"
+   "to": "app/wire_gen.go",
+   "names": [
+    "wired"
+   ]
   },
   {
    "from": "app/app_test.go",
-   "to": "app/app.go"
+   "to": "app/app.go",
+   "together": true
   },
   {
    "from": "app/chain/a_linux.go",
-   "to": "app/chain/b_windows.go"
+   "to": "app/chain/b_windows.go",
+   "together": true
   },
   {
    "from": "app/chain/c_darwin.go",
-   "to": "app/chain/b_windows.go"
+   "to": "app/chain/b_windows.go",
+   "together": true
   },
   {
    "from": "app/flag.go",
-   "to": "app/probe_other.go"
+   "to": "app/probe_other.go",
+   "names": [
+    "probe"
+   ]
   },
   {
    "from": "app/flag.go",
-   "to": "app/probe_windows.go"
+   "to": "app/probe_windows.go",
+   "names": [
+    "probe"
+   ]
   },
   {
    "from": "app/probe_other.go",
-   "to": "app/probe_windows.go"
+   "to": "app/probe_windows.go",
+   "together": true
   }
  ],
  "edges": [

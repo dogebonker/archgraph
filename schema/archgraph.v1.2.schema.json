@@ -1403,10 +1403,40 @@
                   }
                 },
                 "bound_files": {
-                  "description": "Go: files that cannot leave their package and still compile, sorted: a file declaring a method of a type declared in another file, or using an unexported name another file declares, and that other file, when both are scanned. None of them is proposed for a move. Absent otherwise.",
+                  "description": "Native Go: every file, since tree-sitter cannot tell which files could leave their package and still compile. None of them is proposed for a move. Absent otherwise.",
                   "type": "array",
                   "items": {
                     "$ref": "#/$defs/path"
+                  }
+                },
+                "bound": {
+                  "description": "Go: pairs of scanned files of one package that cannot be split across packages and still compile, sorted by from, then to. Their files are never proposed for a move. Absent otherwise.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "from",
+                      "to"
+                    ],
+                    "properties": {
+                      "from": {
+                        "$ref": "#/$defs/path"
+                      },
+                      "to": {
+                        "$ref": "#/$defs/path"
+                      },
+                      "names": {
+                        "description": "The unexported names from uses that to declares, sorted: a field or method as Type.name, named by the type it is selected on (the outer type for a promoted one), anything else bare. Absent when none.",
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "together": {
+                        "description": "true when one file holds a method of a type the other declares, or both declare one name for different platforms. Absent otherwise.",
+                        "type": "boolean"
+                      }
+                    }
                   }
                 },
                 "go_modules": {
@@ -2095,7 +2125,8 @@
             "required": [
               "slice",
               "files",
-              "import_lines"
+              "import_lines",
+              "names"
             ],
             "properties": {
               "slice": {
@@ -2122,6 +2153,42 @@
               "import_lines": {
                 "description": "Go: new (importer, imported folder) pairs across folders after this slice's moves. Other languages: import records, or edges when the collector keeps none, whose importer or target moves.",
                 "$ref": "#/$defs/count"
+              },
+              "names": {
+                "description": "Go: the unexported names to export, from bound pairs whose two files land in different folders after this slice's moves, sorted by name; [] when none. null when unknown: native Go and other languages.",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "declared_in",
+                    "used_by"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "declared_in": {
+                      "$ref": "#/$defs/path"
+                    },
+                    "used_by": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/path"
+                      }
+                    }
+                  }
+                }
+              },
+              "together": {
+                "description": "Go: bound pairs that move together or not at all (a method and its type, platform variants) whose files land in different folders after this slice's moves. Absent when empty.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/link"
+                }
               },
               "new_cycles": {
                 "description": "Go only: imports in package cycles that applying every pending move together would create, with a file in one of this slice's source or destination folders. Absent when empty.",
