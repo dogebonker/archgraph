@@ -1753,6 +1753,9 @@ function applyFocus() {
     for (const j of fd.mes) meS[j] = S_INV;
     for (const e of fd.strong) if (edges[e].me) meS[edges[e].me.i] = S_SELF;
     overlay = { moves: fd.moves, links: fd.links };
+  } else if (t.type === "target") {
+    for (const j of t.fs) { fileS[j] = S_INV; modS[files[j].mod] = S_INV; }
+    for (const e of t.fe) { feS[e] = S_SELF; raise(fileS, edges[e].a, S_NORM); raise(fileS, edges[e].b, S_NORM); if (edges[e].me) meS[edges[e].me.i] = S_SELF; }
   }
 }
 
@@ -1939,6 +1942,7 @@ function zoomToTarget(t) {
   else if (t.type === "module") zoomToModule(t.i);
   else if (t.type === "file") zoomToFile(t.i);
   else if (t.type === "finding") zoomToFinding(findings[t.i]);
+  else if (t.type === "target") zoomToFinding({ fs: t.fs, ms: [], moves: [] });
   else if (t.type === "fedge") {
     const a = files[edges[t.i].a], b = files[edges[t.i].b];
     fitBox(Math.min(a.x, b.x) - 40, Math.min(a.y, b.y) - 40, Math.max(a.x, b.x) + 40, Math.max(a.y, b.y) + 40, K_LABEL * 1.05, true);
@@ -3850,6 +3854,7 @@ function overview() {
   panel.append(el("h2", {}, "Assessment"));
   panel.append(el("p", { class: "sub" }, `${nf(F)} ${F === 1 ? "file" : "files"} in ${nf(N)} ${N === 1 ? "module" : "modules"}`));
   panel.append(el("p", { class: "intro" }, "Read from imports" + (doc.config.codeowners ? " and declared ownership" : "") + "; every line names its evidence. Select a name to see it on the map."));
+  targetContext();
   packageSplitContext();
   externalContext();
   if (doc.config.codeowners) {
@@ -3919,6 +3924,98 @@ function overview() {
     for (const limit of doc.hotspots.limitations || []) panel.append(el("p", { class: "note" }, limit));
   }
 }
+/* ---------- target panel ---------- */
+/* A claim's verdict as `check` words it, without the slice names the panel lists below. */
+const claimVerdict = c => c.verdict === "holds_in"
+  ? `holds in ${c.slices.filter(s => !s.broken.length).length} of ${c.slices.length} slices` : c.verdict;
+const moveCost = m => [count(m.files.length, "file", "files"), count(m.import_lines, "import line", "import lines"),
+  ...(m.names?.length ? [count(m.names.length, "name", "names") + " to export"] : []),
+  ...(m.new_cycles?.length ? [count(m.new_cycles.length, "import", "imports") + " in new package cycles"] : [])].join(", ");
+function linkRows(links) {
+  const rows = el("ul");
+  for (const l of links) { const row = el("li"); row.append(fileLink(l.from), document.createTextNode(" → "), fileLink(l.to)); rows.append(row); }
+  return rows;
+}
+/* A list that builds its rows when first opened. */
+function lazyList(title, build) {
+  const d = el("details");
+  d.append(el("summary", {}, title));
+  d.addEventListener("toggle", () => { if (!d.open || d.childNodes.length > 1) return; d.append(build()); });
+  return d;
+}
+/* A selected slice or move highlights its files and imports on the map like a finding; `rows`
+   fills its panel. */
+const targetSel = (kind, title, paths, links, rows) => ({ type: "target", kind, title, rows,
+  fs: new Set(paths.map(p => fileIndex.get(p)).filter(i => i !== undefined)),
+  fe: links.map(edgeOf).filter(e => e !== undefined) });
+const sliceSel = (claim, slice) => targetSel("Claim slice", `${claim.id}: ${slice.slice}`, slice.files, slice.broken, t => [
+  el("p", {}, claim.reason), el("h3", {}, count(slice.broken.length, "broken import", "broken imports")), linkRows(slice.broken),
+  el("h3", {}, count(t.fs.size, "file", "files")), fileList([...t.fs])]);
+function moveRows(m) {
+  const out = [lazyList(count(m.files.length, "file to move", "files to move"), () => {
+    const rows = el("ul");
+    for (const f of m.files) { const row = el("li"); row.append(fileLink(f.file), document.createTextNode(` → ${f.to}`)); rows.append(row); }
+    return rows;
+  })];
+  if (m.names?.length) out.push(lazyList(count(m.names.length, "name to export", "names to export"), () => {
+    const rows = el("ul");
+    for (const n of m.names) {
+      const row = el("li");
+      row.append(el("span", { class: "mono" }, n.name), document.createTextNode(" in "), fileLink(n.declared_in),
+        document.createTextNode(`, used by ${n.used_by.map(short).join(", ")}`));
+      rows.append(row);
+    }
+    return rows;
+  }));
+  if (m.new_cycles?.length) out.push(lazyList(count(m.new_cycles.length, "import in new package cycles", "imports in new package cycles"), () => linkRows(m.new_cycles)));
+  return out;
+}
+const moveSel = m => targetSel("Pending move", m.slice, m.files.map(f => f.file), m.new_cycles || [], () => [el("p", {}, moveCost(m)), ...moveRows(m)]);
+/* An expandable row whose inside opens with a button selecting it on the map. */
+function targetRow(title, sel, rows) {
+  const detail = el("details", { class: "kind" });
+  detail.append(el("summary", {}, title));
+  detail.addEventListener("toggle", () => {
+    if (!detail.open || detail.childNodes.length > 1) return;
+    const inner = el("div", { class: "inner" }), acts = el("div", { class: "actions" });
+    acts.append(btn("Show on map", "act", () => go(sel())));
+    inner.append(acts, ...rows());
+    detail.append(inner);
+  });
+  return detail;
+}
+function targetContext() {
+  const target = doc.target;
+  if (!target) return;
+  panel.append(el("h3", {}, "Target"));
+  for (const claim of target.claims) {
+    panel.append(el("p", {}, `${claim.id}: ${claimVerdict(claim)}`), el("p", { class: "muted" }, claim.reason + (claim.source ? ` (${claim.source})` : "")));
+    for (const note of claim.notes) panel.append(el("p", { class: "note" }, note));
+    const broken = claim.slices.filter(s => s.broken.length);
+    if (!broken.length) continue;
+    const list = el("div", { class: "kinds" });
+    for (const slice of broken) list.append(targetRow(`${slice.slice}: ${count(slice.broken.length, "broken import", "broken imports")}`,
+      () => sliceSel(claim, slice), () => [linkRows(slice.broken)]));
+    panel.append(list);
+  }
+  const { conforming, moved } = target.progress;
+  panel.append(el("p", {}, `${conforming.done} of ${conforming.of} slices conform` + (moved ? `; ${moved.done} of ${moved.of} slices moved` : "") + "."));
+  const pending = (target.moves || []).filter(m => m.files.length);
+  if (pending.length) {
+    panel.append(el("h3", {}, "Move cost"));
+    const list = el("div", { class: "kinds" });
+    for (const m of pending) list.append(targetRow(`${m.slice} · ${moveCost(m)}`, () => moveSel(m), () => moveRows(m)));
+    panel.append(list);
+  }
+  for (const note of target.notes || []) panel.append(el("p", { class: "note" }, note));
+}
+function targetPanel(t) {
+  head(t.kind, t.title);
+  const acts = el("div", { class: "actions" });
+  acts.append(btn("Zoom to it", "act", () => { reveal(); zoomToTarget(t); }));
+  panel.append(acts, ...t.rows(t));
+}
+/* ---------- end target panel ---------- */
 /* ---------- package split panel ---------- */
 function packageSplitContext(moduleId) {
   const report = doc.package_splits;
@@ -4340,6 +4437,7 @@ function showPanel() {
   else if (t.type === "file") filePanel(t.i);
   else if (t.type === "medge") medgePanel(t.i);
   else if (t.type === "fedge") fedgePanel(t.i);
+  else if (t.type === "target") targetPanel(t);
   else findingPanel(t.i);
   /* Screen readers hear the new heading, not the whole panel. */
   const h2 = panel.querySelector("h2");
