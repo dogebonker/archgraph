@@ -178,8 +178,8 @@ pub struct Config {
     pub depth: usize,
     #[serde(default, skip_serializing_if = "Granularity::is_folder")]
     pub granularity: Granularity,
-    /// Go/Java without `--depth`: every package directory is a module; `depth` is unused.
-    /// Absent otherwise.
+    /// Java, and Go before it grouped by folder, without `--depth`: every package directory is a
+    /// module; `depth` is unused. Absent otherwise.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub package_modules: bool,
     pub source_root: String,

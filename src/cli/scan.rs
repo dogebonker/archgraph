@@ -354,8 +354,9 @@ pub(super) fn scan_doc(
         generated_at: source_time(root)?,
         scan_root: git_scan_root(root),
     };
-    // Keep package directories intact unless a depth is explicitly requested.
-    let package_modules = matches!(language, Language::Go | Language::Java) && args.depth.is_none();
+    // Java keeps package directories intact unless a depth is explicitly requested: its source
+    // root is the scan root, so depth 2 would put a Maven tree in `src/main`.
+    let package_modules = language == Language::Java && args.depth.is_none();
     let config = Config {
         depth: args.depth.unwrap_or(if package_modules { 0 } else { 2 }),
         granularity: globals().granularity.unwrap_or_default(),

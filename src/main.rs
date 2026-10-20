@@ -199,7 +199,7 @@ struct ScanOpts {
     /// Collector engine; native uses tree-sitter and source-level resolution
     #[arg(long, value_enum, default_value_t = collect::Engine::Reference)]
     engine: collect::Engine,
-    /// Directory segments below the source root that form a module [default: 2; Go/Java: each
+    /// Directory segments below the source root that form a module [default: 2; Java: each
     /// package is a module]
     #[arg(long)]
     depth: Option<usize>,

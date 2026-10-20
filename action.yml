@@ -13,7 +13,7 @@ inputs:
     description: layout.yaml with the rules, relative to the workspace (default <path>/layout.yaml when it exists)
     default: ""
   depth:
-    description: Directory segments below the source root that form a module (default 2; Go, each package)
+    description: Directory segments below the source root that form a module (default 2; Java, each package)
     default: ""
   language:
     description: typescript, python, go, rust, java or elixir (default detected; Elixir needs a preinstalled runtime)

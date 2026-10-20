@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Go scans group packages by folder depth 2 by default, like other languages, instead of making each package a module; nested packages show as sub-discs of their folder on the map. `--depth 99` restores one module per package, and saved Go scans with `package_modules` keep their grouping when re-scanned. Java keeps one module per package.
 - Native Rust excludes definite test-only references by default, classifies Rust test files, separates module containment from dependency cycles, narrows parent globs and resolves statically exported macros to their defining files. Real local-module references remain dependencies. Conventional single-crate scans normalize grouping below `src`; saved graph grouping remains unchanged.
 - Native Python recognizes installed wheels through validated `RECORD` metadata and refreshes cached installation evidence. Empty package initializers no longer imply a facade policy; explicit entrypoints/public rules remain enforced.
 - Reports and agent explanations disclose grouping and Rust source-reference semantics. Cycle recipes avoid test/structural cuts and mark unsupported rewrites as non-mechanical immediately; forecast attachment avoids copying prior recipes. Adds focused regressions and a reproducible real-project comparison runner.

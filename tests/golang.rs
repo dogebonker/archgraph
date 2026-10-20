@@ -532,7 +532,7 @@ fn go_moves_never_leave_their_go_module() {
 }
 
 #[test]
-fn go_modules_are_packages_unless_depth_is_given() {
+fn go_modules_group_packages_by_depth() {
     let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("go-packages");
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(&root).unwrap();
@@ -572,19 +572,20 @@ fn go_modules_are_packages_unless_depth_is_given() {
             .collect();
         (modules, doc["config"].get("package_modules").cloned())
     };
-    // Each package (directory) is a module; the root's files are `.`.
+    // The default depth 2 merges packages by folder as for other languages; the root's files
+    // are `.`.
     assert_eq!(
         modules(&[]),
         (
-            vec!["a/b/c/d".to_owned(), "a/b/c".to_owned(), ".".to_owned()],
-            Some(json!(true))
+            vec!["a/b".to_owned(), "a/b".to_owned(), ".".to_owned()],
+            None
         )
     );
-    // An explicit --depth merges packages as for other languages.
+    // A large --depth makes each package (directory) a module.
     assert_eq!(
-        modules(&["--depth", "2"]),
+        modules(&["--depth", "99"]),
         (
-            vec!["a/b".to_owned(), "a/b".to_owned(), ".".to_owned()],
+            vec!["a/b/c/d".to_owned(), "a/b/c".to_owned(), ".".to_owned()],
             None
         )
     );

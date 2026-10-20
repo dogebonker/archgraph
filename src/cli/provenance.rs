@@ -134,7 +134,12 @@ pub(super) fn probe_with_symbols(
     }
     let opts = ScanOpts {
         engine: engine(original),
-        depth: (!config.package_modules).then_some(config.depth),
+        depth: match (config.package_modules, original.source.language) {
+            (false, _) => Some(config.depth),
+            (true, Language::Java) => None,
+            // A Go graph saved with one module per package.
+            (true, _) => Some(99),
+        },
         exclude,
         no_default_excludes: config.no_default_excludes,
         include_tests: config.include_tests,

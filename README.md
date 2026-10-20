@@ -301,7 +301,7 @@ The default reference engine asks [dependency-cruiser](https://github.com/sverwe
 - Findings are suggestions with evidence, not a score to optimise. Read the evidence, then decide.
 - Module boundaries come from folders or your rules. Wrong boundaries give wrong numbers.
 - Small repositories have little signal, and the report says so.
-- TypeScript, JavaScript, Python, Go, Rust, Java and Elixir. In Go each package is a module, so findings there are fewer and mostly about which package depends on which.
+- TypeScript, JavaScript, Python, Go, Rust, Java and Elixir. In Go, modules group packages by folder like other languages (`--depth 99` makes each package a module); in Java each package is a module.
 
 ## Free, all of it
 

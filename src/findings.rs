@@ -388,8 +388,7 @@ pub fn find(
     }
     hidden_coupling(&g, &mut findings);
     unstable_dependency(&g, &mut findings);
-    // Go: clusters of files split packages, which Go cannot do, and clusters of packages are
-    // compared with folders that are the packages themselves: no seam.
+    // Go: clusters of files split packages, which Go cannot do: no seam.
     if doc.source.language != Language::Go {
         seam(&g, &mut findings);
     }
