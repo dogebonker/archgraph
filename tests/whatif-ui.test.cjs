@@ -60,6 +60,7 @@ test('preview updates findings and commands; clear restores the immutable graph 
   assert.match(s.$('whatif-result').textContent, /Resolved[\s\S]*Module cycle · 2/);
   assert.equal(s.files[i].path, 'b/three.ts');
   assert.equal(s.$('whatif-cli').value, "archgraph simulate 'graph.json' --move 'a/three.ts' 'b/three.ts'");
+  assert.equal(s.$('whatif-rules').value, 'No layout rules are embedded in this scan.');
   assert.equal(JSON.stringify(s.doc), before);
   s.run('clearWhatif()');
   assert.equal(s.files[i].path, 'a/three.ts');
@@ -67,6 +68,41 @@ test('preview updates findings and commands; clear restores the immutable graph 
   assert.equal(s.$('stats').textContent, 'Original stats');
   assert(s.$('whatif-commands').hidden);
   s.run('setWhatifMode(false)'); assert.equal(s.context.churnView, true); assert(!s.$('reset').disabled);
+});
+test('the move list previews chained moves together and exports one script, command and rule shifts', () => {
+  const fixture = fixtures.find(f => f.name === 'chained-moves-with-rules'), s = setup(fixture.name), before = JSON.stringify(s.doc);
+  const plain = value => JSON.parse(JSON.stringify(value)), listed = () => plain(s.run('whatifMoves').map(({ file, to }) => ({ file, to })));
+  const preview = (file, folder) => { s.$('whatif-file').value = file; s.$('whatif-folder').value = folder; s.run('runWhatif()'); };
+  s.run('setWhatifMode(true)');
+  preview('app/helper.ts', 'infra'); s.run('whatifAdd()');
+  // The listed file, named by its previewed path, moves again: its entry takes the new destination.
+  preview('infra/helper.ts', 'domain');
+  assert.equal(s.run('whatifMoves[0].to'), 'infra/helper.ts', 'previewing alone does not change the list');
+  s.run('whatifAdd()');
+  preview('infra/db.ts', 'domain/store'); s.run('whatifAdd()');
+  assert.deepEqual(listed(), fixture.move);
+  assert.deepEqual(plain(s.context.whatifResult.before), fixture.before);
+  assert.deepEqual(plain(s.context.whatifResult.after), fixture.after);
+  assert.equal(s.$('whatif-cli').value, "archgraph simulate 'graph.json' --move 'app/helper.ts' 'domain/helper.ts' --move 'infra/db.ts' 'domain/store/db.ts'");
+  assert.equal(s.$('whatif-git').value, "mkdir -p -- 'domain/store'\ngit mv -- 'app/helper.ts' 'domain/helper.ts'\ngit mv -- 'infra/db.ts' 'domain/store/db.ts'");
+  assert.equal(s.$('whatif-rules').value,
+    'app/helper.ts: leaves layer "app/**", enters layer "domain/**", enters forbid no-infra from "domain/**"\n' +
+    'infra/db.ts: leaves forbid no-infra to "infra/**", enters layer "domain/**", enters forbid no-infra from "domain/**"');
+  assert.deepEqual(s.files.filter(f => f.path.startsWith('domain/')).map(f => f.path).sort(), ['domain/helper.ts', 'domain/model.ts', 'domain/store/db.ts']);
+  assert.equal(JSON.stringify(s.doc), before);
+  // Remove one item: the preview and export keep the rest, and focus stays in the list.
+  const list = s.$('whatif-list');
+  assert.equal(list.childNodes.length, 2);
+  list.childNodes[0].childNodes[1].listeners.click();
+  assert.deepEqual(listed(), [fixture.move[1]]);
+  assert.equal(s.$('whatif-cli').value, "archgraph simulate 'graph.json' --move 'infra/db.ts' 'domain/store/db.ts'");
+  assert.equal(s.files.find(f => f.path.endsWith('helper.ts')).path, 'app/helper.ts');
+  assert(list.childNodes[0].childNodes[1].focused);
+  // Clear all restores the original graph and empties the list.
+  s.$('whatif-clear').listeners.click();
+  assert.deepEqual(listed(), []); assert.equal(s.context.whatifResult, null);
+  assert(s.$('whatif-plan').hidden); assert(s.$('whatif-commands').hidden);
+  assert.equal(s.files.find(f => f.path.endsWith('db.ts')).path, 'infra/db.ts');
 });
 test('invalid moves invalidate earlier results instead of retaining success or commands', () => {
   const s = setup();

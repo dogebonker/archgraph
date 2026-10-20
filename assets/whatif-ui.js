@@ -2,44 +2,106 @@
 const whatifUI = {
   box: $("whatif-panel"), file: $("whatif-file"), folder: $("whatif-folder"),
   status: $("whatif-status"), result: $("whatif-result"), graph: $("whatif-graph"),
-  commands: $("whatif-commands"), cli: $("whatif-cli"), git: $("whatif-git")
+  commands: $("whatif-commands"), cli: $("whatif-cli"), git: $("whatif-git"), rules: $("whatif-rules"),
+  plan: $("whatif-plan"), list: $("whatif-list"), add: $("whatif-add")
 };
 const whatifOriginal = { stats: [...$("stats").childNodes], text: $("stats-text").textContent,
   signals: modSignal.slice(), health: modHealth.slice() };
-let whatifSaved = null, whatifDrawing = null, whatifChoices = false, whatifChurn = false;
+/* whatifMoves is the ordered move list; whatifPending the previewed move not yet added to it. */
+let whatifSaved = [], whatifMoves = [], whatifPending = null, whatifRemove = [], whatifDrawing = null, whatifChoices = false, whatifChurn = false;
 const whatifQuote = text => "'" + text.replace(/'/g, "'\\''") + "'";
 function whatifCommands() {
   if (!whatifResult) return;
-  const { file, to } = whatifResult.move;
+  const moves = whatifResult.moves, q = whatifQuote;
   const graph = whatifUI.graph.value.startsWith("-") ? "./" + whatifUI.graph.value : whatifUI.graph.value;
-  whatifUI.cli.value = `archgraph simulate ${whatifQuote(graph)} --move ${whatifQuote(file)} ${whatifQuote(to)}`;
-  const directory = dirname(to);
-  whatifUI.git.value = (directory ? `mkdir -p -- ${whatifQuote(directory)}\n` : "") + `git mv -- ${whatifQuote(file)} ${whatifQuote(to)}`;
+  whatifUI.cli.value = `archgraph simulate ${q(graph)}` + moves.map(m => ` --move ${q(m.file)} ${q(m.to)}`).join("");
+  const known = new Set(doc.files.flatMap(f => f.path.split("/").slice(0, -1).map((_, k, parts) => parts.slice(0, k + 1).join("/"))));
+  const fresh = [...new Set(moves.map(m => dirname(m.to)))].filter(d => d && !known.has(d));
+  whatifUI.git.value = [...(fresh.length ? [`mkdir -p -- ${fresh.map(q).join(" ")}`] : []), ...moves.map(m => `git mv -- ${q(m.file)} ${q(m.to)}`)].join("\n");
+  whatifUI.rules.value = whatifRuleShifts(moves);
+}
+/* The layer and forbid globs each moved file stops and starts matching, read with the preview's glob matcher. */
+function whatifRuleShifts(moves) {
+  const rules = doc.config?.rules?.doc;
+  if (!rules) return "No layout rules are embedded in this scan.";
+  const globs = (rules.layers || []).map(g => ["layer", g]);
+  (rules.forbid || []).forEach((r, k) => {
+    const id = r.id ? `forbid ${r.id}` : `forbid[${k}]`;
+    globs.push([`${id} from`, r.from]);
+    if (!/^(?:pkg|category):/.test(r.to || "")) globs.push([`${id} to`, r.to]);
+  });
+  try {
+    return moves.map(({ file, to }) => {
+      const leaves = [], enters = [];
+      for (const [label, glob] of globs) {
+        const was = ArchgraphPreview.matches(glob, file), now = ArchgraphPreview.matches(glob, to);
+        if (was !== now) (now ? enters : leaves).push(`${now ? "enters" : "leaves"} ${label} "${glob}"`);
+      }
+      return `${file}: ` + ([...leaves, ...enters].join(", ") || "no layer or forbid glob changes");
+    }).join("\n");
+  } catch (error) { return "Rule changes unavailable: " + error.message; }
+}
+function whatifListRender() {
+  whatifRemove = whatifMoves.map((move, k) => {
+    const remove = el("button", { type: "button", "aria-label": `Remove move of ${move.file} to ${move.to}` }, "Remove");
+    remove.addEventListener("click", () => { whatifForget(move.file); whatifListFocus(k); });
+    return remove;
+  });
+  whatifUI.list.replaceChildren(...whatifMoves.map((move, k) => {
+    const item = el("li");
+    item.append(el("span", { class: "path" }, `${move.file} → ${move.to}`), whatifRemove[k]);
+    return item;
+  }));
+  whatifUI.plan.hidden = !whatifMoves.length;
+  whatifUI.add.disabled = !(whatifPending && whatifResult);
+}
+/* Focus stays in the list after a removal: the next item, else the previous, else the file field. */
+function whatifListFocus(k) {
+  (whatifRemove[k] || whatifRemove[k - 1] || whatifUI.file).focus();
+}
+/* The list with the pending move applied: a listed file moved again keeps its place with the new destination. */
+function whatifPlan() {
+  const p = whatifPending, k = p ? whatifMoves.findIndex(m => m.file === p.file) : -1;
+  return !p ? whatifMoves.slice() : k < 0 ? [...whatifMoves, p] : whatifMoves.map((m, j) => j === k ? p : m);
+}
+function whatifAdd() {
+  if (!whatifPending || !whatifResult) return;
+  whatifMoves = whatifPlan(); whatifPending = null; whatifListRender();
+  whatifUI.status.textContent = `Added. ${count(whatifMoves.length, "move", "moves")} in the list.`;
+}
+function whatifForget(file) {
+  whatifMoves = whatifMoves.filter(m => m.file !== file);
+  if (whatifPending?.file === file) whatifPending = null;
+  whatifShow();
+  whatifUI.status.textContent = `Removed ${file}. ${count(whatifMoves.length, "move", "moves")} in the list.`;
+}
+function whatifClearAll() {
+  whatifMoves = []; whatifPending = null; clearWhatif(); whatifListRender();
 }
 async function whatifCopy(field) {
   try { await navigator.clipboard.writeText(field.value); whatifUI.status.textContent = "Copied. Review and run from the scanned root."; }
   catch { field.focus(); field.select(); whatifUI.status.textContent = "Clipboard unavailable. Copy the selected command."; }
 }
 function clearWhatif() {
-  if (whatifSaved) {
-    const { i, local, path } = whatifSaved, m = files[i].mod;
+  for (const { i, local, path } of whatifSaved) {
+    const m = files[i].mod;
     files[i].path = path;
     lx[i] = local[0]; ly[i] = local[1];
     files[i].x = mx[m] + lx[i]; files[i].y = my[m] + ly[i];
     fileEdges(i, new Set());
   }
-  whatifSaved = null; whatifResult = null; whatifDrawing = null;
+  whatifSaved = []; whatifResult = null; whatifDrawing = null;
   modSignal.splice(0, modSignal.length, ...whatifOriginal.signals);
   modHealth.splice(0, modHealth.length, ...whatifOriginal.health);
   $("stats").replaceChildren(...whatifOriginal.stats);
   $("stats-text").textContent = whatifOriginal.text;
   whatifUI.result.replaceChildren(); whatifUI.commands.hidden = true;
-  whatifUI.cli.value = ""; whatifUI.git.value = "";
+  whatifUI.cli.value = ""; whatifUI.git.value = ""; whatifUI.rules.value = "";
   whatifUI.status.textContent = "Preview cleared; original graph restored.";
   buildGrid(); applyFocus(); redraw();
 }
 function setWhatifMode(on) {
-  clearWhatif();
+  whatifClearAll();
   whatifMode = on;
   whatifUI.box.hidden = !on; panel.hidden = on;
   $("whatif-toggle").setAttribute("aria-pressed", String(on));
@@ -64,14 +126,14 @@ function setWhatifMode(on) {
   applyFocus(); redraw();
 }
 function whatifDrop(i, x, y, originalLocal) {
-  if (whatifSaved?.i === i && Math.hypot(x - mx[files[i].mod], y - my[files[i].mod]) <= modR[files[i].mod]) { clearWhatif(); return; }
+  if (whatifSaved.some(s => s.i === i) && Math.hypot(x - mx[files[i].mod], y - my[files[i].mod]) <= modR[files[i].mod]) { whatifForget(doc.files[i].path); return; }
   let target = -1;
   for (let m = 0; m < N; m++) if (m !== files[i].mod && !hiddenMods[m] && Math.hypot(x - mx[m], y - my[m]) <= modR[m] && (target < 0 || modR[m] < modR[target])) target = m;
   const m = files[i].mod;
   lx[i] = originalLocal[0]; ly[i] = originalLocal[1];
   files[i].x = mx[m] + lx[i]; files[i].y = my[m] + ly[i]; fileEdges(i, new Set());
   if (target < 0) {
-    clearWhatif();
+    whatifPending = null; whatifShow();
     whatifUI.status.textContent = "Drop inside another module, or enter a destination folder.";
     buildGrid(); redraw(); return;
   }
@@ -146,27 +208,39 @@ function whatifWarnings(warnings) {
   if (grabbag.length) list.append(el("li", {}, `Grab-bag refinement skipped, raw cycles only: ${grabbag.join(", ")}`));
   return list;
 }
+/* A file already in the list may be named by its previewed path; moving it home removes it. */
 function runWhatif(at) {
+  const file = whatifUI.file.value, folder = whatifUI.folder.value.replace(/\/$/, "");
+  const source = whatifMoves.find(m => m.to === file)?.file ?? file;
+  const to = (folder === "." || folder === "" ? "" : folder + "/") + basename(file);
+  if (to === source && whatifMoves.some(m => m.file === source)) { whatifForget(source); return; }
+  whatifPending = { file: source, to, at };
+  whatifShow();
+}
+/* Previews every listed move plus the pending one, applied together; the saved graph is never changed. */
+function whatifShow() {
   clearWhatif();
+  const moves = whatifPlan();
+  if (!moves.length) { whatifListRender(); return; }
   try {
-    const file = whatifUI.file.value, folder = whatifUI.folder.value.replace(/\/$/, "");
-    const to = (folder === "." || folder === "" ? "" : folder + "/") + basename(file);
-    const result = ArchgraphPreview.simulate(doc, { file, to });
-    const i = fileIndex.get(file), m = modIndex.get(result.move.module);
-    cancelSettle("f" + i);
-    whatifSaved = { i, local: [lx[i], ly[i]], path: files[i].path };
+    const result = ArchgraphPreview.simulate(doc, moves.map(({ file, to }) => ({ file, to })));
     whatifResult = result;
-    files[i].path = to;
-    let point = at || (m === undefined ? [files[i].x, files[i].y] : [mx[m], my[m]]);
-    const open = point => files.every(f => f.i === i || Math.hypot(f.x - point[0], f.y - point[1]) >= R_DOT * 2 + 2);
-    if (m !== undefined && !open(point)) {
-      const slot = sunflower(48, SP * .8).map(p => [point[0] + p.x, point[1] + p.y])
-        .find(p => Math.hypot(p[0] - mx[m], p[1] - my[m]) <= fileRoom(m) && open(p));
-      if (slot) point = slot;
-    }
-    files[i].x = point[0]; files[i].y = point[1];
-    lx[i] = point[0] - mx[files[i].mod]; ly[i] = point[1] - my[files[i].mod];
-    fileEdges(i, new Set());
+    result.moves.forEach((move, k) => {
+      const i = fileIndex.get(move.file), m = modIndex.get(move.module);
+      cancelSettle("f" + i);
+      whatifSaved.push({ i, local: [lx[i], ly[i]], path: files[i].path });
+      files[i].path = move.to;
+      let point = moves[k].at || (m === undefined ? [files[i].x, files[i].y] : [mx[m], my[m]]);
+      const open = point => files.every(f => f.i === i || Math.hypot(f.x - point[0], f.y - point[1]) >= R_DOT * 2 + 2);
+      if (m !== undefined && !open(point)) {
+        const slot = sunflower(48, SP * .8).map(p => [point[0] + p.x, point[1] + p.y])
+          .find(p => Math.hypot(p[0] - mx[m], p[1] - my[m]) <= fileRoom(m) && open(p));
+        if (slot) point = slot;
+      }
+      files[i].x = point[0]; files[i].y = point[1];
+      lx[i] = point[0] - mx[files[i].mod]; ly[i] = point[1] - my[files[i].mod];
+      fileEdges(i, new Set());
+    });
     whatifBuildDrawing(result);
     const before = result.before, after = result.after, verdict = whatifVerdict(result);
     const banner = el("div", { class: "verdict " + verdict.tone });
@@ -175,9 +249,9 @@ function runWhatif(at) {
     for (const text of verdict.bad) chips.append(el("span", { class: "chip bad" }, text));
     for (const text of verdict.good) chips.append(el("span", { class: "chip good" }, text));
     if (verdict.bad.length || verdict.good.length) banner.append(chips);
-    whatifUI.result.append(banner, el("p", { class: "path muted" }, `${file} → ${to}` + (result.move.module === dirname(to) ? "" : `  (module ${result.move.module})`)));
+    whatifUI.result.append(banner, ...result.moves.map(({ file, to, module }) => el("p", { class: "path muted" }, `${file} → ${to}` + (module === dirname(to) ? "" : `  (module ${module})`))));
     if (result.partial) whatifUI.result.append(whatifDetails("⚠ Estimate only: confirm with the CLI", "warn", whatifWarnings(result.warnings)));
-    if (m === undefined) whatifUI.result.append(el("p", { class: "muted" }, "Creates a new module. The map keeps the original module positions."));
+    if (result.moves.some(move => !modIndex.has(move.module))) whatifUI.result.append(el("p", { class: "muted" }, "Creates a new module. The map keeps the original module positions."));
     whatifUI.result.append(whatifTable([
       ["Cycles", before.cycles.length, after.cycles.length], ["Largest module cycle", before.largest_cycle, after.largest_cycle],
       ["Two-way pairs", before.two_way_pairs.length, after.two_way_pairs.length], ["Forbidden imports", before.forbidden, after.forbidden], ["Unplanned imports", before.unplanned, after.unplanned]
@@ -200,9 +274,14 @@ function runWhatif(at) {
     $("stats").replaceChildren(el("span", {}, text)); $("stats-text").textContent = text;
     whatifUI.status.textContent = "";
     $("announce").textContent = [verdict.title, ...verdict.bad, ...verdict.good].join(". ");
+    whatifListRender();
     buildGrid(); applyFocus(); redraw();
   } catch (error) {
-    clearWhatif(); whatifUI.status.textContent = "Cannot preview: " + error.message;
+    /* A rejected pending move drops back to the list's preview; the list was valid when added. */
+    const pending = whatifPending;
+    whatifPending = null;
+    if (pending && whatifMoves.length) whatifShow(); else { clearWhatif(); whatifListRender(); }
+    whatifUI.status.textContent = "Cannot preview: " + error.message;
   }
 }
 function whatifBuildDrawing(result) {
@@ -210,8 +289,9 @@ function whatifBuildDrawing(result) {
   result.after.cycles.filter(c => c.level === "module").forEach((cycle, i) => cycle.members.forEach(id => cycleOf.set(id, i)));
   const fileCycles = new Map();
   result.after.cycles.filter(c => c.level === "file").forEach((cycle, i) => cycle.members.forEach(id => fileCycles.set(id, i)));
-  const renamed = path => path === result.move.file ? result.move.to : path;
-  const moduleOf = i => i === whatifSaved.i ? result.move.module : doc.files[i].module;
+  const moved = new Map(result.moves.map(m => [m.file, m]));
+  const renamed = path => moved.get(path)?.to ?? path;
+  const moduleOf = i => moved.get(doc.files[i].path)?.module ?? doc.files[i].module;
   const verdicts = new Map();
   for (const edge of result.after.verdicts) {
     const key = JSON.stringify([edge.from, edge.to]), old = verdicts.get(key);
@@ -255,13 +335,15 @@ function whatifTip(h) {
     const module = mods[h.i], metrics = whatifResult.after.modules[module.id];
     return [module.id, "Move preview: " + HEALTH_TEXT[modSignal[h.i]], metrics ? `imported by ${metrics.ca}; imports ${metrics.ce}; instability ${fmt(metrics.instability)}` : "Module disappears in the preview."];
   }
-  if (h.type === "file") return [files[h.i].path, "Preview module: " + (h.i === whatifSaved.i ? whatifResult.move.module : doc.files[h.i].module)];
+  if (h.type === "file") return [files[h.i].path, "Preview module: " + (whatifResult.moves.find(m => m.file === doc.files[h.i].path)?.module ?? doc.files[h.i].module)];
   return ["Move preview", "Use the preview panel for current cycle and rule findings."];
 }
 $("whatif-toggle").addEventListener("click", () => setWhatifMode(!whatifMode));
 $("whatif-close").addEventListener("click", () => setWhatifMode(false));
-$("whatif-clear").addEventListener("click", clearWhatif);
+$("whatif-clear").addEventListener("click", whatifClearAll);
+whatifUI.add.addEventListener("click", whatifAdd);
 $("whatif-form").addEventListener("submit", event => { event.preventDefault(); runWhatif(); });
 whatifUI.graph.addEventListener("input", whatifCommands);
 $("whatif-copy-cli").addEventListener("click", () => whatifCopy(whatifUI.cli));
 $("whatif-copy-git").addEventListener("click", () => whatifCopy(whatifUI.git));
+$("whatif-copy-rules").addEventListener("click", () => whatifCopy(whatifUI.rules));

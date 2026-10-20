@@ -7278,6 +7278,617 @@
     }
   },
   {
+    "name": "chained-moves-with-rules",
+    "document": {
+      "schema": "archgraph/v1.2",
+      "kind": "scan",
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "source": {
+        "language": "typescript",
+        "collector": {
+          "name": "fixture",
+          "version": null,
+          "cruised": 0
+        },
+        "git": null,
+        "generated_at": "2026-10-18T00:00:00Z"
+      },
+      "config": {
+        "depth": 1,
+        "source_root": ".",
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "doc": {
+            "version": 1,
+            "modules": [],
+            "layers": [
+              "domain/**",
+              "app/**"
+            ],
+            "public": [],
+            "forbid": [
+              {
+                "id": "no-infra",
+                "from": "domain/**",
+                "to": "infra/**",
+                "reachable": false,
+                "reason": null
+              }
+            ],
+            "allow": []
+          }
+        }
+      },
+      "files": [
+        {
+          "path": "app/helper.ts",
+          "module": "app",
+          "barrel": false
+        },
+        {
+          "path": "app/view.ts",
+          "module": "app",
+          "barrel": false
+        },
+        {
+          "path": "domain/model.ts",
+          "module": "domain",
+          "barrel": false
+        },
+        {
+          "path": "infra/db.ts",
+          "module": "infra",
+          "barrel": false
+        }
+      ],
+      "edges": [
+        {
+          "from": "app/helper.ts",
+          "to": "domain/model.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "allowed",
+          "rule": "layers"
+        },
+        {
+          "from": "app/view.ts",
+          "to": "domain/model.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "allowed",
+          "rule": "layers"
+        },
+        {
+          "from": "domain/model.ts",
+          "to": "app/helper.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "forbidden",
+          "rule": "layers"
+        },
+        {
+          "from": "domain/model.ts",
+          "to": "infra/db.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "forbidden",
+          "rule": "no-infra"
+        }
+      ],
+      "package_entries": [],
+      "modules": [
+        {
+          "id": "app",
+          "files": 2,
+          "ca": 1,
+          "ce": 1,
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 2,
+          "cohesion": 0.0,
+          "outgoing_to": {
+            "domain": 2
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 2.0,
+          "weighted_outgoing_to": {
+            "domain": 2.0
+          }
+        },
+        {
+          "id": "domain",
+          "files": 1,
+          "ca": 1,
+          "ce": 2,
+          "instability": 0.6667,
+          "internal_edges": 0,
+          "outgoing_edges": 2,
+          "cohesion": 0.0,
+          "outgoing_to": {
+            "app": 1,
+            "infra": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 2.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 2.0,
+          "weighted_outgoing_to": {
+            "app": 1.0,
+            "infra": 1.0
+          }
+        },
+        {
+          "id": "infra",
+          "files": 1,
+          "ca": 1,
+          "ce": 0,
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "cohesion": null,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "module_edges": [
+        {
+          "from": "app",
+          "to": "domain",
+          "imports": 2,
+          "forbidden": 0
+        },
+        {
+          "from": "domain",
+          "to": "app",
+          "imports": 1,
+          "forbidden": 1
+        },
+        {
+          "from": "domain",
+          "to": "infra",
+          "imports": 1,
+          "forbidden": 1
+        }
+      ],
+      "cycles": [
+        {
+          "level": "module",
+          "members": [
+            "app",
+            "domain"
+          ],
+          "exact": true,
+          "break": [
+            {
+              "from": "domain/model.ts",
+              "to": "app/helper.ts"
+            }
+          ],
+          "two_way": [
+            {
+              "from": "app",
+              "to": "domain",
+              "imports": 2,
+              "reverse_imports": 1,
+              "even": true,
+              "edges": [
+                {
+                  "from": "app/helper.ts",
+                  "to": "domain/model.ts"
+                },
+                {
+                  "from": "app/view.ts",
+                  "to": "domain/model.ts"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "type_only_cycles": [],
+      "summary": {
+        "forbidden": 2,
+        "unplanned": 0,
+        "cycles": 1,
+        "type_only_cycles": 0,
+        "modules": {
+          "app": {
+            "cohesion": 0.0,
+            "ca": 1,
+            "ce": 1,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0,
+            "instability": 0.5
+          },
+          "domain": {
+            "cohesion": 0.0,
+            "ca": 1,
+            "ce": 2,
+            "weighted_ca": 1.0,
+            "weighted_ce": 2.0,
+            "instability": 0.6667
+          },
+          "infra": {
+            "cohesion": null,
+            "ca": 1,
+            "ce": 0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0,
+            "instability": 0.0
+          }
+        }
+      },
+      "findings": [
+        {
+          "finding_id": "ag-00afc1e99f054d76294e50ca939648e8ad1b7c850603fa696bb1635731142bfb",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "cut_import",
+                "file": "app/helper.ts",
+                "from": "app/helper.ts",
+                "to": "domain/model.ts",
+                "detail": {
+                  "operation": "remove_import",
+                  "target": "domain/model.ts",
+                  "specifier": null,
+                  "edge_kind": "runtime",
+                  "original_to": null
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "absent_edges": [
+                  {
+                    "from": "app/helper.ts",
+                    "to": "domain/model.ts"
+                  }
+                ],
+                "scope": [
+                  "app",
+                  "domain"
+                ]
+              }
+            },
+            "confidence": "low",
+            "risk_notes": [
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
+              "Both dependency directions are balanced; neither side is architecturally preferred. Confirm this cut preserves behavior before applying."
+            ]
+          },
+          "kind": "cycle",
+          "subject": "app, domain",
+          "evidence": {
+            "level": "module",
+            "members": [
+              "app",
+              "domain"
+            ],
+            "exact": true,
+            "break": [
+              {
+                "from": "domain/model.ts",
+                "to": "app/helper.ts"
+              }
+            ],
+            "two_way": [
+              {
+                "from": "app",
+                "to": "domain",
+                "imports": 2,
+                "reverse_imports": 1,
+                "even": true,
+                "edges": [
+                  {
+                    "from": "app/helper.ts",
+                    "to": "domain/model.ts"
+                  },
+                  {
+                    "from": "app/view.ts",
+                    "to": "domain/model.ts"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "finding_id": "ag-8e0bc2bd77599d105fa5435aaa451b567d1657fa97e29335f9b6dd35eaefcd01",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "cut_import",
+                "file": "domain/model.ts",
+                "from": "domain/model.ts",
+                "to": "app/helper.ts",
+                "detail": {
+                  "operation": "remove_import",
+                  "target": "app/helper.ts",
+                  "specifier": null,
+                  "edge_kind": "runtime",
+                  "original_to": null
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "absent_edges": [
+                  {
+                    "from": "domain/model.ts",
+                    "to": "app/helper.ts"
+                  }
+                ]
+              }
+            },
+            "confidence": "medium",
+            "risk_notes": [
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing."
+            ]
+          },
+          "kind": "forbidden-edge",
+          "subject": "domain/model.ts → app/helper.ts",
+          "evidence": {
+            "edge": {
+              "from": "domain/model.ts",
+              "to": "app/helper.ts",
+              "kind": "runtime",
+              "weight": 1.0,
+              "verdict": "forbidden",
+              "rule": "layers"
+            }
+          }
+        },
+        {
+          "finding_id": "ag-cd3ef4c4595282f9bdd37619c7958a7def394b2dec746d4e4c05d98cb690f67a",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "cut_import",
+                "file": "domain/model.ts",
+                "from": "domain/model.ts",
+                "to": "infra/db.ts",
+                "detail": {
+                  "operation": "remove_import",
+                  "target": "infra/db.ts",
+                  "specifier": null,
+                  "edge_kind": "runtime",
+                  "original_to": null
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "absent_edges": [
+                  {
+                    "from": "domain/model.ts",
+                    "to": "infra/db.ts"
+                  }
+                ]
+              }
+            },
+            "confidence": "medium",
+            "risk_notes": [
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing."
+            ]
+          },
+          "kind": "forbidden-edge",
+          "subject": "domain/model.ts → infra/db.ts",
+          "evidence": {
+            "edge": {
+              "from": "domain/model.ts",
+              "to": "infra/db.ts",
+              "kind": "runtime",
+              "weight": 1.0,
+              "verdict": "forbidden",
+              "rule": "no-infra"
+            }
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "finding": {
+            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "kind": "small-repo",
+            "subject": ".",
+            "evidence": {
+              "files": 4,
+              "modules": 3
+            }
+          },
+          "reason": "Evidence does not determine a safe, concrete graph edit; inspect its evidence before changing architecture."
+        }
+      ],
+      "cochange": null
+    },
+    "move": [
+      {
+        "file": "app/helper.ts",
+        "to": "domain/helper.ts"
+      },
+      {
+        "file": "infra/db.ts",
+        "to": "domain/store/db.ts"
+      }
+    ],
+    "before": {
+      "cycles": [
+        {
+          "level": "module",
+          "members": [
+            "app",
+            "domain"
+          ]
+        }
+      ],
+      "two_way_pairs": [
+        [
+          "app",
+          "domain"
+        ]
+      ],
+      "largest_cycle": 2,
+      "modules": {
+        "app": {
+          "cohesion": 0.0,
+          "ca": 1,
+          "ce": 1,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "instability": 0.5
+        },
+        "domain": {
+          "cohesion": 0.0,
+          "ca": 1,
+          "ce": 2,
+          "weighted_ca": 1.0,
+          "weighted_ce": 2.0,
+          "instability": 0.6667
+        },
+        "infra": {
+          "cohesion": null,
+          "ca": 1,
+          "ce": 0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "instability": 0.0
+        }
+      },
+      "forbidden": 2,
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "app/helper.ts",
+          "to": "domain/model.ts",
+          "verdict": "allowed",
+          "rule": "layers",
+          "kind": "runtime"
+        },
+        {
+          "from": "app/view.ts",
+          "to": "domain/model.ts",
+          "verdict": "allowed",
+          "rule": "layers",
+          "kind": "runtime"
+        },
+        {
+          "from": "domain/model.ts",
+          "to": "app/helper.ts",
+          "verdict": "forbidden",
+          "rule": "layers",
+          "kind": "runtime"
+        },
+        {
+          "from": "domain/model.ts",
+          "to": "infra/db.ts",
+          "verdict": "forbidden",
+          "rule": "no-infra",
+          "kind": "runtime"
+        }
+      ]
+    },
+    "after": {
+      "cycles": [
+        {
+          "level": "file",
+          "members": [
+            "domain/helper.ts",
+            "domain/model.ts"
+          ]
+        }
+      ],
+      "two_way_pairs": [],
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "cohesion": 0.0,
+          "ca": 0,
+          "ce": 1,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "instability": 1.0
+        },
+        "domain": {
+          "cohesion": 1.0,
+          "ca": 1,
+          "ce": 0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "instability": 0.0
+        }
+      },
+      "forbidden": 0,
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "app/view.ts",
+          "to": "domain/model.ts",
+          "verdict": "allowed",
+          "rule": "layers",
+          "kind": "runtime"
+        },
+        {
+          "from": "domain/helper.ts",
+          "to": "domain/model.ts",
+          "verdict": "allowed",
+          "rule": "layers",
+          "kind": "runtime"
+        },
+        {
+          "from": "domain/model.ts",
+          "to": "domain/helper.ts",
+          "verdict": "allowed",
+          "rule": "layers",
+          "kind": "runtime"
+        },
+        {
+          "from": "domain/model.ts",
+          "to": "domain/store/db.ts",
+          "verdict": "allowed",
+          "rule": "layers",
+          "kind": "runtime"
+        }
+      ]
+    }
+  },
+  {
     "name": "grabbag-refinement-needs-cli",
     "document": {
       "schema": "archgraph/v1.2",

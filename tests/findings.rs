@@ -204,6 +204,56 @@ fn simulate_cli_destination_decides_layer() {
         m(json!(0.0), 3, 2, json!(0.4))
     );
 
+    // Repeated --move applies both moves together: the first move's fix and the second move's
+    // layer violation, with the cycle the second one closes through adapters/in.
+    let (both, code) = run_json(&[
+        "simulate",
+        &embedded,
+        "--move",
+        "src/adapters/out/queue.ts",
+        "src/adapters/in/queue.ts",
+        "--move",
+        "src/domain/rules.ts",
+        "src/adapters/in/rules.ts",
+    ]);
+    assert_eq!(code, Some(0));
+    assert_eq!(
+        both["move"],
+        json!({ "file": "src/adapters/out/queue.ts", "to": "src/adapters/in/queue.ts", "module": "adapters/in" })
+    );
+    assert_eq!(
+        both["moves"],
+        json!([
+            { "file": "src/adapters/out/queue.ts", "to": "src/adapters/in/queue.ts", "module": "adapters/in" },
+            { "file": "src/domain/rules.ts", "to": "src/adapters/in/rules.ts", "module": "adapters/in" } ])
+    );
+    let counts = |s: &Value| (s["forbidden"].clone(), s["cycles"].clone());
+    assert_eq!(counts(&both["before"]), (json!(3), json!(1)));
+    assert_eq!(counts(&both["after"]), (json!(3), json!(1)));
+    let edges = |v: &Value| {
+        v.as_array()
+            .unwrap()
+            .iter()
+            .map(|e| (e["from"].clone(), e["to"].clone(), e["rule"].clone()))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        edges(&both["new_forbidden"]),
+        [(
+            json!("src/domain/user.ts"),
+            json!("src/adapters/in/rules.ts"),
+            json!("layers")
+        )]
+    );
+    assert_eq!(
+        edges(&both["removed_forbidden"]),
+        [(
+            json!("src/adapters/out/queue.ts"),
+            json!("src/adapters/in/cli.ts"),
+            json!("forbid[1]")
+        )]
+    );
+
     let out = archgraph(&["simulate", &plain, "--move", "src/nope.ts", "src/x.ts"]);
     assert_eq!(out.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&out.stderr).contains("src/nope.ts"));
