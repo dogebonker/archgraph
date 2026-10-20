@@ -90,7 +90,7 @@ fn py_cycles_mapping_barrels_and_cycle() {
     assert_eq!(
         doc["cycles"],
         json!([
-            { "level": "module", "members": ["core", "db"], "exact": true,
+            { "level": "module", "members": ["core", "db"], "exact": true, "grouping": true,
               "break": [{ "from": "mypkg/db/repo.py", "to": "mypkg/core/__init__.py" }],
               "two_way": [{ "from": "core", "to": "db", "imports": 2, "reverse_imports": 1,
                             "even": true,

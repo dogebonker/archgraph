@@ -136,7 +136,7 @@ pub(crate) fn cycles_with_budget<'a>(
     let all: Vec<&Edge> = edges.into_iter().collect();
     let wiring = wiring(|p| module_of[p].as_str(), all.iter().copied());
     // A file nobody imports is an entry point build config names, and an index is its module's
-    // entry: neither is a move to propose.
+    // entry: neither is a move to propose, unless the entry point holds a grouping cycle's break.
     let imported: BTreeSet<&str> = all.iter().map(|e| e.to.as_str()).collect();
     let edges: Vec<&Edge> = all.into_iter().filter(|e| e.kind.is_runtime()).collect();
     let edges = edges.as_slice();
@@ -199,7 +199,7 @@ pub(crate) fn cycles_with_budget<'a>(
             .iter()
             .map(|&i| (weighted[i].0, weighted[i].1))
             .collect();
-        let break_set = edges
+        let break_set: Vec<Link> = edges
             .iter()
             .filter(|e| removed.contains(&(module_of[&e.from].as_str(), module_of[&e.to].as_str())))
             .map(|e| Link {
@@ -207,6 +207,25 @@ pub(crate) fn cycles_with_budget<'a>(
                 to: e.to.clone(),
             })
             .collect();
+        // No file cycle among the members' files spans two members: the cycle comes only from
+        // files sharing a module, and a break-set file nobody imports may move out.
+        let member: BTreeSet<&str> = members.iter().copied().collect();
+        let inside: Vec<(&str, &str)> = edges
+            .iter()
+            .filter(|e| {
+                member.contains(module_of[&e.from].as_str())
+                    && member.contains(module_of[&e.to].as_str())
+            })
+            .map(|e| (e.from.as_str(), e.to.as_str()))
+            .collect();
+        let grouping = components(&inside).iter().all(|c| {
+            c.iter()
+                .map(|f| module_of[*f].as_str())
+                .collect::<BTreeSet<_>>()
+                .len()
+                < 2
+        });
+        let breaking: BTreeSet<&str> = break_set.iter().map(|l| l.from.as_str()).collect();
         let pairs = two_way(module_of, edges, &imports, &sides, &members);
         // One registrar forming the other side of several pairs: moving it out of its module
         // opens them all.
@@ -217,7 +236,7 @@ pub(crate) fn cycles_with_budget<'a>(
             if let ([file], Side::Registry) = (
                 files.into_iter().collect::<Vec<_>>().as_slice(),
                 sides[&back],
-            ) && imported.contains(file)
+            ) && (imported.contains(file) || grouping && breaking.contains(file))
                 && !crate::modules::is_index(file.rsplit('/').next().unwrap_or(file))
             {
                 by_registrar.entry(file).or_default().push(p.from.clone());
@@ -237,12 +256,14 @@ pub(crate) fn cycles_with_budget<'a>(
                     pairs_removed: None,
                     cycle_before: None,
                     cycle_after: None,
+                    entrypoint: !imported.contains(file),
                 }
             })
             .collect();
         cycles.push(Cycle {
             level: CycleLevel::Module,
             two_way: Some(pairs),
+            grouping: Some(grouping),
             registrar_moves,
             members: owned(&members),
             exact,
@@ -277,6 +298,7 @@ pub(crate) fn cycles_with_budget<'a>(
             exact,
             break_set,
             two_way: None,
+            grouping: None,
             registrar_moves: Vec::new(),
         });
     }

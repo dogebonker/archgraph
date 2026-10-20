@@ -289,6 +289,11 @@ fn summary(
                     t.imports == 1 && !t.registry && !t.entry && !t.even && !t.resolved_by_move
                 })
             };
+            let module_of: BTreeMap<&str, &str> = doc
+                .files
+                .iter()
+                .map(|f| (f.path.as_str(), f.module.as_str()))
+                .collect();
             let mut trailing = String::new();
             for c in &module_cycles {
                 for r in &c.registrar_moves {
@@ -312,11 +317,43 @@ fn summary(
                         (Some(b), Some(a)) => format!("the cycle goes from {b} to {a} modules"),
                         _ => String::new(),
                     };
+                    if c.grouping == Some(true) {
+                        // Files of the moved file's module that the other members import.
+                        let mut shared: Vec<&str> = doc
+                            .edges
+                            .iter()
+                            .filter(|e| {
+                                e.kind.is_runtime()
+                                    && module_of.get(e.to.as_str()) == Some(&r.module.as_str())
+                            })
+                            .filter(|e| {
+                                module_of.get(e.from.as_str()).is_some_and(|&from| {
+                                    from != r.module && c.members.iter().any(|m| m == from)
+                                })
+                            })
+                            .map(|e| e.to.as_str())
+                            .collect();
+                        shared.sort();
+                        shared.dedup();
+                        shared.truncate(3);
+                        *out += &format!(
+                            "  cycle comes from grouping: no file-level cycle; {} shares {} with {}\n",
+                            r.file,
+                            r.module,
+                            shared.join(", ")
+                        );
+                    }
                     *out += &format!(
                         "  move {} to {to}: removes {}; {cycle}; no new cycle\n",
                         r.file,
                         count(removed as usize, "two-way pair")
                     );
+                    if r.entrypoint {
+                        *out += &format!(
+                            "  nothing imports {}: update deploy and config references to its path\n",
+                            r.file
+                        );
+                    }
                 }
             }
             let lightest = module_cycles

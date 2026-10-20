@@ -188,9 +188,9 @@ fn ts_cycles_with_minimum_break_sets() {
     assert_eq!(
         doc["cycles"],
         json!([
-            { "level": "module", "members": ["a", "b", "c"], "exact": true,
+            { "level": "module", "members": ["a", "b", "c"], "exact": true, "grouping": false,
               "break": [{ "from": "src/c/z.ts", "to": "src/a/x.ts" }], "two_way": [] },
-            { "level": "module", "members": ["d", "e"], "exact": true,
+            { "level": "module", "members": ["d", "e"], "exact": true, "grouping": false,
               "break": [{ "from": "src/e/n.ts", "to": "src/d/m.ts" }],
               "two_way": [{ "from": "d", "to": "e", "imports": 2, "reverse_imports": 1, "even": true,
                             "edges": [{ "from": "src/d/m.ts", "to": "src/e/n.ts" },
@@ -718,7 +718,7 @@ fn file_cycle_inside_a_module_is_reported_alongside_a_module_cycle() {
     assert_eq!(
         doc["cycles"],
         json!([
-            { "level": "module", "members": ["x", "y"], "exact": true,
+            { "level": "module", "members": ["x", "y"], "exact": true, "grouping": false,
               "break": [{ "from": "x/a.ts", "to": "y/c.ts" }],
               "two_way": [{ "from": "x", "to": "y", "imports": 1, "reverse_imports": 1, "even": true,
                             "edges": [{ "from": "x/a.ts", "to": "y/c.ts" }] }] },
@@ -824,7 +824,7 @@ fn break_sets_and_two_way_pairs_count_runtime_imports_only() {
     ]);
     assert_eq!(
         doc["cycles"],
-        json!([{ "level": "module", "members": ["a", "b"], "exact": true,
+        json!([{ "level": "module", "members": ["a", "b"], "exact": true, "grouping": false,
                  "break": [{ "from": "a/x.ts", "to": "b/y.ts" }],
                  "two_way": [{ "from": "a", "to": "b", "imports": 1, "reverse_imports": 3,
                                "edges": [{ "from": "a/x.ts", "to": "b/y.ts" }] }] }])
@@ -912,13 +912,13 @@ fn a_cycle_is_never_cut_at_an_entry_re_export() {
             "--all-kinds",
         ]);
         let expected = if published {
-            json!([{ "level": "module", "members": ["a", "b"], "exact": true,
+            json!([{ "level": "module", "members": ["a", "b"], "exact": true, "grouping": true,
                      "break": [{ "from": "b/y.ts", "to": "a/k.ts" }, { "from": "b/z.ts", "to": "a/k.ts" }],
                      "two_way": [{ "from": "b", "to": "a", "imports": 2, "reverse_imports": 1,
                                    "edges": [{ "from": "b/y.ts", "to": "a/k.ts" },
                                              { "from": "b/z.ts", "to": "a/k.ts" }] }] }])
         } else {
-            json!([{ "level": "module", "members": ["a", "b"], "exact": true,
+            json!([{ "level": "module", "members": ["a", "b"], "exact": true, "grouping": true,
                      "break": [{ "from": "a/index.ts", "to": "b/x.ts" }],
                      "two_way": [{ "from": "a", "to": "b", "imports": 1, "reverse_imports": 2,
                                    "edges": [{ "from": "a/index.ts", "to": "b/x.ts" }] }] }])
@@ -1303,7 +1303,8 @@ fn a_fan_out_registrar_side_is_not_the_cut() {
                  "cycle_before": 6, "cycle_after": 0 }])
     );
 
-    // A file nobody imports is an entry point build config names: never proposed for a move.
+    // A file nobody imports is an entry point build config names: proposed for a move only when
+    // the cycle comes from grouping (no file cycle), and flagged.
     let edges: Vec<(String, String)> = edges
         .into_iter()
         .filter(|(f, _)| f != "app/use.ts")
@@ -1318,6 +1319,27 @@ fn a_fan_out_registrar_side_is_not_the_cut() {
         "--rules",
         &rules,
     ]);
+    assert_eq!(doc["cycles"][0]["grouping"], true);
+    assert_eq!(
+        doc["cycles"][0]["registrar_moves"][0]["entrypoint"], true,
+        "{:#}",
+        doc["cycles"][0]
+    );
+    // driver/base.ts importing driver/pg/b.ts closes a file cycle across two members: not
+    // grouping, and the entry point stays out.
+    let mut cyclic = edges.clone();
+    cyclic.push(("driver/base.ts".to_owned(), "driver/pg/b.ts".to_owned()));
+    let (dir, input) = synthetic("fan-out-entry-cycle", cyclic.len() + 2, &cyclic);
+    let (doc, _, _) = scan(&[
+        &dir,
+        "--collector-input",
+        &input,
+        "--language",
+        "typescript",
+        "--rules",
+        &rules,
+    ]);
+    assert_eq!(doc["cycles"][0]["grouping"], false);
     assert!(
         doc["cycles"][0].get("registrar_moves").is_none(),
         "{:#}",
@@ -1403,25 +1425,37 @@ fn report_on_a_composition_root_in_a_shared_folder() {
         ]);
         (doc, stdout + &stderr)
     };
-    // The break set, not the lightest pair a/api -> app: every import to cut is main.ts's.
-    let (_, stdout) = report_of("composition-root", &edges);
-    assert!(
-        stdout.contains("  break the 4-module cycle: cut 3 imports from app/main.ts (3)\n"),
-        "{stdout}"
+    let (doc, stdout) = report_of("composition-root", &edges);
+    let cycle = &doc["cycles"][0];
+    assert_eq!(cycle["grouping"], true, "{cycle:#}");
+    assert_eq!(
+        cycle["registrar_moves"],
+        json!([{ "file": "app/main.ts", "module": "app", "pairs": 3,
+                 "with": ["a/api", "b/api", "c/api"], "to": "app/main/main.ts",
+                 "pairs_removed": 3, "cycle_before": 4, "cycle_after": 0, "entrypoint": true }])
     );
-    assert!(!stdout.contains("lightest two-way cut"), "{stdout}");
+    for line in [
+        "  cycle comes from grouping: no file-level cycle; app/main.ts shares app with app/deps.ts, app/routing.ts\n  move app/main.ts to app/main/main.ts: removes 3 two-way pairs; the 4-module cycle goes; no new cycle\n",
+        "  nothing imports app/main.ts: update deploy and config references to its path\n",
+    ] {
+        assert!(stdout.contains(line), "{line:?} missing from\n{stdout}");
+    }
+    assert!(!stdout.contains("break the"), "{stdout}");
 
-    // app/deps.ts importing a/api/x.ts closes a file cycle across modules: the break set is
-    // grouped by importing file.
+    // app/deps.ts importing a/api/x.ts closes a file cycle across modules: no grouping, no move,
+    // and the report shows the break set grouped by importing file.
     let mut cyclic = edges.clone();
     cyclic.push(("app/deps.ts".to_owned(), "a/api/x.ts".to_owned()));
-    let (_, stdout) = report_of("composition-root-cycle", &cyclic);
+    let (doc, stdout) = report_of("composition-root-cycle", &cyclic);
+    assert_eq!(doc["cycles"][0]["grouping"], false);
+    assert!(doc["cycles"][0].get("registrar_moves").is_none());
     assert!(
         stdout.contains(
             "  break the 4-module cycle: cut 4 imports from a/api/x.ts (2), app/main.ts (2)\n"
         ),
         "{stdout}"
     );
+    assert!(!stdout.contains("comes from grouping"), "{stdout}");
 
     // 17 modules in a ring, plus one lighter pair: over 16 module edges the break set is a
     // heuristic, and the report says so.

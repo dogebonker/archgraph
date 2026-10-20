@@ -2055,8 +2055,12 @@
             "$ref": "#/$defs/link"
           }
         },
+        "grouping": {
+          "description": "Module cycles only: true when no file cycle among the members' files (over the same import kinds) holds files of two or more members, so the cycle comes only from files sharing a module.",
+          "type": "boolean"
+        },
         "registrar_moves": {
-          "description": "Module cycles only, absent when empty: registrars (files wiring many modules, imported by at least one file) whose imports alone form the other side of 3 or more two-way pairs, each with a simulated move that adds no new cycle; with lists the other modules of those pairs. A file nobody imports, or an index file, is never listed.",
+          "description": "Module cycles only, absent when empty: registrars (files wiring many modules, imported by at least one file) whose imports alone form the other side of 3 or more two-way pairs, each with a simulated move that adds no new cycle; with lists the other modules of those pairs. A file nobody imports is listed only when the cycle is grouping and the file is in its break set (entrypoint); an index file is never listed.",
           "type": "array",
           "items": {
             "type": "object",
@@ -2098,6 +2102,10 @@
               "cycle_after": {
                 "description": "Modules in the cycle holding module after the move, 0 when it is in none.",
                 "$ref": "#/$defs/count"
+              },
+              "entrypoint": {
+                "description": "Present and true when nothing imports file: an entry point whose deploy and config references follow the move.",
+                "const": true
               }
             }
           }

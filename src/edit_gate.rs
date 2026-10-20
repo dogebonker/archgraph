@@ -229,6 +229,7 @@ mod tests {
             exact: true,
             break_set: vec![],
             two_way: None,
+            grouping: None,
             registrar_moves: vec![],
         }
     }

@@ -35,7 +35,7 @@ fn diff_shows_a_resolved_cycle() {
     assert!(diff["old"]["generated_at"].is_string() && diff["new"]["generated_at"].is_string());
     assert_eq!(
         diff["resolved_cycles"],
-        json!([{ "level": "module", "members": ["a", "b", "c"], "exact": true,
+        json!([{ "level": "module", "members": ["a", "b", "c"], "exact": true, "grouping": false,
                  "break": [{ "from": "src/c/z.ts", "to": "src/a/x.ts" }], "two_way": [] }])
     );
     assert_eq!(diff["new_cycles"], json!([]));

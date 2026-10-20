@@ -145,7 +145,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "grouping": true
         }
       ],
       "type_only_cycles": [],
@@ -207,7 +208,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "grouping": true
             }
           },
           "reason": "Folder dependencies alone do not establish a policy violation or an import to remove. Inspect concrete cyclic file/package imports and declared architecture before changing wiring."
@@ -468,7 +470,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "grouping": false
         }
       ],
       "type_only_cycles": [],
@@ -572,7 +575,8 @@
                   }
                 ]
               }
-            ]
+            ],
+            "grouping": false
           }
         }
       ],
@@ -1423,7 +1427,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "grouping": true
         }
       ],
       "type_only_cycles": [
@@ -1498,7 +1503,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "grouping": true
             }
           },
           "reason": "Folder dependencies alone do not establish a policy violation or an import to remove. Inspect concrete cyclic file/package imports and declared architecture before changing wiring."
@@ -3037,7 +3043,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "grouping": false
         }
       ],
       "type_only_cycles": [],
@@ -3141,7 +3148,8 @@
                   }
                 ]
               }
-            ]
+            ],
+            "grouping": false
           }
         }
       ],
@@ -3472,7 +3480,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "grouping": true
         }
       ],
       "type_only_cycles": [],
@@ -3733,7 +3742,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "grouping": true
             }
           },
           "reason": "Folder dependencies alone do not establish a policy violation or an import to remove. Inspect concrete cyclic file/package imports and declared architecture before changing wiring."

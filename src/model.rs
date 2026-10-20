@@ -478,6 +478,10 @@ pub struct Cycle {
     /// Module cycles only: every pair of members importing each other, as its lighter direction.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub two_way: Option<Vec<TwoWay>>,
+    /// Module cycles only: no file cycle among the members' files spans two members, so the
+    /// cycle comes only from files sharing a module.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub grouping: Option<bool>,
     /// Module cycles only: registrars that alone form the other side of several two-way pairs.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub registrar_moves: Vec<RegistrarMove>,
@@ -509,6 +513,9 @@ pub struct RegistrarMove {
     pub cycle_before: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cycle_after: Option<usize>,
+    /// Nothing imports `file`: an entry point, listed only for a `grouping` cycle.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub entrypoint: bool,
 }
 
 impl RegistrarMove {
@@ -884,6 +891,7 @@ mod tests {
             pairs_removed: Some(removed),
             cycle_before: Some(before),
             cycle_after: Some(after),
+            entrypoint: false,
         }
     }
 
