@@ -34,6 +34,7 @@ function setup(name = 'cut-module-cycle') {
   const fileIndex = new Map(files.map(f => [f.path, f.i]));
   const edges = doc.edges.map((e, i) => ({ ...e, i, a: fileIndex.get(e.from), b: fileIndex.get(e.to) }));
   const context = vm.createContext({ doc, mods, modIndex, files, fileIndex, edges, mx, my, lx, ly,
+    scanDirs: new Set(doc.files.flatMap(f => f.path.split('/').slice(0, -1).map((_, k, parts) => parts.slice(0, k + 1).join('/')))),
     modRoot: mods.map(m => m.id + '/'), N: mods.length,
     modR: mods.map(() => 30), modSignal: mods.map(() => 'cycle'), modHealth: mods.map(() => 'amber'),
     R_DOT: 2.6, SP: 10, fileRoom: () => 24, sunflower: () => [{x:10,y:10}],

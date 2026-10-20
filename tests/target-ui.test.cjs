@@ -47,6 +47,9 @@ function setup(doc) {
   const panel = node(), targets = [], linked = [];
   const ctx = vm.createContext({ document: { createElement: node, createTextNode: text => ({ textContent: text }) },
     doc, panel, short: x => x, go: t => targets.push(t),
+    dirname: p => p.slice(0, Math.max(0, p.lastIndexOf('/'))),
+    mx: [0], my: [0], modR: [30], files: [{ mod: 0 }, { mod: 0 }], SP: 10, R_DOT: 2.6, GAP: 34,
+    scanDirs: new Set(['internal', 'internal/sop']), destination: to => (to === 'internal/sop/h.go' ? [7, 8] : [9, 9]),
     fileIndex: new Map([['internal/sop/handler.go', 0], ['internal/sop/repository.go', 1]]),
     edgeOf: l => { linked.push(l); return l.to === evil ? undefined : 7; } });
   vm.runInContext(fragment('/* Every piece of document text', '/* ---------- header'), ctx);
@@ -102,6 +105,28 @@ test('a move row shows files, import lines, names and new cycles, and selects it
   assert.deepEqual([...t.fs], [0]);
   assert.deepEqual([...t.fe], [7]);
 });
+test('selecting a move to a new folder places one empty disc beside the module its files leave', () => {
+  const { ctx, panel, targets } = setup({ target: target() });
+  vm.runInContext('targetContext()', ctx);
+  const row = descendants(panel).find(n => n.listeners?.toggle && n.children?.[0]?.textContent?.startsWith('sop · '));
+  open(row);
+  click(row);
+  const moves = targets.at(-1).moves;
+  assert.equal(moves.length, 1);
+  const [mv] = moves;
+  assert.equal(mv.file, 0);
+  assert.equal(mv.to, 'internal/sop/handler/handler.go');
+  assert.equal(mv.note, 'new folder internal/sop/handler/');
+  assert.equal(+mv.r.toFixed(6), 9.2);
+  assert.deepEqual(Array.from(mv.at, v => +v.toFixed(6)), [56.2, 0]);
+});
+test('a move to an existing folder points at its files, one label per folder', () => {
+  const { ctx } = setup({ target: target() });
+  ctx.m = { files: [{ file: 'internal/sop/handler.go', to: 'internal/sop/h.go' }, { file: 'internal/sop/repository.go', to: 'internal/sop/r.go' }] };
+  const moves = vm.runInContext('targetMoves(m)', ctx);
+  assert.deepEqual(Array.from(moves, mv => [mv.file, mv.to, [...mv.at], 'r' in mv, mv.note]),
+    [[0, 'internal/sop/h.go', [7, 8], false, 'moves to internal/sop/'], [1, 'internal/sop/r.go', [9, 9], false, null]]);
+});
 test('a document without a target renders nothing', () => {
   const { ctx, panel } = setup({ files: [] });
   vm.runInContext('targetContext()', ctx);
@@ -113,6 +138,8 @@ test('the panel is wired into the overview, selection, zoom and panel routing wi
   assert.match(script, /t\.type === "target"\) targetPanel\(t\)/);
   assert.match(script, /t\.type === "target"\) zoomToFinding\(/);
   assert.match(fragment('function applyFocus()', '/* ---------- canvas, view'), /t\.type === "target"/);
+  assert.match(fragment('function applyFocus()', '/* ---------- canvas, view'), /overlay = \{ moves: t\.moves \|\| \[\], links: \[\] \}/);
+  assert.match(script, /t\.type === "target"\) zoomToFinding\(\{ fs: t\.fs, ms: \[\], moves: t\.moves \|\| \[\] \}\)/);
   assert.doesNotThrow(() => new vm.Script(script));
 });
 test('rules holding only claims leave undecided imports unflagged', () => {

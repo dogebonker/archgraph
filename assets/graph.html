@@ -823,6 +823,7 @@ const files = doc.files.map((f, i) => ({ i, path: f.path, name: basename(f.path)
   barrel: f.barrel, owners: f.owners || [], x: 0, y: 0, ins: [], outs: [] }));
 const F = files.length;
 const fileIndex = new Map(files.map(f => [f.path, f.i]));
+const scanDirs = new Set(doc.files.flatMap(f => f.path.split("/").slice(0, -1).map((_, k, parts) => parts.slice(0, k + 1).join("/"))));
 /* ---------- external model ---------- */
 const externalNodes = (doc.external_nodes || []).filter(n => n.external && typeof n.package === "string").slice().sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 const externalById = new Map(externalNodes.map((node, i) => [node.id, i]));
@@ -1760,6 +1761,7 @@ function applyFocus() {
   } else if (t.type === "target") {
     for (const j of t.fs) { fileS[j] = S_INV; modS[files[j].mod] = S_INV; }
     for (const e of t.fe) { feS[e] = S_SELF; raise(fileS, edges[e].a, S_NORM); raise(fileS, edges[e].b, S_NORM); if (edges[e].me) meS[edges[e].me.i] = S_SELF; }
+    overlay = { moves: t.moves || [], links: [] };
   }
 }
 
@@ -1946,7 +1948,7 @@ function zoomToTarget(t) {
   else if (t.type === "module") zoomToModule(t.i);
   else if (t.type === "file") zoomToFile(t.i);
   else if (t.type === "finding") zoomToFinding(findings[t.i]);
-  else if (t.type === "target") zoomToFinding({ fs: t.fs, ms: [], moves: [] });
+  else if (t.type === "target") zoomToFinding({ fs: t.fs, ms: [], moves: t.moves || [] });
   else if (t.type === "fedge") {
     const a = files[edges[t.i].a], b = files[edges[t.i].b];
     fitBox(Math.min(a.x, b.x) - 40, Math.min(a.y, b.y) - 40, Math.max(a.x, b.x) + 40, Math.max(a.y, b.y) + 40, K_LABEL * 1.05, true);
@@ -2325,19 +2327,20 @@ function draw() {
   const notes = [];
   ctx.globalAlpha = 1;
   for (const mv of overlay.moves) {
-    const f = files[mv.file], [dx, dy] = mv.at;
+    const f = files[mv.file], [dx, dy] = mv.at, rr = mv.r ?? dotR * 2;
     const G = new Float64Array(6), B = new Float64Array(4);
-    curve(G, B, 0, f.x, f.y, dx, dy, dotR + 3 * px, dotR * 2 + 3 * px, 0.18);
+    curve(G, B, 0, f.x, f.y, dx, dy, dotR + 3 * px, rr + 3 * px, 0.18);
     const L = 9 * px;
     ctx.strokeStyle = C.move; ctx.fillStyle = C.move; ctx.lineWidth = 2.2 * px;
     ctx.setLineDash([6 * px, 4 * px]);
     ctx.beginPath(); ctx.moveTo(G[0], G[1]); ctx.quadraticCurveTo(G[2], G[3], G[4], G[5]); ctx.stroke();
     ctx.setLineDash([]);
     ctx.beginPath(); arrowHead(G[2], G[3], G[4], G[5], L); ctx.fill();
+    if (mv.note === null) continue;
     ctx.setLineDash([2.5 * px, 2.5 * px]);
-    ctx.beginPath(); ctx.arc(dx, dy, dotR * 2, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(dx, dy, rr, 0, TAU); ctx.stroke();
     ctx.setLineDash([]);
-    notes.push([dx, dy, "moves to " + short(mv.to), C.move]);
+    notes.push([dx, dy, mv.note ?? "moves to " + short(mv.to), C.move]);
   }
   for (const [a, b, n] of overlay.links) {
     const p = files[a], q = files[b];
@@ -3980,7 +3983,31 @@ function moveRows(m) {
   if (m.new_cycles?.length) out.push(lazyList(count(m.new_cycles.length, "import in new package cycles", "imports in new package cycles"), () => linkRows(m.new_cycles)));
   return out;
 }
-const moveSel = m => targetSel("Pending move", m.slice, m.files.map(f => f.file), m.new_cycles || [], () => [el("p", {}, moveCost(m)), ...moveRows(m)]);
+/* One map arrow per file of a move. A folder the scan lacks gets an empty disc sized for its files beside the module
+   its first file leaves, fanned away from the map centre; existing discs never move. One label per folder. */
+function targetMoves(m) {
+  const byDir = new Map();
+  for (const f of m.files) {
+    const dir = dirname(f.to), j = fileIndex.get(f.file);
+    if (!byDir.has(dir)) byDir.set(dir, []);
+    if (j !== undefined) byDir.get(dir).push({ file: j, to: f.to });
+  }
+  const fresh = [...byDir.keys()].filter(dir => !scanDirs.has(dir));
+  return [...byDir].flatMap(([dir, moves]) => {
+    const k = fresh.indexOf(dir), note = i => i ? null : (k < 0 ? "moves to " : "new folder ") + dir + "/";
+    if (k < 0) return moves.map(({ file, to }, i) => ({ file, to, get at() { return destination(to); }, note: note(i) }));
+    if (!moves.length) return [];
+    const home = files[moves[0].file].mod, r = SP * 0.56 * Math.sqrt(moves.length) + R_DOT + 1, turn = (k - (fresh.length - 1) / 2) * 0.7;
+    return moves.map(({ file, to }, i) => ({ file, to, r, note: note(i), get at() {
+      let cx = 0, cy = 0;
+      for (let q = 0; q < mx.length; q++) { cx += mx[q] / mx.length; cy += my[q] / mx.length; }
+      const a = Math.atan2(my[home] - cy, mx[home] - cx) + turn, d = modR[home] + GAP / 2 + r;
+      return [mx[home] + d * Math.cos(a), my[home] + d * Math.sin(a)];
+    } }));
+  });
+}
+const moveSel = m => ({ ...targetSel("Pending move", m.slice, m.files.map(f => f.file), m.new_cycles || [], () => [el("p", {}, moveCost(m)), ...moveRows(m)]),
+  moves: targetMoves(m) });
 /* An expandable row whose inside opens with a button selecting it on the map. */
 function targetRow(title, sel, rows) {
   const detail = el("details", { class: "kind" });
