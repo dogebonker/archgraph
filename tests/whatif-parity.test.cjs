@@ -67,6 +67,8 @@ test('braces, glob classes and question marks match supported layout globs',()=>
   const doc=structuredClone(fixtures[0].document);
   doc.config.rules={doc:{version:1,forbid:[{from:'{a,c}/[ot]?e.ts',to:'b/**'}]}};
   assert.equal(preview.analyze(doc).forbidden,1);
+  // A capture may sit inside brace alternation, as an ADR's layered layout writes it.
+  assert.equal(preview.bind('{a/<n>/h*.go,b/<n>/h/*.go}','b/x/h/m.go'),'x');
 });
 
 test('grab-bag fan-in threshold uses rounded Rust metrics',()=>{

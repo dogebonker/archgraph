@@ -358,6 +358,25 @@ fn fixtures() -> Value {
         Some(json!({"version":1,"forbid":[{"id":"negated-separator","from":"src[!a]*.ts","to":"data/**"}]})),
         Ts,
     ));
+    // A layout written for a target: claim reason and source, moves, and a capture inside braces.
+    cases.push(case(
+        "target-layout",
+        &[
+            ("src/a/handler.ts", "src/a/repo.ts", V),
+            ("src/b/handler.ts", "src/shared/id.ts", V),
+            ("src/b/repo.ts", "src/shared/id.ts", V),
+            ("src/app/c/handler/h.ts", "lib/x.ts", V),
+        ],
+        "src/a/handler.ts",
+        "src/app/a/handler/handler.ts",
+        json!({}),
+        Some(json!({"version":1,"layer-reason":"Handlers sit above repositories.",
+            "forbid":[{"id":"layered","from":"{src/<name>/handler*.ts,src/app/<name>/handler/*.ts}",
+                "to":"{src/<name>/repo*.ts,src/app/<name>/repo/*.ts}",
+                "reason":"Handlers reach storage through services.","source":"docs/adr/ADR-0003.md"}],
+            "moves":[{"from":"src/<name>/handler*.ts","to":"src/app/<name>/handler/"},{"from":"lib/x.ts","to":"core/"}]})),
+        Ts,
+    ));
     cases.push(case(
         "test-class-survives-rename",
         &[
@@ -472,6 +491,7 @@ fn map_preview_fixtures_match_rust() {
         ("glob-braces-and-question-mark", 2, 1),
         ("glob-negated-character-classes", 1, 0),
         ("glob-negated-class-matches-separator", 1, 0),
+        ("target-layout", 1, 1),
     ] {
         let case = actual
             .as_array()

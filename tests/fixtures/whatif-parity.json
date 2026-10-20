@@ -6728,6 +6728,580 @@
     }
   },
   {
+    "name": "target-layout",
+    "document": {
+      "schema": "archgraph/v1.2",
+      "kind": "scan",
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "source": {
+        "language": "typescript",
+        "collector": {
+          "name": "fixture",
+          "version": null,
+          "cruised": 0
+        },
+        "git": null,
+        "generated_at": "2026-10-18T00:00:00Z"
+      },
+      "config": {
+        "depth": 1,
+        "source_root": ".",
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "doc": {
+            "version": 1,
+            "modules": [],
+            "layers": [],
+            "layer-reason": "Handlers sit above repositories.",
+            "public": [],
+            "forbid": [
+              {
+                "id": "layered",
+                "from": "{src/<name>/handler*.ts,src/app/<name>/handler/*.ts}",
+                "to": "{src/<name>/repo*.ts,src/app/<name>/repo/*.ts}",
+                "reachable": false,
+                "reason": "Handlers reach storage through services.",
+                "source": "docs/adr/ADR-0003.md"
+              }
+            ],
+            "allow": [],
+            "moves": [
+              {
+                "from": "src/<name>/handler*.ts",
+                "to": "src/app/<name>/handler/"
+              },
+              {
+                "from": "lib/x.ts",
+                "to": "core/"
+              }
+            ]
+          }
+        }
+      },
+      "files": [
+        {
+          "path": "lib/x.ts",
+          "module": "lib",
+          "barrel": false
+        },
+        {
+          "path": "src/a/handler.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/a/repo.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/app/c/handler/h.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/b/handler.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/b/repo.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/shared/id.ts",
+          "module": "src",
+          "barrel": false
+        }
+      ],
+      "edges": [
+        {
+          "from": "src/a/handler.ts",
+          "to": "src/a/repo.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "forbidden",
+          "rule": "layered"
+        },
+        {
+          "from": "src/app/c/handler/h.ts",
+          "to": "lib/x.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "unplanned",
+          "rule": "none"
+        },
+        {
+          "from": "src/b/handler.ts",
+          "to": "src/shared/id.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "allowed",
+          "rule": "same-module"
+        },
+        {
+          "from": "src/b/repo.ts",
+          "to": "src/shared/id.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "allowed",
+          "rule": "same-module"
+        }
+      ],
+      "package_entries": [],
+      "modules": [
+        {
+          "id": "lib",
+          "files": 1,
+          "ca": 1,
+          "ce": 0,
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "cohesion": null,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        },
+        {
+          "id": "src",
+          "files": 6,
+          "ca": 0,
+          "ce": 1,
+          "instability": 1.0,
+          "internal_edges": 3,
+          "outgoing_edges": 1,
+          "cohesion": 0.75,
+          "outgoing_to": {
+            "lib": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 3.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "lib": 1.0
+          }
+        }
+      ],
+      "module_edges": [
+        {
+          "from": "src",
+          "to": "lib",
+          "imports": 1,
+          "forbidden": 0
+        }
+      ],
+      "cycles": [],
+      "type_only_cycles": [],
+      "summary": {
+        "forbidden": 1,
+        "unplanned": 1,
+        "cycles": 0,
+        "type_only_cycles": 0,
+        "modules": {
+          "lib": {
+            "cohesion": null,
+            "ca": 1,
+            "ce": 0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0,
+            "instability": 0.0
+          },
+          "src": {
+            "cohesion": 0.75,
+            "ca": 0,
+            "ce": 1,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0,
+            "instability": 1.0
+          }
+        }
+      },
+      "findings": [
+        {
+          "finding_id": "ag-74e89198beddc5797184afe814d22111421e9715caf5426ff4900417afc9918b",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "cut_import",
+                "file": "src/a/handler.ts",
+                "from": "src/a/handler.ts",
+                "to": "src/a/repo.ts",
+                "detail": {
+                  "operation": "remove_import",
+                  "target": "src/a/repo.ts",
+                  "specifier": null,
+                  "edge_kind": "runtime",
+                  "original_to": null
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "absent_edges": [
+                  {
+                    "from": "src/a/handler.ts",
+                    "to": "src/a/repo.ts"
+                  }
+                ]
+              }
+            },
+            "confidence": "medium",
+            "risk_notes": [
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
+              "Policy reason: Handlers reach storage through services.",
+              "Policy source: docs/adr/ADR-0003.md"
+            ]
+          },
+          "kind": "forbidden-edge",
+          "subject": "src/a/handler.ts → src/a/repo.ts",
+          "evidence": {
+            "edge": {
+              "from": "src/a/handler.ts",
+              "to": "src/a/repo.ts",
+              "kind": "runtime",
+              "weight": 1.0,
+              "verdict": "forbidden",
+              "rule": "layered"
+            }
+          }
+        },
+        {
+          "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "split_module",
+                "file": "lib/x.ts",
+                "from": ".",
+                "to": "",
+                "detail": {
+                  "operation": "group_files",
+                  "groups": [
+                    {
+                      "files": [
+                        "lib/x.ts",
+                        "src/app/c/handler/h.ts"
+                      ],
+                      "suggested_module": "split-1"
+                    },
+                    {
+                      "files": [
+                        "src/a/handler.ts",
+                        "src/a/repo.ts"
+                      ],
+                      "suggested_module": "split-2"
+                    },
+                    {
+                      "files": [
+                        "src/b/handler.ts",
+                        "src/b/repo.ts",
+                        "src/shared/id.ts"
+                      ],
+                      "suggested_module": "split-3"
+                    }
+                  ],
+                  "evidence_source": "structural"
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "findings_absent": [
+                  "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                ]
+              }
+            },
+            "confidence": "low",
+            "risk_notes": [
+              "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+            ]
+          },
+          "kind": "seam",
+          "subject": ".",
+          "evidence": {
+            "modularity": 0.625,
+            "folder_modularity": -0.0313,
+            "clusters": [
+              {
+                "files": [
+                  "lib/x.ts",
+                  "src/app/c/handler/h.ts"
+                ],
+                "modules": [
+                  "lib",
+                  "src"
+                ]
+              },
+              {
+                "files": [
+                  "src/a/handler.ts",
+                  "src/a/repo.ts"
+                ],
+                "modules": [
+                  "src"
+                ]
+              },
+              {
+                "files": [
+                  "src/b/handler.ts",
+                  "src/b/repo.ts",
+                  "src/shared/id.ts"
+                ],
+                "modules": [
+                  "src"
+                ]
+              }
+            ],
+            "hubs": [],
+            "via_barrel": false
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "finding": {
+            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "kind": "small-repo",
+            "subject": ".",
+            "evidence": {
+              "files": 7,
+              "modules": 2
+            }
+          },
+          "reason": "Evidence does not determine a safe, concrete graph edit; inspect its evidence before changing architecture."
+        }
+      ],
+      "cochange": null,
+      "target": {
+        "claims": [
+          {
+            "id": "layered",
+            "reason": "Handlers reach storage through services.",
+            "source": "docs/adr/ADR-0003.md",
+            "verdict": "holds_in",
+            "slices": [
+              {
+                "slice": "a",
+                "files": [
+                  "src/a/handler.ts",
+                  "src/a/repo.ts"
+                ],
+                "broken": [
+                  {
+                    "from": "src/a/handler.ts",
+                    "to": "src/a/repo.ts"
+                  }
+                ]
+              },
+              {
+                "slice": "b",
+                "files": [
+                  "src/b/handler.ts",
+                  "src/b/repo.ts"
+                ],
+                "broken": []
+              }
+            ],
+            "notes": []
+          }
+        ],
+        "moves": [
+          {
+            "slice": "*",
+            "files": [
+              {
+                "file": "lib/x.ts",
+                "to": "core/x.ts"
+              }
+            ],
+            "import_lines": 1,
+            "names": null
+          },
+          {
+            "slice": "a",
+            "files": [
+              {
+                "file": "src/a/handler.ts",
+                "to": "src/app/a/handler/handler.ts"
+              }
+            ],
+            "import_lines": 1,
+            "names": null
+          },
+          {
+            "slice": "b",
+            "files": [
+              {
+                "file": "src/b/handler.ts",
+                "to": "src/app/b/handler/handler.ts"
+              }
+            ],
+            "import_lines": 1,
+            "names": null
+          },
+          {
+            "slice": "c",
+            "files": [],
+            "import_lines": 0,
+            "names": null
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 1,
+            "of": 2
+          },
+          "moved": {
+            "done": 1,
+            "of": 3
+          }
+        }
+      }
+    },
+    "move": {
+      "file": "src/a/handler.ts",
+      "to": "src/app/a/handler/handler.ts"
+    },
+    "before": {
+      "cycles": [],
+      "two_way_pairs": [],
+      "largest_cycle": 0,
+      "modules": {
+        "lib": {
+          "cohesion": null,
+          "ca": 1,
+          "ce": 0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "instability": 0.0
+        },
+        "src": {
+          "cohesion": 0.75,
+          "ca": 0,
+          "ce": 1,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "instability": 1.0
+        }
+      },
+      "forbidden": 1,
+      "unplanned": 1,
+      "verdicts": [
+        {
+          "from": "src/a/handler.ts",
+          "to": "src/a/repo.ts",
+          "verdict": "forbidden",
+          "rule": "layered",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/app/c/handler/h.ts",
+          "to": "lib/x.ts",
+          "verdict": "unplanned",
+          "rule": "none",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/b/handler.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/b/repo.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        }
+      ]
+    },
+    "after": {
+      "cycles": [],
+      "two_way_pairs": [],
+      "largest_cycle": 0,
+      "modules": {
+        "lib": {
+          "cohesion": null,
+          "ca": 1,
+          "ce": 0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "instability": 0.0
+        },
+        "src": {
+          "cohesion": 0.75,
+          "ca": 0,
+          "ce": 1,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "instability": 1.0
+        }
+      },
+      "forbidden": 1,
+      "unplanned": 1,
+      "verdicts": [
+        {
+          "from": "src/app/a/handler/handler.ts",
+          "to": "src/a/repo.ts",
+          "verdict": "forbidden",
+          "rule": "layered",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/app/c/handler/h.ts",
+          "to": "lib/x.ts",
+          "verdict": "unplanned",
+          "rule": "none",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/b/handler.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/b/repo.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        }
+      ]
+    }
+  },
+  {
     "name": "test-class-survives-rename",
     "document": {
       "schema": "archgraph/v1.2",

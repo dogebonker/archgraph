@@ -174,7 +174,7 @@ function whatifVerdict(result) {
   if (result.removed_forbidden.length) good.push(count(result.removed_forbidden.length, "forbidden import", "forbidden imports") + " fixed");
   if (removed) good.push(count(removed, "two-way pair", "two-way pairs") + " removed");
   if (after.largest_cycle !== before.largest_cycle) (after.largest_cycle > before.largest_cycle ? bad : good).push(`largest module cycle ${before.largest_cycle} → ${after.largest_cycle}`);
-  if (after.unplanned !== before.unplanned) (after.unplanned > before.unplanned ? bad : good).push(`unplanned imports ${before.unplanned} → ${after.unplanned}`);
+  if (!unflagged && after.unplanned !== before.unplanned) (after.unplanned > before.unplanned ? bad : good).push(`unplanned imports ${before.unplanned} → ${after.unplanned}`);
   const [tone, title] = bad.length && good.length ? ["warn", "Mixed: some better, some worse"] : bad.length ? ["bad", "Makes the structure worse"]
     : good.length ? ["good", "Improves the structure"] : ["same", "No structural change"];
   return { tone: result.partial && tone !== "bad" ? "warn" : tone, title: title + (result.partial ? " (unverified)" : ""), good, bad };
@@ -310,7 +310,7 @@ function whatifBuildDrawing(result) {
   for (const f of files) { const id = moduleOf(f.i); counts.set(id, (counts.get(id) || 0) + 1); }
   for (const edge of edges) {
     const from = moduleOf(edge.a), to = moduleOf(edge.b), a = renamed(doc.files[edge.a].path), b = renamed(doc.files[edge.b].path);
-    const verdict = verdicts.get(JSON.stringify([a, b])), tone = verdict === "forbidden" || verdict === "unplanned" ? verdict : "neutral";
+    const verdict = verdicts.get(JSON.stringify([a, b])), tone = verdict === "forbidden" || (verdict === "unplanned" && !unflagged) ? verdict : "neutral";
     if (tone === "forbidden") { incident.add(from); incident.add(to); }
     const cycle = runtime(edge) && (cycleOf.has(from) && cycleOf.get(from) === cycleOf.get(to) || fileCycles.has(a) && fileCycles.get(a) === fileCycles.get(b));
     previewFiles.push({ ...edge, tone, cycle, previewA: modIndex.get(from), previewB: modIndex.get(to) });

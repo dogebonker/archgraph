@@ -12,12 +12,15 @@
   const ratio = (a, b) => b > 0 ? round(a / b) : null;
   const kind = e => ({static:'runtime', dynamic:'lazy', 'type-reexport':'type'}[e.kind] || e.kind || 'runtime');
   const tests = p => /(?:^|\/)(?:tests|test|__tests__)\//.test(p) || /(?:_test\.go|_test\.exs|(?:^|\/)test_helper\.exs|\.(?:test|spec)\.[^/]+|(?:^|\/)(?:test_[^/]*\.py|conftest\.py)|_test\.py|Tests?\.java)$/.test(p);
-  function glob(raw) {
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  /* `sub`, a regular expression source, stands in for each capture `token`. */
+  function glob(raw, token, sub) {
     if (typeof raw !== 'string' || /[\\\x00-\x1f\x7f]/.test(raw)) throw Error('unsupported glob: ' + raw);
     let out = '', braces = 0;
     for (let i = 0; i < raw.length; i++) {
       const c = raw[i];
-      if (c === '*') {
+      if (token && raw.startsWith(token, i)) { out += sub; i += token.length - 1; }
+      else if (c === '*') {
         if (raw[i+1] === '*') {
           if ((i > 0 && raw[i-1] !== '/') || (i+2 < raw.length && raw[i+2] !== '/')) throw Error('unsupported globstar: ' + raw);
           i++;
@@ -34,7 +37,7 @@
         if (!cls || cls.includes('/') || cls.includes('[')) throw Error('unsupported glob class');
         if (cls[0] === '!' || cls[0] === '^') cls = '^' + cls.slice(1);
         out += '['+cls+']'; i = end;
-      } else out += c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      } else out += esc(c);
     }
     if (braces) throw Error('unbalanced glob braces');
     return new RegExp('^(?:'+out+')$');
@@ -44,8 +47,7 @@
     const unique = [...new Set(tokens)];
     if (unique.length > 1 || raw.split('/').some(s => /[<>]/.test(s) && !/^<[\p{L}\p{N}_]+>$/u.test(s))) throw Error('unsupported capture: '+raw);
     const token = unique[0];
-    const any = glob(token ? raw.split(token).join('*') : raw);
-    const fragments = token && raw.split(token).map(p => glob(p).source.slice(4,-2));
+    const any = glob(raw, token, '[^/]*');
     // The reachability search tests the same rule target against many paths: compile it once.
     const compiled = new Map();
     return {
@@ -54,11 +56,7 @@
         if (!any.test(path)) return undefined;
         if (!token) return null;
         // Bind literal path segments, including characters with glob meaning.
-        for (const value of path.split('/')) {
-          const literal = value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-          if (new RegExp('^(?:'+fragments.join(literal)+')$').test(path)) return value;
-        }
-        return undefined;
+        return path.split('/').find(v => glob(raw, token, esc(v)).test(path));
       },
       instance(text, value) { return token && value !== null && value !== undefined ? text.split(token).join(value) : text; },
       matches(text, value, path) {
@@ -66,8 +64,7 @@
         let re = compiled.get(id);
         if (!re) {
           if ([...text.matchAll(/<[^>]*>/g)].some(m=>m[0]!==token)) throw Error('unbound capture: '+text);
-          const literal = bound && value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-          re = bound ? new RegExp('^(?:'+text.split(token).map(p => glob(p).source.slice(4,-2)).join(literal)+')$') : glob(text);
+          re = bound ? glob(text, token, esc(value)) : glob(text);
           compiled.set(id, re);
         }
         return re.test(path);
@@ -120,13 +117,14 @@
     try {
       if (rules) {
         if (rules.version !== 1) throw Error('unsupported layout version');
-        const known = ['version','exclude','include','edge_weights','pkg-category','external_exposure','grabbag','modules','layers','public','entrypoints','forbid','allow','default'];
+        const known = ['version','exclude','include','edge_weights','pkg-category','external_exposure','grabbag','early-smells','modules','layers','layer-reason','public','entrypoints','forbid','allow','default','moves'];
         if (Object.keys(rules).some(k=>!known.includes(k))) throw Error('unknown layout fields');
         const checkFields = (rows, known) => { if (rows.some(row=>Object.keys(row).some(k=>!known.includes(k)))) throw Error('unknown layout rule fields'); };
         checkFields(rules.modules || [],['id','path']);
         checkFields(rules.public || [],['module','entries','kinds']);
-        checkFields(rules.forbid || [],['id','from','to','reachable','reason','kinds']);
-        checkFields(rules.allow || [],['id','from','to','reason','kinds']);
+        checkFields(rules.forbid || [],['id','from','to','reachable','reason','source','kinds']);
+        checkFields(rules.allow || [],['id','from','to','reason','source','kinds']);
+        checkFields(rules.moves || [],['from','to']);
         for (const row of [...(rules.forbid||[]),...(rules.allow||[]),...(rules.public||[])]) if (row.kinds?.some(k=>!['runtime','static','lazy','dynamic','type','type-reexport','reexport'].includes(k))) throw Error('unknown rule edge kind');
         moduleRules = (rules.modules || []).map(m=>({p:pattern(m.path),id:m.id}));
         const pairs = (xs,name)=>(xs || []).map((r,i)=>({...r,p:pattern(r.from),id:r.id ?? name+'['+i+']'}));

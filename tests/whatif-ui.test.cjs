@@ -38,7 +38,7 @@ function setup(name = 'cut-module-cycle') {
     modR: mods.map(() => 30), modSignal: mods.map(() => 'cycle'), modHealth: mods.map(() => 'amber'),
     R_DOT: 2.6, SP: 10, fileRoom: () => 24, sunflower: () => [{x:10,y:10}],
     RING: { forbidden: 'red', cycle: 'amber', none: 'grey' }, hiddenMods: mods.map(() => false),
-    ArchgraphPreview: engine, whatifMode: false, whatifResult: null, churnView: true,
+    ArchgraphPreview: engine, unflagged: false, whatifMode: false, whatifResult: null, churnView: true,
     sel: null, sideHidden: false, sheetMode: false, panel: node(), navigator: {}, $, el,
     basename: p => p.slice(p.lastIndexOf('/') + 1), dirname: p => p.slice(0, Math.max(0, p.lastIndexOf('/'))),
     count: (n, a, b) => `${n} ${n === 1 ? a : b}`, fmt: n => n ?? 'n/a',
@@ -166,4 +166,12 @@ test('dropping at an occupied module centre keeps the two file discs separate', 
   s.$('whatif-file').value = 'a/three.ts'; s.$('whatif-folder').value = 'b'; s.run('runWhatif()');
   const moved = s.files.find(f => f.path === 'b/three.ts');
   assert(Math.hypot(moved.x - resident.x, moved.y - resident.y) > 7);
+});
+
+test('a claims-only layout leaves an import no rule decides neutral in the preview', () => {
+  const s = setup('reachable-forbid'), move = fixtures.find(f => f.name === 'reachable-forbid').move;
+  s.context.unflagged = true;
+  s.$('whatif-file').value = move.file; s.$('whatif-folder').value = path.posix.dirname(move.to); s.run('runWhatif()');
+  assert.equal(s.context.whatifResult.after.unplanned, 1);
+  assert.deepEqual(Array.from(s.run('whatifDrawing.files'), f => f.tone), ['neutral', 'neutral']);
 });
