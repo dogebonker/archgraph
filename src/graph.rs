@@ -208,19 +208,33 @@ pub(crate) fn cycles_with_budget<'a>(
             })
             .collect();
         // No file cycle among the members' files spans two members: the cycle comes only from
-        // files sharing a module, and a break-set file nobody imports may move out.
+        // files sharing a module, and a break-set file nobody imports may move out. With
+        // `directory_units` a directory is the unit: a package cycle needs no file cycle.
         let member: BTreeSet<&str> = members.iter().copied().collect();
-        let inside: Vec<(&str, &str)> = edges
-            .iter()
-            .filter(|e| {
-                member.contains(module_of[&e.from].as_str())
-                    && member.contains(module_of[&e.to].as_str())
-            })
-            .map(|e| (e.from.as_str(), e.to.as_str()))
-            .collect();
+        let mut unit_module: BTreeMap<&str, &str> = BTreeMap::new();
+        let mut inside: Vec<(&str, &str)> = Vec::new();
+        for e in edges.iter().filter(|e| {
+            member.contains(module_of[&e.from].as_str())
+                && member.contains(module_of[&e.to].as_str())
+        }) {
+            let (from, to) = if directory_units {
+                (
+                    crate::modules::dir_of(&e.from),
+                    crate::modules::dir_of(&e.to),
+                )
+            } else {
+                (e.from.as_str(), e.to.as_str())
+            };
+            if directory_units && from == to {
+                continue;
+            }
+            unit_module.insert(from, module_of[&e.from].as_str());
+            unit_module.insert(to, module_of[&e.to].as_str());
+            inside.push((from, to));
+        }
         let grouping = components(&inside).iter().all(|c| {
             c.iter()
-                .map(|f| module_of[*f].as_str())
+                .map(|u| unit_module[u])
                 .collect::<BTreeSet<_>>()
                 .len()
                 < 2

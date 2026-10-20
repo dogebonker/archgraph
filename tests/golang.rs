@@ -122,7 +122,28 @@ fn go_cycles_appear_only_between_merged_packages() {
     assert_eq!(cycles.len(), 1, "{cycles:#?}");
     assert_eq!(cycles[0]["level"], "module");
     assert_eq!(cycles[0]["members"], json!(["api", "store"]));
+    assert_eq!(cycles[0]["grouping"], true);
     assert_eq!(doc["summary"]["cycles"], 1);
+    // No package cycle: the report points at the depth, not at moving files.
+    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("go-cycles-report");
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    let input = common::fixture("go-cycles").join("go.json");
+    let out = archgraph(&[
+        "report",
+        root.to_str().unwrap(),
+        "--language",
+        "go",
+        "--depth",
+        "1",
+        "--collector-input",
+        input.to_str().unwrap(),
+    ]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("  cycle of api, store comes from module grouping: packages are acyclic; the cycle exists only at folder depth 1; change --depth or the module grouping\n"),
+        "{stdout}"
+    );
 
     // At the default depth every package is its own module: no cycle at all.
     let (doc, _, _) = scan_recorded("go-cycles", &[]);
@@ -382,6 +403,32 @@ fn go_is_detected_only_beside_its_root_marker() {
         "{}",
         detected(&root)
     );
+}
+
+#[test]
+fn go_package_cycle_without_a_file_cycle_is_no_grouping() {
+    // a/use.go imports b, and b imports a/a.go: no file cycle, but packages a and b import
+    // each other, which Go rejects. The cycle is real, not folder grouping.
+    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("go-package-cycle");
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    let dump = write_tmp(
+        "go-package-cycle.json",
+        r#"{ "go_version": "1.27.1", "unresolved": 0, "modules": ["."],
+             "files": [{ "path": "a/a.go", "generated": false },
+                       { "path": "a/use.go", "generated": false },
+                       { "path": "b/b.go", "generated": false }],
+             "edges": [{ "from": "a/use.go", "to": "b/b.go" }, { "from": "b/b.go", "to": "a/a.go" }] }"#,
+    );
+    let (doc, _, _) = scan(&[
+        root.to_str().unwrap(),
+        "--language",
+        "go",
+        "--collector-input",
+        &dump,
+    ]);
+    assert_eq!(doc["cycles"][0]["members"], json!(["a", "b"]));
+    assert_eq!(doc["cycles"][0]["grouping"], false, "{:#}", doc["cycles"]);
 }
 
 #[test]
