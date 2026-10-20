@@ -109,7 +109,7 @@
   }
   function compute(doc, moved) {
     const config = doc.config || {}, language = doc.source?.language, rules = config.rules?.doc;
-    const warnings = [], files = doc.files || [], rename = p => moved && p === moved.file ? moved.to : p;
+    const warnings = [], files = doc.files || [], rename = p => moved?.get(p) ?? p;
     const edges = (doc.edges || []).map(e=>({...e,from:rename(e.from),to:rename(e.to),original_to:e.original_to ? rename(e.original_to) : undefined}));
     const nodes = new Map(files.map(f=>[rename(f.path),{...f,path:rename(f.path)}]));
     if ((doc.external_nodes || []).length || (doc.external_edges || []).length || doc.external_exposure ||
@@ -216,12 +216,21 @@
     return {moduleOf:modulesOf,projection:{cycles,two_way_pairs:twoWay,largest_cycle:Math.max(0,...cycles.filter(c=>c.level==='module').map(c=>c.members.length)),modules,forbidden:verdicts.filter(v=>v.verdict==='forbidden').length,unplanned:verdicts.filter(v=>v.verdict==='unplanned').length,verdicts},warnings};
   }
   function analyze(doc) { const result=compute(doc);return {...result.projection,warnings:sorted(new Set(result.warnings)),partial:result.warnings.length>0}; }
-  function simulate(doc, move) {
+  /* One move, or a list applied together like `archgraph simulate --move A B --move C D`. */
+  function simulate(doc, moves) {
     const valid=p=>typeof p==='string' && p.length>0 && !/[\\:\p{Cc}]/u.test(p) && !p.startsWith('/') && p.split('/').every(s=>s!==''&&s!=='.'&&s!=='..');
-    if (!move || !valid(move.file) || !valid(move.to)) throw Error('Move paths must be relative paths inside the scan root.');
-    if (!doc.files.some(f=>f.path===move.file)) throw Error('Unknown source file: '+move.file);
-    if (doc.files.some(f=>f.path===move.to)) throw Error('Destination already exists: '+move.to);
-    const before=compute(doc),after=compute(doc,move),normalize=p=>p===move.to?move.file:p;
+    moves=Array.isArray(moves)?moves:[moves];
+    if (!moves.length) throw Error('No move to preview.');
+    const renamed=new Map(),original=new Map();
+    for (const move of moves) {
+      if (!move || !valid(move.file) || !valid(move.to)) throw Error('Move paths must be relative paths inside the scan root.');
+      if (!doc.files.some(f=>f.path===move.file)) throw Error('Unknown source file: '+move.file);
+      if (doc.files.some(f=>f.path===move.to)) throw Error('Destination already exists in the scan: '+move.to);
+      if (renamed.has(move.file)) throw Error(move.file+' is moved twice');
+      if (original.has(move.to)) throw Error('Two files are moved to '+move.to);
+      renamed.set(move.file,move.to); original.set(move.to,move.file);
+    }
+    const before=compute(doc),after=compute(doc,renamed),normalize=p=>original.get(p)??p;
     const identity=c=>key([c.level,c.members.map(m=>c.level==='file'||doc.config?.granularity==='file'?normalize(m):m).sort(cmp)]);
     const afterKeys=new Set(after.projection.cycles.map(identity));
     const covered = cycle => { const [level,members]=JSON.parse(identity(cycle)); return before.projection.cycles.some(old=>{ const [oldLevel,oldMembers]=JSON.parse(identity(old));return level===oldLevel && members.every(member=>oldMembers.includes(member)); }); }; 
@@ -229,9 +238,12 @@
     const pair=(v,norm)=>key([norm(v.from),norm(v.to),v.kind]);
     const wasKeys=new Set(was.map(v=>pair(v,p=>p))),nowKeys=new Set(now.map(v=>pair(v,normalize)));
     const warnings=sorted(new Set([...before.warnings,...after.warnings]));
-    return {move:{file:move.file,to:move.to,module:after.moduleOf.get(move.to)},before:before.projection,after:after.projection,
+    const moved=moves.map(m=>({file:m.file,to:m.to,module:after.moduleOf.get(m.to)}));
+    return {move:moved[0],moves:moved,before:before.projection,after:after.projection,
       new_cycles:after.projection.cycles.filter(c=>!covered(c)),removed_cycles:before.projection.cycles.filter(c=>!afterKeys.has(identity(c))),
       new_forbidden:now.filter(v=>!wasKeys.has(pair(v,normalize))),removed_forbidden:was.filter(v=>!nowKeys.has(pair(v,p=>p))),warnings,partial:warnings.length>0};
   }
-  return {analyze,simulate};
+  /* Whether a layout glob (captures match any value) covers a path, as the rules preview reads it. */
+  const matches = (raw, path) => pattern(raw).bind(path) !== undefined;
+  return {analyze,simulate,matches};
 });

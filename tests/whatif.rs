@@ -103,21 +103,25 @@ fn case(
         .into_iter()
         .collect();
     let doc = archgraph::analyze(source, config, files, edges, vec![], None).unwrap();
-    finish(name, doc, file, to)
+    finish(name, doc, &[(file, to)])
 }
 
-fn finish(name: &str, doc: Document, file: &str, to: &str) -> Value {
+/// One move is stored as an object, several as the ordered list the preview applies together.
+fn finish(name: &str, doc: Document, moves: &[(&str, &str)]) -> Value {
     let rules = archgraph::rules::compile(&doc.config).unwrap();
-    let after = archgraph::simulate::apply(
-        &doc,
-        rules.as_ref(),
-        &[Move {
-            file: file.into(),
-            to: to.into(),
-        }],
-    )
-    .unwrap();
-    json!({"name":name,"document":doc,"move":{"file":file,"to":to},"before":projection(&doc),"after":projection(&after)})
+    let moves: Vec<Move> = moves
+        .iter()
+        .map(|(file, to)| Move {
+            file: (*file).into(),
+            to: (*to).into(),
+        })
+        .collect();
+    let after = archgraph::simulate::apply(&doc, rules.as_ref(), &moves).unwrap();
+    let moved = match moves.as_slice() {
+        [one] => json!(one),
+        many => json!(many),
+    };
+    json!({"name":name,"document":doc,"move":moved,"before":projection(&doc),"after":projection(&after)})
 }
 
 fn fixtures() -> Value {
@@ -389,10 +393,35 @@ fn fixtures() -> Value {
     written = finish(
         "written-barrel-rule-target",
         archgraph::restore_scan(input).unwrap(),
-        "billing/index.ts",
-        "billing/public.ts",
+        &[("billing/index.ts", "billing/public.ts")],
     );
     cases.push(written);
+    // The map's move list: both moves applied together, as `simulate --move A B --move C D`.
+    let chained = case(
+        "chained-moves-with-rules",
+        &[
+            ("app/view.ts", "domain/model.ts", V),
+            ("app/helper.ts", "domain/model.ts", V),
+            ("domain/model.ts", "app/helper.ts", V),
+            ("domain/model.ts", "infra/db.ts", V),
+        ],
+        "app/helper.ts",
+        "domain/helper.ts",
+        json!({}),
+        Some(
+            json!({"version":1,"layers":["domain/**","app/**"],"forbid":[{"id":"no-infra","from":"domain/**","to":"infra/**"}]}),
+        ),
+        Ts,
+    );
+    cases.push(finish(
+        "chained-moves-with-rules",
+        archgraph::restore_scan(serde_json::from_value(chained["document"].clone()).unwrap())
+            .unwrap(),
+        &[
+            ("app/helper.ts", "domain/helper.ts"),
+            ("infra/db.ts", "domain/store/db.ts"),
+        ],
+    ));
     let mut grabbag_edges = vec![
         ("app/a.ts", "utils/date.ts", V),
         ("utils/work.ts", "app/a.ts", V),

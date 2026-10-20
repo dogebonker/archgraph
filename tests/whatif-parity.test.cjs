@@ -34,6 +34,10 @@ test('reject unknown, duplicate, no-op and unsafe destinations', () => {
   for(const to of [file,doc.files[1].path,'/tmp/x','../x','x/../y','x//y','./x','x\\y','C:/x','x\nq','x\u0000q','x\u0085q',''])
     assert.throws(()=>preview.simulate(doc,{file,to}),undefined,to);
   assert.throws(()=>preview.simulate(doc,{file:'missing.ts',to:'new/file.ts'}),/Unknown/);
+  // Like the CLI, a move list checks destinations against the scan, even ones an earlier move vacates.
+  const [a,b]=doc.files.map(f=>f.path);
+  assert.throws(()=>preview.simulate(doc,[{file:a,to:'new/x.ts'},{file:b,to:a}]),/already exists in the scan/);
+  assert.throws(()=>preview.simulate(doc,[{file:a,to:'new/x.ts'},{file:b,to:'new/x.ts'}]),/Two files/);
 });
 test('legacy, unknown schema and unsupported glob rules explicitly mark partial', () => {
   for(const schema of ['archgraph/v1','archgraph/v100']) {

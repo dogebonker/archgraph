@@ -372,7 +372,9 @@ p { margin: 6px 0; }
 .whatif-panel input, .whatif-panel textarea { display: block; width: 100%; margin-top: 5px; padding: 8px; border: 1px solid var(--sep); border-radius: 8px; background: var(--surface); color: var(--label); font: inherit; }
 .whatif-panel textarea { font-family: monospace; resize: vertical; }
 .whatif-actions { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
-.whatif-actions button { padding: 8px 12px; background: var(--surface); border: 1px solid var(--sep); border-radius: 8px; color: var(--label); min-height: 36px; }
+.whatif-actions button, .whatif-list button { padding: 8px 12px; background: var(--surface); border: 1px solid var(--sep); border-radius: 8px; color: var(--label); min-height: 36px; }
+.whatif-actions button:disabled { opacity: .45; }
+.whatif-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0; overflow-wrap: anywhere; }
 .whatif-panel ul { padding-left: 18px; overflow-wrap: anywhere; }
 .whatif-panel h3 { font-size: 13px; margin: 16px 0 6px; }
 .whatif-panel details { margin: 10px 0; }
@@ -624,16 +626,22 @@ ul.wi-findings .path { color: var(--label2); margin-top: 2px; }
       <datalist id="whatif-files"></datalist>
       <label>Destination folder<input id="whatif-folder" list="whatif-folders" required autocomplete="off" spellcheck="false" placeholder="src/domain"></label>
       <datalist id="whatif-folders"></datalist>
-      <div class="whatif-actions"><button type="submit" id="whatif-run">Preview move</button><button type="button" id="whatif-clear">Clear preview</button><button type="button" id="whatif-close">Done</button></div>
+      <div class="whatif-actions"><button type="submit" id="whatif-run">Preview move</button><button type="button" id="whatif-add" disabled>Add to list</button><button type="button" id="whatif-clear">Clear all</button><button type="button" id="whatif-close">Done</button></div>
     </form>
+    <div id="whatif-plan" hidden>
+      <h3 id="whatif-plan-title">Move list, previewed together</h3>
+      <ol id="whatif-list" class="whatif-list" aria-labelledby="whatif-plan-title"></ol>
+    </div>
     <p id="whatif-status" role="status" aria-live="polite"></p>
     <div id="whatif-result"></div>
     <div id="whatif-commands" hidden>
       <h3>Next steps, from the scanned root</h3>
       <label>1. Confirm with the CLI<textarea id="whatif-cli" readonly rows="3"></textarea></label>
       <div class="whatif-actions"><button type="button" id="whatif-copy-cli">Copy simulate command</button></div>
-      <label>2. Apply the move<textarea id="whatif-git" readonly rows="4"></textarea></label>
-      <div class="whatif-actions"><button type="button" id="whatif-copy-git">Copy git mv snippet</button></div>
+      <label>2. Apply the moves<textarea id="whatif-git" readonly rows="4"></textarea></label>
+      <div class="whatif-actions"><button type="button" id="whatif-copy-git">Copy shell script</button></div>
+      <label>3. Review layout rule changes<textarea id="whatif-rules" readonly rows="3"></textarea></label>
+      <div class="whatif-actions"><button type="button" id="whatif-copy-rules">Copy rule changes</button></div>
       <details><summary>Graph JSON path</summary><input id="whatif-graph" value="graph.json" aria-label="Graph JSON path for CLI" autocomplete="off" spellcheck="false"></details>
     </div>
   </section>
