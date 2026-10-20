@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- The map no longer flags undecided imports as unplanned when the rules only forbid (claims, with or without moves): there such an import is not a coverage gap. Verdicts and `check` output are unchanged.
 - MCP gains a `target` tool returning the scan's `target` (or `null`), and the archgraph-rules skill gains a step for drafting a target from a deck, markdown or ADR: claims as `forbid` rules sharing an id, `moves` for planned relocations, and claims archgraph cannot check reported as outside it.
 - `diff` gains an optional `target` (`conforming` and `moved` as `[old, new]`, and `newly_broken` slices with their imports) when either scan has a claim or a move, and `--format markdown` a `### Target` section. `report` prints the `check` target block, so the action's push summary shows it.
 - Go: `source.collector.bound` replaces `bound_files` for the reference engine: pairs `{from, to, names, together}` with the unexported names one file uses from the other, qualified by type for fields and methods (`Server.db`), and whether they move together (a method and its type, platform variants). A limitation counts pairs left out because a file is excluded. Each pending slice in `target.moves` lists `names` to export (`null` when unknown: native Go, other languages) and the `together` pairs its moves split, leaving out pairs that land in one folder, and `check` appends `, N names to export` to its `move` line. The native engine keeps `bound_files`.

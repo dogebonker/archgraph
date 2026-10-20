@@ -882,12 +882,13 @@ const short = p => PREFIX && p.startsWith(PREFIX) ? p.slice(PREFIX.length) : p;
 const medges = doc.module_edges.map((e, i) => ({ i, a: modIndex.get(e.from), b: modIndex.get(e.to), imports: e.imports,
   forbidden: e.forbidden, v: { allowed: 0, forbidden: 0, unplanned: 0, none: 0 }, types: 0, list: [] }));
 const meOf = new Map(medges.map(e => [e.a * N + e.b, e]));
+const unflagged = claimsOnly(doc.config.rules?.doc);
 const edges = doc.edges.map((e, i) => {
   const a = fileIndex.get(e.from), b = fileIndex.get(e.to);
   const ma = files[a].mod, mb = files[b].mod;
   const r = { i, a, b, kind: e.kind, verdict: e.verdict, rule: e.rule,
     confidence: e.confidence, original_to: e.original_to, specifier: e.specifier, line: e.line, resolution_reason: e.resolution_reason,
-    tone: e.verdict === "forbidden" || e.verdict === "unplanned" ? e.verdict : "neutral",
+    tone: e.verdict === "forbidden" || (e.verdict === "unplanned" && !unflagged) ? e.verdict : "neutral",
     me: ma === mb ? null : meOf.get(ma * N + mb) || null };
   files[a].outs.push(i);
   files[b].ins.push(i);
@@ -900,7 +901,7 @@ const edges = doc.edges.map((e, i) => {
 });
 for (const me of medges) {
   me.typeOnly = me.list.length > 0 && me.types === me.list.length;
-  me.tone = me.forbidden || me.v.forbidden ? "forbidden" : me.v.unplanned ? "unplanned" : "neutral";
+  me.tone = me.forbidden || me.v.forbidden ? "forbidden" : me.v.unplanned && !unflagged ? "unplanned" : "neutral";
   me.twoWay = meOf.has(me.b * N + me.a);
   me.w = Math.min(9, Math.round((0.8 + 0.95 * Math.log2(Math.max(1, me.imports))) * 4) / 4);
 }
@@ -1510,6 +1511,7 @@ const assessment = (() => {
       ": most imports of ", loose.length === 1 ? "its" : "their", " files go to other modules, so the folder may hold several modules' worth of code."] });
   }
   for (const verdict of ["forbidden", "unplanned"]) {
+    if (verdict === "unplanned" && unflagged) continue;
     const external = externalEdges.filter(edge => edge.verdict === verdict);
     if (external.length) {
       const first = external[0], target = { pkg: externalById.get(first.to), label: `pkg:${externalNodes[externalById.get(first.to)].package}` };
@@ -1654,7 +1656,7 @@ function diagnosis(i) {
   if (c) say(`It participates in reciprocal dependencies across ${c.members.length} folders; this alone does not establish a circular file import or defect.`);
   if (role !== "collection" && m.files >= REAL_SIZE && m.ca > 0 && cx !== null && cx < LOOSE_MAX) risky.push(`most imports of its files go to other modules (cohesion ${n2(cx)}${notCounting}), so it may hold several modules' worth of code`);
   if (forb) risky.push(`${count(forb, "import", "imports")} out of it ${forb === 1 ? "is" : "are"} forbidden`);
-  if (unpl) say(`Policy coverage: ${count(unpl, "outgoing import is", "outgoing imports are")} uncovered; no violation is implied.`);
+  if (unpl && !unflagged) say(`Policy coverage: ${count(unpl, "outgoing import is", "outgoing imports are")} uncovered; no violation is implied.`);
   const unst = ofKind("unstable-dependency").filter(fd => fd.f.evidence.from === m.id);
   if (unst.length) risky.push(`it imports the more volatile ${listed(unst.map(fd => fd.f.evidence.to))}`);
   const reach = ofKind("internals-reach").filter(fd => fd.f.evidence.module === m.id);
@@ -3554,7 +3556,7 @@ function fileTree(spec) {
     line.append(badge(fi), path);
     let label = (o.lead ? o.lead + " " : "") + files[fi].path;
     const e = o.edge;
-    if (e && (e.verdict === "forbidden" || e.verdict === "unplanned")) {
+    if (e && (e.verdict === "forbidden" || (e.verdict === "unplanned" && !unflagged))) {
       const tag = `${e.verdict}${e.rule ? " by " + e.rule : ""}`;
       const v = el("span", { class: "tv " + e.verdict, title: tag });
       v.append(el("i"), el("span", {}, tag));
@@ -3925,6 +3927,12 @@ function overview() {
   }
 }
 /* ---------- target panel ---------- */
+/* Rules that only forbid (claims, with or without moves) plan nothing else: an import no rule
+   decides is not a coverage gap there, so the map does not flag it. */
+function claimsOnly(rules) {
+  return !!rules?.forbid?.length && !rules.layers?.length && !rules.allow?.length && !rules.public?.length
+    && !Object.keys(rules.entrypoints || {}).length && rules.default !== "forbidden";
+}
 /* A claim's verdict as `check` words it, without the slice names the panel lists below. */
 const claimVerdict = c => c.verdict === "holds_in"
   ? `holds in ${c.slices.filter(s => !s.broken.length).length} of ${c.slices.length} slices` : c.verdict;

@@ -115,3 +115,20 @@ test('the panel is wired into the overview, selection, zoom and panel routing wi
   assert.match(fragment('function applyFocus()', '/* ---------- canvas, view'), /t\.type === "target"/);
   assert.doesNotThrow(() => new vm.Script(script));
 });
+test('rules holding only claims leave undecided imports unflagged', () => {
+  const { ctx } = setup({ target: target() });
+  const cases = [
+    [undefined, false],
+    [{ forbid: [{ id: 'layered', from: 'a/**', to: 'b/**' }], moves: [{ from: 'a/**', to: 'c/' }] }, true],
+    [{ forbid: [{ from: 'a/**', to: 'b/**' }], layers: ['a/**'] }, false],
+    [{ forbid: [{ from: 'a/**', to: 'b/**' }], allow: [{ from: 'a/**', to: '**' }] }, false],
+    [{ forbid: [{ from: 'a/**', to: 'b/**' }], public: [{ module: 'b/**', entries: ['b/index.ts'] }] }, false],
+    [{ forbid: [{ from: 'a/**', to: 'b/**' }], entrypoints: { 'b/**': 'b/index.ts' } }, false],
+    [{ forbid: [{ from: 'a/**', to: 'b/**' }], default: 'forbidden' }, false],
+    [{ forbid: [] }, false],
+  ];
+  for (const [rules, expected] of cases) {
+    ctx.rules = rules;
+    assert.equal(vm.runInContext('claimsOnly(rules)', ctx), expected, JSON.stringify(rules));
+  }
+});

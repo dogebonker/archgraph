@@ -110,7 +110,7 @@ test('ring integrates camera bounds, hit testing, search, selection and module c
 test('external rule verdicts contribute separate assessment counts and a real package/file next step', () => {
   const { context, run } = setup({ external_nodes: [packageNode], external_edges: [packageEdge,
     { ...packageEdge, kind: 'runtime', line: 8 }, { ...packageEdge, verdict: 'unplanned', line: 9 }] });
-  vm.runInContext('const bad = [], coverage = [], next = [];', context);
+  vm.runInContext('const bad = [], coverage = [], next = [], unflagged = false;', context);
   const start = script.indexOf('  for (const verdict of ["forbidden", "unplanned"]) {');
   const end = script.indexOf('    const groups = ruleGroups(verdict);', start);
   vm.runInContext(script.slice(start, end) + '\n}', context);
@@ -182,16 +182,22 @@ test('folder cycles remain inspectable without an actionable finding', () => {
 });
 
 test('uncovered internal imports go to coverage rather than findings to repair', () => {
-  const context = vm.createContext({ bad: [], coverage: [], next: [], externalEdges: [],
-    edges: [{ a: 0, b: 1 }], ruleGroups: verdict => verdict === 'unplanned' ? [['unnamed', [0]]] : [],
-    count: (n, one, many) => `${n} ${n === 1 ? one : many}` });
-  const start = script.indexOf('  for (const verdict of ["forbidden", "unplanned"]) {');
-  const end = script.indexOf('  const unstable =', start);
-  vm.runInContext(script.slice(start, end), context);
+  const assess = unflagged => {
+    const context = vm.createContext({ bad: [], coverage: [], next: [], externalEdges: [], unflagged,
+      edges: [{ a: 0, b: 1 }], ruleGroups: verdict => verdict === 'unplanned' ? [['unnamed', [0]]] : [],
+      count: (n, one, many) => `${n} ${n === 1 ? one : many}` });
+    const start = script.indexOf('  for (const verdict of ["forbidden", "unplanned"]) {');
+    const end = script.indexOf('  const unstable =', start);
+    vm.runInContext(script.slice(start, end), context);
+    return context;
+  };
+  const context = assess(false);
   assert.equal(vm.runInContext('bad.length', context), 0);
   assert.equal(vm.runInContext('next.length', context), 0);
   assert.equal(vm.runInContext('coverage.length', context), 1);
   assert.match(vm.runInContext('coverage[0].parts[1]', context), /not a violation/);
+  // Rules that only forbid plan nothing else, so an undecided import is no coverage gap.
+  assert.equal(vm.runInContext('coverage.length', assess(true)), 0);
 });
 
 test('file-cycle counts state their recorded scope and point to the full file graph', () => {
