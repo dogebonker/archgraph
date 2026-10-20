@@ -17,25 +17,31 @@ function whatifCommands() {
   whatifUI.cli.value = `archgraph simulate ${q(graph)}` + moves.map(m => ` --move ${q(m.file)} ${q(m.to)}`).join("");
   const known = new Set(doc.files.flatMap(f => f.path.split("/").slice(0, -1).map((_, k, parts) => parts.slice(0, k + 1).join("/"))));
   const fresh = [...new Set(moves.map(m => dirname(m.to)))].filter(d => d && !known.has(d));
-  whatifUI.git.value = [...(fresh.length ? [`mkdir -p -- ${fresh.map(q).join(" ")}`] : []), ...moves.map(m => `git mv -- ${q(m.file)} ${q(m.to)}`)].join("\n");
+  whatifUI.git.value = ["set -e", ...(fresh.length ? [`mkdir -p -- ${fresh.map(q).join(" ")}`] : []), ...moves.map(m => `git mv -- ${q(m.file)} ${q(m.to)}`)].join("\n");
   whatifUI.rules.value = whatifRuleShifts(moves);
 }
-/* The layer and forbid globs each moved file stops and starts matching, read with the preview's glob matcher. */
+/* The layer (first matching glob, as the checker reads it) and forbid globs each moved file stops and starts
+   matching; a capture glob shifts when the bound value changes. */
 function whatifRuleShifts(moves) {
   const rules = doc.config?.rules?.doc;
   if (!rules) return "No layout rules are embedded in this scan.";
-  const globs = (rules.layers || []).map(g => ["layer", g]);
+  const globs = [];
   (rules.forbid || []).forEach((r, k) => {
     const id = r.id ? `forbid ${r.id}` : `forbid[${k}]`;
     globs.push([`${id} from`, r.from]);
     if (!/^(?:pkg|category):/.test(r.to || "")) globs.push([`${id} to`, r.to]);
   });
+  const bind = ArchgraphPreview.bind, layer = path => (rules.layers || []).find(g => bind(g, path) !== undefined);
+  const shown = (label, glob, value) => `${label} "${glob}"` + (typeof value === "string" ? ` (${glob.match(/<[^>]*>/)[0]} = ${value})` : "");
   try {
     return moves.map(({ file, to }) => {
-      const leaves = [], enters = [];
+      const leaves = [], enters = [], was = layer(file), now = layer(to);
+      if (was !== now) { if (was !== undefined) leaves.push(`leaves layer "${was}"`); if (now !== undefined) enters.push(`enters layer "${now}"`); }
       for (const [label, glob] of globs) {
-        const was = ArchgraphPreview.matches(glob, file), now = ArchgraphPreview.matches(glob, to);
-        if (was !== now) (now ? enters : leaves).push(`${now ? "enters" : "leaves"} ${label} "${glob}"`);
+        const was = bind(glob, file), now = bind(glob, to);
+        if (was === now) continue;
+        if (was !== undefined) leaves.push("leaves " + shown(label, glob, was));
+        if (now !== undefined) enters.push("enters " + shown(label, glob, now));
       }
       return `${file}: ` + ([...leaves, ...enters].join(", ") || "no layer or forbid glob changes");
     }).join("\n");
@@ -66,7 +72,10 @@ function whatifPlan() {
 }
 function whatifAdd() {
   if (!whatifPending || !whatifResult) return;
+  const file = whatifPending.file;
   whatifMoves = whatifPlan(); whatifPending = null; whatifListRender();
+  /* The disabled Add button would drop focus: move it to the added item. */
+  whatifRemove[whatifMoves.findIndex(m => m.file === file)].focus();
   whatifUI.status.textContent = `Added. ${count(whatifMoves.length, "move", "moves")} in the list.`;
 }
 function whatifForget(file) {

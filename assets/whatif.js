@@ -243,7 +243,7 @@
       new_cycles:after.projection.cycles.filter(c=>!covered(c)),removed_cycles:before.projection.cycles.filter(c=>!afterKeys.has(identity(c))),
       new_forbidden:now.filter(v=>!wasKeys.has(pair(v,normalize))),removed_forbidden:was.filter(v=>!nowKeys.has(pair(v,p=>p))),warnings,partial:warnings.length>0};
   }
-  /* Whether a layout glob (captures match any value) covers a path, as the rules preview reads it. */
-  const matches = (raw, path) => pattern(raw).bind(path) !== undefined;
-  return {analyze,simulate,matches};
+  /* What a layout glob binds for a path: undefined when it does not match, null when it has no capture, else the captured segment. */
+  const bind = (raw, path) => pattern(raw).bind(path);
+  return {analyze,simulate,bind};
 });

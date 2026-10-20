@@ -75,6 +75,8 @@ test('the move list previews chained moves together and exports one script, comm
   const preview = (file, folder) => { s.$('whatif-file').value = file; s.$('whatif-folder').value = folder; s.run('runWhatif()'); };
   s.run('setWhatifMode(true)');
   preview('app/helper.ts', 'infra'); s.run('whatifAdd()');
+  // Add disables itself: focus moves to the added item's Remove button.
+  assert(s.run('whatifRemove[0].focused'));
   // The listed file, named by its previewed path, moves again: its entry takes the new destination.
   preview('infra/helper.ts', 'domain');
   assert.equal(s.run('whatifMoves[0].to'), 'infra/helper.ts', 'previewing alone does not change the list');
@@ -84,7 +86,7 @@ test('the move list previews chained moves together and exports one script, comm
   assert.deepEqual(plain(s.context.whatifResult.before), fixture.before);
   assert.deepEqual(plain(s.context.whatifResult.after), fixture.after);
   assert.equal(s.$('whatif-cli').value, "archgraph simulate 'graph.json' --move 'app/helper.ts' 'domain/helper.ts' --move 'infra/db.ts' 'domain/store/db.ts'");
-  assert.equal(s.$('whatif-git').value, "mkdir -p -- 'domain/store'\ngit mv -- 'app/helper.ts' 'domain/helper.ts'\ngit mv -- 'infra/db.ts' 'domain/store/db.ts'");
+  assert.equal(s.$('whatif-git').value, "set -e\nmkdir -p -- 'domain/store'\ngit mv -- 'app/helper.ts' 'domain/helper.ts'\ngit mv -- 'infra/db.ts' 'domain/store/db.ts'");
   assert.equal(s.$('whatif-rules').value,
     'app/helper.ts: leaves layer "app/**", enters layer "domain/**", enters forbid no-infra from "domain/**"\n' +
     'infra/db.ts: leaves forbid no-infra to "infra/**", enters layer "domain/**", enters forbid no-infra from "domain/**"');
@@ -103,6 +105,11 @@ test('the move list previews chained moves together and exports one script, comm
   assert.deepEqual(listed(), []); assert.equal(s.context.whatifResult, null);
   assert(s.$('whatif-plan').hidden); assert(s.$('whatif-commands').hidden);
   assert.equal(s.files.find(f => f.path.endsWith('db.ts')).path, 'infra/db.ts');
+  // Only the first matching layer counts, and a capture glob shifts when its bound value changes.
+  s.doc.config.rules.doc = { layers: ['src/a/**', 'src/**'], forbid: [{ id: 'own', from: 'src/<d>/**', to: 'lib/**' }] };
+  assert.equal(s.run('whatifRuleShifts([{ file: "src/a/x.ts", to: "src/b/x.ts" }])'),
+    'src/a/x.ts: leaves layer "src/a/**", leaves forbid own from "src/<d>/**" (<d> = a), ' +
+    'enters layer "src/**", enters forbid own from "src/<d>/**" (<d> = b)');
 });
 test('invalid moves invalidate earlier results instead of retaining success or commands', () => {
   const s = setup();
