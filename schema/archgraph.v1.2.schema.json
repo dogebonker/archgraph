@@ -3735,6 +3735,7 @@
               }
             },
             "newly_fixed": {
+              "description": "Slices broken in the old scan and not broken in the new one. A slice the new scan no longer binds, or whose files are gone, counts as fixed.",
               "type": "array",
               "items": {
                 "$ref": "#/$defs/slice-change"

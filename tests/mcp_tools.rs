@@ -437,6 +437,16 @@ fn diff_target_lists_newly_broken_and_newly_fixed_slices_with_lines() {
             "newly_fixed": slice("a", "src/m/a/app/x.ts", "src/m/a/domain/d.ts", 2),
         })
     );
+    // Slice a broken in old and gone in new counts as fixed.
+    let gone = claims_in(
+        vec!["src/m/b/app/y.ts".into(), "src/m/b/domain/e.ts".into()],
+        Vec::new(),
+    );
+    let target = archgraph::diff::diff(&old, &gone).target.unwrap();
+    assert_eq!(
+        serde_json::to_value(target.newly_fixed).unwrap(),
+        slice("a", "src/m/a/app/x.ts", "src/m/a/domain/d.ts", 2)
+    );
 }
 
 #[test]
@@ -465,6 +475,15 @@ Target: 1 of 2 slices conform.
 
 - **app-no-domain**: apps never reach a domain (docs/adr/0001.md)
   - slice a: src/m/a/app/x.ts:2 → src/m/a/domain/d.ts
+"
+    );
+    validate("review", &out);
+    let plain = cycle();
+    let out = call(&plain, Path::new("."), "review", json!({}), Some(&plain)).unwrap();
+    assert_eq!(
+        out["markdown"],
+        "**archgraph review**: 0 newly broken slices, 0 other new forbidden imports, 0 newly fixed slices.
+No rules: nothing was checked; add layout.yaml or pass --rules.
 "
     );
     validate("review", &out);

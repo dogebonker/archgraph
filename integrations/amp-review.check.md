@@ -2,7 +2,7 @@
 name: archgraph
 description: Architecture rules and claims in layout.yaml, checked by archgraph against the base branch
 ---
-Run `archgraph review` from the repository root (add `--base <ref>` when the target branch is not `main`), or call the archgraph MCP tool `review`. Quote its output verbatim as the architecture section of your review.
+Run `archgraph review` from the repository root (add `--base <ref>` when the target branch is not the first of `origin/HEAD`, `main` or `master` that exists), or call the archgraph MCP tool `review`. Quote its output verbatim as the architecture section of your review.
 
 - Report every row under "Newly broken" and "Other new forbidden imports" at its file:line with the reason it quotes. Mention "Newly fixed" rows briefly.
 - Do not re-judge import direction, layering or forbidden imports yourself: archgraph's verdict is final for what layout.yaml states. If the Base line names a HEAD fallback, rules changed since base or rules from outside the repository, repeat it.

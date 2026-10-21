@@ -489,6 +489,10 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
     if let Some(error) = &error {
         value["error"] = json!(error);
     }
+    // The review markdown stays the text content; its copy in data is the first to go.
+    let mut markdown = (name == "review")
+        .then(|| value["data"]["markdown"].as_str().map(str::to_owned))
+        .flatten();
     loop {
         let mut out = result(value.clone(), error.is_some(), explain);
         if name == "propose" && error.is_none() {
@@ -500,10 +504,8 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
                     .unwrap_or("<finding_id>")
             ))];
         }
-        if let Some(markdown) = value["data"]["markdown"].as_str()
-            && name == "review"
-        {
-            out.content = vec![ContentBlock::text(markdown.to_owned())];
+        if let Some(markdown) = &markdown {
+            out.content = vec![ContentBlock::text(markdown.clone())];
         }
         if size(&out) <= cap {
             return out;
@@ -519,7 +521,12 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
             })
         };
         value["omitted"] = json!(value["omitted"].as_u64().unwrap() + 1);
-        if let Some(fallback) = &explain_fallback
+        if markdown.is_some()
+            && let Some(data) = value["data"].as_object_mut()
+            && data.remove("markdown").is_some()
+        {
+            // The text content still carries it.
+        } else if let Some(fallback) = &explain_fallback
             && value["data"] != *fallback
             && !value["data"].is_null()
         {
@@ -534,6 +541,12 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
             {
                 let shortened: String = text.chars().take(text.chars().count() / 2).collect();
                 value["error"] = json!(shortened);
+            } else if let Some(text) = markdown.as_mut() {
+                // Nothing else is left to drop: cut the quoted text itself rather than loop.
+                let kept: String = text.chars().take(text.chars().count() / 2).collect();
+                *text = format!(
+                    "{kept}\n… (cut to fit the MCP cap; run `archgraph review` for the rest)"
+                );
             } else {
                 value["hint"] = json!("Narrow paths; use context or rules for details.");
             }
@@ -678,10 +691,45 @@ mod tests {
             assert!(size(&out) <= 4000, "{}", size(&out));
             assert_eq!(out.content[0].as_text().unwrap().text, markdown);
             let v = out.structured_content.unwrap();
-            assert_eq!(v["data"]["markdown"], markdown);
+            // Brief already drops the rows; in full, the markdown copy goes before any row.
+            assert_eq!(v["data"].get("markdown").is_some(), brief, "{v}");
             assert_eq!(v["counts"]["other_forbidden"], 100);
             assert_eq!(v["truncated"], true);
         }
+    }
+    #[test]
+    fn review_cap_drops_the_escaped_markdown_copy_before_the_text() {
+        // JSON doubles each backslash and quote, so two copies of this markdown exceed the cap.
+        let row =
+            "  - slice a\\_b: src/x\\_\\_y\\_z.ts:1 → src/\"q\"\\\\\"r\"\\\\\"s\"\\\\\"t\".ts\n";
+        let markdown = format!(
+            "{}\nBase 0123456789ab (HEAD fallback: no origin/HEAD, main or master reference; includes uncommitted edits); rules from outside the repository: both commits are judged by them.\n",
+            row.repeat(1300 / row.len())
+        );
+        let rows: Vec<_> = (0..20)
+            .map(|i| json!({"from":format!("src/a\\_{i}.ts"),"to":"src/\"x\".ts","line":i}))
+            .collect();
+        let payload = json!({"markdown":markdown,"progress":null,"newly_broken":[],"newly_fixed":[],"other_forbidden":rows});
+        for brief in [true, false] {
+            let out = bounded("review", Ok(payload.clone()), brief);
+            assert!(size(&out) <= 4000, "{}", size(&out));
+            assert_eq!(out.content[0].as_text().unwrap().text, markdown);
+            let v = out.structured_content.unwrap();
+            assert!(v["data"].get("markdown").is_none(), "{v}");
+            assert_eq!(v["counts"]["other_forbidden"], 20);
+        }
+    }
+    #[test]
+    fn review_markdown_over_the_cap_is_cut_rather_than_looping() {
+        let markdown = "x".repeat(9000);
+        let out = bounded("review", Ok(json!({"markdown": markdown})), false);
+        assert!(size(&out) <= 4000, "{}", size(&out));
+        let text = &out.content[0].as_text().unwrap().text;
+        assert!(text.starts_with("xxx"), "{text}");
+        assert!(
+            text.ends_with("… (cut to fit the MCP cap; run `archgraph review` for the rest)"),
+            "{text}"
+        );
     }
     #[test]
     fn tiny_explanation_and_errors_stay_bounded() {

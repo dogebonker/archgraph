@@ -609,12 +609,13 @@ fn missing_git_baseline_is_actionable_and_other_tools_remain_available() {
 #[test]
 fn review_base_line_tells_external_rules_from_changed_rules() {
     let f = Fixture::new();
-    let review = |rules: &std::path::Path| {
+    let review = |rules: &std::path::Path, base: &[&str]| {
         let out = f
             .command()
             .args(["--no-daemon", "review", ".", "--language", "typescript"])
-            .args(["--engine", "native", "--base", "HEAD", "--rules"])
+            .args(["--engine", "native", "--rules"])
             .arg(rules)
+            .args(base)
             .output()
             .unwrap();
         assert!(
@@ -624,10 +625,19 @@ fn review_base_line_tells_external_rules_from_changed_rules() {
         );
         String::from_utf8(out.stdout).unwrap()
     };
+    // No origin/HEAD, main or master: the base is HEAD.
+    f.git(&["branch", "-m", "topic"]);
+    let markdown = review(&f.root.join("layout.yaml"), &[]);
+    assert!(
+        markdown.ends_with(
+            " (HEAD fallback: no origin/HEAD, main or master reference; includes uncommitted edits).\n"
+        ),
+        "{markdown}"
+    );
     // Outside the repository: no file at base to compare with.
     let external = f.root.with_extension("yaml");
     fs::copy(f.root.join("layout.yaml"), &external).unwrap();
-    let markdown = review(&external);
+    let markdown = review(&external, &["--base", "HEAD"]);
     fs::remove_file(&external).unwrap();
     assert!(
         markdown.ends_with(
@@ -637,7 +647,7 @@ fn review_base_line_tells_external_rules_from_changed_rules() {
     );
     // In the repository and edited since base.
     fs::write(f.root.join("layout.yaml"), "version: 1\n").unwrap();
-    let markdown = review(&f.root.join("layout.yaml"));
+    let markdown = review(&f.root.join("layout.yaml"), &["--base", "HEAD"]);
     assert!(
         markdown.ends_with(
             " (explicit); rules changed since base: both commits are judged by the current rules.\n"

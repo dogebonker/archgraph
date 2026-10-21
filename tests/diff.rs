@@ -518,15 +518,14 @@ fn markdown_reports_target_progress_and_newly_broken_slices() {
     assert!(!markdown.contains("Target:"), "{markdown}");
 }
 
+const GO_CLAIM: &str = "version: 1\nforbid:\n\
+    \x20 - { id: no-adapters, from: \"domain/**\", to: \"adapters/**\", reason: \"the domain stays pure\" }\n";
+
 #[test]
 fn go_target_imports_take_the_line_of_their_first_use() {
     // A Go edge carries the first line using its target (8, `postgres.Insert`), which wins over
     // the import record's line (3, the import statement).
-    let rules = write_tmp(
-        "diff/go-claim.yaml",
-        "version: 1\nforbid:\n\
-         \x20 - { id: no-adapters, from: \"domain/**\", to: \"adapters/**\", reason: \"the domain stays pure\" }\n",
-    );
+    let rules = write_tmp("diff/go-claim.yaml", GO_CLAIM);
     let (broken, held) = before_after(
         "go-layers",
         &["--rules", &rules],
@@ -542,5 +541,37 @@ fn go_target_imports_take_the_line_of_their_first_use() {
         doc["target"]["newly_broken"],
         json!([{"claim": "no-adapters", "reason": "the domain stays pure", "slice": "*",
                 "imports": [{"from": "domain/order.go", "to": "adapters/postgres/repo.go", "line": 8}]}])
+    );
+}
+
+#[test]
+fn go_target_imports_without_edge_lines_take_the_import_record_line() {
+    // A recording made before edges carried lines: the import statement's line (3) stands in.
+    let dir = common::fixture("go-layers");
+    let mut recorded: Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.join("go.json")).unwrap()).unwrap();
+    for edge in recorded["edges"].as_array_mut().unwrap() {
+        edge.as_object_mut().unwrap().remove("line");
+    }
+    let input = write_tmp("diff/go-lineless-input.json", &recorded.to_string());
+    let rules = write_tmp("diff/go-lineless.yaml", GO_CLAIM);
+    let (mut held, broken, _) = scan(&[
+        dir.to_str().unwrap(),
+        "--collector-input",
+        &input,
+        "--rules",
+        &rules,
+    ]);
+    held["edges"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|e| !(e["from"] == "domain/order.go" && e["to"] == "adapters/postgres/repo.go"));
+    let broken = write_tmp("diff/go-lineless-broken.json", &broken);
+    let held = write_tmp("diff/go-lineless-held.json", &held.to_string());
+    let (doc, _) = run_json(&["diff", &held, &broken]);
+    assert_eq!(
+        doc["target"]["newly_broken"],
+        json!([{"claim": "no-adapters", "reason": "the domain stays pure", "slice": "*",
+                "imports": [{"from": "domain/order.go", "to": "adapters/postgres/repo.go", "line": 3}]}])
     );
 }
