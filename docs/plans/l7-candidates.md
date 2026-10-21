@@ -40,7 +40,7 @@ graph into exact, checkable glob claims.
       to: "internal/<name>/handler{/**,.*,_*}"
       reason: "service does not import handler (drafted from the graph; review intent)"
   ```
-  a broken claim also lists `# Breaks in discovery, miner:` and each hit
+  a broken claim also lists `# Breaks in "discovery", "miner":` (names quoted, so a line break in a folder name cannot end the comment) and each hit
   `#   "internal/discovery/service.go" -> "internal/discovery/routes.go"`; a header
   `# N eligible slice claims; M omitted by --max-rules.` Root and role escaped with `literal()`.
   One claim per pair; teams merge under one id by hand.

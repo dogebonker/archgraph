@@ -534,7 +534,8 @@ pub fn infer(input: &ScanInput, options: Options) -> Result<String> {
             claim.held
         )?;
         if !claim.hits.is_empty() {
-            let names: Vec<&str> = claim.hits.iter().map(|(name, _)| name.as_str()).collect();
+            // Names come from paths: quoted, so a line break in a folder name cannot end the comment.
+            let names: Vec<String> = claim.hits.iter().map(|(name, _)| quoted(name)).collect();
             writeln!(out, "  # Breaks in {}:", names.join(", "))?;
             for hit in claim.hits.iter().flat_map(|(_, hits)| hits) {
                 writeln!(out, "  #   {} -> {}", quoted(&hit.from), quoted(&hit.to))?;
@@ -920,6 +921,54 @@ mod tests {
     }
 
     #[test]
+    fn a_line_break_in_a_breaking_slice_name_stays_inside_the_comment() {
+        // A family one level below a module: its slice names are not module ids, so nothing else
+        // rejects a line break in one before the comment is written.
+        let evil = "x\n  - { id: injected, from: \"**\", to: \"**\" }";
+        let names = ["a", "b", "c", "d", "e", evil];
+        let files: Vec<String> = names
+            .iter()
+            .flat_map(|n| ["handler", "service"].map(|r| format!("lib/kit/{n}/{r}.go")))
+            .collect();
+        let files: Vec<&str> = files.iter().map(String::as_str).collect();
+        let mut edges: Vec<(String, String)> = names
+            .iter()
+            .map(|n| {
+                (
+                    format!("lib/kit/{n}/handler.go"),
+                    format!("lib/kit/{n}/service.go"),
+                )
+            })
+            .collect();
+        edges.push((
+            format!("lib/kit/{evil}/service.go"),
+            format!("lib/kit/{evil}/handler.go"),
+        ));
+        let edges: Vec<(&str, &str)> = edges
+            .iter()
+            .map(|(f, t)| (f.as_str(), t.as_str()))
+            .collect();
+        // The helper's module rules would carry the path; a real scan's modules need none.
+        let mut scan = input(&[("lib", &files)], &edges);
+        scan.config.rules = None;
+        scan.config.source_root = ".".into();
+        let (text, rules) = parsed(&scan, Options::default());
+        assert!(
+            text.contains(
+                "  # Breaks in \"x\\n  - { id: injected, from: \\\"**\\\", to: \\\"**\\\" }\":\n"
+            ),
+            "{text}"
+        );
+        assert!(
+            rules
+                .forbid
+                .iter()
+                .all(|r| r.id.as_deref() != Some("injected")),
+            "{text}"
+        );
+    }
+
+    #[test]
     fn slice_claims_need_a_direction_that_holds_across_enough_siblings() {
         let five = ["a", "b", "c", "d", "e"];
         let (text, rules) = parsed(&slices(&five, &["e"]), Options::default());
@@ -933,7 +982,7 @@ mod tests {
             Some("service does not import handler (drafted from the graph; review intent)")
         );
         assert!(text.contains(
-            "  # internal/<name>: handler imports service in 5 of 5 slices; service imports handler in 1 of 5 (holds in 4).\n  # Breaks in e:\n  #   \"internal/e/service.go\" -> \"internal/e/handler.go\"\n  - id: infer-claim-1\n"
+            "  # internal/<name>: handler imports service in 5 of 5 slices; service imports handler in 1 of 5 (holds in 4).\n  # Breaks in \"e\":\n  #   \"internal/e/service.go\" -> \"internal/e/handler.go\"\n  - id: infer-claim-1\n"
         ), "{text}");
         assert!(text.contains("# 1 eligible slice claims; 0 omitted by --max-rules.\n"));
         let (text, rules) = parsed(
