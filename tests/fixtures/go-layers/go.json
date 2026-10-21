@@ -3,11 +3,13 @@
  "edges": [
   {
    "from": "app/service.go",
-   "to": "domain/order.go"
+   "to": "domain/order.go",
+   "line": 5
   },
   {
    "from": "domain/order.go",
-   "to": "adapters/postgres/repo.go"
+   "to": "adapters/postgres/repo.go",
+   "line": 8
   }
  ],
  "files": [

@@ -519,8 +519,9 @@ fn markdown_reports_target_progress_and_newly_broken_slices() {
 }
 
 #[test]
-fn go_target_imports_take_their_line_from_the_import_record() {
-    // Go edges carry no line: the record of domain/order.go's import has it.
+fn go_target_imports_take_the_line_of_their_first_use() {
+    // A Go edge carries the first line using its target (8, `postgres.Insert`), which wins over
+    // the import record's line (3, the import statement).
     let rules = write_tmp(
         "diff/go-claim.yaml",
         "version: 1\nforbid:\n\
@@ -533,17 +534,13 @@ fn go_target_imports_take_their_line_from_the_import_record() {
         "adapters/postgres/repo.go",
     );
     let scanned: Value = serde_json::from_str(&std::fs::read_to_string(&broken).unwrap()).unwrap();
-    assert!(
-        scanned["edges"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .all(|e| e["line"].is_null())
-    );
+    assert!(scanned["edges"].as_array().unwrap().iter().any(|e| {
+        e["from"] == "domain/order.go" && e["to"] == "adapters/postgres/repo.go" && e["line"] == 8
+    }));
     let (doc, _) = run_json(&["diff", &held, &broken]);
     assert_eq!(
         doc["target"]["newly_broken"],
         json!([{"claim": "no-adapters", "reason": "the domain stays pure", "slice": "*",
-                "imports": [{"from": "domain/order.go", "to": "adapters/postgres/repo.go", "line": 3}]}])
+                "imports": [{"from": "domain/order.go", "to": "adapters/postgres/repo.go", "line": 8}]}])
     );
 }

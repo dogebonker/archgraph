@@ -45,39 +45,48 @@
  "edges": [
   {
    "from": "app/app.go",
-   "to": "app/wire_gen.go"
+   "to": "app/wire_gen.go",
+   "line": 7
   },
   {
    "from": "app/app.go",
-   "to": "lib/lib.go"
+   "to": "lib/lib.go",
+   "line": 7
   },
   {
    "from": "app/app_test.go",
-   "to": "app/app.go"
+   "to": "app/app.go",
+   "line": 6
   },
   {
    "from": "app/apptesting/fake.go",
-   "to": "app/app.go"
+   "to": "app/app.go",
+   "line": 6
   },
   {
    "from": "app/cmd/cmd.go",
-   "to": "app/finder.go"
+   "to": "app/finder.go",
+   "line": 5
   },
   {
    "from": "app/ext_test.go",
-   "to": "app/app.go"
+   "to": "app/app.go",
+   "line": 9
   },
   {
    "from": "app/flag.go",
-   "to": "app/probe_other.go"
+   "to": "app/probe_other.go",
+   "line": 8
   },
   {
    "from": "app/flag.go",
-   "to": "app/probe_windows.go"
+   "to": "app/probe_windows.go",
+   "line": 8
   },
   {
    "from": "app/testhelp.go",
-   "to": "app/app.go"
+   "to": "app/app.go",
+   "line": 7
   }
  ],
  "files": [

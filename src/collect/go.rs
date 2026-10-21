@@ -54,6 +54,9 @@ struct DumpFile {
 struct DumpEdge {
     from: String,
     to: String,
+    /// The first line of `from` using `to`; absent in recordings older than it.
+    #[serde(default)]
+    line: Option<usize>,
 }
 
 /// The directories under `root` holding a go.mod with a `module` line, root-relative (`.` for
@@ -212,6 +215,7 @@ pub fn parse(json: &[u8]) -> Result<Parsed> {
             from: e.from,
             to: e.to,
             kind: EdgeKind::Static,
+            line: e.line,
             ..crate::model::Edge::default()
         })
         .collect();

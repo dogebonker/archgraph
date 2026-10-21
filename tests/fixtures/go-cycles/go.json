@@ -11,19 +11,23 @@
  "edges": [
   {
    "from": "api/handler/handler.go",
-   "to": "api/handler/route.go"
+   "to": "api/handler/route.go",
+   "line": 8
   },
   {
    "from": "api/handler/handler.go",
-   "to": "store/store.go"
+   "to": "store/store.go",
+   "line": 8
   },
   {
    "from": "api/handler/route.go",
-   "to": "api/handler/handler.go"
+   "to": "api/handler/handler.go",
+   "line": 3
   },
   {
    "from": "store/sql/sql.go",
-   "to": "api/types/types.go"
+   "to": "api/types/types.go",
+   "line": 5
   }
  ],
  "files": [

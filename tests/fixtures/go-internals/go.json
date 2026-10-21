@@ -3,15 +3,18 @@
  "edges": [
   {
    "from": "billing/billing.go",
-   "to": "billing/ledger/ledger.go"
+   "to": "billing/ledger/ledger.go",
+   "line": 5
   },
   {
    "from": "orders/checkout.go",
-   "to": "billing/billing.go"
+   "to": "billing/billing.go",
+   "line": 10
   },
   {
    "from": "orders/checkout.go",
-   "to": "billing/ledger/ledger.go"
+   "to": "billing/ledger/ledger.go",
+   "line": 10
   }
  ],
  "files": [

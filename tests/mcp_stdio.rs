@@ -605,3 +605,43 @@ fn missing_git_baseline_is_actionable_and_other_tools_remain_available() {
             .is_array()
     );
 }
+
+#[test]
+fn review_base_line_tells_external_rules_from_changed_rules() {
+    let f = Fixture::new();
+    let review = |rules: &std::path::Path| {
+        let out = f
+            .command()
+            .args(["--no-daemon", "review", ".", "--language", "typescript"])
+            .args(["--engine", "native", "--base", "HEAD", "--rules"])
+            .arg(rules)
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        String::from_utf8(out.stdout).unwrap()
+    };
+    // Outside the repository: no file at base to compare with.
+    let external = f.root.with_extension("yaml");
+    fs::copy(f.root.join("layout.yaml"), &external).unwrap();
+    let markdown = review(&external);
+    fs::remove_file(&external).unwrap();
+    assert!(
+        markdown.ends_with(
+            " (explicit); rules from outside the repository: both commits are judged by them.\n"
+        ),
+        "{markdown}"
+    );
+    // In the repository and edited since base.
+    fs::write(f.root.join("layout.yaml"), "version: 1\n").unwrap();
+    let markdown = review(&f.root.join("layout.yaml"));
+    assert!(
+        markdown.ends_with(
+            " (explicit); rules changed since base: both commits are judged by the current rules.\n"
+        ),
+        "{markdown}"
+    );
+}

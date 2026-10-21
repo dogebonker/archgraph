@@ -26,131 +26,163 @@
  "edges": [
   {
    "from": "dashboard/view.go",
-   "to": "internal/report/summary.go"
+   "to": "internal/report/summary.go",
+   "line": 8
   },
   {
    "from": "dashboard/view.go",
-   "to": "pub/rates.go"
+   "to": "pub/rates.go",
+   "line": 8
   },
   {
    "from": "internal/report/label.go",
-   "to": "internal/report/summary.go"
+   "to": "internal/report/summary.go",
+   "line": 5
   },
   {
    "from": "internal/report/percent.go",
-   "to": "internal/report/rate.go"
+   "to": "internal/report/rate.go",
+   "line": 5
   },
   {
    "from": "internal/report/tax.go",
-   "to": "internal/report/util.go"
+   "to": "internal/report/util.go",
+   "line": 5
   },
   {
    "from": "invoice/create.go",
-   "to": "internal/report/format.go"
+   "to": "internal/report/format.go",
+   "line": 9
   },
   {
    "from": "invoice/create.go",
-   "to": "internal/report/label.go"
+   "to": "internal/report/label.go",
+   "line": 9
   },
   {
    "from": "invoice/create.go",
-   "to": "internal/report/notify_linux.go"
+   "to": "internal/report/notify_linux.go",
+   "line": 9
   },
   {
    "from": "invoice/create.go",
-   "to": "internal/report/notify_other.go"
+   "to": "internal/report/notify_other.go",
+   "line": 9
   },
   {
    "from": "invoice/create.go",
-   "to": "internal/report/notify_windows.go"
+   "to": "internal/report/notify_windows.go",
+   "line": 9
   },
   {
    "from": "invoice/create.go",
-   "to": "internal/report/percent.go"
+   "to": "internal/report/percent.go",
+   "line": 9
   },
   {
    "from": "invoice/create.go",
-   "to": "internal/report/rate.go"
+   "to": "internal/report/rate.go",
+   "line": 9
   },
   {
    "from": "invoice/create.go",
-   "to": "internal/report/tax.go"
+   "to": "internal/report/tax.go",
+   "line": 9
   },
   {
    "from": "invoice/create.go",
-   "to": "pub/money.go"
+   "to": "pub/money.go",
+   "line": 9
   },
   {
    "from": "invoice/send.go",
-   "to": "internal/report/format.go"
+   "to": "internal/report/format.go",
+   "line": 9
   },
   {
    "from": "invoice/send.go",
-   "to": "internal/report/label.go"
+   "to": "internal/report/label.go",
+   "line": 9
   },
   {
    "from": "invoice/send.go",
-   "to": "internal/report/notify_linux.go"
+   "to": "internal/report/notify_linux.go",
+   "line": 9
   },
   {
    "from": "invoice/send.go",
-   "to": "internal/report/notify_other.go"
+   "to": "internal/report/notify_other.go",
+   "line": 9
   },
   {
    "from": "invoice/send.go",
-   "to": "internal/report/notify_windows.go"
+   "to": "internal/report/notify_windows.go",
+   "line": 9
   },
   {
    "from": "invoice/send.go",
-   "to": "internal/report/percent.go"
+   "to": "internal/report/percent.go",
+   "line": 9
   },
   {
    "from": "invoice/send.go",
-   "to": "internal/report/rate.go"
+   "to": "internal/report/rate.go",
+   "line": 9
   },
   {
    "from": "invoice/send.go",
-   "to": "internal/report/tax.go"
+   "to": "internal/report/tax.go",
+   "line": 9
   },
   {
    "from": "invoice/send.go",
-   "to": "pub/money.go"
+   "to": "pub/money.go",
+   "line": 9
   },
   {
    "from": "invoice/total.go",
-   "to": "internal/report/format.go"
+   "to": "internal/report/format.go",
+   "line": 9
   },
   {
    "from": "invoice/total.go",
-   "to": "internal/report/label.go"
+   "to": "internal/report/label.go",
+   "line": 9
   },
   {
    "from": "invoice/total.go",
-   "to": "internal/report/notify_linux.go"
+   "to": "internal/report/notify_linux.go",
+   "line": 9
   },
   {
    "from": "invoice/total.go",
-   "to": "internal/report/notify_other.go"
+   "to": "internal/report/notify_other.go",
+   "line": 9
   },
   {
    "from": "invoice/total.go",
-   "to": "internal/report/notify_windows.go"
+   "to": "internal/report/notify_windows.go",
+   "line": 9
   },
   {
    "from": "invoice/total.go",
-   "to": "internal/report/percent.go"
+   "to": "internal/report/percent.go",
+   "line": 9
   },
   {
    "from": "invoice/total.go",
-   "to": "internal/report/rate.go"
+   "to": "internal/report/rate.go",
+   "line": 9
   },
   {
    "from": "invoice/total.go",
-   "to": "internal/report/tax.go"
+   "to": "internal/report/tax.go",
+   "line": 9
   },
   {
    "from": "invoice/total.go",
-   "to": "pub/money.go"
+   "to": "pub/money.go",
+   "line": 9
   }
  ],
  "files": [

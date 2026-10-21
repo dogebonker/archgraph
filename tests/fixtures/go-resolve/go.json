@@ -52,91 +52,113 @@
  "edges": [
   {
    "from": "cmd/tool/main.go",
-   "to": "server/base.go"
+   "to": "server/base.go",
+   "line": 11
   },
   {
    "from": "cmd/tool/main.go",
-   "to": "server/handle.go"
+   "to": "server/handle.go",
+   "line": 11
   },
   {
    "from": "cmd/tool/main.go",
-   "to": "server/server.go"
+   "to": "server/server.go",
+   "line": 10
   },
   {
    "from": "kinds/alias.go",
-   "to": "kinds/impl.go"
+   "to": "kinds/impl.go",
+   "line": 3
   },
   {
    "from": "kinds/emb.go",
-   "to": "kinds/iface.go"
+   "to": "kinds/iface.go",
+   "line": 5
   },
   {
    "from": "lost/lost.go",
-   "to": "wrap/wrap.go"
+   "to": "wrap/wrap.go",
+   "line": 10
   },
   {
    "from": "plugin/plugin.go",
-   "to": "blank/beta.go"
+   "to": "blank/beta.go",
+   "line": 5
   },
   {
    "from": "plugin/plugin.go",
-   "to": "store/doc.go"
+   "to": "store/doc.go",
+   "line": 7
   },
   {
    "from": "server/handle.go",
-   "to": "server/server.go"
+   "to": "server/server.go",
+   "line": 5
   },
   {
    "from": "server/handle.go",
-   "to": "store/db.go"
+   "to": "store/db.go",
+   "line": 5
   },
   {
    "from": "server/server.go",
-   "to": "server/base.go"
+   "to": "server/base.go",
+   "line": 6
   },
   {
    "from": "server/server.go",
-   "to": "store/db.go"
+   "to": "store/db.go",
+   "line": 7
   },
   {
    "from": "server/server.go",
-   "to": "store/open.go"
+   "to": "store/open.go",
+   "line": 10
   },
   {
    "from": "store/open.go",
-   "to": "store/db.go"
+   "to": "store/db.go",
+   "line": 3
   },
   {
    "from": "store/size.go",
-   "to": "store/native.go"
+   "to": "store/native.go",
+   "line": 3
   },
   {
    "from": "store/size.go",
-   "to": "store/sys_linux.go"
+   "to": "store/sys_linux.go",
+   "line": 3
   },
   {
    "from": "store/size.go",
-   "to": "store/sys_windows.go"
+   "to": "store/sys_windows.go",
+   "line": 3
   },
   {
    "from": "use/use.go",
-   "to": "kinds/alias.go"
+   "to": "kinds/alias.go",
+   "line": 9
   },
   {
    "from": "use/use.go",
-   "to": "kinds/emb.go"
+   "to": "kinds/emb.go",
+   "line": 7
   },
   {
    "from": "use/use.go",
-   "to": "kinds/gen.go"
+   "to": "kinds/gen.go",
+   "line": 8
   },
   {
    "from": "use/use.go",
-   "to": "kinds/iface.go"
+   "to": "kinds/iface.go",
+   "line": 7
   },
   {
    "from": "use/use_test.go",
-   "to": "use/use.go"
+   "to": "use/use.go",
+   "line": 9
   }
  ],
  "files": [

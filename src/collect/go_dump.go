@@ -183,7 +183,8 @@ func main() {
 	all = append(all, xtests...)
 	sort.Slice(all, func(i, j int) bool { return all[i].path < all[j].path })
 	var files []fileOut
-	edges := map[edge]bool{}
+	// Each edge with the first line of `From` using `To`.
+	edges := map[edge]int{}
 	unresolved := 0
 	for _, p := range all {
 		index(p)
@@ -215,10 +216,14 @@ func main() {
 	}
 
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
-	sorted := func(set map[edge]bool) []edge {
-		out := []edge{}
-		for e := range set {
-			out = append(out, e)
+	type lined struct {
+		edge
+		Line int `json:"line"`
+	}
+	sorted := func(set map[edge]int) []lined {
+		out := []lined{}
+		for e, line := range set {
+			out = append(out, lined{e, line})
 		}
 		sort.Slice(out, func(i, j int) bool {
 			return out[i].From < out[j].From || out[i].From == out[j].From && out[i].To < out[j].To
@@ -627,11 +632,17 @@ func check(p *pkg) *types.Package {
 }
 
 // Adds an edge from each file of `p` to every local file declaring something it uses, and to the
-// anchor file of a local package it imports blank (`import _`). Returns the number of imports
+// anchor file of a local package it imports blank (`import _`), each with its smallest line of
+// a use (the import line for a blank import). Returns the number of imports
 // that look local (under a scanned module path) but name no local package, plus the imports of
 // local packages none of whose uses resolved.
-func references(p *pkg, edges map[edge]bool) int {
+func references(p *pkg, edges map[edge]int) int {
 	unresolved := 0
+	add := func(e edge, line int) {
+		if l, ok := edges[e]; !ok || line < l {
+			edges[e] = line
+		}
+	}
 	for _, f := range p.files {
 		from := rel(f)
 		reached := map[*pkg]bool{}
@@ -639,10 +650,11 @@ func references(p *pkg, edges map[edge]bool) int {
 		// or composite literal holding it, which ast.Inspect visits first.
 		qualified := map[*ast.Ident]string{}
 		var name string
+		var line int
 		link := func(to string, q *pkg, obj types.Object) {
 			reached[q] = true
 			if to != from {
-				edges[edge{from, to}] = true
+				add(edge{from, to}, line)
 				if q == p && !obj.Exported() {
 					bind(from, to).names[name] = true
 				}
@@ -654,6 +666,7 @@ func references(p *pkg, edges map[edge]bool) int {
 			case *ast.Ident:
 				obj = info.Uses[n]
 				name = qualified[n]
+				line = fset.Position(n.Pos()).Line
 			case *ast.SelectorExpr:
 				// The selected object is also recorded as the use of n.Sel, linked there.
 				if s := info.Selections[n]; s != nil {
@@ -709,7 +722,7 @@ func references(p *pkg, edges map[edge]bool) int {
 			case spec.Name != nil && spec.Name.Name == "_":
 				// A blank import uses the package for its side effects: its anchor stands for it.
 				reached[q] = true
-				edges[edge{from, anchor(q)}] = true
+				add(edge{from, anchor(q)}, fset.Position(spec.Pos()).Line)
 			default:
 				// Imported, but no use was resolved: they sit inside expressions whose type comes
 				// from a module that is not loaded. Counted, not guessed.

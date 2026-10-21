@@ -118,6 +118,23 @@ fn go_references_resolve_to_the_declaring_files() {
 }
 
 #[test]
+fn go_edges_carry_the_line_of_their_first_use() {
+    // A use within one package has no import statement: the edge's own line is the only one.
+    // A blank import's edge has the import's line.
+    let (doc, _, _) = scan_recorded("go-resolve", &[]);
+    let line = |from: &str, to: &str| {
+        doc["edges"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["from"] == from && e["to"] == to)
+            .map(|e| e["line"].clone())
+    };
+    assert_eq!(line("store/size.go", "store/sys_linux.go"), Some(json!(3)));
+    assert_eq!(line("plugin/plugin.go", "store/doc.go"), Some(json!(7)));
+}
+
+#[test]
 fn go_cycles_appear_only_between_merged_packages() {
     // handler.go and route.go use each other: one package, which Go compiles as a unit, so no
     // file cycle. At --depth 1 api/handler -> store and store/sql -> api/types merge into a

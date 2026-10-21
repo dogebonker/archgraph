@@ -94,7 +94,17 @@ pub(super) fn call(mut args: Call) -> Result<Value> {
     let mut result = mcp_tools::call(&doc, &root, &args.tool, arguments, baseline.as_ref())?;
     if let Some((base, selection)) = base {
         if args.tool == "review" {
-            let changed = if policy_note == Some(true) {
+            // policy_changed counts rules outside the repository as changed: base has no copy.
+            let external = args
+                .setup
+                .opts
+                .rules
+                .as_deref()
+                .and_then(|p| p.canonicalize().ok())
+                .is_some_and(|p| !p.starts_with(&root));
+            let changed = if external {
+                "; rules from outside the repository: both commits are judged by them"
+            } else if policy_note == Some(true) {
                 "; rules changed since base: both commits are judged by the current rules"
             } else {
                 ""
