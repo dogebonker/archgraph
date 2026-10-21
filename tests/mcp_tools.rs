@@ -387,3 +387,59 @@ fn target_returns_claim_verdicts_or_null() {
     assert_eq!(without, Value::Null);
     validate("target", &without);
 }
+
+/// Slices a and b under the claim app-no-domain, a leaf rule on shared/ and `(from, to, line)`
+/// imports.
+fn claims(edges: &[(&str, &str, usize)]) -> Document {
+    let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","cruised":5},"git":{"commit":"test","dirty":false},"generated_at":"1970-01-01T00:00:00Z"})).unwrap();
+    let config: Config = serde_json::from_value(json!({"depth":1,"source_root":"src","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"fixture","doc":{"version":1,"forbid":[
+        {"id":"app-no-domain","from":"src/m/<name>/app/**","to":"src/m/<name>/domain/**","reason":"apps never reach a domain","source":"docs/adr/0001.md"},
+        {"from":"src/shared/**","to":"src/m/**","reason":"shared stays a leaf"}]}}})).unwrap();
+    archgraph::analyze(
+        source,
+        config,
+        [
+            "src/m/a/app/x.ts",
+            "src/m/a/domain/d.ts",
+            "src/m/b/app/y.ts",
+            "src/m/b/domain/e.ts",
+            "src/shared/id.ts",
+        ]
+        .map(String::from)
+        .to_vec(),
+        edges
+            .iter()
+            .map(|(from, to, line)| Edge {
+                from: (*from).into(),
+                to: (*to).into(),
+                line: Some(*line),
+                ..Default::default()
+            })
+            .collect(),
+        Vec::new(),
+        None,
+    )
+    .unwrap()
+}
+
+#[test]
+fn diff_target_lists_newly_broken_and_newly_fixed_slices_with_lines() {
+    let old = claims(&[("src/m/a/app/x.ts", "src/m/a/domain/d.ts", 2)]);
+    let new = claims(&[
+        ("src/m/b/app/y.ts", "src/m/b/domain/e.ts", 3),
+        ("src/shared/id.ts", "src/m/a/domain/d.ts", 1),
+    ]);
+    let slice = |slice: &str, from: &str, to: &str, line: usize| {
+        json!([{"claim": "app-no-domain", "reason": "apps never reach a domain",
+                "source": "docs/adr/0001.md", "slice": slice,
+                "imports": [{"from": from, "to": to, "line": line}]}])
+    };
+    assert_eq!(
+        serde_json::to_value(archgraph::diff::diff(&old, &new).target).unwrap(),
+        json!({
+            "conforming": [{"done": 1, "of": 2}, {"done": 1, "of": 2}],
+            "newly_broken": slice("b", "src/m/b/app/y.ts", "src/m/b/domain/e.ts", 3),
+            "newly_fixed": slice("a", "src/m/a/app/x.ts", "src/m/a/domain/d.ts", 2),
+        })
+    );
+}

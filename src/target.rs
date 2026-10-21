@@ -98,14 +98,28 @@ pub struct Delta {
     /// Slices with no file left to move; only when both scans have `moves`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub moved: Option<[Count; 2]>,
-    pub newly_broken: Vec<NewlyBroken>,
+    pub newly_broken: Vec<SliceChange>,
+    /// Slices broken in old that are not broken in new, also when no longer bound or gone.
+    pub newly_fixed: Vec<SliceChange>,
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct NewlyBroken {
+pub struct SliceChange {
     pub claim: String,
+    pub reason: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
     pub slice: String,
-    pub imports: Vec<Link>,
+    pub imports: Vec<Evidence>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Evidence {
+    pub from: String,
+    pub to: String,
+    /// Absent when the collector records no line for the import.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line: Option<usize>,
 }
 
 type Files = BTreeSet<String>;
@@ -363,35 +377,78 @@ fn import_lines(doc: &Document, moves: &[Move]) -> usize {
     }
 }
 
-/// Slices broken in `new` that were not broken in `old`, with their imports.
-pub fn delta(old: &Report, new: &Report) -> Delta {
-    let was_broken = |claim: &str, slice: &str| {
-        old.claims
+/// The target's counts in both scans and the slices newly broken and newly fixed; `None` when
+/// neither scan has a target.
+pub fn delta(old: &Document, new: &Document) -> Option<Delta> {
+    if old.target.is_none() && new.target.is_none() {
+        return None;
+    }
+    let none = Report::default();
+    let was = old.target.as_ref().unwrap_or(&none);
+    let is = new.target.as_ref().unwrap_or(&none);
+    Some(Delta {
+        conforming: [was.progress.conforming, is.progress.conforming],
+        moved: was
+            .progress
+            .moved
+            .zip(is.progress.moved)
+            .map(|(a, b)| [a, b]),
+        newly_broken: changed(new, is, was),
+        newly_fixed: changed(old, was, is),
+    })
+}
+
+/// Slices broken in `report`, the target of `doc`, that are not broken in `other`, with each
+/// import's line in `doc`.
+fn changed(doc: &Document, report: &Report, other: &Report) -> Vec<SliceChange> {
+    let broken_in_other = |claim: &str, slice: &str| {
+        other
+            .claims
             .iter()
             .filter(|c| c.id == claim)
             .flat_map(|c| &c.slices)
             .any(|s| s.slice == slice && !s.broken.is_empty())
     };
-    let newly_broken = new
+    report
         .claims
         .iter()
         .flat_map(|c| c.slices.iter().map(move |s| (c, s)))
-        .filter(|(c, s)| !s.broken.is_empty() && !was_broken(&c.id, &s.slice))
-        .map(|(c, s)| NewlyBroken {
+        .filter(|(c, s)| !s.broken.is_empty() && !broken_in_other(&c.id, &s.slice))
+        .map(|(c, s)| SliceChange {
             claim: c.id.clone(),
+            reason: c.reason.clone(),
+            source: c.source.clone(),
             slice: s.slice.clone(),
-            imports: s.broken.clone(),
+            imports: s
+                .broken
+                .iter()
+                .map(|l| Evidence {
+                    from: l.from.clone(),
+                    to: l.to.clone(),
+                    line: line(doc, &l.from, &l.to),
+                })
+                .collect(),
         })
-        .collect();
-    Delta {
-        conforming: [old.progress.conforming, new.progress.conforming],
-        moved: old
-            .progress
-            .moved
-            .zip(new.progress.moved)
-            .map(|(a, b)| [a, b]),
-        newly_broken,
-    }
+        .collect()
+}
+
+/// The first line an edge `from -> to` records, else the smallest of the import records of
+/// `from` resolving to `to` (Go edges carry none).
+// ponytail: scans every edge and record per broken import, O(links × edges); index the pairs
+// once if diffs with many broken imports get slow.
+fn line(doc: &Document, from: &str, to: &str) -> Option<usize> {
+    doc.edges
+        .iter()
+        .chain(&doc.external_edges)
+        .find_map(|e| (e.from == from && e.to == to).then_some(e.line).flatten())
+        .or_else(|| {
+            doc.imports
+                .iter()
+                .flatten()
+                .filter(|i| i.from == from && i.targets.iter().any(|t| t == to))
+                .filter_map(|i| i.line)
+                .min()
+        })
 }
 
 /// The `check` lines: a verdict per claim with up to 20 broken imports, the pending moves, notes,

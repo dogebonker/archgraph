@@ -495,6 +495,15 @@ fn markdown_reports_target_progress_and_newly_broken_slices() {
         doc["target"]["moved"],
         json!([{"done": 0, "of": 2}, {"done": 0, "of": 2}])
     );
+    // depcruise records no lines, so no import has one.
+    let b = json!([{"claim": "app-no-domain", "reason": "apps never reach a domain", "slice": "b",
+                    "imports": [{"from": "src/m/b/app/y.ts", "to": "src/m/b/domain/e.ts"}]}]);
+    assert_eq!(doc["target"]["newly_broken"], b);
+    assert_eq!(doc["target"]["newly_fixed"], json!([]));
+    let (reverse, _) = run_json(&["diff", &new, &old]);
+    common::validate(&reverse);
+    assert_eq!(reverse["target"]["newly_broken"], json!([]));
+    assert_eq!(reverse["target"]["newly_fixed"], b);
     // T16: the same diff fails the gate.
     let (_, _, code) = diff(&[&old, &new, "--fail-on", "new-forbidden"]);
     assert_eq!(code, Some(1));
@@ -507,4 +516,34 @@ fn markdown_reports_target_progress_and_newly_broken_slices() {
     let plain = before_after("ts-cycles", &[], "src/c/z.ts", "src/a/x.ts");
     let (markdown, _, _) = diff(&[&plain.0, &plain.1, "--format", "markdown"]);
     assert!(!markdown.contains("Target:"), "{markdown}");
+}
+
+#[test]
+fn go_target_imports_take_their_line_from_the_import_record() {
+    // Go edges carry no line: the record of domain/order.go's import has it.
+    let rules = write_tmp(
+        "diff/go-claim.yaml",
+        "version: 1\nforbid:\n\
+         \x20 - { id: no-adapters, from: \"domain/**\", to: \"adapters/**\", reason: \"the domain stays pure\" }\n",
+    );
+    let (broken, held) = before_after(
+        "go-layers",
+        &["--rules", &rules],
+        "domain/order.go",
+        "adapters/postgres/repo.go",
+    );
+    let scanned: Value = serde_json::from_str(&std::fs::read_to_string(&broken).unwrap()).unwrap();
+    assert!(
+        scanned["edges"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|e| e["line"].is_null())
+    );
+    let (doc, _) = run_json(&["diff", &held, &broken]);
+    assert_eq!(
+        doc["target"]["newly_broken"],
+        json!([{"claim": "no-adapters", "reason": "the domain stays pure", "slice": "*",
+                "imports": [{"from": "domain/order.go", "to": "adapters/postgres/repo.go", "line": 3}]}])
+    );
 }

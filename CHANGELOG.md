@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- `diff`'s `target` gains `newly_fixed`, the slices broken in the old scan and not in the new one (also when no longer bound or gone), and each newly broken or fixed slice carries its claim's `reason` and `source` and each import's `line` (from the edge, else the import record; absent when the collector records none, as depcruise).
 - The review page gains the move cost table (sortable; a slice opens the map with its destination folders) and the assessment's findings to review and next steps, each opening the map as the side panel does. It now opens with the verdict in sentences and a title block, and draws the claims as one hatched, hairline-ruled sheet with a measured bar per claim; the matrix and move cost sit side by side where they fit.
 - The report opens on a review page when the scan has a target: the slices conforming and moved, forbidden imports and cycles in one line, and a claims-by-slice table whose broken cells open the map on that slice. A Review and Map switch in the header changes view and is kept in the URL (`#review`, `#map`).
 - The map's what-if preview shows the target live: each claim's verdict and broken imports and the slices conforming and moved after the previewed moves, with "(was X of Y)" where a count changes. Claims with package rules, and then the conforming count, keep the scan's values.

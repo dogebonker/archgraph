@@ -82,16 +82,7 @@ pub fn diff(old: &Document, new: &Document) -> Diff {
         new_forbidden: only_in(new, old, Verdict::Forbidden),
         resolved_forbidden: only_in(old, new, Verdict::Forbidden),
         new_unplanned: only_in(new, old, Verdict::Unplanned),
-        target: match (&old.target, &new.target) {
-            (None, None) => None,
-            (o, n) => {
-                let none = crate::target::Report::default();
-                Some(crate::target::delta(
-                    o.as_ref().unwrap_or(&none),
-                    n.as_ref().unwrap_or(&none),
-                ))
-            }
-        },
+        target: crate::target::delta(old, new),
     }
 }
 

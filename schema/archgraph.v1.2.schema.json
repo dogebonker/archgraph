@@ -2263,6 +2263,52 @@
         }
       }
     },
+    "slice-change": {
+      "description": "A claim's slice whose verdict changed, with the claim's reason and source and the slice's broken imports; an import's `line` is absent when the collector records none.",
+      "type": "object",
+      "required": [
+        "claim",
+        "reason",
+        "slice",
+        "imports"
+      ],
+      "properties": {
+        "claim": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "slice": {
+          "type": "string"
+        },
+        "imports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "from": {
+                "$ref": "#/$defs/path"
+              },
+              "to": {
+                "$ref": "#/$defs/path"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    },
     "cycle": {
       "description": "Strongly connected runtime dependencies by default; --all-kinds includes every kind. Deferred components are reported separately in type_only_cycles.",
       "type": "object",
@@ -3632,11 +3678,12 @@
           }
         },
         "target": {
-          "description": "Claim progress between the scans, absent when neither has a target. Slices broken in new that were not broken in old are listed with their imports.",
+          "description": "Claim progress between the scans, absent when neither has a target. Slices broken in new that were not broken in old are listed with their imports as newly broken, and slices broken in old that are not broken in new, also when no longer bound or gone, as newly fixed.",
           "type": "object",
           "required": [
             "conforming",
-            "newly_broken"
+            "newly_broken",
+            "newly_fixed"
           ],
           "properties": {
             "conforming": {
@@ -3684,26 +3731,13 @@
             "newly_broken": {
               "type": "array",
               "items": {
-                "type": "object",
-                "required": [
-                  "claim",
-                  "slice",
-                  "imports"
-                ],
-                "properties": {
-                  "claim": {
-                    "type": "string"
-                  },
-                  "slice": {
-                    "type": "string"
-                  },
-                  "imports": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/$defs/link"
-                    }
-                  }
-                }
+                "$ref": "#/$defs/slice-change"
+              }
+            },
+            "newly_fixed": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/slice-change"
               }
             }
           }
