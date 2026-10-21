@@ -53,6 +53,9 @@ outputs:
   html:
     description: Path of archgraph.html, the HEAD graph page
     value: ${{ steps.archgraph.outputs.html }}
+  sarif:
+    description: Path of archgraph.sarif, the HEAD forbidden imports and broken claims for github/codeql-action/upload-sarif; empty without rules
+    value: ${{ steps.archgraph.outputs.sarif }}
   forbidden:
     description: Number of forbidden imports at HEAD
     value: ${{ steps.archgraph.outputs.forbidden }}

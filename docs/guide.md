@@ -872,6 +872,45 @@ jobs:
       - uses: dogebonker/archgraph@v0.1.0
 ```
 
+To show forbidden imports and broken claims as code scanning alerts, with annotations on the changed lines of a pull request, upload the `sarif` output:
+
+```yaml
+name: architecture
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+  security-events: write
+  actions: read # private repositories only
+jobs:
+  archgraph:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - id: archgraph
+        uses: dogebonker/archgraph@v0.1.0
+      - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: ${{ !cancelled() && steps.archgraph.outputs.sarif }}
+        with:
+          sarif_file: ${{ steps.archgraph.outputs.sarif }}
+```
+
+The upload step runs after a failed archgraph step, since the file is written before the gate result. The SHA is the `v4.39.1` tag of github/codeql-action (`git ls-remote https://github.com/github/codeql-action 'refs/tags/v4*'`); update it from that repository's releases.
+
+- Private repositories need GitHub Code Security enabled; public repositories do not.
+- Fork and Dependabot pull requests can upload under `pull_request`. Never use `pull_request_target`, as below.
+- When `actions/checkout` uses `path:`, set `checkout_path` on the upload step to that path.
+- `upload-sarif` warns once per result that archgraph provides its own fingerprint. That is expected.
+- Give each `forbid` rule an `id`. Unnamed rules are numbered `forbid[i]`, so inserting one renumbers the rest and reopens their alerts.
+
 Never run it on `pull_request_target`. That event gets the base repository's write token and secrets, and scanning the pull request's code there hands a privileged job to files the pull request controls: its `tsconfig.json`, `layout.yaml` and file names (see the warning at the top). `pull_request` runs with a read-only token and no secrets for forks.
 
 - **Push:** `report` with `layout.yaml` from `path` (or `rules`), its summary in the job summary. The step fails when any import is forbidden.
@@ -884,7 +923,7 @@ Never run it on `pull_request_target`. That event gets the base repository's wri
 
 - Elixir action scans use a preinstalled Elixir 1.14+ / OTP 25+ runtime. Install it before the action (for example, `sudo apt-get update && sudo apt-get install --yes elixir` on Ubuntu), set `language: elixir` when detection is ambiguous, and optionally set `ARCHGRAPH_ELIXIR` to its executable. The action does not install Elixir or run Mix.
 
-Inputs: `path` (default `.`), `rules`, `depth` (default 2; for Java, each package is a module), `language`, `engine` (`reference`, experimental `native`, or TypeScript-only `depcruise`), `package`, `exclude` (globs, one per line or comma-separated), `fail-on`, `fail-on-rules-change` (default `false`), `version`, `binary` (an archgraph executable to use instead of a release), `base-ref`, `artifact-name`. With `engine: native`, the action forwards the engine to HEAD and base scans and skips all external collector setup, including npm, Python, Go and Elixir. Native Go needs a preinstalled Go toolchain; `ARCHGRAPH_GO` selects its executable without a download. Outputs: `json` and `html` (paths), `forbidden` (count at HEAD), `new-forbidden`, `new-cycles` (counts) and `rules-changed`, the last three for pull requests only. All logic is in [ci/action.sh](ci/action.sh), which reads its inputs from `INPUT_*` environment variables, so it runs outside Actions too.
+Inputs: `path` (default `.`), `rules`, `depth` (default 2; for Java, each package is a module), `language`, `engine` (`reference`, experimental `native`, or TypeScript-only `depcruise`), `package`, `exclude` (globs, one per line or comma-separated), `fail-on`, `fail-on-rules-change` (default `false`), `version`, `binary` (an archgraph executable to use instead of a release), `base-ref`, `artifact-name`. With `engine: native`, the action forwards the engine to HEAD and base scans and skips all external collector setup, including npm, Python, Go and Elixir. Native Go needs a preinstalled Go toolchain; `ARCHGRAPH_GO` selects its executable without a download. Outputs: `json`, `html` and `sarif` (paths; `sarif` is empty without rules), `forbidden` (count at HEAD), `new-forbidden`, `new-cycles` (counts) and `rules-changed`, the last three for pull requests only. All logic is in [ci/action.sh](ci/action.sh), which reads its inputs from `INPUT_*` environment variables, so it runs outside Actions too.
 
 ## Schema contract
 

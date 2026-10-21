@@ -203,6 +203,14 @@ cat "$work/report.txt"
   echo "forbidden=$(jq '.summary.forbidden' "$head/archgraph.json")"
 } >>"$GITHUB_OUTPUT"
 
+# SARIF for github/codeql-action/upload-sarif, from HEAD's rules; exit 1 is "forbidden imports".
+if [[ -n $rules ]]; then
+  sarif_status=0
+  "$archgraph" check "$head/archgraph.json" --format sarif >"$head/archgraph.sarif" || sarif_status=$?
+  ((sarif_status <= 1)) || die "check --format sarif failed with exit $sarif_status"
+  echo "sarif=$head/archgraph.sarif" >>"$GITHUB_OUTPUT"
+fi
+
 if [[ -z $base_ref ]]; then
   # A fence longer than any backtick run in the text, which the repository controls.
   fence='```'

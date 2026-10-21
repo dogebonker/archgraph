@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- The action writes `archgraph.sarif` (HEAD's `check --format sarif`) when rules exist and exposes its path as the output `sarif`; the CI guide shows uploading it with `github/codeql-action/upload-sarif` for annotations on changed lines.
 - `archgraph check --format sarif` prints SARIF 2.1.0 for GitHub code scanning: a result per import breaking a claim (rule: the claim id), then per other forbidden import (rule: its rule), at the importing file under `source.scan_root` and its line, or the whole file with "Line unknown" when the collector records none; rules carry their reasons and sources, and fingerprints leave out the line. Exit 1 when any import is forbidden.
 - `integrations/amp-review.check.md` and `integrations/claude-review.agent.md` tell an AI reviewer to quote `archgraph review`, treat its verdict on import direction as final, and judge only what it does not check.
 - `archgraph review [root] [--base <ref>] [--format markdown|json]` and an MCP `review` tool (4,000-byte cap, the markdown as text content) report what a pull request changed in the target for an AI reviewer to quote: newly broken slices with their claim's reason and source, other new forbidden imports with their rule's reasons, newly fixed slices, each import at `file:line`, within 1,300 bytes of markdown with true totals and a count of rows left out, plus a `Base <sha> (<selection>)` line that notes a rules change since the base or rules from outside the repository. Base selection matches `check_diff`.

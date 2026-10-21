@@ -143,6 +143,10 @@ jobs:
           OUTCOME: ${{ steps.archgraph.outcome }}
           FORBIDDEN: ${{ steps.archgraph.outputs.forbidden }}
           JSON: ${{ steps.archgraph.outputs.json }}
+      - name: The step wrote SARIF with the fixture's four broken claims and one forbidden import
+        run: jq -e '.runs[0].results | length == 5' "$SARIF"
+        env:
+          SARIF: ${{ steps.archgraph.outputs.sarif }}
 
   action-pr:
     needs: binary
