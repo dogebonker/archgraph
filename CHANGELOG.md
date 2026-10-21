@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- `integrations/amp-review.check.md` and `integrations/claude-review.agent.md` tell an AI reviewer to quote `archgraph review`, treat its verdict on import direction as final, and judge only what it does not check.
 - `archgraph review [root] [--base <ref>] [--format markdown|json]` and an MCP `review` tool (4,000-byte cap, the markdown as text content) report what a pull request changed in the target for an AI reviewer to quote: newly broken slices with their claim's reason and source, other new forbidden imports with their rule's reasons, newly fixed slices, each import at `file:line`, within 1,300 bytes of markdown with true totals and a count of rows left out, plus a `Base <sha> (<selection>)` line that notes a rules change since the base. Base selection matches `check_diff`.
 - `diff`'s `target` gains `newly_fixed`, the slices broken in the old scan and not in the new one (also when no longer bound or gone), and each newly broken or fixed slice carries its claim's `reason` and `source` and each import's `line` (from the edge, else the import record; absent when the collector records none, as depcruise).
 - The review page gains the move cost table (sortable; a slice opens the map with its destination folders) and the assessment's findings to review and next steps, each opening the map as the side panel does. It now opens with the verdict in sentences and a title block, and draws the claims as one hatched, hairline-ruled sheet with a measured bar per claim; the matrix and move cost sit side by side where they fit.

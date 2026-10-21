@@ -171,6 +171,17 @@ Use explicit predicates when verification must assert a result, for example:
 
 A matching running `serve` daemon can provide scans through its authenticated local socket or loopback endpoint. The stdio process bridges that protocol; the daemon's length-framed `command` socket is not a raw MCP transport and must not be entered as an MCP URL. Collection options and environment must match for cached scans. `--no-daemon` forces standalone collection, and an unreachable stale endpoint falls back to standalone. Refresh/setup errors remain errors with a next step rather than a successful stale answer. Current scans use v1.2 recipes; upgraded readers still accept v1 and v1.1 inputs.
 
+## Reviewing a pull request with an AI reviewer
+
+`archgraph review [root] [--base <ref>]` prints what a branch changed in the target, short enough for an AI reviewer to quote: newly broken claim slices and other new forbidden imports at file:line with the reason they quote, newly fixed slices, the progress line and the base commit used. MCP clients call the `review` tool for the same text. Two ready-made reviewer instructions tell an AI reviewer to quote it, treat its verdict on import direction as final, and judge only what it does not check:
+
+```sh
+mkdir -p .agents/checks && cp integrations/amp-review.check.md .agents/checks/archgraph.md          # Amp
+mkdir -p .claude/agents && cp integrations/claude-review.agent.md .claude/agents/archgraph-reviewer.md  # Claude Code
+```
+
+The Claude Code reviewer lists no `tools`, so it inherits the session's archgraph MCP tools. Copy the file once; neither `init` nor `sync-rules` writes it.
+
 ## Fix recipes and verification
 
 Every actionable `findings[]` entry has a stable `finding_id` and a typed `recipe`. Evidence that cannot determine a concrete edit remains in `diagnostics[]`, with the original finding and a reason; diagnostics are advisory, not automatically fixable findings. This includes weak-signal or conceptual observations such as small repositories, hidden coupling and unsupported boundary changes. A diagnostic is not evidence that the architecture is clean.
