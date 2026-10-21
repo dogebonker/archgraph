@@ -51,6 +51,11 @@ Codes are stable for discussion.
   to the declaring file of each function, type, field and method, which is closer to ArchUnit
   than to the import tools; the guide could say so and TypeScript/Python could follow where the
   native engine resolves symbols. That is what "a service calls a controller" needs.
+  Covered at file level: the guide's "What an edge means" lists what an edge is per language and
+  engine, and a `forbid` on files already catches calls and field uses in Go, Java, Rust and
+  Elixir. Java no longer counts an unused import. The remaining gap is the kind of use: no edge
+  says call, so a claim cannot forbid calls while allowing type uses, and TypeScript and Python
+  edges stay imports.
 - **L5. Fail on rules that match nothing, and on uncovered code, as options.** ArchUnit fails a
   rule that matches zero classes by default; Deptrac `--fail-on-uncovered` and Sonargraph
   "unassigned" make coverage gaps visible. Archgraph reports `vacuous` claims and unplanned
