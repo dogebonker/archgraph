@@ -167,6 +167,9 @@ fn invalid_input_and_thresholds_cannot_create_a_layout() {
         vec!["--min-potential-edges", "0"],
         vec!["--max-density", "NaN"],
         vec!["--max-density", "1.1"],
+        vec!["--min-slices", "1"],
+        vec!["--min-share", "0"],
+        vec!["--min-share", "1.5"],
     ] {
         let output = scratch.run(&[&["infer-layout", graph, "--apply"][..], &arguments].concat());
         assert_eq!(output.status.code(), Some(2));
@@ -235,6 +238,42 @@ fn sparse_proposal_reports_and_checks_written_import_violations() {
         forbidden
             .iter()
             .all(|edge| edge["original_to"] == "adapters-out/index.ts")
+    );
+}
+
+#[test]
+fn drafted_slice_claim_checks_as_holding_in_most_slices() {
+    let scratch = Scratch::new();
+    let mut paths = Vec::new();
+    let mut edges = Vec::new();
+    for name in ["a", "b", "c", "d", "e"] {
+        for role in ["handler", "service", "repository"] {
+            paths.push(format!("internal/{name}/{role}.go"));
+        }
+        edges.push(edge(
+            &format!("internal/{name}/handler.go"),
+            &format!("internal/{name}/service.go"),
+        ));
+    }
+    edges.push(edge("internal/e/service.go", "internal/e/handler.go"));
+    let graph = scratch.graph("archgraph/v1.1", &paths, edges);
+    let output = scratch.run(&["infer-layout", graph.to_str().unwrap()]);
+    success(&output);
+    let draft = scratch.0.join("draft.yaml");
+    fs::write(&draft, output.stdout).unwrap();
+    let checked = scratch.run(&[
+        "check",
+        graph.to_str().unwrap(),
+        "--rules",
+        draft.to_str().unwrap(),
+    ]);
+    let stdout = String::from_utf8_lossy(&checked.stdout);
+    assert_eq!(checked.status.code(), Some(1), "{stdout}");
+    assert!(
+        stdout.contains(
+            "claim infer-claim-1: holds in 4 of 5 slices; broken in e reason=\"service does not import handler (drafted from the graph; review intent)\"\n"
+        ),
+        "{stdout}"
     );
 }
 

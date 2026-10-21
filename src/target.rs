@@ -212,7 +212,7 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
                     notes.push(format!("forbid[{i}] `to` matches no file"));
                 }
                 for (value, s) in &evidence[i] {
-                    if !s.hits.is_empty() || (!s.from.is_empty() && !s.to.is_empty()) {
+                    if s.bound() {
                         bound.insert(value.clone());
                     }
                     let (files, broken, sides) = slices.entry(value.clone()).or_default();

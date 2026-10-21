@@ -427,6 +427,13 @@ pub struct SliceEvidence {
     pub hits: Vec<Link>,
 }
 
+impl SliceEvidence {
+    /// Whether the rule speaks about this slice: files on both sides, or an import it forbids.
+    pub fn bound(&self) -> bool {
+        !self.hits.is_empty() || (!self.from.is_empty() && !self.to.is_empty())
+    }
+}
+
 pub struct Compiled {
     categories: BTreeMap<String, Vec<GlobMatcher>>,
     modules: Vec<(Pattern, String)>,

@@ -5,7 +5,7 @@ use std::fmt::Write;
 
 use anyhow::{Result, bail};
 
-use crate::model::{Edge, ModuleClass, ScanInput};
+use crate::model::{Edge, Link, ModuleClass, ScanInput};
 use crate::rules::{Compiled, Rules};
 
 #[derive(Debug, Clone, Copy)]
@@ -13,6 +13,8 @@ pub struct Options {
     pub min_potential_edges: usize,
     pub max_density: f64,
     pub max_rules: usize,
+    pub min_slices: usize,
+    pub min_share: f64,
 }
 
 impl Default for Options {
@@ -21,6 +23,8 @@ impl Default for Options {
             min_potential_edges: 100,
             max_density: 0.01,
             max_rules: 20,
+            min_slices: 5,
+            min_share: 0.8,
         }
     }
 }
@@ -75,6 +79,148 @@ fn patterns(
         .collect()
 }
 
+/// A drafted `from ↛ to` claim over the sibling slices `<root>/<name>/`.
+struct SliceClaim<'a> {
+    root: &'a str,
+    from: &'a str,
+    to: &'a str,
+    bound: usize,
+    held: usize,
+    /// Slices where `to` imports `from`.
+    imports: usize,
+    hits: Vec<(String, Vec<Link>)>,
+}
+
+/// The role of `rest`, the path below a slice folder: its first folder, or a file name cut at
+/// its first `.` or `_`.
+fn role(rest: &str) -> &str {
+    match rest.split_once('/') {
+        Some((folder, _)) => folder,
+        None => rest.split(['.', '_']).next().unwrap_or(rest),
+    }
+}
+
+fn role_glob(root: &str, role: &str) -> String {
+    let root = if root.is_empty() {
+        String::new()
+    } else {
+        format!("{}/", literal(root))
+    };
+    format!("{root}<name>/{}{{/**,.*,_*}}", literal(role))
+}
+
+/// Claims `B ↛ A` where A imports B in at least `min_slices` sibling slices and `B ↛ A` binds at
+/// least `min_slices` and holds in at least `min_share` of them. Counts come from
+/// `Compiled::forbid_slices`, as `check` takes them.
+fn slice_claims<'a>(input: &'a ScanInput, options: Options) -> Result<Vec<SliceClaim<'a>>> {
+    // root -> name -> roles.
+    let mut families: BTreeMap<&str, BTreeMap<&str, BTreeSet<&str>>> = BTreeMap::new();
+    for file in &input.files {
+        let path = file.path.as_str();
+        let starts = std::iter::once(0).chain(path.match_indices('/').map(|(at, _)| at + 1));
+        for start in starts {
+            let root = &path[..start.saturating_sub(1)];
+            let Some((name, rest)) = path[start..].split_once('/') else {
+                break;
+            };
+            let role = role(rest);
+            if role.is_empty()
+                || [root, name, role]
+                    .iter()
+                    .any(|s| s.contains(|c: char| c.is_control() || matches!(c, '<' | '>')))
+            {
+                continue;
+            }
+            families
+                .entry(root)
+                .or_default()
+                .entry(name)
+                .or_default()
+                .insert(role);
+        }
+    }
+    let mut pairs = Vec::new();
+    for (&root, names) in &families {
+        if names.len() < options.min_slices {
+            continue;
+        }
+        let mut seen: BTreeMap<&str, usize> = BTreeMap::new();
+        for &role in names.values().flatten() {
+            *seen.entry(role).or_default() += 1;
+        }
+        let roles: Vec<&str> = seen
+            .into_iter()
+            .filter(|&(_, n)| n >= options.min_slices)
+            .map(|(role, _)| role)
+            .collect();
+        for &from in &roles {
+            for &to in &roles {
+                if from != to {
+                    pairs.push((root, from, to));
+                }
+            }
+        }
+    }
+    // ponytail: role pairs × slices × files, bounded by the slice prefilter; group by family if
+    // drafts get slow on large monorepos.
+    let rules = Rules {
+        version: 1,
+        forbid: pairs
+            .iter()
+            .map(|&(root, from, to)| crate::rules::Forbid {
+                from: role_glob(root, from),
+                to: role_glob(root, to),
+                ..Default::default()
+            })
+            .collect(),
+        ..Rules::default()
+    };
+    let files: Vec<&str> = input.files.iter().map(|f| f.path.as_str()).collect();
+    let edges: Vec<&Edge> = input.edges.iter().collect();
+    let evidence = Compiled::new(&rules)?.forbid_slices(&files, &edges, &BTreeMap::new());
+    let index: BTreeMap<_, usize> = pairs.iter().enumerate().map(|(i, &p)| (p, i)).collect();
+    let mut claims = Vec::new();
+    for (i, &(root, from, to)) in pairs.iter().enumerate() {
+        let bound: Vec<_> = evidence[i].iter().filter(|(_, s)| s.bound()).collect();
+        let hits: Vec<(String, Vec<Link>)> = bound
+            .iter()
+            .filter(|(_, s)| !s.hits.is_empty())
+            .map(|(name, s)| {
+                (
+                    name.as_deref().unwrap_or_default().to_owned(),
+                    s.hits.clone(),
+                )
+            })
+            .collect();
+        let imports = evidence[index[&(root, to, from)]]
+            .values()
+            .filter(|s| !s.hits.is_empty())
+            .count();
+        let held = bound.len() - hits.len();
+        if imports >= options.min_slices
+            && bound.len() >= options.min_slices
+            && held as f64 >= options.min_share * bound.len() as f64
+        {
+            claims.push(SliceClaim {
+                root,
+                from,
+                to,
+                bound: bound.len(),
+                held,
+                imports,
+                hits,
+            });
+        }
+    }
+    claims.sort_by(|a, b| {
+        b.bound
+            .cmp(&a.bound)
+            .then_with(|| (b.held * a.bound).cmp(&(a.held * b.bound)))
+            .then_with(|| (a.root, a.from, a.to).cmp(&(b.root, b.from, b.to)))
+    });
+    Ok(claims)
+}
+
 /// Infer observations, not intent. Every generated rule remains subject to user review.
 pub fn infer(input: &ScanInput, options: Options) -> Result<String> {
     crate::validate_scan(input)?;
@@ -83,6 +229,12 @@ pub fn infer(input: &ScanInput, options: Options) -> Result<String> {
     }
     if !options.max_density.is_finite() || !(0.0..=1.0).contains(&options.max_density) {
         bail!("maximum density must be finite and between 0 and 1");
+    }
+    if options.min_slices < 2 {
+        bail!("minimum slices must be at least 2");
+    }
+    if !(options.min_share > 0.0 && options.min_share <= 1.0) {
+        bail!("minimum share must be above 0 and at most 1");
     }
     for file in &input.files {
         if file.path.starts_with('/')
@@ -289,9 +441,12 @@ pub fn infer(input: &ScanInput, options: Options) -> Result<String> {
     } else {
         out.push_str("# Package rules unavailable: no import accounting; rescan before inferring external boundaries.\n");
     }
+    let mut claims = slice_claims(input, options)?;
+    let claims_eligible = claims.len();
+    claims.truncate(options.max_rules);
     let external_eligible = external_proposals.len();
-    external_proposals.truncate(options.max_rules);
-    let internal_limit = options.max_rules.saturating_sub(external_proposals.len());
+    external_proposals.truncate(options.max_rules - claims.len());
+    let internal_limit = options.max_rules - claims.len() - external_proposals.len();
     let mut proposals: Vec<(usize, usize, usize, usize, f64)> = Vec::new();
     let mut eligible_count = 0;
     for from in 0..names.len() {
@@ -344,6 +499,11 @@ pub fn infer(input: &ScanInput, options: Options) -> Result<String> {
     }
     writeln!(
         out,
+        "# {claims_eligible} eligible slice claims; {} omitted by --max-rules.",
+        claims_eligible - claims.len()
+    )?;
+    writeln!(
+        out,
         "# {} eligible sparse boundaries; {} omitted by --max-rules.",
         eligible_count,
         eligible_count - proposals.len()
@@ -354,10 +514,42 @@ pub fn infer(input: &ScanInput, options: Options) -> Result<String> {
         external_eligible - external_proposals.len()
     )?;
     out.push_str("forbid:");
-    if proposals.is_empty() && external_proposals.is_empty() {
+    if proposals.is_empty() && external_proposals.is_empty() && claims.is_empty() {
         out.push_str(" []\n");
     } else {
         out.push('\n');
+    }
+    for (i, claim) in claims.iter().enumerate() {
+        let root = if claim.root.is_empty() {
+            String::new()
+        } else {
+            format!("{}/", claim.root)
+        };
+        let (from, to, bound) = (claim.from, claim.to, claim.bound);
+        writeln!(
+            out,
+            "  # {root}<name>: {to} imports {from} in {} of {bound} slices; {from} imports {to} in {} of {bound} (holds in {}).",
+            claim.imports,
+            bound - claim.held,
+            claim.held
+        )?;
+        if !claim.hits.is_empty() {
+            let names: Vec<&str> = claim.hits.iter().map(|(name, _)| name.as_str()).collect();
+            writeln!(out, "  # Breaks in {}:", names.join(", "))?;
+            for hit in claim.hits.iter().flat_map(|(_, hits)| hits) {
+                writeln!(out, "  #   {} -> {}", quoted(&hit.from), quoted(&hit.to))?;
+            }
+        }
+        writeln!(
+            out,
+            "  - id: infer-claim-{}\n    from: {}\n    to: {}\n    reason: {}",
+            i + 1,
+            quoted(&role_glob(claim.root, from)),
+            quoted(&role_glob(claim.root, to)),
+            quoted(&format!(
+                "{from} does not import {to} (drafted from the graph; review intent)"
+            ))
+        )?;
     }
     for (rank, pattern, count, packages, potential) in external_proposals {
         writeln!(
@@ -656,6 +848,7 @@ mod tests {
             min_potential_edges: 1,
             max_density: 1.0,
             max_rules: usize::MAX,
+            ..Options::default()
         };
         let (_, all) = parsed(&scan, options);
         assert!(all.forbid.len() > 3);
@@ -682,6 +875,100 @@ mod tests {
                 all.forbid.len() - max_rules
             )));
         }
+    }
+
+    /// `internal/<name>/{handler,service,repository}.go` per name, `handler.go -> service.go` in
+    /// each, and `service.go -> handler.go` in each of `back`.
+    fn slices(names: &[&str], back: &[&str]) -> ScanInput {
+        let paths: Vec<Vec<String>> = names
+            .iter()
+            .map(|n| {
+                ["handler", "service", "repository"]
+                    .map(|role| format!("internal/{n}/{role}.go"))
+                    .to_vec()
+            })
+            .collect();
+        let paths: Vec<Vec<&str>> = paths
+            .iter()
+            .map(|p| p.iter().map(String::as_str).collect())
+            .collect();
+        let modules: Vec<(&str, &[&str])> = names
+            .iter()
+            .zip(&paths)
+            .map(|(&n, p)| (n, &p[..]))
+            .collect();
+        let mut edges: Vec<(String, String)> = names
+            .iter()
+            .map(|n| {
+                (
+                    format!("internal/{n}/handler.go"),
+                    format!("internal/{n}/service.go"),
+                )
+            })
+            .collect();
+        edges.extend(back.iter().map(|n| {
+            (
+                format!("internal/{n}/service.go"),
+                format!("internal/{n}/handler.go"),
+            )
+        }));
+        let edges: Vec<(&str, &str)> = edges
+            .iter()
+            .map(|(from, to)| (from.as_str(), to.as_str()))
+            .collect();
+        input(&modules, &edges)
+    }
+
+    #[test]
+    fn slice_claims_need_a_direction_that_holds_across_enough_siblings() {
+        let five = ["a", "b", "c", "d", "e"];
+        let (text, rules) = parsed(&slices(&five, &["e"]), Options::default());
+        assert_eq!(rules.forbid.len(), 1, "{text}");
+        let claim = &rules.forbid[0];
+        assert_eq!(claim.id.as_deref(), Some("infer-claim-1"));
+        assert_eq!(claim.from, "internal/<name>/service{/**,.*,_*}");
+        assert_eq!(claim.to, "internal/<name>/handler{/**,.*,_*}");
+        assert_eq!(
+            claim.reason.as_deref(),
+            Some("service does not import handler (drafted from the graph; review intent)")
+        );
+        assert!(text.contains(
+            "  # internal/<name>: handler imports service in 5 of 5 slices; service imports handler in 1 of 5 (holds in 4).\n  # Breaks in e:\n  #   \"internal/e/service.go\" -> \"internal/e/handler.go\"\n  - id: infer-claim-1\n"
+        ), "{text}");
+        assert!(text.contains("# 1 eligible slice claims; 0 omitted by --max-rules.\n"));
+        let (text, rules) = parsed(
+            &slices(&five, &["e"]),
+            Options {
+                max_rules: 0,
+                ..Options::default()
+            },
+        );
+        assert!(rules.forbid.is_empty());
+        assert!(text.contains("# 1 eligible slice claims; 1 omitted by --max-rules.\n"));
+        assert!(
+            parsed(&slices(&five, &["d", "e"]), Options::default())
+                .1
+                .forbid
+                .is_empty()
+        );
+        let four = ["a", "b", "c", "d"];
+        assert!(
+            parsed(&slices(&four, &[]), Options::default())
+                .1
+                .forbid
+                .is_empty()
+        );
+        let (text, rules) = parsed(
+            &slices(&four, &[]),
+            Options {
+                min_slices: 4,
+                ..Options::default()
+            },
+        );
+        assert_eq!(rules.forbid.len(), 1);
+        assert!(text.contains(
+            "  # internal/<name>: handler imports service in 4 of 4 slices; service imports handler in 0 of 4 (holds in 4).\n  - id: infer-claim-1\n"
+        ), "{text}");
     }
 
     #[test]
@@ -746,6 +1033,14 @@ mod tests {
             )
             .is_err()
         );
+        for (min_slices, min_share) in [(1, 0.8), (5, 0.0), (5, 1.1), (5, f64::NAN)] {
+            let options = Options {
+                min_slices,
+                min_share,
+                ..Options::default()
+            };
+            assert!(infer(&scan, options).is_err());
+        }
         let mut scan = scan;
         scan.files[0].module = "<bad>".into();
         scan.config.rules.as_mut().unwrap().doc.modules[0].id = "<bad>".into();

@@ -482,7 +482,7 @@ The command condenses module SCCs and assigns each component its longest distanc
 
 Inference uses **all import kinds**, because existing layer rules apply to all kinds. Consequently, a type/lazy/re-export cycle can remain unresolved here even when the default runtime cycle report is acyclic. Dependencies use their written boundary (`original_to` for resolved barrel imports), matching `check`. Tests and externals are outside the internal layering graph; written targets absent from the scanned files are counted as omitted evidence. External package policies use the separate import ledger described below.
 
-Sparse-boundary proposals require at least two files on each side and **100 potential file pairs** by default. Density is distinct observed importing-file/target-file pairs divided by source files × target files, across all kinds. A density at or below **0.01** qualifies. Comments give the evidence and list existing violating dependencies with source lines when available: adopting such a rule means reviewing and fixing those imports. Proposals already implied by layer ordering are omitted. At most **20** forbid proposals are printed. External-free layer proposals come first; the remaining internal proposals are ordered by density, potential pairs and module IDs. Both share `--max-rules`, and comments report omitted proposals.
+Sparse-boundary proposals require at least two files on each side and **100 potential file pairs** by default. Density is distinct observed importing-file/target-file pairs divided by source files × target files, across all kinds. A density at or below **0.01** qualifies. Comments give the evidence and list existing violating dependencies with source lines when available: adopting such a rule means reviewing and fixing those imports. Proposals already implied by layer ordering are omitted. At most **20** forbid proposals are printed. Slice claims (below) come first, then external-free layer proposals; the remaining internal proposals are ordered by density, potential pairs and module IDs. All share `--max-rules`, and comments report omitted proposals.
 
 ```sh
 archgraph infer-layout graph.json --min-potential-edges 500 --max-density 0.005
@@ -490,6 +490,12 @@ archgraph infer-layout graph.json --max-rules 0           # layers only
 ```
 
 When import accounting is present and at least one known external package exists elsewhere in the scan, inference also proposes `to: "pkg:**"` for an acyclic layer with **zero external imports and zero unresolved imports**. It requires `layer file count × distinct package identities observed repo-wide` to meet `--min-potential-edges` (default 100). Comments show the factors; these are file/package opportunities, not measured missing edges. No package rule is inferred from an unavailable ledger or unresolved absence evidence.
+
+Inference also drafts claims from a direction that holds across sibling slices. For a folder `root` with at least `--min-slices` (default **5**) child folders, each child is a slice and the next path segment its role: a folder is kept (`ui/`), a file is cut at its first `.` or `_` (`handler_documents.go` is `handler`), and the role's glob is `<root>/<name>/<role>{/**,.*,_*}`. When A imports B in at least `--min-slices` slices, and `B ↛ A` binds at least `--min-slices` slices and holds in at least `--min-share` (default **0.8**) of them, the draft proposes the claim `infer-claim-N` from B to A with the reason `B does not import A (drafted from the graph; review intent)`. Its comments give the counts, as `# internal/<name>: handler imports service in 18 of 18 slices; service imports handler in 0 of 18 (holds in 18).`, and list each slice it breaks in and the imports that break it. Counts come from the rule as `check` evaluates it and include tests. Claims are ordered by bound slices, then share; each role pair gets its own id, and merging claims under one id is a review step. No claim is drafted for a direction no slice shows, such as a layer skipped: add those by hand.
+
+```sh
+archgraph infer-layout graph.json --min-slices 3 --min-share 1
+```
 
 These thresholds limit over-fitting; zero observed imports still do not establish an intended boundary. Review the draft before making it a CI policy. No scan-schema or rules-format migration is required.
 
