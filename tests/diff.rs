@@ -568,6 +568,75 @@ fn markdown_reports_target_progress_and_newly_broken_slices() {
     assert!(!markdown.contains("Target:"), "{markdown}");
 }
 
+#[test]
+fn fail_on_new_vacuous_exits_1_when_a_change_empties_a_claim() {
+    let old = target_scan("vacuous-old", &[], &[]);
+    // Both apps move out of src/m/<name>/app/, so app-no-domain's `from` matches no file.
+    let gone = target_scan(
+        "vacuous-gone",
+        &[],
+        &[
+            ("src/m/a/app/x.ts", "src/app/a/x.ts"),
+            ("src/m/b/app/y.ts", "src/app/b/y.ts"),
+        ],
+    );
+    let (markdown, stderr, code) = diff(&[
+        &old,
+        &gone,
+        "--fail-on",
+        "new-vacuous",
+        "--format",
+        "markdown",
+    ]);
+    assert_eq!(code, Some(1), "{stderr}");
+    assert!(
+        markdown.starts_with("**archgraph diff: fail** (new-vacuous): "),
+        "{markdown}"
+    );
+    assert!(
+        markdown.contains(
+            "\nTarget: 0 of 0 slices conform (was 2 of 2), 2 of 2 slices moved (was 0 of 2), 1 newly vacuous claim.\n"
+        ),
+        "{markdown}"
+    );
+    assert!(
+        markdown.contains(
+            "\n### Newly vacuous claims (1)\n\n- app-no-domain: forbid[0] `from` matches no file\n"
+        ),
+        "{markdown}"
+    );
+    let (doc, code) = run_json(&["diff", &old, &gone, "--fail-on", "new-vacuous"]);
+    assert_eq!(code, Some(1));
+    common::validate(&doc);
+    assert_eq!(
+        doc["target"]["newly_vacuous"],
+        json!([{"claim": "app-no-domain", "reason": "apps never reach a domain",
+                "notes": ["forbid[0] `from` matches no file"]}])
+    );
+    // A claim vacuous in the base, or not vacuous in the head, never counts.
+    for (from, to) in [(&gone, &old), (&old, &old)] {
+        let (doc, code) = run_json(&["diff", from, to, "--fail-on", "new-vacuous"]);
+        assert_eq!(code, Some(0));
+        assert!(doc["target"].get("newly_vacuous").is_none(), "{doc}");
+    }
+    // One app moved: the claim still binds slice a.
+    let partial = target_scan(
+        "vacuous-partial",
+        &[],
+        &[("src/m/b/app/y.ts", "src/app/b/y.ts")],
+    );
+    let (markdown, _, code) = diff(&[
+        &old,
+        &partial,
+        "--fail-on",
+        "new-vacuous",
+        "--format",
+        "markdown",
+    ]);
+    assert_eq!(code, Some(0));
+    assert!(!markdown.contains("vacuous"), "{markdown}");
+}
+
 const GO_CLAIM: &str = "version: 1\nforbid:\n\
     \x20 - { id: no-adapters, from: \"domain/**\", to: \"adapters/**\", reason: \"the domain stays pure\" }\n";
 

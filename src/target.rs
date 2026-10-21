@@ -101,6 +101,18 @@ pub struct Delta {
     pub newly_broken: Vec<SliceChange>,
     /// Slices broken in old that are not broken in new, also when no longer bound or gone.
     pub newly_fixed: Vec<SliceChange>,
+    /// Claims vacuous in new that old has and that are not vacuous there.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub newly_vacuous: Vec<VacuousClaim>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VacuousClaim {
+    pub claim: String,
+    pub reason: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -377,8 +389,8 @@ fn import_lines(doc: &Document, moves: &[Move]) -> usize {
     }
 }
 
-/// The target's counts in both scans and the slices newly broken and newly fixed; `None` when
-/// neither scan has a target.
+/// The target's counts in both scans, the slices newly broken and newly fixed and the claims
+/// newly vacuous; `None` when neither scan has a target.
 pub fn delta(old: &Document, new: &Document) -> Option<Delta> {
     if old.target.is_none() && new.target.is_none() {
         return None;
@@ -395,6 +407,23 @@ pub fn delta(old: &Document, new: &Document) -> Option<Delta> {
             .map(|(a, b)| [a, b]),
         newly_broken: changed(new, is, was),
         newly_fixed: changed(old, was, is),
+        newly_vacuous: is
+            .claims
+            .iter()
+            .filter(|c| {
+                c.verdict == ClaimVerdict::Vacuous
+                    && was
+                        .claims
+                        .iter()
+                        .any(|o| o.id == c.id && o.verdict != ClaimVerdict::Vacuous)
+            })
+            .map(|c| VacuousClaim {
+                claim: c.id.clone(),
+                reason: c.reason.clone(),
+                source: c.source.clone(),
+                notes: c.notes.clone(),
+            })
+            .collect(),
     })
 }
 

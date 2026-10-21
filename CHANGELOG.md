@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- `diff --fail-on new-vacuous` fails when a claim the old scan states and that binds a slice there binds none in the new scan, as when a pull request moves every file a claim's `from` matches; the markdown Target line gains `, 1 newly vacuous claim` and a `### Newly vacuous claims` list with the claim's notes, the diff document's `target` gains optional `newly_vacuous`, and `review` lists each such claim with its reason (JSON `newly_vacuous`). A claim the old scan lacks, or that is already vacuous there, never counts.
 - Java: an import alone no longer gives an edge in either engine, so an unused import has none, as in Go. A used imported name still does, including static imports, and native Java now resolves a `Type::method` qualifier through the imports. Import records are unchanged.
 - The guide gains "What an edge means": per language and engine, whether an edge is a reference or an import, whether an unused import gives one and whether type-only uses are separated, with how to write a call-level claim.
 - `review` ends a known other-forbidden row with `, listed in layout.known.yaml` (JSON `known: true`) and adds `N known entries no longer occur: run archgraph check --update-known shrink.`; `check_diff` gains `stale_known`. The report header reads `3 forbidden (2 known)` and the review verdict `3 imports break a rule, 2 of them known.`

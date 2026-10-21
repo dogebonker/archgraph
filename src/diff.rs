@@ -115,6 +115,9 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
         if !t.newly_broken.is_empty() {
             out += &format!(", {}", count(t.newly_broken.len(), "newly broken slice"));
         }
+        if !t.newly_vacuous.is_empty() {
+            out += &format!(", {}", count(t.newly_vacuous.len(), "newly vacuous claim"));
+        }
         out += ".\n";
     }
     for (title, edges) in [
@@ -177,6 +180,16 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
                     esc(&link.to)
                 );
             }
+        }
+    }
+    if let Some(t) = d.target.as_ref().filter(|t| !t.newly_vacuous.is_empty()) {
+        out += &format!("\n### Newly vacuous claims ({})\n\n", t.newly_vacuous.len());
+        for c in &t.newly_vacuous {
+            out += &format!("- {}", esc(&c.claim));
+            if !c.notes.is_empty() {
+                out += &format!(": {}", c.notes.join("; "));
+            }
+            out += "\n";
         }
     }
     let change = |pair: [Option<f64>; 2]| match pair {
@@ -243,8 +256,12 @@ const REVIEW_BYTES: usize = 1300;
 /// already under a newly broken slice, with their rule's reasons and sources.
 pub fn review(old: &Document, new: &Document) -> Value {
     let d = diff(old, new);
-    let (broken, fixed) = d.target.as_ref().map_or((&[][..], &[][..]), |t| {
-        (&t.newly_broken[..], &t.newly_fixed[..])
+    let (broken, fixed, vacuous) = d.target.as_ref().map_or((&[][..], &[][..], &[][..]), |t| {
+        (
+            &t.newly_broken[..],
+            &t.newly_fixed[..],
+            &t.newly_vacuous[..],
+        )
     });
     let in_broken: BTreeSet<(&str, &str)> = broken
         .iter()
@@ -316,6 +333,22 @@ pub fn review(old: &Document, new: &Document) -> Value {
         .map_or("the known file", |k| k.path.as_str());
     let mut lines = Vec::new();
     slices(&mut lines, "Newly broken", broken);
+    if !vacuous.is_empty() {
+        lines.push((
+            format!("\n### Newly vacuous claims ({})\n\n", vacuous.len()),
+            false,
+        ));
+        for c in vacuous {
+            let mut row = format!("- **{}**: {}", esc(&c.claim), esc(&c.reason));
+            if let Some(source) = &c.source {
+                row += &format!(" ({})", esc(source));
+            }
+            if !c.notes.is_empty() {
+                row += &format!(", {}", c.notes.join("; "));
+            }
+            lines.push((row + "\n", true));
+        }
+    }
     if !other.is_empty() {
         lines.push((
             format!("\n### Other new forbidden imports ({})\n\n", other.len()),
@@ -395,6 +428,7 @@ pub fn review(old: &Document, new: &Document) -> Value {
         "progress": d.target.as_ref().map(|t| json!({"conforming": t.conforming, "moved": t.moved})),
         "newly_broken": broken,
         "newly_fixed": fixed,
+        "newly_vacuous": vacuous,
         "other_forbidden": other.iter().map(|(e, rule, reasons, sources)| {
             let mut row = json!({"from": e.from, "to": e.to, "rule": rule, "reasons": reasons, "sources": sources});
             if let Some(line) = e.line {

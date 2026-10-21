@@ -1097,6 +1097,35 @@
                       "additionalProperties": false
                     }
                   },
+                  "newly_vacuous": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "claim": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        },
+                        "notes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "claim",
+                        "reason",
+                        "notes"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
                   "other_forbidden": {
                     "type": "array",
                     "items": {

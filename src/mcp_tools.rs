@@ -641,7 +641,7 @@ pub fn schemas() -> Vec<ToolSchema> {
         ),
         schema(
             "review",
-            "What a pull request changed in the target against a Git base, as markdown for an AI reviewer to quote: newly broken slices, other new forbidden imports with their rules' reasons, newly fixed slices, each import at file:line.",
+            "What a pull request changed in the target against a Git base, as markdown for an AI reviewer to quote: newly broken slices, claims made vacuous, other new forbidden imports with their rules' reasons, newly fixed slices, each import at file:line.",
             json!({"base":{"type":"string","minLength":1}}),
             &[],
             {
@@ -655,6 +655,7 @@ pub fn schemas() -> Vec<ToolSchema> {
                     "markdown":{"type":"string"},
                     "progress":{"anyOf":[{"type":"null"},object(json!({"conforming":pair,"moved":{"anyOf":[{"type":"null"},pair]}}),&["conforming","moved"])]},
                     "newly_broken":change.clone(),"newly_fixed":change,
+                    "newly_vacuous":array(object(json!({"claim":{"type":"string"},"reason":{"type":"string"},"source":{"type":"string"},"notes":strings()}),&["claim","reason","notes"])),
                     "other_forbidden":array(object(json!({"from":{"type":"string"},"to":{"type":"string"},"line":number(),"rule":{"type":"string"},"reasons":strings(),"sources":strings(),"known":{"const":true}}),&["from","to","rule","reasons","sources"]))}})
             },
         ),

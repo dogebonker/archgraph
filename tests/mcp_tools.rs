@@ -502,6 +502,43 @@ No rules: nothing was checked; add layout.yaml or pass --rules.
 }
 
 #[test]
+fn review_lists_a_claim_the_change_makes_vacuous() {
+    let old = claims(&[]);
+    // Neither app is left, so app-no-domain's `from` matches no file.
+    let files = vec![
+        "src/m/a/domain/d.ts".into(),
+        "src/m/b/domain/e.ts".into(),
+        "src/shared/id.ts".into(),
+    ];
+    let new = claims_in(files.clone(), Vec::new());
+    let out = call(&new, Path::new("."), "review", json!({}), Some(&old)).unwrap();
+    assert_eq!(
+        out["markdown"],
+        "**archgraph review**: 0 newly broken slices, 0 other new forbidden imports, 0 newly fixed slices.
+Target: 0 of 0 slices conform (was 2 of 2).
+
+### Newly vacuous claims (1)
+
+- **app-no-domain**: apps never reach a domain (docs/adr/0001.md), forbid[0] `from` matches no file
+"
+    );
+    assert_eq!(
+        out["newly_vacuous"],
+        json!([{"claim": "app-no-domain", "reason": "apps never reach a domain",
+                "source": "docs/adr/0001.md", "notes": ["forbid[0] `from` matches no file"]}])
+    );
+    validate("review", &out);
+    // A claim the base does not state never counts.
+    let unclaimed = claims_with(
+        json!([{"from":"src/shared/**","to":"src/m/**","reason":"shared stays a leaf"}]),
+        files,
+        Vec::new(),
+    );
+    let target = archgraph::diff::diff(&unclaimed, &new).target.unwrap();
+    assert!(target.newly_vacuous.is_empty());
+}
+
+#[test]
 fn review_marks_known_other_forbidden_imports_and_counts_stale_entries() {
     let files = [
         "src/m/a/domain/d.ts",

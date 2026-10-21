@@ -369,7 +369,12 @@ fn brief_payload(value: &mut Value) -> usize {
             *edge = json!({"from":edge["from"],"to":edge["to"],"kind":edge["kind"],"rule":edge["rule"],"line":edge["line"]});
         }
     }
-    for key in ["newly_broken", "newly_fixed", "other_forbidden"] {
+    for key in [
+        "newly_broken",
+        "newly_fixed",
+        "newly_vacuous",
+        "other_forbidden",
+    ] {
         if let Some(rows) = value.get_mut(key).and_then(Value::as_array_mut) {
             omitted += rows.len();
             rows.clear();

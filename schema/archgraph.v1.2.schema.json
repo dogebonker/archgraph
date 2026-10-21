@@ -3804,6 +3804,35 @@
               "items": {
                 "$ref": "#/$defs/slice-change"
               }
+            },
+            "newly_vacuous": {
+              "description": "Claims vacuous in the new scan that the old scan states and that are not vacuous there, with the claim's notes on rule sides matching no file. Absent when empty.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "claim",
+                  "reason",
+                  "notes"
+                ],
+                "properties": {
+                  "claim": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
             }
           }
         }

@@ -305,7 +305,8 @@ struct DiffArgs {
     old: PathBuf,
     /// The later scan document
     new: PathBuf,
-    /// Exit 1 when any of these is in the diff: new-forbidden, new-cycles, new-unplanned, stale-known
+    /// Exit 1 when any of these is in the diff: new-forbidden, new-cycles, new-unplanned,
+    /// stale-known, new-vacuous
     #[arg(long, value_delimiter = ',', value_parser = fail_on)]
     fail_on: Vec<FailOn>,
     /// The diff document, or a markdown summary for a pull request
@@ -323,12 +324,15 @@ enum FailOn {
     Unplanned,
     #[value(name = "stale-known")]
     StaleKnown,
+    #[value(name = "new-vacuous")]
+    Vacuous,
 }
 
 /// A `--fail-on` item, spaces around it ignored (`new-forbidden, new-cycles`).
 fn fail_on(s: &str) -> Result<FailOn, String> {
-    FailOn::from_str(s.trim(), false)
-        .map_err(|_| "expected new-forbidden, new-cycles, new-unplanned or stale-known".into())
+    FailOn::from_str(s.trim(), false).map_err(|_| {
+        "expected new-forbidden, new-cycles, new-unplanned, stale-known or new-vacuous".into()
+    })
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -613,6 +617,11 @@ fn diff(args: DiffArgs) -> Result<ExitCode> {
             FailOn::Cycles => (!d.new_cyclic_imports.is_empty()).then_some("new-cycles"),
             FailOn::Unplanned => (!d.new_unplanned.is_empty()).then_some("new-unplanned"),
             FailOn::StaleKnown => (!d.stale_known.is_empty()).then_some("stale-known"),
+            FailOn::Vacuous => d
+                .target
+                .as_ref()
+                .is_some_and(|t| !t.newly_vacuous.is_empty())
+                .then_some("new-vacuous"),
         })
         .collect();
     match args.format {
