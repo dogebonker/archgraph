@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- The report opens on a review page when the scan has a target: the slices conforming and moved, forbidden imports and cycles in one line, and a claims-by-slice table whose broken cells open the map on that slice. A Review and Map switch in the header changes view and is kept in the URL (`#review`, `#map`).
 - The map's what-if preview shows the target live: each claim's verdict and broken imports and the slices conforming and moved after the previewed moves, with "(was X of Y)" where a count changes. Claims with package rules, and then the conforming count, keep the scan's values.
 - The map's Target panel shows a selected slice's moves: an arrow from each file to its destination, and an empty disc labelled `new folder <dir>/` for each destination folder the scan does not have yet.
 - The map's what-if panel gains a "Copy layout moves" export: the move list as `layout.yaml` `moves` entries on exact paths, with a comment for any move a rule cannot express.

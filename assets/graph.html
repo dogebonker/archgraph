@@ -397,6 +397,51 @@ ul.wi-findings .path { color: var(--label2); margin-top: 2px; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 
+/* The review page: an opaque document over the map, under the chrome and beside the inspector. It
+   hides with visibility, so it keeps its scroll position and the map keeps its size and view. */
+#views .tbtn[aria-checked="true"] { color: #fff; background: rgba(10, 132, 255, .9); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 2px 6px rgba(0, 0, 0, .45); }
+#review-page { position: fixed; z-index: 4; inset: 0; padding-top: var(--top); background: var(--base);
+  visibility: hidden; opacity: 0; transition: opacity .2s ease-out, visibility 0s linear .2s; }
+.reviewing #review-page { visibility: visible; opacity: 1; transition: opacity .2s ease-out; }
+.reviewing #seg, .reviewing .tools, .reviewing #view-btn, .reviewing .ctrl, .reviewing #level, .reviewing #mini { visibility: hidden; }
+#review-body { height: 100%; margin-right: calc(var(--pw) + 12px); padding: 12px 24px 56px 20px; overflow-y: auto; overscroll-behavior: contain; }
+#review-body > * { max-width: min(1080px, 100%); }
+#review-body h3 { margin: 28px 0 4px; font-size: 15px; line-height: 1.3; font-weight: 600; letter-spacing: -0.01em; }
+.rv-strip { margin: 0; color: var(--label2); font-size: 17px; line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; }
+.rv-strip span { white-space: nowrap; }
+.rv-strip b { color: var(--label); font-weight: 700; }
+.rv-strip .bad b { color: var(--red-s); } .rv-strip .good b { color: var(--green-s); }
+.rv-strip .sep { color: var(--label3); white-space: normal; }
+.rv-key { display: flex; flex-wrap: wrap; gap: 2px 18px; margin: 0 0 12px; color: var(--label2); font-size: 12px; }
+.rv-key b { font-weight: 600; }
+/* Wide target matrices scroll sideways inside their own box; the slice names stay put. */
+.rv-x { width: fit-content; max-width: 100%; overflow-x: auto; border-radius: var(--r-in); background: var(--fill1); }
+.matrix { border-collapse: separate; border-spacing: 0; }
+.matrix th, .matrix td { padding: 7px 16px; border-bottom: 1px solid var(--sep); }
+.matrix tbody tr:last-child > * { border-bottom: 0; }
+.matrix thead th { min-width: 172px; max-width: 280px; padding-top: 12px; padding-bottom: 10px; vertical-align: bottom; text-align: left; font-weight: 400; }
+.matrix thead th:first-child { min-width: 0; color: var(--label2); font-size: 12px; font-weight: 500; }
+.matrix th:first-child { position: sticky; left: 0; z-index: 1; background: var(--fill1); }
+.matrix th[scope="row"] { text-align: left; white-space: nowrap; color: var(--label2); font: 500 12px/1.4 var(--mono); }
+.matrix tr.hurts th[scope="row"] { color: var(--label); }
+.matrix td { text-align: center; }
+.rv-id { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.rv-verdict { display: block; color: var(--label2); font-size: 12px; font-weight: 600; }
+.rv-verdict.holds { color: var(--green-s); } .rv-verdict.holds_in { color: var(--orange); } .rv-verdict.broken { color: var(--red-s); }
+.rv-reason { display: block; margin-top: 4px; color: var(--label2); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.rv-source { display: block; color: var(--label3); font-size: 11px; overflow-wrap: anywhere; }
+.rv-ok { color: var(--green-s); font-weight: 600; } .rv-na { color: var(--label3); font-size: 17px; font-weight: 700; line-height: 1; } .rv-no { color: var(--red-s); }
+.rv-bad { min-width: 48px; height: 24px; padding: 0 10px; border: 0; border-radius: 999px; background: rgba(255, 69, 58, .16); color: var(--red-s);
+  font-size: 12px; font-weight: 600; transition: background-color .15s ease-out, transform .12s ease-out; }
+.rv-bad:hover { background: rgba(255, 69, 58, .28); }
+.rv-bad:active { transform: scale(.96); }
+@media (pointer: coarse) { .rv-bad { min-width: 56px; height: 36px; } }
+@media (max-width: 1099px), (max-height: 500px) { #review-body { padding-left: calc(16px + var(--sa-l)); } }
+@media (max-width: 759px) and (min-height: 501px) {
+  #review-body { margin-right: 0; padding: 8px calc(16px + var(--sa-r)) calc(var(--peek) + 32px + var(--sa-b)) calc(16px + var(--sa-l)); }
+  .rv-strip { font-size: 15px; }
+}
+
 /* ---------- compact layouts: phones, landscape phones and tablets ----------
    One top bar (mark, search, View), counts in the inspector, the map as large as possible. */
 .compact-only, .peekbar, .grabbar, #side-open, .sheet-x { display: none; }
@@ -527,6 +572,10 @@ ul.wi-findings .path { color: var(--label2); margin-top: 2px; }
       <dl class="meta" id="meta"></dl>
     </div>
     <span class="spacer"></span>
+    <div class="seg glass capsule" role="radiogroup" aria-label="View" id="views">
+      <button type="button" class="tbtn" role="radio" aria-checked="false" data-view="review" title="Claims and progress against the target">Review</button>
+      <button type="button" class="tbtn" role="radio" aria-checked="true" data-view="map" title="The module map">Map</button>
+    </div>
     <form id="find" role="search" class="glass capsule">
       <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
       <input id="search" type="search" list="paths" autocomplete="off" spellcheck="false" placeholder="Search modules and files" aria-label="Search modules and files" aria-keyshortcuts="/">
@@ -610,6 +659,7 @@ ul.wi-findings .path { color: var(--label2); margin-top: 2px; }
 </div>
 <div id="tip" class="glass" role="tooltip" hidden></div>
 <div id="presstip" class="glass" aria-hidden="true" hidden></div>
+<main id="review-page" aria-label="Review"><div id="review-body"></div></main>
 <aside id="sheet" class="glass" aria-label="Details">
   <div class="grabbar">
     <div class="grab" id="grab" role="slider" tabindex="0" aria-label="Details panel height" aria-valuemin="0" aria-valuemax="2" aria-valuenow="0" aria-valuetext="collapsed"></div>
@@ -2905,7 +2955,8 @@ document.addEventListener("keydown", ev => {
     select(null);
     return;
   }
-  if (typing || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  /* The review page covers the map: its keys leave the map alone, search aside. */
+  if (typing || ev.metaKey || ev.ctrlKey || ev.altKey || reviewing && ev.key !== "/") return;
   const onGraph = t === canvas || t === document.body || (t instanceof HTMLElement && t.closest("#mods"));
   if (ev.key === "+" || ev.key === "=") zoomBy(1.5);
   else if (ev.key === "-" || ev.key === "_") zoomBy(1 / 1.5);
@@ -3398,7 +3449,7 @@ function select(t) {
 function reveal() {
   if (sheetMode && sheetDetent === 2) snapSheet(1, 0);
 }
-function go(t) { select(t); reveal(); zoomToTarget(t); }
+function go(t) { if (reviewing) location.hash = "#map"; select(t); reveal(); zoomToTarget(t); }
 function btn(text, cls, on, title) {
   const b = el("button", { type: "button", class: cls }, text);
   if (title) b.title = title;
@@ -4056,6 +4107,117 @@ function targetPanel(t) {
   panel.append(acts, ...t.rows(t));
 }
 /* ---------- end target panel ---------- */
+/* ---------- review page ---------- */
+/* The report opens on the review page when the scan has a target, else on the map. `#review` and
+   `#map` choose, so a link opens the same view and back and forward step between them. The page
+   covers the map, which keeps its state underneath. */
+let reviewing = false;
+const viewOf = hash => hash === "#review" || hash === "#map" ? hash.slice(1) : doc.target ? "review" : "map";
+/* What the target and the scan say, in one line; parts that do not apply are left out. */
+function verdictStrip() {
+  const strip = el("p", { class: "rv-strip" }), t = doc.target;
+  const part = (n, rest, tone) => {
+    if (strip.children.length) strip.append(el("span", { class: "sep" }, " · "));
+    const sp = el("span", tone ? { class: tone } : {});
+    sp.append(el("b", {}, n), document.createTextNode(rest));
+    strip.append(sp);
+  };
+  const tally = (n, one, many) => part(String(n), " " + (n === 1 ? one : many), n ? "bad" : "");
+  if (t) {
+    const { conforming: c, moved: m } = t.progress;
+    part(`${c.done} of ${c.of}`, " slices conform", c.done < c.of ? "bad" : c.of ? "good" : "");
+    if (m) part(`${m.done} of ${m.of}`, " slices moved");
+  }
+  if (doc.config.rules) tally(doc.summary.forbidden, "forbidden import", "forbidden imports");
+  tally(doc.summary.cycles, "cycle", "cycles");
+  return strip;
+}
+/* A cell's symbol, with the words a screen reader hears instead. */
+const mark = (symbol, cls, text) => {
+  const sp = el("span", { class: cls, title: text });
+  sp.append(el("span", { "aria-hidden": "true" }, symbol), el("span", { class: "sr" }, text));
+  return sp;
+};
+/* A column per claim, a row per slice any claim binds, slices with a broken import first. A broken
+   cell selects its slice on the map exactly as the Target panel's slice row does. */
+function claimsMatrix(target = doc.target) {
+  const claims = target.claims, names = [...new Set(claims.flatMap(c => c.slices.map(s => s.slice)))];
+  const hurts = name => claims.some(c => c.slices.some(s => s.slice === name && s.broken.length));
+  names.sort((a, b) => hurts(b) - hurts(a) || (a < b ? -1 : a > b ? 1 : 0));
+  const table = el("table", { class: "matrix", "aria-labelledby": "rv-claims" });
+  const thead = el("thead"), head = el("tr"), tbody = el("tbody");
+  head.append(el("th", { scope: "col" }, "Slice"));
+  for (const c of claims) {
+    const th = el("th", { scope: "col" });
+    th.append(el("span", { class: "rv-id" }, c.id), el("span", { class: "rv-verdict " + c.verdict }, claimVerdict(c)),
+      el("span", { class: "rv-reason" }, c.reason));
+    if (c.source) th.append(el("span", { class: "rv-source" }, c.source));
+    head.append(th);
+  }
+  thead.append(head);
+  for (const name of names) {
+    const tr = el("tr", hurts(name) ? { class: "hurts" } : {});
+    tr.append(el("th", { scope: "row" }, name));
+    for (const c of claims) {
+      const s = c.slices.find(x => x.slice === name), td = el("td");
+      if (!s) td.append(mark("·", "rv-na", "rule can't fail here"));
+      else if (!s.broken.length) td.append(mark("✓", "rv-ok", "holds"));
+      else {
+        const b = btn(`✗ ${s.broken.length}`, "rv-bad", () => go(sliceSel(c, s)));
+        b.setAttribute("aria-label", `${count(s.broken.length, "broken import", "broken imports")}, show on the map`);
+        td.append(b);
+      }
+      tr.append(td);
+    }
+    tbody.append(tr);
+  }
+  table.append(thead, tbody);
+  return table;
+}
+function reviewPage(out) {
+  out.append(el("h2", { class: "sr" }, "Review"), verdictStrip());
+  if (!doc.target) { out.append(el("p", { class: "rv-key" }, "The rules state no claim or move, so there is no target to review.")); return; }
+  if (!doc.target.claims.length) return;
+  const key = el("p", { class: "rv-key" }), wrap = el("div", { class: "rv-x" });
+  for (const [symbol, cls, text] of [["✓", "rv-ok", "holds"], ["✗ N", "rv-no", "N broken imports, select to show them on the map"],
+    ["·", "rv-na", "the rule can't fail here"]]) {
+    const sp = el("span");
+    sp.append(el("b", { class: cls, "aria-hidden": "true" }, symbol), document.createTextNode(" " + text));
+    key.append(sp);
+  }
+  wrap.append(claimsMatrix());
+  out.append(el("h3", { id: "rv-claims" }, "Claims"), key, wrap);
+}
+function showView(view) {
+  const page = $("review-page"), had = page.contains(document.activeElement);
+  reviewing = view === "review";
+  root.classList.toggle("reviewing", reviewing);
+  $("stage").inert = reviewing;
+  for (const b of $("views").children) {
+    const on = b.dataset.view === view;
+    b.setAttribute("aria-checked", String(on));
+    b.tabIndex = on ? 0 : -1;
+    /* A cell that opened the map no longer shows: focus lands on the switch, one Tab from the map. */
+    if (on && had && !reviewing) b.focus();
+  }
+  if (reviewing) { closePops(); closeView(false); }
+}
+function initReview() {
+  reviewPage($("review-body"));
+  const btns = [...$("views").children];
+  btns.forEach((b, j) => {
+    b.addEventListener("click", () => { if (b.dataset.view !== (reviewing ? "review" : "map")) location.hash = "#" + b.dataset.view; });
+    b.addEventListener("keydown", ev => {
+      if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+      ev.preventDefault();
+      btns[1 - j].focus();
+      btns[1 - j].click();
+    });
+  });
+  window.addEventListener("hashchange", () => showView(viewOf(location.hash)));
+  showView(viewOf(location.hash));
+}
+/* ---------- end review page ---------- */
 /* ---------- package split panel ---------- */
 function packageSplitContext(moduleId) {
   const report = doc.package_splits;
@@ -4500,6 +4662,7 @@ try {
     if (!getComputedStyle($("find")).backdropFilter.includes("url")) root.classList.remove("lens");
   }
 } catch { root.classList.remove("lens"); }
+initReview();
 showPanel();
 const ro = new ResizeObserver(() => resize());
 ro.observe(stage);
