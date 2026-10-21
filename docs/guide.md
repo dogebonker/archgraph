@@ -903,12 +903,12 @@ jobs:
           sarif_file: ${{ steps.archgraph.outputs.sarif }}
 ```
 
-The upload step runs after a failed archgraph step, since the file is written before the gate result. The SHA is the `v4.39.1` tag of github/codeql-action (`git ls-remote https://github.com/github/codeql-action 'refs/tags/v4*'`); update it from that repository's releases.
+The upload step runs after a failed archgraph step, since the file is written before the gate result. The SHA is the peeled `^{}` line of `git ls-remote https://github.com/github/codeql-action 'refs/tags/v4*'` for the `v4.39.1` tag; update it from that repository's releases.
 
 - Private repositories need GitHub Code Security enabled; public repositories do not.
 - Fork and Dependabot pull requests can upload under `pull_request`. Never use `pull_request_target`, as below.
 - When `actions/checkout` uses `path:`, set `checkout_path` on the upload step to that path.
-- `upload-sarif` warns once per result that archgraph provides its own fingerprint. That is expected.
+- `upload-sarif` warns about the provided fingerprint only for results that have a line: it skips results without `region.startLine` and warns only when its computed hash differs. That is expected.
 - Give each `forbid` rule an `id`. Unnamed rules are numbered `forbid[i]`, so inserting one renumbers the rest and reopens their alerts.
 
 Never run it on `pull_request_target`. That event gets the base repository's write token and secrets, and scanning the pull request's code there hands a privileged job to files the pull request controls: its `tsconfig.json`, `layout.yaml` and file names (see the warning at the top). `pull_request` runs with a read-only token and no secrets for forks.

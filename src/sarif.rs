@@ -17,22 +17,33 @@ pub fn sarif(doc: &Document) -> Value {
     let sources = |id: &str| rules.map_or_else(Vec::new, |r| r.doc.sources(id));
     // (rule id, from, to, message)
     let mut found: Vec<(&str, &str, &str, String)> = Vec::new();
-    for claim in doc.target.iter().flat_map(|t| &t.claims) {
-        for slice in &claim.slices {
-            for link in &slice.broken {
-                let mut text = format!(
-                    "{} imports {}, breaking claim {}",
-                    link.from, link.to, claim.id
-                );
-                if slice.slice != "*" {
-                    text += &format!(" in slice {}", slice.slice);
-                }
-                text += &format!(": {}", claim.reason);
-                if let Some(source) = &claim.source {
-                    text += &format!(" ({source})");
-                }
-                found.push((&claim.id, &link.from, &link.to, text + "."));
+    // Named slices go first so a link also in slice `*` (a rule without a `<name>` capture
+    // sharing the id) keeps the named one; later repeats of (id, from, to) are skipped.
+    let mut slices: Vec<_> = doc
+        .target
+        .iter()
+        .flat_map(|t| &t.claims)
+        .flat_map(|c| c.slices.iter().map(move |s| (c, s)))
+        .collect();
+    slices.sort_by_key(|(_, s)| s.slice == "*");
+    let mut claimed: BTreeSet<(&str, &str, &str)> = BTreeSet::new();
+    for (claim, slice) in slices {
+        for link in &slice.broken {
+            if !claimed.insert((&claim.id, &link.from, &link.to)) {
+                continue;
             }
+            let mut text = format!(
+                "{} imports {}, breaking claim {}",
+                link.from, link.to, claim.id
+            );
+            if slice.slice != "*" {
+                text += &format!(" in slice {}", slice.slice);
+            }
+            text += &format!(": {}", claim.reason.trim_end_matches('.'));
+            if let Some(source) = &claim.source {
+                text += &format!(" ({source})");
+            }
+            found.push((&claim.id, &link.from, &link.to, text + "."));
         }
     }
     // A pair under a broken claim, or already listed under another kind, is not repeated.
@@ -45,7 +56,7 @@ pub fn sarif(doc: &Document) -> Value {
         let mut text = format!("{} imports {}, forbidden by {rule}", e.from, e.to);
         let (reasons, sources) = (reasons(rule), sources(rule));
         if !reasons.is_empty() {
-            text += &format!(": {}", reasons.join("; "));
+            text += &format!(": {}", reasons.join("; ").trim_end_matches('.'));
         }
         if !sources.is_empty() {
             text += &format!(" ({})", sources.join(", "));
@@ -62,17 +73,20 @@ pub fn sarif(doc: &Document) -> Value {
             } else {
                 reasons.join("; ")
             };
-            let mut rule = json!({
+            let sources = sources(id);
+            let help = if sources.is_empty() {
+                text.clone()
+            } else {
+                format!("Source: {}", sources.join(", "))
+            };
+            json!({
                 "id": id,
                 "shortDescription": {"text": text},
+                "fullDescription": {"text": text},
+                "help": {"text": help},
                 "defaultConfiguration": {"level": "error"},
                 "properties": {"tags": ["architecture"]},
-            });
-            let sources = sources(id);
-            if !sources.is_empty() {
-                rule["help"] = json!({"text": format!("Source: {}", sources.join(", "))});
-            }
-            rule
+            })
         })
         .collect();
     let root = doc.source.scan_root.as_deref().filter(|r| *r != ".");

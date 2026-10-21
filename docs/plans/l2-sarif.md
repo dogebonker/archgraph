@@ -71,7 +71,7 @@ in [pr-architecture-review.md](../pr-architecture-review.md).
   `74053824541e62736c72f6c88aeef584`; recompute and explain if they differ), rules descriptors,
   a line-less + `scan_root = "web"` case (uri `web/...`, no region, "Line unknown…" ending);
   `tests/rules.rs` ts-fda check test extended with `--format sarif`: exit 1, the (ruleId, uri)
-  pairs in claim-then-forbidden order, no regions (depcruise has no lines), schema-valid.
+  pairs in claim-then-forbidden order, regions present (the recorded scan carries lines 1,1,1,1,3), uris under `tests/fixtures/ts-fda/`, schema-valid.
 
 ### P2. `feat(action): write archgraph.sarif and document uploading it to code scanning`
 - `ci/action.sh` after the outputs block, before the base-ref branch: when rules exist, run

@@ -412,10 +412,18 @@ fn claims(edges: &[(&str, &str, usize)]) -> Document {
 
 /// `files` and `edges` under the rules of `claims`.
 fn claims_in(files: Vec<String>, edges: Vec<Edge>) -> Document {
-    let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","cruised":5},"git":{"commit":"test","dirty":false},"generated_at":"1970-01-01T00:00:00Z"})).unwrap();
-    let config: Config = serde_json::from_value(json!({"depth":1,"source_root":"src","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"fixture","doc":{"version":1,"forbid":[
+    claims_with(
+        json!([
         {"id":"app-no-domain","from":"src/m/<name>/app/**","to":"src/m/<name>/domain/**","reason":"apps never reach a domain","source":"docs/adr/0001.md"},
-        {"from":"src/shared/**","to":"src/m/**","reason":"shared stays a leaf"}]}}})).unwrap();
+        {"from":"src/shared/**","to":"src/m/**","reason":"shared stays a leaf"}]),
+        files,
+        edges,
+    )
+}
+
+fn claims_with(forbid: Value, files: Vec<String>, edges: Vec<Edge>) -> Document {
+    let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","cruised":5},"git":{"commit":"test","dirty":false},"generated_at":"1970-01-01T00:00:00Z"})).unwrap();
+    let config: Config = serde_json::from_value(json!({"depth":1,"source_root":"src","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"fixture","doc":{"version":1,"forbid":forbid}}})).unwrap();
     archgraph::analyze(source, config, files, edges, Vec::new(), None).unwrap()
 }
 
@@ -504,9 +512,12 @@ fn sarif_puts_each_broken_claim_and_other_forbidden_import_on_its_line() {
         run["tool"]["driver"]["rules"],
         json!([
             {"id": "app-no-domain", "shortDescription": {"text": "apps never reach a domain"},
+             "fullDescription": {"text": "apps never reach a domain"},
              "help": {"text": "Source: docs/adr/0001.md"},
              "defaultConfiguration": {"level": "error"}, "properties": {"tags": ["architecture"]}},
             {"id": "forbid[1]", "shortDescription": {"text": "shared stays a leaf"},
+             "fullDescription": {"text": "shared stays a leaf"},
+             "help": {"text": "shared stays a leaf"},
              "defaultConfiguration": {"level": "error"}, "properties": {"tags": ["architecture"]}},
         ])
     );
@@ -549,6 +560,57 @@ fn sarif_puts_each_broken_claim_and_other_forbidden_import_on_its_line() {
     assert_eq!(
         results[0]["message"]["text"],
         "src/m/b/app/y.ts imports src/m/b/domain/e.ts, breaking claim app-no-domain in slice b: apps never reach a domain (docs/adr/0001.md). Line unknown: the fixture collector records none."
+    );
+}
+
+#[test]
+fn sarif_reports_a_link_once_per_claim_id_and_does_not_double_a_closing_period() {
+    // Two rules share an id: the link is in slice `b` and in slice `*`.
+    let doc = claims_with(
+        json!([
+            {"id":"app-no-domain","from":"src/m/<name>/app/**","to":"src/m/<name>/domain/**","reason":"apps never reach a domain."},
+            {"id":"app-no-domain","from":"src/m/b/app/**","to":"src/m/b/domain/**","reason":"apps never reach a domain."}]),
+        vec!["src/m/b/app/y.ts".into(), "src/m/b/domain/e.ts".into()],
+        vec![Edge {
+            from: "src/m/b/app/y.ts".into(),
+            to: "src/m/b/domain/e.ts".into(),
+            line: Some(3),
+            ..Default::default()
+        }],
+    );
+    let out = archgraph::sarif::sarif(&doc);
+    common::validate_sarif(&out);
+    let results = out["runs"][0]["results"].as_array().unwrap();
+    assert_eq!(results.len(), 1);
+    let prints: std::collections::BTreeSet<_> = results
+        .iter()
+        .map(|r| r["partialFingerprints"]["primaryLocationLineHash"].to_string())
+        .collect();
+    assert_eq!(prints.len(), results.len());
+    assert_eq!(
+        results[0]["message"]["text"],
+        "src/m/b/app/y.ts imports src/m/b/domain/e.ts, breaking claim app-no-domain in slice b: apps never reach a domain."
+    );
+    assert_eq!(
+        results[0]["partialFingerprints"]["primaryLocationLineHash"],
+        "bef3e88717e6b19c6929f9300f74b5d5"
+    );
+
+    // A forbidden import whose reason ends in a period.
+    let doc = claims_with(
+        json!([{"from":"src/shared/**","to":"src/m/**","reason":"shared stays a leaf."}]),
+        vec!["src/shared/id.ts".into(), "src/m/a/domain/d.ts".into()],
+        vec![Edge {
+            from: "src/shared/id.ts".into(),
+            to: "src/m/a/domain/d.ts".into(),
+            line: Some(1),
+            ..Default::default()
+        }],
+    );
+    let out = archgraph::sarif::sarif(&doc);
+    assert_eq!(
+        out["runs"][0]["results"][0]["message"]["text"],
+        "src/shared/id.ts imports src/m/a/domain/d.ts, forbidden by forbid[0]: shared stays a leaf."
     );
 }
 
