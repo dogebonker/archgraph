@@ -450,6 +450,25 @@ impl Compiled {
         {
             bail!("layer-reason must be nonempty and contain no control characters");
         }
+        // Ids and reasons are printed by check, review and SARIF: a blank one says nothing.
+        let named = rules
+            .forbid
+            .iter()
+            .map(|r| ("forbid", r.id.as_deref(), r.reason.as_deref()));
+        let allowed = rules
+            .allow
+            .iter()
+            .map(|r| ("allow", r.id.as_deref(), r.reason.as_deref()));
+        let mut index: BTreeMap<&str, usize> = BTreeMap::new();
+        for (kind, id, reason) in named.chain(allowed) {
+            let i = index.entry(kind).or_default();
+            for (field, value) in [("id", id), ("reason", reason)] {
+                if value.is_some_and(|v| v.trim().is_empty()) {
+                    bail!("{kind}[{i}].{field} must be nonempty");
+                }
+            }
+            *i += 1;
+        }
         for source in rules
             .forbid
             .iter()

@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- A `forbid` or `allow` rule with a blank `id` or `reason` is rejected when the layout loads, naming the field: it would print as nothing in `check`, `review` and SARIF.
 - The action writes `archgraph.sarif` (HEAD's `check --format sarif`) when rules exist and exposes its path as the output `sarif`; the CI guide shows uploading it with `github/codeql-action/upload-sarif` for annotations on changed lines.
 - `archgraph check --format sarif` prints SARIF 2.1.0 for GitHub code scanning: a result per import breaking a claim (rule: the claim id), then per other forbidden import (rule: its rule), at the importing file under `source.scan_root` and its line, or the whole file with "Line unknown" when the collector records none; rules carry their reasons and sources, and fingerprints leave out the line. Exit 1 when any import is forbidden.
 - `integrations/amp-review.check.md` and `integrations/claude-review.agent.md` tell an AI reviewer to quote `archgraph review`, treat its verdict on import direction as final, and judge only what it does not check.

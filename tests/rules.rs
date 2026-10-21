@@ -783,6 +783,37 @@ fn rules_errors() {
     let (code, stderr) = scan_with(&default);
     assert_eq!(code, Some(0), "{stderr}");
 
+    // A blank id or reason would print as nothing in check, review and SARIF, which GitHub rejects.
+    for (name, yaml, field) in [
+        (
+            "rules/blank-forbid-id.yaml",
+            "version: 1\nforbid:\n  - { id: \" \", from: \"src/domain/**\", to: \"src/adapters/**\" }\n",
+            "forbid[0].id",
+        ),
+        (
+            "rules/blank-forbid-reason.yaml",
+            "version: 1\nforbid:\n  - { id: a, from: \"src/domain/**\", to: \"src/adapters/**\", reason: \"\" }\n",
+            "forbid[0].reason",
+        ),
+        (
+            "rules/blank-allow-id.yaml",
+            "version: 1\nallow:\n  - { id: \"\", from: \"src/**\", to: \"src/**\" }\n",
+            "allow[0].id",
+        ),
+        (
+            "rules/blank-allow-reason.yaml",
+            "version: 1\nallow:\n  - { from: \"src/**\", to: \"src/**\", reason: \"  \" }\n",
+            "allow[0].reason",
+        ),
+    ] {
+        let (code, stderr) = scan_with(&write_tmp(name, yaml));
+        assert_eq!(code, Some(2), "{name}: {stderr}");
+        assert!(
+            stderr.contains(&format!("{field} must be nonempty")),
+            "{name}: {stderr}"
+        );
+    }
+
     let version = write_tmp("rules/version.yaml", "version: 2\n");
     let (code, stderr) = scan_with(&version);
     assert_eq!(code, Some(2));
