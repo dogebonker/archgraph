@@ -701,6 +701,133 @@ fn py_clean_hexagonal_layers_and_sibling_forbids() {
 }
 
 #[test]
+fn check_fails_only_on_forbidden_imports_missing_from_the_known_file() {
+    let rules = write_tmp(
+        "known/layout.yaml",
+        &std::fs::read_to_string(layout("ts-hexagonal")).unwrap(),
+    );
+    let known = std::path::Path::new(&rules).with_file_name("layout.known.yaml");
+    let _ = std::fs::remove_file(&known);
+    let scan = scan_file("ts-hexagonal", &[]);
+    let header = "# Forbidden imports layout.yaml already has. check fails on any other, and on an entry that no\n\
+                  # longer occurs. Shrink with: archgraph check --update-known shrink\n\
+                  version: 1\nknown:\n";
+    let http = "  - { rule: \"forbid[0]\", from: \"src/adapters/in/http.ts\", to: \"src/adapters/out/pg.ts\" }\n";
+    let queue = "  - { rule: \"forbid[1]\", from: \"src/adapters/out/queue.ts\", to: \"src/adapters/in/cli.ts\" }\n";
+    let user =
+        "  - { rule: \"layers\", from: \"src/domain/user.ts\", to: \"src/adapters/out/pg.ts\" }\n";
+    let all = format!("{header}{http}{queue}{user}");
+    let stale = "stale known src/main.ts -> src/adapters/out/pg.ts (forbid[0]): no longer forbidden; \
+                 run archgraph check --update-known shrink\n";
+
+    // Two listed: only the third fails.
+    std::fs::write(&known, format!("{header}{http}{user}")).unwrap();
+    let (stdout, _, code) = check(&[&scan, "--rules", &rules]);
+    assert_eq!(code, Some(1));
+    assert_eq!(
+        stdout,
+        "forbidden src/adapters/out/queue.ts -> src/adapters/in/cli.ts (forbid[1])\n\
+         3 forbidden (2 known), 0 unplanned\n"
+    );
+
+    // All listed: exit 0, the output and the document keep every forbidden import.
+    std::fs::write(&known, &all).unwrap();
+    let output = write_tmp("known/checked.json", "");
+    let (stdout, stderr, code) = check(&[&scan, "--rules", &rules, "-o", &output]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert_eq!(stdout, "3 forbidden (3 known), 0 unplanned\n");
+    let mut checked: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&output).unwrap()).unwrap();
+    validate(&checked);
+    assert_eq!(checked["summary"]["forbidden"], 3);
+    assert_eq!(checked["summary"]["known"], 3);
+    assert_eq!(
+        checked["config"]["rules"]["known"]["path"],
+        "layout.known.yaml"
+    );
+    assert_eq!(
+        checked["edges"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|e| e["known"] == true)
+            .count(),
+        3
+    );
+    // Flags read from a document are recomputed from its list, never kept.
+    checked["config"]["rules"]["known"] = serde_json::Value::Null;
+    let tampered = write_tmp("known/tampered.json", &checked.to_string());
+    let (stdout, _, code) = check(&[&tampered]);
+    assert_eq!(code, Some(1));
+    assert!(stdout.ends_with("\n3 forbidden, 0 unplanned\n"), "{stdout}");
+
+    // An entry that no longer occurs fails until the file shrinks.
+    let main =
+        "  - { rule: \"forbid[0]\", from: \"src/main.ts\", to: \"src/adapters/out/pg.ts\" }\n";
+    std::fs::write(&known, format!("{all}{main}")).unwrap();
+    let (stdout, _, code) = check(&[&scan, "--rules", &rules]);
+    assert_eq!(code, Some(1));
+    assert_eq!(
+        stdout,
+        format!("{stale}3 forbidden (3 known), 0 unplanned\n")
+    );
+    let (stdout, stderr, code) = check(&[&scan, "--rules", &rules, "--update-known", "shrink"]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert!(
+        stderr.contains("layout.known.yaml: 3 kept, 1 dropped, 0 added\n"),
+        "{stderr}"
+    );
+    assert_eq!(stdout, "3 forbidden (3 known), 0 unplanned\n");
+    assert_eq!(std::fs::read_to_string(&known).unwrap(), all);
+
+    // A renamed rule: the old entry is stale and the import unlisted.
+    let renamed = "  - { rule: \"layers\", from: \"src/adapters/in/http.ts\", to: \"src/adapters/out/pg.ts\" }\n";
+    std::fs::write(&known, format!("{header}{renamed}{queue}{user}")).unwrap();
+    let (stdout, _, code) = check(&[&scan, "--rules", &rules]);
+    assert_eq!(code, Some(1));
+    assert_eq!(
+        stdout,
+        "forbidden src/adapters/in/http.ts -> src/adapters/out/pg.ts (forbid[0])\n\
+         stale known src/adapters/in/http.ts -> src/adapters/out/pg.ts (layers): no longer forbidden; \
+         run archgraph check --update-known shrink\n\
+         3 forbidden (2 known), 0 unplanned\n"
+    );
+
+    // accept creates the file; shrink never does.
+    std::fs::remove_file(&known).unwrap();
+    let (_, stderr, code) = check(&[&scan, "--rules", &rules, "--update-known", "shrink"]);
+    assert_eq!(code, Some(2));
+    assert!(stderr.contains("no layout.known.yaml"), "{stderr}");
+    assert!(!known.exists());
+    let (stdout, stderr, code) = check(&[&scan, "--rules", &rules, "--update-known", "accept"]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert!(
+        stderr.contains("layout.known.yaml: 0 kept, 0 dropped, 3 added\n"),
+        "{stderr}"
+    );
+    assert_eq!(stdout, "3 forbidden (3 known), 0 unplanned\n");
+    assert_eq!(std::fs::read_to_string(&known).unwrap(), all);
+
+    // A saved scan names no rules file to write beside.
+    let (_, embedded, _) = scan_recorded("ts-hexagonal", &["--rules", &rules]);
+    let embedded = write_tmp("known/embedded.json", &embedded);
+    let (_, stderr, code) = check(&[&embedded, "--update-known", "accept"]);
+    assert_eq!(code, Some(2));
+    assert!(stderr.contains("pass --rules"), "{stderr}");
+
+    // Strict like layout.yaml.
+    std::fs::write(
+        &known,
+        "version: 1\nknown:\n  - { rule: \"layers\", from: \"a.ts\", too: \"b.ts\" }\n",
+    )
+    .unwrap();
+    let (_, stderr, code) = check(&[&scan, "--rules", &rules]);
+    assert_eq!(code, Some(2));
+    assert!(stderr.contains("unknown field `too`"), "{stderr}");
+    std::fs::remove_file(&known).unwrap();
+}
+
+#[test]
 fn check_uses_embedded_rules_and_the_flag_replaces_them() {
     let embedded = scan_file("ts-hexagonal", &["--rules", &layout("ts-hexagonal")]);
     let (stdout, _, code) = check(&[&embedded]);

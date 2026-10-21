@@ -20,6 +20,12 @@ pub fn summary(doc: &Document) -> Summary {
     };
     Summary {
         forbidden: count(Verdict::Forbidden),
+        known: doc
+            .edges
+            .iter()
+            .chain(&doc.external_edges)
+            .filter(|e| e.known)
+            .count(),
         unplanned: count(Verdict::Unplanned),
         cycles: doc.cycles.len(),
         type_only_cycles: doc.type_only_cycles.len(),

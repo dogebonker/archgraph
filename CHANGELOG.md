@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- `check` reads `layout.known.yaml` beside the rules file, a list of forbidden imports the code already has, and fails only on a forbidden import missing from it or on a listed one that no longer occurs (`stale known ...`); `check --update-known accept` writes every forbidden import now and `--update-known shrink` drops entries that no longer occur. The totals line reads `3 forbidden (2 known), 0 unplanned` when any are listed, `report` exits the same way, and scan documents gain optional `config.rules.known`, `edges[].known`, `summary.known` and `stale_known`.
 - A `forbid` or `allow` rule with a blank `id` or `reason` is rejected when the layout loads, naming the field: it would print as nothing in `check`, `review` and SARIF.
 - The action writes `archgraph.sarif` (HEAD's `check --format sarif`) when rules exist and exposes its path as the output `sarif`; the CI guide shows uploading it with `github/codeql-action/upload-sarif` for annotations on changed lines.
 - `archgraph check --format sarif` prints SARIF 2.1.0 for GitHub code scanning: a result per import breaking a claim (rule: the claim id), then per other forbidden import (rule: its rule), at the importing file under `source.scan_root` and its line, or the whole file with "Line unknown" when the collector records none; rules carry their reasons and sources, and fingerprints leave out the line. Exit 1 when any import is forbidden.

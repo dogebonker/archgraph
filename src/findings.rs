@@ -1539,6 +1539,7 @@ mod tests {
             config.rules = Some(crate::model::RulesRef {
                 path: "layout.yaml".into(),
                 sha256: String::new(),
+                known: None,
                 doc: serde_json::from_value(serde_json::json!({"version":1,
                     "modules":[{"id":"receiver","path":"target/**"}],
                     "edge_weights":{"runtime":0.8,"lazy":0.2,"type":0.05,"reexport":0.7}

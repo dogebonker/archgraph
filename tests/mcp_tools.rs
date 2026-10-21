@@ -348,6 +348,7 @@ fn explain_modules_report_all_layers_and_unclassified_members() {
         config.rules = Some(archgraph::model::RulesRef {
             path: "layout.yaml".into(),
             sha256: "fixture".into(),
+            known: None,
             doc: serde_json::from_value(json!({"version":1,"layers":layers})).unwrap(),
         });
         archgraph::analyze(

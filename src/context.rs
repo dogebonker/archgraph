@@ -1048,6 +1048,7 @@ mod tests {
         scan.config.rules = Some(RulesRef {
             path: "layout.yaml".into(),
             sha256: String::new(),
+            known: None,
             doc: crate::rules::Rules {
                 version: 1,
                 ..Default::default()
@@ -1535,6 +1536,7 @@ mod tests {
         scan.config.rules = Some(RulesRef {
             path: "layout.yaml".into(),
             sha256: String::new(),
+            known: None,
             doc: crate::rules::Rules {
                 version: 1,
                 ..Default::default()

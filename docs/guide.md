@@ -354,7 +354,7 @@ Wrote
   /tmp/arch/archgraph.html
 ```
 
-**check** prints forbidden and unplanned imports. Exit 1 when any import is forbidden, 2 on usage or input errors.
+**check** prints forbidden and unplanned imports. Exit 1 when any import is forbidden and not in the [known list](#known-violations), or a listed one no longer occurs; 2 on usage or input errors.
 
 ```sh
 $ archgraph check graph.json --rules layout.yaml
@@ -364,7 +364,7 @@ forbidden src/shared/format.ts -> src/domains/cart/types.ts (shared-no-domain)
 2 forbidden, 1 unplanned
 ```
 
-`--format sarif` prints SARIF 2.1.0 for GitHub code scanning instead (`-o` still writes the document; the agent-rule and early-smell checks are skipped; exit 1 when any import is forbidden, else 0): a result per import that breaks a claim, ruled by the claim id, then one per other forbidden import, ruled by its rule (`forbid[i]` when unnamed, so give rules an `id`), each with its rule's reasons and sources. A result points at the importing file under `source.scan_root` and its line; without a line it covers the whole file and its message says so. Its fingerprint hashes the rule, file and target but not the line, so an alert survives the import moving within its file.
+`--format sarif` prints SARIF 2.1.0 for GitHub code scanning instead (`-o` still writes the document; the agent-rule and early-smell checks are skipped; exit 1 as for text, else 0): a result per import that breaks a claim, ruled by the claim id, then one per other forbidden import, ruled by its rule (`forbid[i]` when unnamed, so give rules an `id`), each with its rule's reasons and sources. A result points at the importing file under `source.scan_root` and its line; without a line it covers the whole file and its message says so. Its fingerprint hashes the rule, file and target but not the line, so an alert survives the import moving within its file.
 
 **simulate** compares forbidden imports, unplanned imports, cycles and module metrics before and after moving one or more files (`kind: simulation`, with full `before` and `after` summaries). Repeat `--move FILE DEST` to apply several moves together. The destination path decides the new module and layer.
 
@@ -1024,6 +1024,29 @@ forbid:
 ```text
 claim layered: holds in 16 of 18 slices; broken in interview, sop reason="Dependencies point inward (slide 8)"
 ```
+
+### Known violations
+
+A layout written for code that already breaks it fails `check` on every existing import. List them in `layout.known.yaml` beside the rules file (`<stem>.known.yaml`: `ci/strict.yaml` reads `ci/strict.known.yaml`) and `check` fails only on a forbidden import missing from the list, or on a listed one that no longer occurs. The list only shrinks: fixing a listed import fails `check` until the entry goes.
+
+```sh
+archgraph check --update-known accept    # list every forbidden import now (creates the file)
+archgraph check --update-known shrink    # drop entries that no longer occur, add none
+```
+
+Both print `layout.known.yaml: N kept, N dropped, N added` on stderr and then check as usual; `shrink` without the file exits 2, and a saved scan needs `--rules` to name where the file goes. Run them by hand and commit the file; CI only reads it.
+
+```yaml
+# Forbidden imports layout.yaml already has. check fails on any other, and on an entry that no
+# longer occurs. Shrink with: archgraph check --update-known shrink
+version: 1
+known:
+  - { rule: "forbid[0]", from: "src/adapters/in/http.ts", to: "src/adapters/out/pg.ts" }
+```
+
+An entry is the importer, the written target as `check` prints it (`pkg:<package>` for a package) and the rule that decides the import, without a line, sorted one per line. Unknown keys and control characters are an error, as in `layout.yaml`. Moving a file or renaming a rule makes its entries stale and the imports unlisted: run `accept` again. Unnamed rules are numbered (`forbid[0]`), so adding one renumbers the rest: give rules an `id`. An intended exception belongs in `allow`, not here.
+
+`check` leaves listed imports out of its lines and counts them in the totals (`3 forbidden (2 known), 0 unplanned`), and prints `stale known <from> -> <to> (<rule>): no longer forbidden; run archgraph check --update-known shrink` for an entry that no longer occurs. Claims still count a listed import as broken. `report` exits the same way and prints `N forbidden (M known)`. The scan document embeds the list as `config.rules.known`, marks listed edges `known: true` and counts them in `summary.known`, and lists stale entries in `stale_known`; `--rules` replaces the rules and the list together.
 
 ### Moves
 

@@ -808,5 +808,20 @@ mod tests {
         assert!(warm.fallback.as_ref().unwrap().contains("layout rules"));
         assert!(warm.fallback.as_ref().unwrap().contains("policy.yaml"));
         assert_fresh(&fixture, &warm);
+        // The known list beside the rules is non-source metadata: a full refresh rereads it.
+        fixture.write(
+            "policy.known.yaml",
+            "version: 1\nknown:\n  - { rule: \"forbid[0]\", from: \"a/a.ts\", to: \"b/b.ts\" }\n",
+        );
+        warm.refresh(&[fixture.0.join("policy.known.yaml")])
+            .unwrap();
+        assert_eq!(warm.doc.summary.known, 1);
+        assert!(
+            warm.fallback
+                .as_ref()
+                .unwrap()
+                .contains("policy.known.yaml")
+        );
+        assert_fresh(&fixture, &warm);
     }
 }

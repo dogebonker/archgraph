@@ -1,3 +1,7 @@
+use std::collections::BTreeSet;
+
+use archgraph::known;
+
 use super::*;
 
 #[derive(Args)]
@@ -14,20 +18,15 @@ pub(super) struct Check {
     /// Text, or SARIF 2.1.0 for GitHub code scanning (skips the agent-rule and early-smell checks)
     #[arg(long, value_enum, default_value_t = CheckFormat::Text)]
     format: CheckFormat,
+    /// Rewrite the known-violations file beside the rules (layout.known.yaml), then check
+    #[arg(long, value_enum)]
+    update_known: Option<known::Mode>,
 }
 
 #[derive(Clone, Copy, PartialEq, ValueEnum)]
 enum CheckFormat {
     Text,
     Sarif,
-}
-
-fn policy_target(doc: &archgraph::model::Document, path: &str) -> String {
-    doc.external_nodes
-        .iter()
-        .find(|node| node.id == path)
-        .map(|node| format!("pkg:{}", node.package))
-        .unwrap_or_else(|| path.to_owned())
 }
 
 pub(super) fn run(args: Check) -> Result<ExitCode> {
@@ -40,13 +39,49 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
         .as_ref()
         .map(|root| root.join("layout.yaml"))
         .filter(|p| p.is_file());
-    let doc = if let Some(root) = &root {
+    let mut doc = if let Some(root) = &root {
         scan_cli::live(root, args.rules.as_deref().or(default_rules.as_deref()))?
     } else {
         recompute(&args.graph, args.rules.as_deref())?
     };
     if doc.config.rules.is_none() && doc.surface.is_none() {
         bail!("no rules: pass --rules, or scan with --rules");
+    }
+    if let Some(mode) = args.update_known {
+        let rules = args
+            .rules
+            .as_deref()
+            .or(default_rules.as_deref())
+            .context("--update-known writes beside the rules file: pass --rules")?;
+        let path = known::path(rules);
+        let name = path
+            .file_name()
+            .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+        let listed = doc.config.rules.as_ref().and_then(|r| r.known.as_ref());
+        if mode == known::Mode::Shrink && listed.is_none() {
+            bail!("no {name} to shrink: create it with archgraph check --update-known accept");
+        }
+        let entries = known::update(&doc, mode);
+        let old: BTreeSet<_> = listed.into_iter().flat_map(|f| &f.entries).collect();
+        let new: BTreeSet<_> = entries.iter().collect();
+        let rules_name = rules
+            .file_name()
+            .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+        write_file(&path, known::render(&rules_name, &entries).as_bytes())?;
+        eprintln!(
+            "{name}: {} kept, {} dropped, {} added",
+            old.intersection(&new).count(),
+            old.difference(&new).count(),
+            new.difference(&old).count()
+        );
+        if let Some(rules) = &mut doc.config.rules {
+            rules.known = Some(known::File {
+                path: name,
+                entries,
+            });
+        }
+        known::mark(&mut doc);
+        doc.summary = simulate::summary(&doc);
     }
     if args.format == CheckFormat::Sarif {
         if let Some(path) = &args.output {
@@ -56,12 +91,7 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
             "{}",
             serde_json::to_string_pretty(&archgraph::sarif::sarif(&doc))?
         );
-        let forbidden = doc
-            .edges
-            .iter()
-            .chain(&doc.external_edges)
-            .any(|edge| edge.verdict == Some(Verdict::Forbidden));
-        return Ok(ExitCode::from(u8::from(forbidden)));
+        return Ok(ExitCode::from(u8::from(known::fails(&doc))));
     }
     let active_policy = args.rules.as_deref().map(Path::canonicalize).transpose()?;
     let default_policy = default_rules
@@ -111,11 +141,12 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
                 "cycles": doc.cycles, "forbidden": forbidden, "unplanned": unplanned,
                 "surface": doc.surface,
                 "target": doc.target,
+                "stale_known": doc.stale_known,
                 "early_smells": smells,
                 "reasons": forbidden.iter().map(|edge| serde_json::json!({"from":edge.from,"to":edge.to,"reasons":reasons(&doc, edge.rule.as_deref().unwrap_or_default()),"sources":sources(&doc, edge.rule.as_deref().unwrap_or_default())})).collect::<Vec<_>>(),
             }),
         )?;
-        return Ok(if !forbidden.is_empty() || smells.blocking_count > 0 {
+        return Ok(if known::fails(&doc) || smells.blocking_count > 0 {
             ExitCode::from(1)
         } else if incomplete {
             ExitCode::from(2)
@@ -123,11 +154,15 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
             ExitCode::SUCCESS
         });
     }
-    let (mut forbidden, mut unplanned) = (0, 0);
+    let (mut forbidden, mut listed, mut unplanned) = (0, 0, 0);
     for e in doc.edges.iter().chain(&doc.external_edges) {
         let label = match e.verdict {
             Some(Verdict::Forbidden) => {
                 forbidden += 1;
+                if e.known {
+                    listed += 1;
+                    continue;
+                }
                 "forbidden"
             }
             Some(Verdict::Unplanned) => {
@@ -140,7 +175,7 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
             Some(path) => format!(
                 " via {}",
                 path.iter()
-                    .map(|p| policy_target(&doc, p))
+                    .map(|p| known::policy_target(&doc, p))
                     .collect::<Vec<_>>()
                     .join(" -> ")
             ),
@@ -149,14 +184,14 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
         let rule = e.rule.as_deref().unwrap_or_default();
         let written = e.original_to.as_deref().unwrap_or(&e.to);
         let resolved = if written != e.to {
-            format!(" [resolves to {}]", policy_target(&doc, &e.to))
+            format!(" [resolves to {}]", known::policy_target(&doc, &e.to))
         } else {
             String::new()
         };
         println!(
             "{label} {} -> {} ({rule}){via}{resolved}{}{}",
             e.from,
-            policy_target(&doc, written),
+            known::policy_target(&doc, written),
             reasons(&doc, rule)
                 .into_iter()
                 .map(|reason| format!(" reason={reason:?}"))
@@ -167,7 +202,13 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
                 .collect::<String>()
         );
     }
-    println!("{forbidden} forbidden, {unplanned} unplanned");
+    for entry in &doc.stale_known {
+        println!("{}", known::stale_line(entry));
+    }
+    match listed {
+        0 => println!("{forbidden} forbidden, {unplanned} unplanned"),
+        listed => println!("{forbidden} forbidden ({listed} known), {unplanned} unplanned"),
+    }
     if let Some(target) = &doc.target {
         print!("{}", archgraph::target::text(target));
     }
@@ -193,7 +234,7 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
     if let Some(path) = &args.output {
         write(Some(path), &doc)?;
     }
-    Ok(if forbidden > 0 || smells.blocking_count > 0 {
+    Ok(if known::fails(&doc) || smells.blocking_count > 0 {
         ExitCode::from(1)
     } else if incomplete {
         ExitCode::from(2)

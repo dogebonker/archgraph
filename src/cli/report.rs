@@ -72,7 +72,7 @@ pub(super) fn run(args: Report) -> Result<ExitCode> {
             summary(&doc, root, rules.as_deref(), &json, &html, bold)
         );
     }
-    Ok(if doc.summary.forbidden > 0 {
+    Ok(if archgraph::known::fails(&doc) {
         ExitCode::from(1)
     } else {
         ExitCode::SUCCESS
@@ -233,10 +233,17 @@ fn summary(
             let mut by_rule: Vec<_> = by_rule.into_iter().collect();
             by_rule.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
             let rules: Vec<String> = by_rule.iter().map(|(r, n)| format!("{r} {n}")).collect();
+            let known = match doc.summary.known {
+                n if n > 0 && verdict == Verdict::Forbidden => format!(" ({n} known)"),
+                _ => String::new(),
+            };
             out += &match total {
                 0 => format!("  0 {label}\n"),
-                n => format!("  {n} {label}: {}\n", rules.join(", ")),
+                n => format!("  {n} {label}{known}: {}\n", rules.join(", ")),
             };
+        }
+        for entry in &doc.stale_known {
+            out += &format!("  {}\n", archgraph::known::stale_line(entry));
         }
     }
     if let Some(target) = &doc.target {

@@ -254,6 +254,7 @@ pub fn load(path: &Path) -> Result<RulesRef> {
             .map(|b| format!("{b:02x}"))
             .collect(),
         doc,
+        known: crate::known::load(path)?,
     })
 }
 
@@ -293,7 +294,7 @@ fn known_keys() -> serde_json::Value {
 
 /// The first key of `given` that `known` lacks, with where it sits (`forbid[0]`); array items
 /// are compared with `known`'s first item.
-fn unknown_key(
+pub(crate) fn unknown_key(
     given: &serde_json::Value,
     known: &serde_json::Value,
     at: &str,

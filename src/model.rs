@@ -61,6 +61,9 @@ pub struct Document {
     /// Claim verdicts, when the rules state a claim.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target: Option<crate::target::Report>,
+    /// Entries of the rules' known list that no forbidden import matches.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub stale_known: Vec<crate::known::Entry>,
 }
 
 /// The parts of a scan document that every other subcommand recomputes the rest from.
@@ -267,6 +270,9 @@ pub struct RulesRef {
     pub path: String,
     pub sha256: String,
     pub doc: Rules,
+    /// The forbidden imports listed beside the rules file.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub known: Option<crate::known::File>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -393,6 +399,9 @@ pub struct Edge {
     pub resolution_reason: Option<String>,
     pub verdict: Option<Verdict>,
     pub rule: Option<String>,
+    /// A forbidden import the rules' known list has.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub known: bool,
     /// For a `reachable` forbid: the import path from `to` to the matching file. Printed by
     /// `check`, not part of the document.
     #[serde(skip)]
@@ -820,10 +829,17 @@ pub struct Changes {
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct Summary {
     pub forbidden: usize,
+    /// Of `forbidden`, those the rules' known list has.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub known: usize,
     pub unplanned: usize,
     pub cycles: usize,
     pub type_only_cycles: usize,
     pub modules: BTreeMap<String, ModuleSummary>,
+}
+
+fn is_zero(n: &usize) -> bool {
+    *n == 0
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

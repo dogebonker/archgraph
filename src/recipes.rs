@@ -764,6 +764,7 @@ pub fn project(doc: &Document, recipe: &Recipe) -> Result<Document> {
                         resolution_reason: None,
                         verdict: None,
                         rule: None,
+                        known: false,
                         reach: None,
                     });
                 }

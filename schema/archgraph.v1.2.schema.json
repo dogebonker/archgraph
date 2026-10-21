@@ -213,6 +213,29 @@
     }
   ],
   "$defs": {
+    "known-entry": {
+      "description": "A forbidden import by importer, written target as check prints it and first-match rule.",
+      "type": "object",
+      "required": [
+        "from",
+        "to",
+        "rule"
+      ],
+      "properties": {
+        "from": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rule": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "symbol-target": {
       "type": "object",
       "required": [
@@ -1583,6 +1606,25 @@
                     },
                     "doc": {
                       "$ref": "#/$defs/rules"
+                    },
+                    "known": {
+                      "description": "The known list beside the rules file (layout.known.yaml).",
+                      "type": "object",
+                      "required": [
+                        "path",
+                        "entries"
+                      ],
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "entries": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/known-entry"
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -1955,6 +1997,13 @@
         "target": {
           "$ref": "#/$defs/target"
         },
+        "stale_known": {
+          "description": "Entries of the known list that no forbidden import matches. Absent when empty.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/known-entry"
+          }
+        },
         "external_exposure": {
           "$ref": "#/$defs/external-exposure"
         },
@@ -2037,6 +2086,10 @@
         },
         "resolution_reason": {
           "type": "string"
+        },
+        "known": {
+          "description": "A forbidden import the known list beside the rules has. Absent unless true.",
+          "type": "boolean"
         }
       }
     },
@@ -2882,6 +2935,10 @@
       ],
       "properties": {
         "forbidden": {
+          "$ref": "#/$defs/count"
+        },
+        "known": {
+          "description": "Of forbidden, those the known list beside the rules has. Absent when zero.",
           "$ref": "#/$defs/count"
         },
         "unplanned": {

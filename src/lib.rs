@@ -24,6 +24,7 @@ pub mod hotspots;
 pub mod impact;
 pub mod incremental;
 pub mod infer_layout;
+pub mod known;
 pub mod mcp_tools;
 pub mod model;
 pub mod modules;
@@ -517,7 +518,9 @@ fn build_inner(
         surface: None,
         package_splits: None,
         target: None,
+        stale_known: Vec::new(),
     };
+    known::mark(&mut doc);
     if owners.is_some() {
         for module in &mut doc.modules {
             let mut ownership = model::ModuleOwnership {

@@ -878,7 +878,13 @@ fn report_summary_prints_the_target_block() {
     std::fs::create_dir_all(&root).unwrap();
     let rules = write_tmp(
         "go-target-report.yaml",
-        "version: 1\nmoves:\n  - { from: \"<name>/**\", to: \"core/<name>/\" }\n",
+        "version: 1\nmoves:\n  - { from: \"<name>/**\", to: \"core/<name>/\" }\n\
+         forbid:\n  - { from: \"api/**\", to: \"store/**\" }\n",
+    );
+    // Pushes use report's exit status: a listed forbidden import passes.
+    write_tmp(
+        "go-target-report.known.yaml",
+        "version: 1\nknown:\n  - { rule: \"forbid[0]\", from: \"api/handler/handler.go\", to: \"store/store.go\" }\n",
     );
     let input = common::fixture("go-cycles").join("go.json");
     let out = archgraph(&[
@@ -892,6 +898,11 @@ fn report_summary_prints_the_target_block() {
         input.to_str().unwrap(),
     ]);
     let stdout = String::from_utf8_lossy(&out.stdout);
+    assert_eq!(out.status.code(), Some(0), "{stdout}");
+    assert!(
+        stdout.contains("Rules\n  1 forbidden (1 known): forbid[0] 1\n"),
+        "{stdout}"
+    );
     assert!(
         stdout.contains(
             "Target\nmove api: 3 files, 1 import line\nmove store: 2 files, 1 import line\n\

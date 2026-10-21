@@ -444,6 +444,7 @@ mod tests {
         input.config.rules = Some(crate::model::RulesRef {
             path: "fixture.yaml".into(),
             sha256: String::new(),
+            known: None,
             doc: rules,
         });
         input.edges = edges
