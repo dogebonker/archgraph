@@ -397,49 +397,89 @@ ul.wi-findings .path { color: var(--label2); margin-top: 2px; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 
-/* The review page: an opaque document over the map, under the chrome and beside the inspector. It
-   hides with visibility, so it keeps its scroll position and the map keeps its size and view. */
+/* The review page: an opaque document over the map, under the chrome, with the inspector hidden. It
+   hides with visibility, so it keeps its scroll position and the map keeps its size and view. It
+   borrows a drawing's vernacular: one sheet with a hairline grid, hatching for "does not apply
+   here", red and green only where something holds or breaks. */
+:root { --sheet: #161618; --hairline: #3a3a3c; --holds: #7fd3a0; --broken: #ff5a4e; --broken-tint: rgba(255, 90, 78, .16);
+  --hatch: repeating-linear-gradient(45deg, rgba(235, 235, 245, .18) 0 1px, transparent 1px 6px); }
 #views .tbtn[aria-checked="true"] { color: #fff; background: rgba(10, 132, 255, .9); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 2px 6px rgba(0, 0, 0, .45); }
-#review-page { position: fixed; z-index: 4; inset: 0; padding-top: var(--top); background: var(--base);
-  visibility: hidden; opacity: 0; transition: opacity .2s ease-out, visibility 0s linear .2s; }
-.reviewing #review-page { visibility: visible; opacity: 1; transition: opacity .2s ease-out; }
-.reviewing #seg, .reviewing .tools, .reviewing #view-btn, .reviewing .ctrl, .reviewing #level, .reviewing #mini { visibility: hidden; }
-#review-body { height: 100%; margin-right: calc(var(--pw) + 12px); padding: 12px 24px 56px 20px; overflow-y: auto; overscroll-behavior: contain; }
-#review-body > * { max-width: min(1080px, 100%); }
-#review-body h3 { margin: 28px 0 4px; font-size: 15px; line-height: 1.3; font-weight: 600; letter-spacing: -0.01em; }
-.rv-strip { margin: 0; color: var(--label2); font-size: 17px; line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; }
-.rv-strip span { white-space: nowrap; }
-.rv-strip b { color: var(--label); font-weight: 700; }
-.rv-strip .bad b { color: var(--red-s); } .rv-strip .good b { color: var(--green-s); }
-.rv-strip .sep { color: var(--label3); white-space: normal; }
-.rv-key { display: flex; flex-wrap: wrap; gap: 2px 18px; margin: 0 0 12px; color: var(--label2); font-size: 12px; }
-.rv-key b { font-weight: 600; }
-/* Wide target matrices scroll sideways inside their own box; the slice names stay put. */
-.rv-x { width: fit-content; max-width: 100%; overflow-x: auto; border-radius: var(--r-in); background: var(--fill1); }
-.matrix { border-collapse: separate; border-spacing: 0; }
-.matrix th, .matrix td { padding: 7px 16px; border-bottom: 1px solid var(--sep); }
-.matrix tbody tr:last-child > * { border-bottom: 0; }
-.matrix thead th { min-width: 172px; max-width: 280px; padding-top: 12px; padding-bottom: 10px; vertical-align: bottom; text-align: left; font-weight: 400; }
-.matrix thead th:first-child { min-width: 0; color: var(--label2); font-size: 12px; font-weight: 500; }
-.matrix th:first-child { position: sticky; left: 0; z-index: 1; background: var(--fill1); }
-.matrix th[scope="row"] { text-align: left; white-space: nowrap; color: var(--label2); font: 500 12px/1.4 var(--mono); }
-.matrix tr.hurts th[scope="row"] { color: var(--label); }
-.matrix td { text-align: center; }
-.rv-id { display: block; font-weight: 600; overflow-wrap: anywhere; }
-.rv-verdict { display: block; color: var(--label2); font-size: 12px; font-weight: 600; }
-.rv-verdict.holds { color: var(--green-s); } .rv-verdict.holds_in { color: var(--orange); } .rv-verdict.broken { color: var(--red-s); }
-.rv-reason { display: block; margin-top: 4px; color: var(--label2); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
-.rv-source { display: block; color: var(--label3); font-size: 11px; overflow-wrap: anywhere; }
-.rv-ok { color: var(--green-s); font-weight: 600; } .rv-na { color: var(--label3); font-size: 17px; font-weight: 700; line-height: 1; } .rv-no { color: var(--red-s); }
-.rv-bad { min-width: 48px; height: 24px; padding: 0 10px; border: 0; border-radius: 999px; background: rgba(255, 69, 58, .16); color: var(--red-s);
-  font-size: 12px; font-weight: 600; transition: background-color .15s ease-out, transform .12s ease-out; }
-.rv-bad:hover { background: rgba(255, 69, 58, .28); }
-.rv-bad:active { transform: scale(.96); }
-@media (pointer: coarse) { .rv-bad { min-width: 56px; height: 36px; } }
+#review-page { position: fixed; z-index: 4; inset: 0; padding-top: var(--top); background: var(--base); visibility: hidden; }
+.reviewing #review-page { visibility: visible; }
+.reviewing #seg, .reviewing .tools, .reviewing #meta, .reviewing #view-btn, .reviewing .ctrl, .reviewing #level, .reviewing #mini { visibility: hidden; }
+/* The page carries the findings, so the inspector steps aside and gives its width to the tables.
+   Visibility keeps its size, so the map's visible area and view are the same on return. */
+.reviewing #sheet, .reviewing #side-open { visibility: hidden; }
+/* The page is as wide as its widest block, so the title block's right edge lines up with the tables. */
+#review-body { display: grid; grid-template-columns: fit-content(1400px); align-content: start; height: 100%; padding: 12px 24px 64px 20px;
+  overflow-y: auto; overscroll-behavior: contain; font-size: 13px; }
+#review-body .rv-findings { max-width: 80ch; }
+#review-body h3 { margin: 0 0 10px; font-size: 15px; line-height: 1.3; font-weight: 600; letter-spacing: -0.01em; }
+.rv-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px 40px; margin-bottom: 36px; }
+.rv-verdict { flex: 1 1 420px; max-width: 760px; }
+.rv-verdict p { margin: 0; font-size: 26px; line-height: 1.25; font-weight: 600; letter-spacing: -0.02em; }
+.rv-verdict .rv-then { color: var(--label2); }
+.rv-title { flex: none; display: grid; grid-template-columns: auto auto; margin: 0; border: 1px solid var(--hairline); font-size: 12px; }
+.rv-title div { display: contents; }
+.rv-title dt, .rv-title dd { margin: 0; padding: 5px 12px; border-bottom: 1px solid var(--hairline); }
+.rv-title div:last-child > * { border-bottom: 0; }
+.rv-title dt { color: var(--label2); border-right: 1px solid var(--hairline); }
+.rv-title dd { overflow-wrap: anywhere; }
+/* The matrix and the move cost sit side by side where both fit (about 1200px of page), else they stack. */
+.rv-blocks { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 36px 40px; }
+.rv-sec { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.rv-x { width: fit-content; max-width: 100%; overflow-x: auto; background: var(--sheet); border: 1px solid var(--hairline); }
+.rv-sheet { border-collapse: collapse; }
+.rv-sheet th, .rv-sheet td { padding: 6px 12px; border: 1px solid var(--hairline); }
+.rv-sheet tr > :first-child { border-left: 0; } .rv-sheet tr > :last-child { border-right: 0; }
+.rv-sheet thead tr > * { border-top: 0; } .rv-sheet tbody tr:last-child > * { border-bottom: 0; }
+.rv-sheet thead th { padding-top: 10px; padding-bottom: 10px; vertical-align: bottom; text-align: left; font-weight: 400; color: var(--label2); }
+.rv-sheet th:first-child { position: sticky; left: 0; z-index: 1; background: var(--sheet); }
+.rv-sheet th[scope="row"] { text-align: left; white-space: nowrap; font-weight: 500; }
+.rv-sheet td { text-align: center; }
+.rv-sheet thead th + th { min-width: 160px; max-width: 250px; }
+.rv-id { display: block; color: var(--label); font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.rv-says { display: block; color: var(--label); }
+.rv-reason { display: block; margin-top: 2px; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.rv-bar { display: flex; gap: 1px; height: 4px; margin-top: 10px; }
+.rv-bar i { flex: 1; background: var(--holds); } .rv-bar i.no { background: var(--broken); }
+td.rv-ok { color: var(--holds); font-size: 12px; }
+td.rv-na { background: var(--hatch); }
+/* A broken cell: a red tint with a red edge and a red count; solid red only under the pointer or focus. */
+td.rv-no { padding: 0; background: var(--broken-tint); box-shadow: inset 3px 0 0 var(--broken); }
+.rv-hit { display: block; width: 100%; min-height: 30px; border: 0; background: none; color: var(--broken); font-weight: 700; }
+.rv-hit:hover, .rv-hit:focus-visible { background: var(--broken); color: var(--sheet); }
+.rv-hit:focus-visible { outline: 2px solid #fff; outline-offset: -4px; border-radius: 0; }
+.rv-key { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 10px 0 0; color: var(--label2); font-size: 12px; }
+.rv-key span { display: inline-flex; align-items: center; gap: 6px; }
+.rv-sw { width: 14px; height: 10px; border: 1px solid var(--hairline); }
+.rv-sw.ok { border: 0; width: 10px; height: 5px; border-left: 1.5px solid var(--holds); border-bottom: 1.5px solid var(--holds); transform: rotate(-45deg) translate(1px, -1px); }
+.rv-sw.no { background: var(--broken-tint); border-color: var(--broken-tint); box-shadow: inset 3px 0 0 var(--broken); } .rv-sw.na { background: var(--hatch); }
+/* Move cost: numbers right-aligned, a small mark on the sorted column. */
+.rv-moves thead th + th { min-width: 0; max-width: 104px; }
+.rv-moves thead th + th, .rv-moves td { text-align: right; }
+.rv-moves tr > td:last-child { text-align: left; }
+.rv-moves td.rv-moved { color: var(--holds); }
+.rv-sort { padding: 0; border: 0; background: none; color: var(--label2); font-size: 12px; text-align: inherit; }
+.rv-sort:hover, [aria-sort="ascending"] > .rv-sort, [aria-sort="descending"] > .rv-sort { color: var(--label); }
+[aria-sort="ascending"] > .rv-sort::after { content: " ↑"; } [aria-sort="descending"] > .rv-sort::after { content: " ↓"; }
+.rv-go { padding: 0; border: 0; background: none; color: var(--label); font: inherit; text-decoration: underline; text-decoration-color: var(--label3);
+  text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.rv-go:hover { color: var(--blue); text-decoration-color: currentColor; }
+/* Findings: the side sheet's lists, plain, with hairlines between items. */
+.rv-findings { max-width: 960px; margin-top: 44px; }
+#review-body .rv-findings h3 { margin-top: 28px; }
+#review-body .rv-findings h3:first-child { margin-top: 0; }
+#review-body .rv-findings h3 svg, #review-body .assess li > svg { display: none; }
+#review-body .assess { border-radius: 0; background: none; border-top: 1px solid var(--hairline); }
+#review-body .assess li { display: block; padding: 10px 0; border-top: 0; border-bottom: 1px solid var(--hairline); }
+#review-body .assess li.empty { color: var(--label2); }
+@media (pointer: coarse) { .rv-hit { min-height: 44px; } }
 @media (max-width: 1099px), (max-height: 500px) { #review-body { padding-left: calc(16px + var(--sa-l)); } }
 @media (max-width: 759px) and (min-height: 501px) {
-  #review-body { margin-right: 0; padding: 8px calc(16px + var(--sa-r)) calc(var(--peek) + 32px + var(--sa-b)) calc(16px + var(--sa-l)); }
-  .rv-strip { font-size: 15px; }
+  #review-body { padding: 8px calc(16px + var(--sa-r)) calc(48px + var(--sa-b)) calc(16px + var(--sa-l)); }
+  .rv-verdict { flex-basis: 100%; }
+  .rv-verdict p { font-size: 21px; }
 }
 
 /* ---------- compact layouts: phones, landscape phones and tablets ----------
@@ -827,6 +867,7 @@ function drawPackageSplitHalo(ctx, marker, x, y, r, px) {
 /* ---------- end history context helpers ---------- */
 
 /* ---------- header ---------- */
+const LANG = { typescript: "TypeScript", python: "Python" };
 const mods = doc.modules, N = mods.length;
 const forbidden = [...doc.edges, ...(doc.external_edges || [])].filter(e => e.verdict === "forbidden").length;
 const commit = doc.source.git ? " at " + doc.source.git.commit.slice(0, 12) + (doc.source.git.dirty ? " (dirty)" : "") : "";
@@ -845,7 +886,6 @@ $("stats-text").textContent =
     d.append(el("dt", {}, label), el("dd", cls ? { class: cls } : {}, value));
     meta.append(d);
   };
-  const LANG = { typescript: "TypeScript", python: "Python" };
   const c = doc.source.collector;
   field("Language", LANG[doc.source.language] || doc.source.language);
   field("Collector", c.name, "", "opt");
@@ -3907,6 +3947,27 @@ function diagnosticContext() {
   panel.append(detail);
 }
 /* ---------- end diagnostic observations ---------- */
+/* A titled list of the assessment's sentences; each reference in them opens the map on its target. */
+const MARK = { good: "holds", bad: "hurts", info: "next", next: "next" };
+function assessSection(out, title, cls, items, empty) {
+  const h = el("h3", { class: cls }, title);
+  h.prepend(icon(MARK[cls]));
+  out.append(h);
+  const list = el(cls === "next" ? "ol" : "ul", { class: "assess " + cls });
+  if (!items.length) list.append(el("li", { class: "empty" }, empty));
+  for (const parts of items) {
+    const li = el("li");
+    li.append(icon(MARK[cls]), sentence(parts, "div"));
+    list.append(li);
+  }
+  out.append(list);
+}
+/* What hurts and what to do next: the side sheet's and the review page's, the same lists, the
+   second in `nextOut` when given. */
+function findingSections(out, nextOut = out) {
+  assessSection(out, "Findings to review", "bad", assessment.bad.map(b => b.parts), "Checked cycles, hubs, cohesion, rules, unstable imports, co-change and entries: nothing stands out.");
+  assessSection(nextOut, "What to do next", "next", assessment.next, "No finding suggests a change.");
+}
 function overview() {
   panel.append(peekbar());
   panel.append(el("h2", {}, "Assessment"));
@@ -3939,25 +4000,10 @@ function overview() {
   if (ofKind("small-repo").length) panel.append(el("p", { class: "note" }, "Few files or modules: read the lines below as hints, the signal is weak."));
   if (doc.source.collector.type_marking === "unavailable") panel.append(el("p", { class: "note" }, "Type-only imports could not be told apart in this repository, so some cycles may include imports TypeScript removes."));
   if (foundations.length && !hasOutgoingTo) panel.append(el("p", { class: "note" }, "This scan has no outgoing_to per module (an older archgraph), so cohesion here also counts imports of foundations. Rescan to judge it without them."));
-  const MARK = { good: "holds", bad: "hurts", info: "next", next: "next" };
-  const section = (title, cls, items, empty) => {
-    const h = el("h3", { class: cls }, title);
-    h.prepend(icon(MARK[cls]));
-    panel.append(h);
-    const list = el(cls === "next" ? "ol" : "ul", { class: "assess " + cls });
-    if (!items.length) list.append(el("li", { class: "empty" }, empty));
-    for (const parts of items) {
-      const li = el("li");
-      li.append(icon(MARK[cls]), sentence(parts, "div"));
-      list.append(li);
-    }
-    panel.append(list);
-  };
-  section("What holds up", "good", assessment.good, "Checked rules, stable foundations, cohesion, cycles and entries: none stands out as solid.");
-  section("Policy coverage (informational)", "info", assessment.coverage.map(b => b.parts), "No uncovered imports recorded. Coverage does not establish correctness.");
-  section("Folder dependencies (informational)", "info", assessment.observations, "No reciprocal folder dependencies recorded. Cross-module circular file imports may be summarized as folder loops; use --granularity file to inspect the full file graph.");
-  section("Findings to review", "bad", assessment.bad.map(b => b.parts), "Checked cycles, hubs, cohesion, rules, unstable imports, co-change and entries: nothing stands out.");
-  section("What to do next", "next", assessment.next, "No finding suggests a change.");
+  assessSection(panel, "What holds up", "good", assessment.good, "Checked rules, stable foundations, cohesion, cycles and entries: none stands out as solid.");
+  assessSection(panel, "Policy coverage (informational)", "info", assessment.coverage.map(b => b.parts), "No uncovered imports recorded. Coverage does not establish correctness.");
+  assessSection(panel, "Folder dependencies (informational)", "info", assessment.observations, "No reciprocal folder dependencies recorded. Cross-module circular file imports may be summarized as folder loops; use --granularity file to inspect the full file graph.");
+  findingSections(panel);
   diagnosticContext();
   panel.append(el("h3", {}, findings.length ? "All findings" : "No findings"));
   const byKind = new Map();
@@ -4110,60 +4156,83 @@ function targetPanel(t) {
 /* ---------- review page ---------- */
 /* The report opens on the review page when the scan has a target, else on the map. `#review` and
    `#map` choose, so a link opens the same view and back and forward step between them. The page
-   covers the map, which keeps its state underneath. */
+   covers the map, which keeps its state underneath. It reads like a drawing sheet: a verdict, a
+   title block, then the claims matrix, the move cost and the findings. */
 let reviewing = false;
 const viewOf = hash => hash === "#review" || hash === "#map" ? hash.slice(1) : doc.target ? "review" : "map";
-/* What the target and the scan say, in one line; parts that do not apply are left out. */
-function verdictStrip() {
-  const strip = el("p", { class: "rv-strip" }), t = doc.target;
-  const part = (n, rest, tone) => {
-    if (strip.children.length) strip.append(el("span", { class: "sep" }, " · "));
-    const sp = el("span", tone ? { class: tone } : {});
-    sp.append(el("b", {}, n), document.createTextNode(rest));
-    strip.append(sp);
-  };
-  const tally = (n, one, many) => part(String(n), " " + (n === 1 ? one : many), n ? "bad" : "");
-  if (t) {
-    const { conforming: c, moved: m } = t.progress;
-    part(`${c.done} of ${c.of}`, " slices conform", c.done < c.of ? "bad" : c.of ? "good" : "");
-    if (m) part(`${m.done} of ${m.of}`, " slices moved");
-  }
-  if (doc.config.rules) tally(doc.summary.forbidden, "forbidden import", "forbidden imports");
-  tally(doc.summary.cycles, "cycle", "cycles");
-  return strip;
+/* The verdict as sentences: how many slices follow every claim, then moves, forbidden imports and
+   cycles. Parts that do not apply are left out; no cycles is said only when nothing else is. */
+function verdictSentences() {
+  const t = doc.target, s = doc.summary, out = [];
+  const share = (c, all, some, none) => c.done === c.of ? all(c.of) : c.done ? some(c.done, c.of) : none(c.of);
+  const c = t?.progress.conforming, m = t?.progress.moved;
+  if (c?.of) out.push(share(c, n => `All ${n} slices follow every claim.`, (d, n) => `${d} of ${n} slices follow every claim.`,
+    n => `None of ${n} slices follows every claim.`));
+  if (m?.of) out.push(share(m, n => `All ${n} slices have moved.`, (d, n) => `${d} of ${n} slices have moved.`, n => `None of ${n} slices has moved.`));
+  if (doc.config.rules) out.push(!s.forbidden ? "No import breaks a rule." : s.forbidden === 1 ? "1 import breaks a rule." : `${nf(s.forbidden)} imports break a rule.`);
+  if (s.cycles) out.push(s.cycles === 1 ? "1 cycle remains." : `${nf(s.cycles)} cycles remain.`);
+  else if (!out.length) out.push("No cycles.");
+  return out;
 }
-/* A cell's symbol, with the words a screen reader hears instead. */
-const mark = (symbol, cls, text) => {
-  const sp = el("span", { class: cls, title: text });
-  sp.append(el("span", { "aria-hidden": "true" }, symbol), el("span", { class: "sr" }, text));
-  return sp;
-};
+/* The first sentence leads; the rest follow on one line. */
+function verdictText() {
+  const [first, ...rest] = verdictSentences(), box = el("div", { class: "rv-verdict" });
+  box.append(el("p", {}, first));
+  if (rest.length) box.append(el("p", { class: "rv-then" }, rest.join(" ")));
+  return box;
+}
+/* The scan's particulars, as a drawing's title block. */
+function titleBlock() {
+  const dl = el("dl", { class: "rv-title" }), git = doc.source.git, rules = doc.config.rules;
+  const row = (label, ...value) => {
+    const d = el("div"), dd = el("dd");
+    dd.append(...value.map(v => typeof v === "string" ? document.createTextNode(v) : v));
+    d.append(el("dt", {}, label), dd);
+    dl.append(d);
+  };
+  const code = text => el("span", { class: "mono" }, text);
+  row("Path", code(doc.source.scan_root || doc.config.source_root || "."));
+  row("Language", LANG[doc.source.language] || doc.source.language);
+  row("Collector", code(doc.source.collector.name));
+  if (git) row("Commit", code(git.commit.slice(0, 7)), git.dirty ? " with local changes" : "");
+  row("Rules", rules ? code(rules.path) : "none");
+  return dl;
+}
 /* A column per claim, a row per slice any claim binds, slices with a broken import first. A broken
-   cell selects its slice on the map exactly as the Target panel's slice row does. */
+   cell is a red block holding its import count and selects its slice on the map exactly as the
+   Target panel's slice row does; a hatched cell is a slice the claim's rule cannot fail in. Each
+   column header ends in a measured bar, one segment per bound slice. */
 function claimsMatrix(target = doc.target) {
   const claims = target.claims, names = [...new Set(claims.flatMap(c => c.slices.map(s => s.slice)))];
   const hurts = name => claims.some(c => c.slices.some(s => s.slice === name && s.broken.length));
   names.sort((a, b) => hurts(b) - hurts(a) || (a < b ? -1 : a > b ? 1 : 0));
-  const table = el("table", { class: "matrix", "aria-labelledby": "rv-claims" });
+  const table = el("table", { class: "rv-sheet", "aria-labelledby": "rv-claims" });
   const thead = el("thead"), head = el("tr"), tbody = el("tbody");
   head.append(el("th", { scope: "col" }, "Slice"));
   for (const c of claims) {
-    const th = el("th", { scope: "col" });
-    th.append(el("span", { class: "rv-id" }, c.id), el("span", { class: "rv-verdict " + c.verdict }, claimVerdict(c)),
+    const th = el("th", { scope: "col" }), bar = el("span", { class: "rv-bar", "aria-hidden": "true" });
+    for (const name of names) {
+      const bound = c.slices.find(x => x.slice === name);
+      if (bound) bar.append(el("i", { class: bound.broken.length ? "no" : "ok" }));
+    }
+    th.append(el("span", { class: "rv-id" }, c.id), el("span", { class: "rv-says" }, claimVerdict(c)),
       el("span", { class: "rv-reason" }, c.reason));
-    if (c.source) th.append(el("span", { class: "rv-source" }, c.source));
+    if (c.source) th.append(el("span", { class: "rv-reason" }, c.source));
+    th.append(bar);
     head.append(th);
   }
   thead.append(head);
   for (const name of names) {
-    const tr = el("tr", hurts(name) ? { class: "hurts" } : {});
-    tr.append(el("th", { scope: "row" }, name));
+    const tr = el("tr");
+    tr.append(el("th", { scope: "row", class: "mono" }, name));
     for (const c of claims) {
-      const s = c.slices.find(x => x.slice === name), td = el("td");
-      if (!s) td.append(mark("·", "rv-na", "rule can't fail here"));
-      else if (!s.broken.length) td.append(mark("✓", "rv-ok", "holds"));
+      const s = c.slices.find(x => x.slice === name);
+      let td;
+      if (!s) { td = el("td", { class: "rv-na", title: "rule can't fail here" }); td.append(el("span", { class: "sr" }, "rule can't fail here")); }
+      else if (!s.broken.length) { td = el("td", { class: "rv-ok" }); td.append(el("span", { "aria-hidden": "true" }, "✓"), el("span", { class: "sr" }, "holds")); }
       else {
-        const b = btn(`✗ ${s.broken.length}`, "rv-bad", () => go(sliceSel(c, s)));
+        td = el("td", { class: "rv-no" });
+        const b = btn(String(s.broken.length), "rv-hit", () => go(sliceSel(c, s)));
         b.setAttribute("aria-label", `${count(s.broken.length, "broken import", "broken imports")}, show on the map`);
         td.append(b);
       }
@@ -4174,19 +4243,81 @@ function claimsMatrix(target = doc.target) {
   table.append(thead, tbody);
   return table;
 }
-function reviewPage(out) {
-  out.append(el("h2", { class: "sr" }, "Review"), verdictStrip());
-  if (!doc.target) { out.append(el("p", { class: "rv-key" }, "The rules state no claim or move, so there is no target to review.")); return; }
-  if (!doc.target.claims.length) return;
-  const key = el("p", { class: "rv-key" }), wrap = el("div", { class: "rv-x" });
-  for (const [symbol, cls, text] of [["✓", "rv-ok", "holds"], ["✗ N", "rv-no", "N broken imports, select to show them on the map"],
-    ["·", "rv-na", "the rule can't fail here"]]) {
+/* Each slice's move cost, the Target panel's numbers in columns, sortable by any of them (most
+   files first). A pending row's slice name selects that move on the map, destination discs and
+   all. Hatching keeps its one meaning, does not apply, so a pending slice reads "not yet" plainly. */
+function moveTable(target = doc.target) {
+  const unknown = -1, isGo = doc.source.language === "go";
+  const cols = [
+    ["Slice", m => m.slice],
+    ["Files", m => m.files.length],
+    ["Import lines", m => m.import_lines],
+    ["Names to export", m => m.names ? m.names.length : unknown],
+    ["Imports in new package cycles", m => isGo ? m.new_cycles?.length || 0 : unknown],
+    ["Moved", m => m.files.length ? 0 : 1],
+  ];
+  const cell = (j, v) => j === 5 ? el("td", { class: v ? "rv-moved" : "muted" }, v ? "moved" : "not yet")
+    : v === unknown ? el("td", { class: "muted" }, "unknown") : el("td", {}, nf(v));
+  const table = el("table", { class: "rv-sheet rv-moves", "aria-labelledby": "rv-moves" });
+  const thead = el("thead"), head = el("tr"), tbody = el("tbody");
+  let by = 1, dir = -1;
+  const ths = cols.map(([label], j) => {
+    const th = el("th", { scope: "col" });
+    th.append(btn(label, "rv-sort", () => { dir = by === j ? -dir : j ? -1 : 1; by = j; fill(); }));
+    head.append(th);
+    return th;
+  });
+  const fill = () => {
+    ths.forEach((th, j) => th.setAttribute("aria-sort", j !== by ? "none" : dir < 0 ? "descending" : "ascending"));
+    const key = cols[by][1];
+    const order = [...target.moves].sort((a, b) => {
+      const p = key(a), q = key(b);
+      return (p < q ? -dir : p > q ? dir : 0) || (a.slice < b.slice ? -1 : a.slice > b.slice ? 1 : 0);
+    });
+    tbody.replaceChildren(...order.map(m => {
+      const tr = el("tr"), th = el("th", { scope: "row", class: "mono" });
+      if (m.files.length) {
+        const b = btn(m.slice, "rv-go", () => go(moveSel(m)));
+        b.setAttribute("aria-label", `${m.slice}: show the move on the map`);
+        th.append(b);
+      } else th.textContent = m.slice;
+      tr.append(th, ...cols.slice(1).map(([, value], j) => cell(j + 1, value(m))));
+      return tr;
+    }));
+  };
+  thead.append(head);
+  fill();
+  table.append(thead, tbody);
+  return table;
+}
+/* A titled block of the page; a table scrolls sideways inside its own box. */
+function block(id, title, table, key) {
+  const sec = el("section", { class: "rv-sec", "aria-labelledby": id }), wrap = el("div", { class: "rv-x" });
+  wrap.append(table);
+  sec.append(el("h3", { id }, title), wrap);
+  if (key) sec.append(key);
+  return sec;
+}
+/* The matrix legend: one quiet line of swatches. */
+function matrixKey() {
+  const key = el("p", { class: "rv-key" });
+  for (const [cls, text] of [["ok", "holds"], ["no", "broken imports, select a count to show them on the map"], ["na", "the rule can't fail here"]]) {
     const sp = el("span");
-    sp.append(el("b", { class: cls, "aria-hidden": "true" }, symbol), document.createTextNode(" " + text));
+    sp.append(el("i", { class: "rv-sw " + cls, "aria-hidden": "true" }), document.createTextNode(text));
     key.append(sp);
   }
-  wrap.append(claimsMatrix());
-  out.append(el("h3", { id: "rv-claims" }, "Claims"), key, wrap);
+  return key;
+}
+function reviewPage(out) {
+  const t = doc.target, head = el("div", { class: "rv-head" }), tables = el("div", { class: "rv-blocks" });
+  head.append(verdictText(), titleBlock());
+  out.append(el("h2", { class: "sr" }, "Review"), head);
+  if (!t) out.append(el("p", { class: "rv-key" }, "The rules state no claim or move, so there is no target to review."));
+  if (t?.claims.length) tables.append(block("rv-claims", "Claims", claimsMatrix(t), matrixKey()));
+  if (t?.moves?.length) tables.append(block("rv-moves", "Move cost", moveTable(t)));
+  const findings = el("section", { class: "rv-findings", "aria-label": "Findings" });
+  findingSections(findings);
+  out.append(tables, findings);
 }
 function showView(view) {
   const page = $("review-page"), had = page.contains(document.activeElement);
