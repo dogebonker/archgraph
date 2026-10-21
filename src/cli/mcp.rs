@@ -690,7 +690,9 @@ mod tests {
         let rows: Vec<_> = (0..100)
             .map(|i| json!({"from":format!("src/{i}.ts"),"to":"src/x.ts","line":i}))
             .collect();
-        let payload = json!({"markdown":markdown,"progress":null,"newly_broken":[],"newly_fixed":[],"other_forbidden":rows});
+        let vacuous =
+            json!([{"claim":"c","reason":"r","notes":["forbid[0] `from` matches no file"]}]);
+        let payload = json!({"markdown":markdown,"progress":null,"newly_broken":[],"newly_fixed":[],"newly_vacuous":vacuous,"other_forbidden":rows});
         for brief in [true, false] {
             let out = bounded("review", Ok(payload.clone()), brief);
             assert!(size(&out) <= 4000, "{}", size(&out));
@@ -699,6 +701,7 @@ mod tests {
             // Brief already drops the rows; in full, the markdown copy goes before any row.
             assert_eq!(v["data"].get("markdown").is_some(), brief, "{v}");
             assert_eq!(v["counts"]["other_forbidden"], 100);
+            assert_eq!(v["counts"]["newly_vacuous"], 1, "{v}");
             assert_eq!(v["truncated"], true);
         }
     }
