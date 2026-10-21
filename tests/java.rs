@@ -30,7 +30,7 @@ fn java_recording_uses_shared_analysis_and_test_excludes() {
     ]);
     assert_eq!(doc["source"]["language"], "java");
     assert_eq!(doc["source"]["collector"]["name"], "java-javac");
-    assert_eq!(doc["files"].as_array().unwrap().len(), 3);
+    assert_eq!(doc["files"].as_array().unwrap().len(), 5);
     assert_eq!(
         edges(&doc),
         [
@@ -45,6 +45,14 @@ fn java_recording_uses_shared_analysis_and_test_excludes() {
             (
                 "src/main/java/demo/service/Checkout.java",
                 "src/main/java/demo/model/Order.java"
+            ),
+            (
+                "src/main/java/demo/web/Controller.java",
+                "src/main/java/demo/model/Order.java"
+            ),
+            (
+                "src/main/java/demo/web/Controller.java",
+                "src/main/java/demo/service/Checkout.java"
             ),
         ]
     );
@@ -63,8 +71,8 @@ fn java_recording_uses_shared_analysis_and_test_excludes() {
         input.to_str().unwrap(),
         "--include-tests",
     ]);
-    assert_eq!(doc["files"].as_array().unwrap().len(), 4);
-    assert_eq!(edges(&doc).len(), 4);
+    assert_eq!(doc["files"].as_array().unwrap().len(), 6);
+    assert_eq!(edges(&doc).len(), 6);
 }
 
 #[test]

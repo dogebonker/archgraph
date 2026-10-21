@@ -4,13 +4,25 @@
     "src/main/java/demo/model/Factory.java",
     "src/main/java/demo/model/Order.java",
     "src/main/java/demo/service/Checkout.java",
+    "src/main/java/demo/web/Controller.java",
+    "src/main/java/demo/web/Idle.java",
     "src/test/java/demo/service/CheckoutTest.java"
   ],
   "edges": [
     {"from": "src/main/java/demo/model/Factory.java", "to": "src/main/java/demo/model/Order.java"},
     {"from": "src/main/java/demo/service/Checkout.java", "to": "src/main/java/demo/model/Factory.java"},
     {"from": "src/main/java/demo/service/Checkout.java", "to": "src/main/java/demo/model/Order.java"},
+    {"from": "src/main/java/demo/web/Controller.java", "to": "src/main/java/demo/model/Order.java"},
+    {"from": "src/main/java/demo/web/Controller.java", "to": "src/main/java/demo/service/Checkout.java"},
     {"from": "src/test/java/demo/service/CheckoutTest.java", "to": "src/main/java/demo/service/Checkout.java"}
+  ],
+  "imports": [
+    {"from": "src/main/java/demo/service/Checkout.java", "specifier": "demo.model.Order.LIMIT", "line": 3, "kind": "runtime", "targets": ["src/main/java/demo/model/Order.java"]},
+    {"from": "src/main/java/demo/service/Checkout.java", "specifier": "demo.model.Factory", "line": 4, "kind": "runtime", "targets": ["src/main/java/demo/model/Factory.java"]},
+    {"from": "src/main/java/demo/web/Controller.java", "specifier": "demo.model.Order.LIMIT", "line": 3, "kind": "runtime", "targets": ["src/main/java/demo/model/Order.java"]},
+    {"from": "src/main/java/demo/web/Controller.java", "specifier": "demo.service.Checkout", "line": 4, "kind": "runtime", "targets": ["src/main/java/demo/service/Checkout.java"]},
+    {"from": "src/main/java/demo/web/Idle.java", "specifier": "demo.model.Order.*", "line": 3, "kind": "runtime", "targets": ["src/main/java/demo/model/Order.java"]},
+    {"from": "src/main/java/demo/web/Idle.java", "specifier": "demo.service.Checkout", "line": 4, "kind": "runtime", "targets": ["src/main/java/demo/service/Checkout.java"]}
   ],
   "unresolved": 0
 }

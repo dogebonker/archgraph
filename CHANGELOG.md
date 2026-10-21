@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Java: an import alone no longer gives an edge in either engine, so an unused import has none, as in Go. A used imported name still does, including static imports, and native Java now resolves a `Type::method` qualifier through the imports. Import records are unchanged.
 - The guide gains "What an edge means": per language and engine, whether an edge is a reference or an import, whether an unused import gives one and whether type-only uses are separated, with how to write a call-level claim.
 - `review` ends a known other-forbidden row with `, listed in layout.known.yaml` (JSON `known: true`) and adds `N known entries no longer occur: run archgraph check --update-known shrink.`; `check_diff` gains `stale_known`. The report header reads `3 forbidden (2 known)` and the review verdict `3 imports break a rule, 2 of them known.`
 - `check` reads `layout.known.yaml` beside the rules file, a list of forbidden imports the code already has, and fails only on a forbidden import missing from it or on a listed one that no longer occurs (`stale known ...`); `check --update-known accept` writes every forbidden import now and `--update-known shrink` drops entries that no longer occur. The totals line reads `3 forbidden (2 known), 0 unplanned` when any are listed, `report` exits the same way, and scan documents gain optional `config.rules.known`, `edges[].known`, `summary.known` and `stale_known`.

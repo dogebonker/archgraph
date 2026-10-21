@@ -122,22 +122,8 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
             if !candidates.is_empty()
                 && (import.wildcard && !import.static_member || candidates.len() == 1)
             {
-                record.targets = candidates.iter().cloned().collect();
-                if !import.wildcard || import.static_member {
-                    for target in candidates {
-                        add_edge(
-                            file,
-                            &target,
-                            target_name,
-                            import.line,
-                            &included,
-                            &mut raw.edges,
-                            &mut edge_keys,
-                            &mut symbols.imports,
-                            &mut symbol_keys,
-                        );
-                    }
-                }
+                // The import alone gives no edge: the references below add one where the name is used.
+                record.targets = candidates.into_iter().collect();
             } else if candidates.len() > 1 {
                 record.unresolved = Some(ImportReason::Alias);
             } else if let Some(package) = jdk_package(target_name) {

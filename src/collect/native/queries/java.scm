@@ -10,6 +10,7 @@
 (type_parameter (type_identifier) @parameter)
 (method_invocation object: (_) @receiver)
 (field_access) @receiver
+(method_reference . (identifier) @receiver)
 (method_invocation name: (identifier) @member)
 (identifier) @identifier
 (marker_annotation name: (_) @annotation)

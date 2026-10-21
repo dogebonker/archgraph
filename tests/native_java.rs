@@ -60,6 +60,14 @@ fn native_java_resolves_reference_fixture_without_jdk() {
                 "src/main/java/demo/service/Checkout.java",
                 "src/main/java/demo/model/Order.java"
             ),
+            (
+                "src/main/java/demo/web/Controller.java",
+                "src/main/java/demo/model/Order.java"
+            ),
+            (
+                "src/main/java/demo/web/Controller.java",
+                "src/main/java/demo/service/Checkout.java"
+            ),
         ]
     );
     assert!(output.raw.files.iter().any(|f| f.ends_with("Test.java")));
@@ -177,7 +185,17 @@ fn native_java_syntax_errors_keep_valid_imports_and_generic_parameters_are_local
         ),
     ]);
     let output = collect(root.path());
-    assert!(output.raw.edges.iter().any(|e| e.to == "model/T.java"));
+    assert!(
+        output
+            .raw
+            .imports
+            .as_ref()
+            .unwrap()
+            .iter()
+            .any(|i| i.specifier == "model.T" && i.targets == ["model/T.java"])
+    );
+    // `T` in the class is the type parameter, so the import is unused and gives no edge.
+    assert!(output.raw.edges.is_empty());
     assert!(
         output
             .symbols
@@ -288,8 +306,26 @@ fn native_java_excluded_copies_do_not_make_included_types_ambiguous() {
         .filter(|i| i.from == "src/main/java/app/Wild.java")
         .map(|i| i.name.as_str())
         .collect();
-    assert_eq!(
-        names,
-        std::collections::BTreeSet::from(["helper", "p.Util"])
-    );
+    assert_eq!(names, std::collections::BTreeSet::from(["helper"]));
+}
+#[test]
+fn native_java_method_reference_qualifier_is_a_use_of_the_import() {
+    let root = fixture(&[
+        (
+            "model/Order.java",
+            "package model; public class Order { public static void touch(){} }",
+        ),
+        (
+            "Ref.java",
+            "import model.Order; class Ref { Runnable r = Order::touch; }",
+        ),
+    ]);
+    let output = collect(root.path());
+    let edges: Vec<_> = output
+        .raw
+        .edges
+        .iter()
+        .map(|e| (e.from.as_str(), e.to.as_str()))
+        .collect();
+    assert_eq!(edges, [("Ref.java", "model/Order.java")]);
 }

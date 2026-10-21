@@ -115,6 +115,10 @@ class ArchgraphJava {
                             edges.add("{\"from\":" + quote(from) + ",\"to\":" + quote(to) + "}");
                         }
                     }
+                    // An import alone is no reference: names it brings in count where the code uses them.
+                    @Override public Void visitImport(ImportTree tree, Void unused) {
+                        return null;
+                    }
                     @Override public Void visitIdentifier(IdentifierTree tree, Void unused) {
                         reference();
                         return super.visitIdentifier(tree, unused);
