@@ -251,6 +251,7 @@ fn input_schemas_reject_unknown_fields_and_match_examples() {
         ("verify", json!({"expect":{"cycles_in":["a"],"equals":0}})),
         ("explain", json!({"path":"src/a.ts"})),
         ("rules", json!({"paths":["src/a.ts"]})),
+        ("review", json!({"base":"HEAD"})),
     ];
     for (name, mut args) in examples {
         let schema = schemas().into_iter().find(|s| s.name == name).unwrap();
@@ -391,35 +392,29 @@ fn target_returns_claim_verdicts_or_null() {
 /// Slices a and b under the claim app-no-domain, a leaf rule on shared/ and `(from, to, line)`
 /// imports.
 fn claims(edges: &[(&str, &str, usize)]) -> Document {
+    let files = [
+        "src/m/a/app/x.ts",
+        "src/m/a/domain/d.ts",
+        "src/m/b/app/y.ts",
+        "src/m/b/domain/e.ts",
+        "src/shared/id.ts",
+    ];
+    let edges = edges.iter().map(|(from, to, line)| Edge {
+        from: (*from).into(),
+        to: (*to).into(),
+        line: Some(*line),
+        ..Default::default()
+    });
+    claims_in(files.map(String::from).to_vec(), edges.collect())
+}
+
+/// `files` and `edges` under the rules of `claims`.
+fn claims_in(files: Vec<String>, edges: Vec<Edge>) -> Document {
     let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","cruised":5},"git":{"commit":"test","dirty":false},"generated_at":"1970-01-01T00:00:00Z"})).unwrap();
     let config: Config = serde_json::from_value(json!({"depth":1,"source_root":"src","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"fixture","doc":{"version":1,"forbid":[
         {"id":"app-no-domain","from":"src/m/<name>/app/**","to":"src/m/<name>/domain/**","reason":"apps never reach a domain","source":"docs/adr/0001.md"},
         {"from":"src/shared/**","to":"src/m/**","reason":"shared stays a leaf"}]}}})).unwrap();
-    archgraph::analyze(
-        source,
-        config,
-        [
-            "src/m/a/app/x.ts",
-            "src/m/a/domain/d.ts",
-            "src/m/b/app/y.ts",
-            "src/m/b/domain/e.ts",
-            "src/shared/id.ts",
-        ]
-        .map(String::from)
-        .to_vec(),
-        edges
-            .iter()
-            .map(|(from, to, line)| Edge {
-                from: (*from).into(),
-                to: (*to).into(),
-                line: Some(*line),
-                ..Default::default()
-            })
-            .collect(),
-        Vec::new(),
-        None,
-    )
-    .unwrap()
+    archgraph::analyze(source, config, files, edges, Vec::new(), None).unwrap()
 }
 
 #[test]
@@ -442,4 +437,80 @@ fn diff_target_lists_newly_broken_and_newly_fixed_slices_with_lines() {
             "newly_fixed": slice("a", "src/m/a/app/x.ts", "src/m/a/domain/d.ts", 2),
         })
     );
+}
+
+#[test]
+fn review_quotes_each_newly_broken_other_forbidden_and_newly_fixed_import() {
+    let old = claims(&[("src/m/a/app/x.ts", "src/m/a/domain/d.ts", 2)]);
+    let new = claims(&[
+        ("src/m/b/app/y.ts", "src/m/b/domain/e.ts", 3),
+        ("src/shared/id.ts", "src/m/a/domain/d.ts", 1),
+    ]);
+    let out = call(&new, Path::new("."), "review", json!({}), Some(&old)).unwrap();
+    assert_eq!(
+        out["markdown"],
+        "**archgraph review**: 1 newly broken slice, 1 other new forbidden import, 1 newly fixed slice.
+Target: 1 of 2 slices conform.
+
+### Newly broken (1)
+
+- **app-no-domain**: apps never reach a domain (docs/adr/0001.md)
+  - slice b: src/m/b/app/y.ts:3 → src/m/b/domain/e.ts
+
+### Other new forbidden imports (1)
+
+- src/shared/id.ts:1 → src/m/a/domain/d.ts, forbid\\[1\\]: shared stays a leaf
+
+### Newly fixed (1)
+
+- **app-no-domain**: apps never reach a domain (docs/adr/0001.md)
+  - slice a: src/m/a/app/x.ts:2 → src/m/a/domain/d.ts
+"
+    );
+    validate("review", &out);
+}
+
+#[test]
+fn review_markdown_keeps_true_totals_within_its_budget() {
+    let slices: Vec<String> = (0..40).map(|i| format!("s{i:02}")).collect();
+    let files = slices
+        .iter()
+        .flat_map(|s| {
+            [
+                format!("src/m/{s}/app/x.ts"),
+                format!("src/m/{s}/domain/d.ts"),
+            ]
+        })
+        .collect::<Vec<_>>();
+    let old = claims_in(files.clone(), Vec::new());
+    let edges = slices
+        .iter()
+        .map(|s| Edge {
+            from: format!("src/m/{s}/app/x.ts"),
+            to: format!("src/m/{s}/domain/d.ts"),
+            ..Default::default()
+        })
+        .collect();
+    let out = call(
+        &claims_in(files, edges),
+        Path::new("."),
+        "review",
+        json!({}),
+        Some(&old),
+    )
+    .unwrap();
+    let md = out["markdown"].as_str().unwrap();
+    assert!(md.len() <= 1300, "{}", md.len());
+    assert!(md.contains("\n### Newly broken (40)\n"), "{md}");
+    assert!(
+        md.ends_with(
+            "\n\n25 more rows in `archgraph review --format json`.
+Lines unknown for 40 imports: the fixture collector records none.
+"
+        ),
+        "{md}"
+    );
+    assert_eq!(md.matches("\n  - slice ").count(), 40 - 25);
+    assert_eq!(out["newly_broken"].as_array().unwrap().len(), 40);
+    validate("review", &out);
 }

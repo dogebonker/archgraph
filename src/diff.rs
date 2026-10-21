@@ -2,9 +2,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use serde_json::{Value, json};
+
 use crate::model::{
     Cycle, CycleLevel, Diff, Document, Edge, Link, Module, ModuleDelta, SCHEMA, Snapshot, Verdict,
 };
+use crate::target::{Delta, SliceChange};
 
 pub fn diff(old: &Document, new: &Document) -> Diff {
     let snapshot = |d: &Document| Snapshot {
@@ -107,17 +110,7 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
         count(d.resolved_cycles.len(), "resolved dependency component"),
     );
     if let Some(t) = &d.target {
-        let [old, new] = t.conforming;
-        out += &format!("\nTarget: {} of {} slices conform", new.done, new.of);
-        if old != new {
-            out += &format!(" (was {} of {})", old.done, old.of);
-        }
-        if let Some([old, m]) = t.moved {
-            out += &format!(", {} of {} slices moved", m.done, m.of);
-            if old != m {
-                out += &format!(" (was {} of {})", old.done, old.of);
-            }
-        }
+        out += &format!("\n{}", progress(t));
         if !t.newly_broken.is_empty() {
             out += &format!(", {}", count(t.newly_broken.len(), "newly broken slice"));
         }
@@ -214,6 +207,179 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
         d.removed_modules.len()
     );
     out
+}
+
+/// `Target: 15 of 18 slices conform (was 16 of 18), 0 of 23 slices moved`.
+fn progress(t: &Delta) -> String {
+    let [old, new] = t.conforming;
+    let mut out = format!("Target: {} of {} slices conform", new.done, new.of);
+    if old != new {
+        out += &format!(" (was {} of {})", old.done, old.of);
+    }
+    if let Some([old, m]) = t.moved {
+        out += &format!(", {} of {} slices moved", m.done, m.of);
+        if old != m {
+            out += &format!(" (was {} of {})", old.done, old.of);
+        }
+    }
+    out
+}
+
+/// Bytes of `review` markdown before rows give way to a count; totals are always exact.
+const REVIEW_BYTES: usize = 1300;
+
+/// What a pull request changed in the target, for an AI reviewer to quote: `markdown` within
+/// `REVIEW_BYTES`, and every row as JSON. `other_forbidden` is the new forbidden imports not
+/// already under a newly broken slice, with their rule's reasons and sources.
+pub fn review(old: &Document, new: &Document) -> Value {
+    let d = diff(old, new);
+    let (broken, fixed) = d.target.as_ref().map_or((&[][..], &[][..]), |t| {
+        (&t.newly_broken[..], &t.newly_fixed[..])
+    });
+    let in_broken: BTreeSet<(&str, &str)> = broken
+        .iter()
+        .flat_map(|c| &c.imports)
+        .map(|e| (e.from.as_str(), e.to.as_str()))
+        .collect();
+    let rules = new.config.rules.as_ref();
+    let other: Vec<(&Edge, &str, Vec<&str>, Vec<&str>)> = d
+        .new_forbidden
+        .iter()
+        .filter(|e| !in_broken.contains(&(e.from.as_str(), e.to.as_str())))
+        .map(|e| {
+            let rule = e.rule.as_deref().unwrap_or_default();
+            let (reasons, sources) = rules.map_or_else(Default::default, |r| {
+                (r.doc.reasons(rule), r.doc.sources(rule))
+            });
+            (e, rule, reasons, sources)
+        })
+        .collect();
+    let mut md = format!(
+        "**archgraph review**: {}, {}, {}.\n",
+        count(broken.len(), "newly broken slice"),
+        count(other.len(), "other new forbidden import"),
+        count(fixed.len(), "newly fixed slice"),
+    );
+    if rules.is_none() {
+        md += "No rules: nothing was checked; add layout.yaml or pass --rules.\n";
+    } else if let Some(t) = &d.target {
+        md += &format!("{}.\n", progress(t));
+    }
+    fn at(path: &str, line: Option<usize>) -> String {
+        match line {
+            Some(n) => format!("{}:{n}", esc(path)),
+            None => esc(path),
+        }
+    }
+    // Each line with whether it is a row, which the footer counts.
+    fn slices(lines: &mut Vec<(String, bool)>, title: &str, changes: &[SliceChange]) {
+        if changes.is_empty() {
+            return;
+        }
+        lines.push((format!("\n### {title} ({})\n\n", changes.len()), false));
+        let mut claim = None;
+        for c in changes {
+            if claim != Some(&c.claim) {
+                claim = Some(&c.claim);
+                let source = c
+                    .source
+                    .as_ref()
+                    .map_or(String::new(), |s| format!(" ({})", esc(s)));
+                lines.push((
+                    format!("- **{}**: {}{source}\n", esc(&c.claim), esc(&c.reason)),
+                    false,
+                ));
+            }
+            for e in &c.imports {
+                let row = format!(
+                    "  - slice {}: {} → {}\n",
+                    esc(&c.slice),
+                    at(&e.from, e.line),
+                    esc(&e.to)
+                );
+                lines.push((row, true));
+            }
+        }
+    }
+    let mut lines = Vec::new();
+    slices(&mut lines, "Newly broken", broken);
+    if !other.is_empty() {
+        lines.push((
+            format!("\n### Other new forbidden imports ({})\n\n", other.len()),
+            false,
+        ));
+        for (e, rule, reasons, sources) in &other {
+            let mut row = format!("- {} → {}, {}", at(&e.from, e.line), esc(&e.to), esc(rule));
+            if !reasons.is_empty() {
+                let reasons: Vec<String> = reasons.iter().map(|r| esc(r)).collect();
+                row += &format!(": {}", reasons.join("; "));
+            }
+            if !sources.is_empty() {
+                let sources: Vec<String> = sources.iter().map(|s| esc(s)).collect();
+                row += &format!(" ({})", sources.join(", "));
+            }
+            lines.push((row + "\n", true));
+        }
+    }
+    slices(&mut lines, "Newly fixed", fixed);
+    let unknown = broken
+        .iter()
+        .chain(fixed)
+        .flat_map(|c| &c.imports)
+        .filter(|e| e.line.is_none())
+        .count()
+        + other.iter().filter(|(e, ..)| e.line.is_none()).count();
+    let footer = |more: usize| {
+        let mut out = String::new();
+        if more > 0 {
+            out += &format!(
+                "{} in `archgraph review --format json`.\n",
+                count(more, "more row")
+            );
+        }
+        if unknown > 0 {
+            out += &format!(
+                "Lines unknown for {}: the {} collector records none.\n",
+                count(unknown, "import"),
+                new.source.collector.name
+            );
+        }
+        if out.is_empty() {
+            out
+        } else {
+            format!("\n{out}")
+        }
+    };
+    let rows = lines.iter().filter(|(_, row)| *row).count();
+    let all: usize = lines.iter().map(|(text, _)| text.len()).sum();
+    let reserve = if md.len() + all + footer(0).len() <= REVIEW_BYTES {
+        0
+    } else {
+        footer(rows).len()
+    };
+    let (mut more, mut full) = (0, false);
+    for (text, row) in lines {
+        full = full || md.len() + text.len() + reserve > REVIEW_BYTES;
+        if full {
+            more += usize::from(row);
+        } else {
+            md += &text;
+        }
+    }
+    md += &footer(more);
+    json!({
+        "markdown": md,
+        "progress": d.target.as_ref().map(|t| json!({"conforming": t.conforming, "moved": t.moved})),
+        "newly_broken": broken,
+        "newly_fixed": fixed,
+        "other_forbidden": other.iter().map(|(e, rule, reasons, sources)| {
+            let mut row = json!({"from": e.from, "to": e.to, "rule": rule, "reasons": reasons, "sources": sources});
+            if let Some(line) = e.line {
+                row["line"] = json!(line);
+            }
+            row
+        }).collect::<Vec<_>>(),
+    })
 }
 
 /// `n` and `noun`, plural unless `n` is 1.

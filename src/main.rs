@@ -131,6 +131,8 @@ enum Cmd {
     Mcp(mcp_cli::Mcp),
     #[command(hide = true)]
     McpCall(mcp_cli::Call),
+    /// What a pull request changed in the target, for an AI reviewer to quote
+    Review(mcp_cli::Review),
     /// Keep a repository graph warm over local JSON-RPC
     Serve(daemon_cli::Serve),
     /// Show the local daemon state
@@ -457,6 +459,7 @@ fn execute_inner(cli: Cli) -> ExitCode {
         Cmd::McpCall(args) => mcp_cli::call(args)
             .and_then(|value| write(None, &value))
             .map(|()| ExitCode::SUCCESS),
+        Cmd::Review(args) => mcp_cli::review(args).map(|()| ExitCode::SUCCESS),
         Cmd::Status(args) => daemon_cli::status(args).map(|()| ExitCode::SUCCESS),
         Cmd::Explain(args) => recompute(&args.graph, None)
             .and_then(|doc| {

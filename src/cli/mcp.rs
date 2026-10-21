@@ -51,7 +51,7 @@ pub(super) fn call(mut args: Call) -> Result<Value> {
     if args.setup.opts.rules.is_none() && root.join("layout.yaml").is_file() {
         args.setup.opts.rules = Some(root.join("layout.yaml"));
     }
-    let base = (args.tool == "check_diff")
+    let base = matches!(args.tool.as_str(), "check_diff" | "review")
         .then(|| base_commit(&root, arguments.get("base").and_then(Value::as_str)))
         .transpose()?;
     let doc = scan_cli::scan_doc(
@@ -93,11 +93,47 @@ pub(super) fn call(mut args: Call) -> Result<Value> {
     };
     let mut result = mcp_tools::call(&doc, &root, &args.tool, arguments, baseline.as_ref())?;
     if let Some((base, selection)) = base {
+        if args.tool == "review" {
+            let changed = if policy_note == Some(true) {
+                "; rules changed since base: both commits are judged by the current rules"
+            } else {
+                ""
+            };
+            let markdown = result["markdown"].as_str().unwrap_or_default();
+            result["markdown"] = json!(format!(
+                "{markdown}\nBase {} ({selection}){changed}.\n",
+                &base[..12.min(base.len())]
+            ));
+        }
         result["base"] = json!(base);
         result["base_selection"] = json!(selection);
         result["policy"] = json!({"comparison":"current rules applied to both snapshots", "changed_from_base":policy_note});
     }
     Ok(result)
+}
+#[derive(Args)]
+pub(super) struct Review {
+    #[command(flatten)]
+    setup: Mcp,
+    /// Git revision to compare with [default: merge-base of HEAD and origin/HEAD, main or
+    /// master, else HEAD]
+    #[arg(long)]
+    base: Option<String>,
+    /// The markdown to quote, or JSON with every row
+    #[arg(long, value_enum, default_value_t = Format::Markdown)]
+    format: Format,
+}
+pub(super) fn review(args: Review) -> Result<()> {
+    let value = call(Call {
+        setup: args.setup,
+        tool: "review".into(),
+        arguments: json!({"base": args.base}).to_string(),
+    })?;
+    match args.format {
+        Format::Markdown => print!("{}", value["markdown"].as_str().unwrap_or_default()),
+        Format::Json => write(None, &value)?,
+    }
+    Ok(())
 }
 fn base_commit(root: &Path, explicit: Option<&str>) -> Result<(String, String)> {
     archgraph::git::toplevel(root)
@@ -323,6 +359,12 @@ fn brief_payload(value: &mut Value) -> usize {
             *edge = json!({"from":edge["from"],"to":edge["to"],"kind":edge["kind"],"rule":edge["rule"],"line":edge["line"]});
         }
     }
+    for key in ["newly_broken", "newly_fixed", "other_forbidden"] {
+        if let Some(rows) = value.get_mut(key).and_then(Value::as_array_mut) {
+            omitted += rows.len();
+            rows.clear();
+        }
+    }
     if let Some(limits) = value.get_mut("limitations").and_then(Value::as_array_mut) {
         omitted += limits.len();
         limits.clear();
@@ -395,7 +437,11 @@ fn explain_summary(value: &Value, details: bool) -> Value {
 }
 fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
     let explain = name == "explain";
-    let cap = if explain { 300 } else { 2000 };
+    let cap = match name {
+        "explain" => 300,
+        "review" => 4000,
+        _ => 2000,
+    };
     let (mut data, error) = match value {
         Ok(value) => (value, None),
         Err(error) => (Value::Null, Some(format!("{error:#}"))),
@@ -443,6 +489,11 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
                     .as_str()
                     .unwrap_or("<finding_id>")
             ))];
+        }
+        if let Some(markdown) = value["data"]["markdown"].as_str()
+            && name == "review"
+        {
+            out.content = vec![ContentBlock::text(markdown.to_owned())];
         }
         if size(&out) <= cap {
             return out;
@@ -604,6 +655,23 @@ mod tests {
         assert_eq!(v["data"]["pass"], false);
         assert_eq!(v["truncated"], true);
         assert!(v["omitted"].as_u64().unwrap() > 0);
+    }
+    #[test]
+    fn review_cap_trims_rows_and_keeps_the_markdown_as_text() {
+        let markdown = "é".repeat(700);
+        let rows: Vec<_> = (0..100)
+            .map(|i| json!({"from":format!("src/{i}.ts"),"to":"src/x.ts","line":i}))
+            .collect();
+        let payload = json!({"markdown":markdown,"progress":null,"newly_broken":[],"newly_fixed":[],"other_forbidden":rows});
+        for brief in [true, false] {
+            let out = bounded("review", Ok(payload.clone()), brief);
+            assert!(size(&out) <= 4000, "{}", size(&out));
+            assert_eq!(out.content[0].as_text().unwrap().text, markdown);
+            let v = out.structured_content.unwrap();
+            assert_eq!(v["data"]["markdown"], markdown);
+            assert_eq!(v["counts"]["other_forbidden"], 100);
+            assert_eq!(v["truncated"], true);
+        }
     }
     #[test]
     fn tiny_explanation_and_errors_stay_bounded() {

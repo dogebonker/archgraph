@@ -823,6 +823,305 @@
       ],
       "type": "object"
     },
+    "review_input": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string",
+          "minLength": 1
+        },
+        "brief": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prefer compact output. All responses retain a hard output cap."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "review_output": {
+      "type": "object",
+      "required": [
+        "data",
+        "truncated",
+        "omitted"
+      ],
+      "properties": {
+        "data": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "omitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "hint": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            },
+            "not": {
+              "required": [
+                "error"
+              ]
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": [
+                  "markdown",
+                  "progress",
+                  "newly_broken",
+                  "newly_fixed",
+                  "other_forbidden"
+                ],
+                "properties": {
+                  "markdown": {
+                    "type": "string"
+                  },
+                  "progress": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "conforming": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "done": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "of": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "done",
+                                "of"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "minItems": 2,
+                            "maxItems": 2
+                          },
+                          "moved": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "done": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "of": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "done",
+                                    "of"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "minItems": 2,
+                                "maxItems": 2
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "conforming",
+                          "moved"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "newly_broken": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "claim": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        },
+                        "slice": {
+                          "type": "string"
+                        },
+                        "imports": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "from": {
+                                "type": "string"
+                              },
+                              "to": {
+                                "type": "string"
+                              },
+                              "line": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "from",
+                              "to"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "claim",
+                        "reason",
+                        "slice",
+                        "imports"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "newly_fixed": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "claim": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        },
+                        "slice": {
+                          "type": "string"
+                        },
+                        "imports": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "from": {
+                                "type": "string"
+                              },
+                              "to": {
+                                "type": "string"
+                              },
+                              "line": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "from",
+                              "to"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "claim",
+                        "reason",
+                        "slice",
+                        "imports"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "other_forbidden": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        },
+                        "line": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "rule": {
+                          "type": "string"
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "sources": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to",
+                        "rule",
+                        "reasons",
+                        "sources"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
     "rules_input": {
       "additionalProperties": false,
       "properties": {

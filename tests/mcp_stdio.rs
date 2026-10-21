@@ -226,6 +226,7 @@ impl Client {
                 "context",
                 "explain",
                 "propose",
+                "review",
                 "rules",
                 "simulate",
                 "target",
@@ -284,7 +285,11 @@ impl Client {
     }
     fn tool(&mut self, name: &str, args: Value) -> Value {
         let result = self.request("tools/call", json!({"name":name,"arguments":args}));
-        let limit = if name == "explain" { 300 } else { 2000 };
+        let limit = match name {
+            "explain" => 300,
+            "review" => 4000,
+            _ => 2000,
+        };
         assert!(
             serde_json::to_vec(&result).unwrap().len() <= limit,
             "{name} exceeds cap: {result}"
@@ -358,6 +363,23 @@ fn stdio_tools_conform_fix_cycle_and_keep_deterministic_bounded_results() {
     assert_eq!(diff["structuredContent"]["counts"]["new_forbidden"], 1);
     assert_eq!(diff["structuredContent"]["counts"]["new_cyclic_imports"], 2);
     assert_eq!(diff["structuredContent"]["truncated"], true);
+    let review = c.tool("review", json!({"base":"HEAD"}));
+    let markdown = review["structuredContent"]["data"]["markdown"]
+        .as_str()
+        .unwrap_or_else(|| panic!("{review}"));
+    assert_eq!(review["content"][0]["text"], markdown);
+    let head = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(&f.root)
+        .output()
+        .unwrap()
+        .stdout;
+    let head = String::from_utf8(head).unwrap();
+    assert!(
+        markdown.contains("1 other new forbidden import")
+            && markdown.contains(&format!("\nBase {} (explicit).\n", &head[..12])),
+        "{markdown}"
+    );
 
     let id = data["findings"]
         .as_array()

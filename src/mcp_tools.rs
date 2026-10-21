@@ -41,6 +41,14 @@ struct DiffArgs {
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+struct ReviewArgs {
+    #[serde(default)]
+    base: Option<String>,
+    #[serde(default = "yes")]
+    brief: bool,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ProposeArgs {
     finding_id: String,
     #[serde(default = "yes")]
@@ -140,6 +148,12 @@ pub fn validate(name: &str, arguments: &Value) -> Result<()> {
             {
                 bail!("snapshot must be a 64-character lowercase hex capture ID, without base");
             }
+            if a.base.as_ref().is_some_and(|b| b.trim().is_empty()) {
+                bail!("base must be a non-empty Git revision");
+            }
+        }
+        "review" => {
+            let a: ReviewArgs = parse(arguments.clone())?;
             if a.base.as_ref().is_some_and(|b| b.trim().is_empty()) {
                 bail!("base must be a non-empty Git revision");
             }
@@ -309,6 +323,12 @@ pub fn call(
             Ok(
                 json!({"base":a.base,"new_forbidden":diff.new_forbidden,"new_cyclic_imports":diff.new_cyclic_imports,"new_cycles":new_cycles(old,doc,&[]),"grown_cycles":grown,"findings":findings(doc),"limitations":["Module cycles describe display-folder coupling; new_cyclic_imports supplies concrete runtime cycle evidence. Recipes use current findings; semantic code changes require review."]}),
             )
+        }
+        "review" => {
+            let a: ReviewArgs = parse(arguments)?;
+            let _ = (a.base, a.brief);
+            let old = baseline.context("review requires a baseline scan; run inside a Git repository and provide base=<commit> if HEAD has no parent")?;
+            Ok(crate::diff::review(old, doc))
         }
         "propose" => {
             let a: ProposeArgs = parse(arguments)?;
@@ -618,6 +638,25 @@ pub fn schemas() -> Vec<ToolSchema> {
             json!({"base":{"type":"string","minLength":1},"snapshot":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Pre-edit capture ID; mutually exclusive with base."}}),
             &[],
             json!({"type":"object","required":["new_forbidden","new_cycles","grown_cycles","findings"],"properties":{"new_forbidden":array(json!({"type":"object","required":["from","to"]})),"new_cyclic_imports":array(json!({"type":"object","required":["from","to"],"properties":{"from":{"type":"string"},"to":{"type":"string"}}})),"new_cycles":array(cycle.clone()),"grown_cycles":array(object(json!({"before":cycle.clone(),"after":cycle.clone()}),&["before","after"])),"findings":array(finding.clone())}}),
+        ),
+        schema(
+            "review",
+            "What a pull request changed in the target against a Git base, as markdown for an AI reviewer to quote: newly broken slices, other new forbidden imports with their rules' reasons, newly fixed slices, each import at file:line.",
+            json!({"base":{"type":"string","minLength":1}}),
+            &[],
+            {
+                let change = array(object(
+                    json!({"claim":{"type":"string"},"reason":{"type":"string"},"source":{"type":"string"},"slice":{"type":"string"},"imports":array(object(json!({"from":{"type":"string"},"to":{"type":"string"},"line":number()}),&["from","to"]))}),
+                    &["claim", "reason", "slice", "imports"],
+                ));
+                let count = object(json!({"done":number(),"of":number()}), &["done", "of"]);
+                let pair = json!({"type":"array","items":count,"minItems":2,"maxItems":2});
+                json!({"type":"object","required":["markdown","progress","newly_broken","newly_fixed","other_forbidden"],"properties":{
+                    "markdown":{"type":"string"},
+                    "progress":{"anyOf":[{"type":"null"},object(json!({"conforming":pair,"moved":{"anyOf":[{"type":"null"},pair]}}),&["conforming","moved"])]},
+                    "newly_broken":change.clone(),"newly_fixed":change,
+                    "other_forbidden":array(object(json!({"from":{"type":"string"},"to":{"type":"string"},"line":number(),"rule":{"type":"string"},"reasons":strings(),"sources":strings()}),&["from","to","rule","reasons","sources"]))}})
+            },
         ),
         schema(
             "propose",
