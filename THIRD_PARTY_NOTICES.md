@@ -4,6 +4,8 @@ The native collectors embed the grammar/runtime components below. License texts 
 
 The native Elixir module/application-name catalog was generated from installed Elixir 1.20.1 / Erlang OTP 29 application manifests; it does not embed or execute their runtime code. Projects: [Elixir](https://github.com/elixir-lang/elixir) and [Erlang/OTP](https://github.com/erlang/otp).
 
+The tests validate SARIF output against the OASIS SARIF 2.1.0 errata01 JSON schema, vendored unmodified as `tests/fixtures/sarif-schema-2.1.0.json` from https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json (sha256 `c3b4bb2d6093897483348925aaa73af03b3e3f4bd4ca38cef26dcb4212a2682e`); it carries no license text of its own and is not embedded in the binary.
+
 ## tree-sitter 0.27.1
 
 Project: https://github.com/tree-sitter/tree-sitter. Source: pinned crate archive `tree-sitter-0.27.1/LICENSE`.

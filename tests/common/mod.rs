@@ -107,6 +107,20 @@ pub fn without_import_metadata(value: &Value) -> Value {
     projected
 }
 
+/// Validates `sarif` against the OASIS SARIF 2.1.0 errata01 schema, vendored byte-identical from
+/// https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json
+/// (sha256 c3b4bb2d6093897483348925aaa73af03b3e3f4bd4ca38cef26dcb4212a2682e).
+pub fn validate_sarif(sarif: &Value) {
+    let schema: Value =
+        serde_json::from_str(include_str!("../fixtures/sarif-schema-2.1.0.json")).unwrap();
+    let validator = jsonschema::validator_for(&schema).unwrap();
+    let errors: Vec<String> = validator
+        .iter_errors(sarif)
+        .map(|e| format!("{e} at {}", e.instance_path()))
+        .collect();
+    assert!(errors.is_empty(), "SARIF violations: {errors:#?}");
+}
+
 pub fn layout(name: &str) -> String {
     fixture(name)
         .join("layout.yaml")

@@ -2,7 +2,7 @@ mod common;
 
 use common::{
     archgraph, finding, fixture, layout, scan, scan_file, scan_recorded, stable, synthetic,
-    validate, verdicts, write_tmp,
+    validate, validate_sarif, verdicts, write_tmp,
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -179,6 +179,48 @@ fn ts_fda_check_prints_violations_and_exits_one() {
     validate(&serde_json::from_str(&checked).unwrap());
     let (_, with_rules, _) = scan_recorded("ts-fda", &["--rules", &layout("ts-fda")]);
     assert_eq!(stable(&checked), stable(&with_rules));
+
+    // SARIF: each broken claim import, then the forbidden import under no claim, at its line,
+    // under the fixture's directory, which is the Git scan root.
+    let (stdout, _, code) = check(&[&plain, "--rules", &layout("ts-fda"), "--format", "sarif"]);
+    assert_eq!(code, Some(1));
+    let sarif: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    validate_sarif(&sarif);
+    let results = sarif["runs"][0]["results"].as_array().unwrap();
+    let rows: Vec<(&str, &str, u64)> = results
+        .iter()
+        .map(|r| {
+            let location = &r["locations"][0]["physicalLocation"];
+            (
+                r["ruleId"].as_str().unwrap(),
+                location["artifactLocation"]["uri"].as_str().unwrap(),
+                location["region"]["startLine"].as_u64().unwrap(),
+            )
+        })
+        .collect();
+    let root = "tests/fixtures/ts-fda/src/";
+    assert_eq!(
+        rows,
+        [
+            ("shared-no-domain", &*format!("{root}shared/format.ts"), 1),
+            (
+                "browser-no-server",
+                &format!("{root}domains/checkout/client.ts"),
+                1
+            ),
+            (
+                "browser-no-server",
+                &format!("{root}domains/checkout/controller.ts"),
+                1
+            ),
+            (
+                "browser-no-server",
+                &format!("{root}domains/checkout/index.ts"),
+                1
+            ),
+            ("public", &format!("{root}domains/cart/ui/Cart.tsx"), 3),
+        ]
+    );
 }
 
 /// Slice a imports its domain, b has both sides and holds, c has only a domain.

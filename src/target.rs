@@ -436,7 +436,7 @@ fn changed(doc: &Document, report: &Report, other: &Report) -> Vec<SliceChange> 
 /// `from` resolving to `to` (Go edges carry none).
 // ponytail: scans every edge and record per broken import, O(links × edges); index the pairs
 // once if diffs with many broken imports get slow.
-fn line(doc: &Document, from: &str, to: &str) -> Option<usize> {
+pub(crate) fn line(doc: &Document, from: &str, to: &str) -> Option<usize> {
     doc.edges
         .iter()
         .chain(&doc.external_edges)

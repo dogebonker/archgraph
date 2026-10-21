@@ -11,6 +11,15 @@ pub(super) struct Check {
     /// Write the recomputed document here
     #[arg(short, long)]
     output: Option<PathBuf>,
+    /// Text, or SARIF 2.1.0 for GitHub code scanning (skips the agent-rule and early-smell checks)
+    #[arg(long, value_enum, default_value_t = CheckFormat::Text)]
+    format: CheckFormat,
+}
+
+#[derive(Clone, Copy, PartialEq, ValueEnum)]
+enum CheckFormat {
+    Text,
+    Sarif,
 }
 
 fn policy_target(doc: &archgraph::model::Document, path: &str) -> String {
@@ -38,6 +47,21 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
     };
     if doc.config.rules.is_none() && doc.surface.is_none() {
         bail!("no rules: pass --rules, or scan with --rules");
+    }
+    if args.format == CheckFormat::Sarif {
+        if let Some(path) = &args.output {
+            write(Some(path), &doc)?;
+        }
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&archgraph::sarif::sarif(&doc))?
+        );
+        let forbidden = doc
+            .edges
+            .iter()
+            .chain(&doc.external_edges)
+            .any(|edge| edge.verdict == Some(Verdict::Forbidden));
+        return Ok(ExitCode::from(u8::from(forbidden)));
     }
     let active_policy = args.rules.as_deref().map(Path::canonicalize).transpose()?;
     let default_policy = default_rules

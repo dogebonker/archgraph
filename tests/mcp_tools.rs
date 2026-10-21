@@ -1,3 +1,5 @@
+mod common;
+
 use std::path::Path;
 
 use archgraph::{
@@ -487,6 +489,67 @@ No rules: nothing was checked; add layout.yaml or pass --rules.
 "
     );
     validate("review", &out);
+}
+
+#[test]
+fn sarif_puts_each_broken_claim_and_other_forbidden_import_on_its_line() {
+    let new = claims(&[
+        ("src/m/b/app/y.ts", "src/m/b/domain/e.ts", 3),
+        ("src/shared/id.ts", "src/m/a/domain/d.ts", 1),
+    ]);
+    let out = archgraph::sarif::sarif(&new);
+    common::validate_sarif(&out);
+    let run = &out["runs"][0];
+    assert_eq!(
+        run["tool"]["driver"]["rules"],
+        json!([
+            {"id": "app-no-domain", "shortDescription": {"text": "apps never reach a domain"},
+             "help": {"text": "Source: docs/adr/0001.md"},
+             "defaultConfiguration": {"level": "error"}, "properties": {"tags": ["architecture"]}},
+            {"id": "forbid[1]", "shortDescription": {"text": "shared stays a leaf"},
+             "defaultConfiguration": {"level": "error"}, "properties": {"tags": ["architecture"]}},
+        ])
+    );
+    let at = |uri: &str, line: usize| {
+        json!([{"physicalLocation": {"artifactLocation": {"uri": uri, "uriBaseId": "%SRCROOT%"},
+                                     "region": {"startLine": line}}}])
+    };
+    assert_eq!(
+        run["results"],
+        json!([
+            {"ruleId": "app-no-domain", "level": "error",
+             "message": {"text": "src/m/b/app/y.ts imports src/m/b/domain/e.ts, breaking claim app-no-domain in slice b: apps never reach a domain (docs/adr/0001.md)."},
+             "locations": at("src/m/b/app/y.ts", 3),
+             "partialFingerprints": {"primaryLocationLineHash": "bef3e88717e6b19c6929f9300f74b5d5"}},
+            {"ruleId": "forbid[1]", "level": "error",
+             "message": {"text": "src/shared/id.ts imports src/m/a/domain/d.ts, forbidden by forbid[1]: shared stays a leaf."},
+             "locations": at("src/shared/id.ts", 1),
+             "partialFingerprints": {"primaryLocationLineHash": "74053824541e62736c72f6c88aeef584"}},
+        ])
+    );
+
+    // No line: the whole file under the scan root, and the message says why.
+    let mut lineless = claims_in(
+        vec!["src/m/b/app/y.ts".into(), "src/m/b/domain/e.ts".into()],
+        vec![Edge {
+            from: "src/m/b/app/y.ts".into(),
+            to: "src/m/b/domain/e.ts".into(),
+            ..Default::default()
+        }],
+    );
+    lineless.source.scan_root = Some("web".into());
+    let out = archgraph::sarif::sarif(&lineless);
+    common::validate_sarif(&out);
+    let results = out["runs"][0]["results"].as_array().unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(
+        results[0]["locations"],
+        json!([{"physicalLocation": {"artifactLocation": {"uri": "web/src/m/b/app/y.ts", "uriBaseId": "%SRCROOT%"}}}])
+    );
+    assert_eq!(
+        results[0]["message"]["text"],
+        "src/m/b/app/y.ts imports src/m/b/domain/e.ts, breaking claim app-no-domain in slice b: apps never reach a domain (docs/adr/0001.md). Line unknown: the fixture collector records none."
+    );
 }
 
 #[test]

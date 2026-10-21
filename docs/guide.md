@@ -364,6 +364,8 @@ forbidden src/shared/format.ts -> src/domains/cart/types.ts (shared-no-domain)
 2 forbidden, 1 unplanned
 ```
 
+`--format sarif` prints SARIF 2.1.0 for GitHub code scanning instead (`-o` still writes the document; the agent-rule and early-smell checks are skipped; exit 1 when any import is forbidden, else 0): a result per import that breaks a claim, ruled by the claim id, then one per other forbidden import, ruled by its rule (`forbid[i]` when unnamed, so give rules an `id`), each with its rule's reasons and sources. A result points at the importing file under `source.scan_root` and its line; without a line it covers the whole file and its message says so. Its fingerprint hashes the rule, file and target but not the line, so an alert survives the import moving within its file.
+
 **simulate** compares forbidden imports, unplanned imports, cycles and module metrics before and after moving one or more files (`kind: simulation`, with full `before` and `after` summaries). Repeat `--move FILE DEST` to apply several moves together. The destination path decides the new module and layer.
 
 ```sh
