@@ -47,6 +47,9 @@ pub struct CheckReport {
     pub stale: Vec<Notice>,
     pub missing: Vec<Notice>,
     pub unknown: Vec<Notice>,
+    /// Forbid and allow rules without a `source`, listed only when requested.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unsourced: Option<Vec<String>>,
 }
 
 fn safe_path(root: &Path, path: &Path) -> Result<PathBuf> {
@@ -655,7 +658,7 @@ pub fn apply(root: &Path, report: &Report) -> Result<usize> {
     Ok(fresh.len())
 }
 
-pub fn check(root: &Path) -> Result<CheckReport> {
+pub fn check(root: &Path, require_source: bool) -> Result<CheckReport> {
     let root = fs::canonicalize(root)?;
     crate::rules::load(&root.join("layout.yaml"))?;
     let raw: Value = serde_yaml_ng::from_str(&fs::read_to_string(root.join("layout.yaml"))?)?;
@@ -664,7 +667,34 @@ pub fn check(root: &Path) -> Result<CheckReport> {
         stale: Vec::new(),
         missing: Vec::new(),
         unknown: Vec::new(),
+        unsourced: require_source.then(Vec::new),
     };
+    if let Some(unsourced) = &mut report.unsourced {
+        let rules: Vec<_> =
+            ["forbid", "allow"]
+                .into_iter()
+                .flat_map(|key| {
+                    raw[key].as_array().into_iter().flatten().enumerate().map(
+                        move |(index, item)| {
+                            let label = item["id"]
+                                .as_str()
+                                .map_or_else(|| format!("{key}[{index}]"), str::to_owned);
+                            (label, item["source"].is_string())
+                        },
+                    )
+                })
+                .collect();
+        // Rules sharing an id are one claim, sourced when any of them is (as in `Rules::sources`).
+        for (label, _) in &rules {
+            if !rules
+                .iter()
+                .any(|(other, sourced)| other == label && *sourced)
+                && !unsourced.contains(label)
+            {
+                unsourced.push(label.clone());
+            }
+        }
+    }
     let sources: BTreeSet<_> = ["forbid", "allow"]
         .into_iter()
         .flat_map(|key| raw[key].as_array().into_iter().flatten())
@@ -822,9 +852,9 @@ mod tests {
             );
         }
         decision(&root, &DECISION.replace("Accepted", "Deprecated"));
-        assert_eq!(check(root.path()).unwrap().stale.len(), 1);
+        assert_eq!(check(root.path(), false).unwrap().stale.len(), 1);
         fs::remove_file(root.path().join("docs/ADR-001.md")).unwrap();
-        assert_eq!(check(root.path()).unwrap().missing.len(), 1);
+        assert_eq!(check(root.path(), false).unwrap().missing.len(), 1);
     }
     #[test]
     fn apply_refuses_flow_sections_without_mutation() {

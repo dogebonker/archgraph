@@ -23,6 +23,9 @@ enum Command {
     Check {
         #[arg(default_value = ".")]
         root: PathBuf,
+        /// Also fail on forbid and allow rules that cite no ADR `source`
+        #[arg(long)]
+        require_source: bool,
     },
 }
 pub(super) fn run(args: Adr) -> Result<ExitCode> {
@@ -46,9 +49,17 @@ pub(super) fn run(args: Adr) -> Result<ExitCode> {
             }
             Ok(ExitCode::SUCCESS)
         }
-        Command::Check { root } => {
-            let report = archgraph::adr::check(&root)?;
-            let failed = !report.stale.is_empty() || !report.missing.is_empty();
+        Command::Check {
+            root,
+            require_source,
+        } => {
+            let report = archgraph::adr::check(&root, require_source)?;
+            let failed = !report.stale.is_empty()
+                || !report.missing.is_empty()
+                || report
+                    .unsourced
+                    .as_ref()
+                    .is_some_and(|rules| !rules.is_empty());
             write(None, &report)?;
             Ok(if failed {
                 ExitCode::from(1)

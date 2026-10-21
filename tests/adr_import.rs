@@ -118,6 +118,38 @@ fn review_apply_check_and_recipe_retain_adr_provenance() {
     assert_eq!(stale.status.code(), Some(1));
     let report: Value = serde_json::from_slice(&stale.stdout).unwrap();
     assert_eq!(report["stale"].as_array().unwrap().len(), 1);
+    assert!(report.get("unsourced").is_none());
+}
+
+#[test]
+fn require_source_fails_on_rules_without_an_adr() {
+    let fixture = TempDir::new("adr-require-source").unwrap();
+    let root = fixture.path();
+    fs::create_dir_all(root.join("docs")).unwrap();
+    fs::write(
+        root.join("docs/ADR-001.md"),
+        "# ADR-001 Boundary\n\n## Status\nAccepted\n",
+    )
+    .unwrap();
+    let sourced = "version: 1\nforbid:\n- id: no-b\n  from: src/a/**\n  to: src/b/**\n  source: docs/ADR-001.md\n";
+    fs::write(root.join("layout.yaml"), sourced).unwrap();
+    let passed = run(root, &["adr", "check", "--require-source"]);
+    success(&passed);
+    let report: Value = serde_json::from_slice(&passed.stdout).unwrap();
+    assert_eq!(report["unsourced"], serde_json::json!([]));
+    fs::write(
+        root.join("layout.yaml"),
+        format!("{sourced}- from: src/a/**\n  to: src/c/**\nallow:\n- id: legacy\n  from: src/a/**\n  to: src/d/**\n- id: legacy\n  from: src/a/**\n  to: src/e/**\n- id: no-b\n  from: src/a/**\n  to: src/f/**\n"),
+    )
+    .unwrap();
+    success(&run(root, &["adr", "check"]));
+    let failed = run(root, &["adr", "check", "--require-source"]);
+    assert_eq!(failed.status.code(), Some(1));
+    let report: Value = serde_json::from_slice(&failed.stdout).unwrap();
+    assert_eq!(
+        report["unsourced"],
+        serde_json::json!(["forbid[1]", "legacy"])
+    );
 }
 
 #[test]
@@ -142,7 +174,7 @@ fn source_metadata_is_optional_but_normalized_and_resolved_by_decision() {
     assert_eq!(rules.doc.sources("forbid[0]"), ["docs/ADR-001.md"]);
     assert_eq!(rules.doc.sources("accepted-exception"), ["docs/ADR-002.md"]);
     assert!(rules.doc.sources("unrelated").is_empty());
-    assert_eq!(adr::check(fixture.path()).unwrap().missing.len(), 2);
+    assert_eq!(adr::check(fixture.path(), false).unwrap().missing.len(), 2);
 }
 
 #[test]
