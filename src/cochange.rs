@@ -14,6 +14,12 @@ const MAX_FILES: usize = 30;
 /// Fewer shared commits than this is coincidence more often than coupling.
 const MIN_COMMITS: usize = 3;
 
+/// Whether an import joins the pair's files either way; `edges` holds (from, to) of the scan's
+/// edges, so only direct imports count.
+pub(crate) fn linked(edges: &HashSet<(&str, &str)>, [a, b]: &[String; 2]) -> bool {
+    edges.contains(&(a.as_str(), b.as_str())) || edges.contains(&(b.as_str(), a.as_str()))
+}
+
 /// Pairs of `files` changed together in the last `limit` commits, following renames.
 pub fn collect(root: &Path, limit: usize, files: &[String]) -> Result<Cochange> {
     // `--relative` and the `.` pathspec limit the log to commits touching the scanned root and

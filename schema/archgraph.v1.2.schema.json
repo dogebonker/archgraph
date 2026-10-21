@@ -2157,6 +2157,31 @@
                       "items": {
                         "$ref": "#/$defs/link"
                       }
+                    },
+                    "cochanged": {
+                      "description": "With --cochange, pairs with one file on a claim rule's `from` side and the other on its `to` side in this slice, `from` side first, and no import either way. Absent when empty.",
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "files",
+                          "commits"
+                        ],
+                        "properties": {
+                          "files": {
+                            "type": "array",
+                            "minItems": 2,
+                            "maxItems": 2,
+                            "items": {
+                              "$ref": "#/$defs/path"
+                            }
+                          },
+                          "commits": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -3830,6 +3855,46 @@
                     "items": {
                       "type": "string"
                     }
+                  }
+                }
+              }
+            },
+            "newly_cochanged": {
+              "description": "Co-changed pairs a slice lists in the new scan and not in the old one, from-side file first; computed only when both scans read --cochange. Absent when empty.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "claim",
+                  "reason",
+                  "slice",
+                  "files",
+                  "commits"
+                ],
+                "properties": {
+                  "claim": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "slice": {
+                    "type": "string"
+                  },
+                  "files": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                      "$ref": "#/$defs/path"
+                    }
+                  },
+                  "commits": {
+                    "type": "integer",
+                    "minimum": 1
                   }
                 }
               }

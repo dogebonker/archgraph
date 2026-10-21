@@ -1061,8 +1061,7 @@ fn hidden_coupling(g: &Graph, out: &mut Vec<Finding>) {
         else {
             continue;
         };
-        let linked = |x: &str, y: &str| g.raw.contains(&(x, y));
-        if ma == mb || linked(a, b) || linked(b, a) {
+        if ma == mb || crate::cochange::linked(&g.raw, &pair.files) {
             continue;
         }
         out.push(finding(

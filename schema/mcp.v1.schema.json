@@ -1126,6 +1126,46 @@
                       "additionalProperties": false
                     }
                   },
+                  "newly_cochanged": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "claim": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        },
+                        "slice": {
+                          "type": "string"
+                        },
+                        "files": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "commits": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "claim",
+                        "reason",
+                        "slice",
+                        "files",
+                        "commits"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
                   "other_forbidden": {
                     "type": "array",
                     "items": {
@@ -1591,6 +1631,35 @@
                                       "required": [
                                         "from",
                                         "to"
+                                      ],
+                                      "type": "object"
+                                    },
+                                    "type": "array"
+                                  },
+                                  "cochanged": {
+                                    "description": "With --cochange, pairs with one file on a claim rule's `from` side and the other on its `to` side in this slice, `from` side first, and no import either way. Absent when empty.",
+                                    "items": {
+                                      "properties": {
+                                        "commits": {
+                                          "minimum": 1,
+                                          "type": "integer"
+                                        },
+                                        "files": {
+                                          "items": {
+                                            "minLength": 1,
+                                            "not": {
+                                              "pattern": "^/"
+                                            },
+                                            "type": "string"
+                                          },
+                                          "maxItems": 2,
+                                          "minItems": 2,
+                                          "type": "array"
+                                        }
+                                      },
+                                      "required": [
+                                        "files",
+                                        "commits"
                                       ],
                                       "type": "object"
                                     },

@@ -6,9 +6,9 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use serde::Serialize;
 
-use crate::model::{Document, Edge, Language, Link, Move};
+use crate::model::{CochangePair, Document, Edge, Language, Link, Move};
 use crate::modules::dir_of;
-use crate::rules::Compiled;
+use crate::rules::{Compiled, SliceEvidence};
 
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct Report {
@@ -73,6 +73,10 @@ pub struct Slice {
     pub slice: String,
     pub files: Vec<String>,
     pub broken: Vec<Link>,
+    /// Pairs from `--cochange` with one file on a claim rule's `from` side and the other on its
+    /// `to` side in this slice, `from` side first, and no import either way.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub cochanged: Vec<CochangePair>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -104,6 +108,20 @@ pub struct Delta {
     /// Claims vacuous in new that old has and that are not vacuous there.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub newly_vacuous: Vec<VacuousClaim>,
+    /// Co-changed pairs a slice lists in new and not in old; only when both scans read co-change.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub newly_cochanged: Vec<CochangedPair>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CochangedPair {
+    pub claim: String,
+    pub reason: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    pub slice: String,
+    pub files: [String; 2],
+    pub commits: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -165,13 +183,20 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
         .map(|n| (n.id.clone(), n.package.clone()))
         .collect();
     let evidence = rules.forbid_slices(&files, &edges, &externals);
+    let pairs = doc.cochange.as_ref().map_or(&[][..], |c| &c.pairs[..]);
+    let links: HashSet<(&str, &str)> = doc
+        .edges
+        .iter()
+        .map(|e| (e.from.as_str(), e.to.as_str()))
+        .collect();
     // Per capture value, whether it holds in every claim bound to it.
     let mut conforming: BTreeMap<String, bool> = BTreeMap::new();
     let claims = ids
         .into_iter()
         .map(|id| {
             let mut notes = Vec::new();
-            let mut slices: BTreeMap<Option<String>, (Files, Imports)> = BTreeMap::new();
+            let mut slices: BTreeMap<Option<String>, (Files, Imports, Vec<&SliceEvidence>)> =
+                BTreeMap::new();
             let mut bound = BTreeSet::new();
             let rules = forbid
                 .iter()
@@ -190,20 +215,21 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
                     if !s.hits.is_empty() || (!s.from.is_empty() && !s.to.is_empty()) {
                         bound.insert(value.clone());
                     }
-                    let (files, broken) = slices.entry(value.clone()).or_default();
+                    let (files, broken, sides) = slices.entry(value.clone()).or_default();
                     files.extend(s.from.iter().chain(&s.to).cloned());
                     broken.extend(s.hits.iter().map(|h| (h.from.clone(), h.to.clone())));
+                    sides.push(s);
                 }
             }
             slices.retain(|value, _| bound.contains(value));
-            for (value, (_, broken)) in &slices {
+            for (value, (_, broken, _)) in &slices {
                 if let Some(value) = value {
                     *conforming.entry(value.clone()).or_insert(true) &= broken.is_empty();
                 }
             }
             let held = slices
                 .values()
-                .filter(|(_, broken)| broken.is_empty())
+                .filter(|(_, broken, _)| broken.is_empty())
                 .count();
             let first = |field: fn(&crate::rules::Forbid) -> Option<&String>| {
                 rules.clone().find_map(|(_, r)| field(r)).cloned()
@@ -220,13 +246,14 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
                 },
                 slices: slices
                     .into_iter()
-                    .map(|(value, (files, broken))| Slice {
+                    .map(|(value, (files, broken, sides))| Slice {
                         slice: value.unwrap_or_else(|| "*".into()),
                         files: files.into_iter().collect(),
                         broken: broken
                             .into_iter()
                             .map(|(from, to)| Link { from, to })
                             .collect(),
+                        cochanged: cochanged(pairs, &links, &sides),
                     })
                     .collect(),
                 notes,
@@ -350,6 +377,37 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
     })
 }
 
+/// The `pairs` with one file on a rule's `from` side and the other on its `to` side, `from` side
+/// first, that no import in `links` joins.
+// ponytail: every pair against every slice's sides, O(pairs × slices × side files); index files
+// by slice if long histories over many slices get slow.
+fn cochanged(
+    pairs: &[CochangePair],
+    links: &HashSet<(&str, &str)>,
+    sides: &[&SliceEvidence],
+) -> Vec<CochangePair> {
+    let across =
+        |a: &String, b: &String| sides.iter().any(|s| s.from.contains(a) && s.to.contains(b));
+    pairs
+        .iter()
+        .filter(|p| !crate::cochange::linked(links, &p.files))
+        .filter_map(|p| {
+            let [a, b] = &p.files;
+            let files = if across(a, b) {
+                [a.clone(), b.clone()]
+            } else if across(b, a) {
+                [b.clone(), a.clone()]
+            } else {
+                return None;
+            };
+            Some(CochangePair {
+                files,
+                commits: p.commits,
+            })
+        })
+        .collect()
+}
+
 /// The import lines `moves` rewrite. Go: (importer, imported folder) pairs across folders after
 /// the moves that were not there before. Other languages: import records (edges when the
 /// collector keeps none) whose importer or target moves.
@@ -389,8 +447,8 @@ fn import_lines(doc: &Document, moves: &[Move]) -> usize {
     }
 }
 
-/// The target's counts in both scans, the slices newly broken and newly fixed and the claims
-/// newly vacuous; `None` when neither scan has a target.
+/// The target's counts in both scans, the slices newly broken and newly fixed, the claims newly
+/// vacuous and the co-changed pairs new in `new`; `None` when neither scan has a target.
 pub fn delta(old: &Document, new: &Document) -> Option<Delta> {
     if old.target.is_none() && new.target.is_none() {
         return None;
@@ -424,7 +482,37 @@ pub fn delta(old: &Document, new: &Document) -> Option<Delta> {
                 notes: c.notes.clone(),
             })
             .collect(),
+        newly_cochanged: if old.cochange.is_some() && new.cochange.is_some() {
+            newly_cochanged(was, is)
+        } else {
+            Vec::new()
+        },
     })
+}
+
+/// Pairs a slice of `is` lists that the same claim's slice in `was` does not.
+fn newly_cochanged(was: &Report, is: &Report) -> Vec<CochangedPair> {
+    let listed = |claim: &str, slice: &str, files: &[String; 2]| {
+        was.claims
+            .iter()
+            .filter(|c| c.id == claim)
+            .flat_map(|c| &c.slices)
+            .any(|s| s.slice == slice && s.cochanged.iter().any(|p| &p.files == files))
+    };
+    is.claims
+        .iter()
+        .flat_map(|c| c.slices.iter().map(move |s| (c, s)))
+        .flat_map(|(c, s)| s.cochanged.iter().map(move |p| (c, s, p)))
+        .filter(|(c, s, p)| !listed(&c.id, &s.slice, &p.files))
+        .map(|(c, s, p)| CochangedPair {
+            claim: c.id.clone(),
+            reason: c.reason.clone(),
+            source: c.source.clone(),
+            slice: s.slice.clone(),
+            files: p.files.clone(),
+            commits: p.commits,
+        })
+        .collect()
 }
 
 /// Slices broken in `report`, the target of `doc`, that are not broken in `other`, with each
@@ -480,8 +568,8 @@ pub(crate) fn line(doc: &Document, from: &str, to: &str) -> Option<usize> {
         })
 }
 
-/// The `check` lines: a verdict per claim with up to 20 broken imports, the pending moves, notes,
-/// then progress.
+/// The `check` lines: a verdict per claim with up to 20 broken imports and 20 co-changed pairs, the
+/// pending moves, notes, then progress.
 pub fn text(report: &Report) -> String {
     let mut out = String::new();
     for claim in &report.claims {
@@ -521,6 +609,17 @@ pub fn text(report: &Report) -> String {
         }
         if imports.len() > 20 {
             out += &format!("  ... and {} more\n", imports.len() - 20);
+        }
+        let pairs: Vec<&CochangePair> = claim.slices.iter().flat_map(|s| &s.cochanged).collect();
+        for p in pairs.iter().take(20) {
+            let [from, to] = &p.files;
+            out += &format!(
+                "  co-change: {from} <-> {to}, {} commits, no import\n",
+                p.commits
+            );
+        }
+        if pairs.len() > 20 {
+            out += &format!("  ... and {} more\n", pairs.len() - 20);
         }
         for note in &claim.notes {
             out += &format!("  note: {note}\n");

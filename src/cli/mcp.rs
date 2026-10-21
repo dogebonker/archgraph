@@ -373,6 +373,7 @@ fn brief_payload(value: &mut Value) -> usize {
         "newly_broken",
         "newly_fixed",
         "newly_vacuous",
+        "newly_cochanged",
         "other_forbidden",
     ] {
         if let Some(rows) = value.get_mut(key).and_then(Value::as_array_mut) {

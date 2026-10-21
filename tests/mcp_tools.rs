@@ -4,7 +4,7 @@ use std::path::Path;
 
 use archgraph::{
     mcp_tools::{call, finding_id, schemas},
-    model::{Config, Document, Edge, Source},
+    model::{Cochange, CochangePair, Config, Document, Edge, Source},
 };
 use serde_json::{Value, json};
 
@@ -427,6 +427,100 @@ fn claims_with(forbid: Value, files: Vec<String>, edges: Vec<Edge>) -> Document 
     let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","cruised":5},"git":{"commit":"test","dirty":false},"generated_at":"1970-01-01T00:00:00Z"})).unwrap();
     let config: Config = serde_json::from_value(json!({"depth":1,"source_root":"src","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"fixture","doc":{"version":1,"forbid":forbid}}})).unwrap();
     archgraph::analyze(source, config, files, edges, Vec::new(), None).unwrap()
+}
+
+/// `doc` with git co-change `(a, b, commits)` pairs and its target recomputed.
+fn with_cochange(mut doc: Document, pairs: &[(&str, &str, usize)]) -> Document {
+    doc.cochange = Some(Cochange {
+        limit: 300,
+        commits: 10,
+        skipped: 0,
+        pairs: pairs
+            .iter()
+            .map(|(a, b, commits)| CochangePair {
+                files: [(*a).into(), (*b).into()],
+                commits: *commits,
+            })
+            .collect(),
+    });
+    let rules = archgraph::rules::compile(&doc.config).unwrap().unwrap();
+    doc.target = archgraph::target::analyze(&doc, &rules);
+    doc
+}
+
+#[test]
+fn target_lists_files_changed_together_across_a_claim_without_an_import() {
+    let (x, y) = ("src/m/a/app/x.ts", "src/m/b/app/y.ts");
+    let (d, e) = ("src/m/a/domain/d.ts", "src/m/b/domain/e.ts");
+    let doc = with_cochange(
+        claims(&[(x, d, 2)]),
+        &[(x, d, 4), (y, e, 3), (x, e, 5), (y, "src/shared/id.ts", 3)],
+    );
+    let target = doc.target.as_ref().unwrap();
+    let slices = serde_json::to_value(&target.claims[0].slices).unwrap();
+    // x and d import each other; x and e are in different slices; shared/ is on no claim side.
+    assert_eq!(slices[0]["slice"], "a");
+    assert_eq!(slices[0].get("cochanged"), None);
+    assert_eq!(
+        slices[1]["cochanged"],
+        json!([{"files": [y, e], "commits": 3}])
+    );
+    assert_eq!(
+        archgraph::target::text(target),
+        "claim app-no-domain: holds in 1 of 2 slices; broken in a reason=\"apps never reach a domain\" source=\"docs/adr/0001.md\"
+  src/m/a/app/x.ts -> src/m/a/domain/d.ts
+  co-change: src/m/b/app/y.ts <-> src/m/b/domain/e.ts, 3 commits, no import
+target: 1 of 2 slices conform
+"
+    );
+}
+
+#[test]
+fn diff_and_review_list_pairs_newly_changed_together_across_a_claim() {
+    let (y, e) = ("src/m/b/app/y.ts", "src/m/b/domain/e.ts");
+    let old = with_cochange(claims(&[(y, e, 3)]), &[(y, e, 3)]);
+    let new = with_cochange(claims(&[]), &[(y, e, 3)]);
+    let d = archgraph::diff::diff(&old, &new);
+    let target = serde_json::to_value(&d.target).unwrap();
+    assert_eq!(target["newly_fixed"][0]["slice"], "b");
+    assert_eq!(
+        target["newly_cochanged"],
+        json!([{"claim": "app-no-domain", "reason": "apps never reach a domain",
+                "source": "docs/adr/0001.md", "slice": "b", "files": [y, e], "commits": 3}])
+    );
+    let md = archgraph::diff::markdown(&d, &[]);
+    assert!(
+        md.contains("\nTarget: 2 of 2 slices conform (was 1 of 2), 1 newly co-changed pair.\n"),
+        "{md}"
+    );
+    assert!(
+        md.contains("\n### Changed together across a claim, no import (1)\n\n- app-no-domain, slice b: src/m/b/app/y.ts ↔ src/m/b/domain/e.ts (3 commits)\n"),
+        "{md}"
+    );
+    // The pair is linked in the new scan, and a scan without co-change lists none.
+    let reverse = serde_json::to_value(archgraph::diff::diff(&new, &old).target).unwrap();
+    assert_eq!(reverse.get("newly_cochanged"), None);
+    let unread =
+        serde_json::to_value(archgraph::diff::diff(&claims(&[(y, e, 3)]), &new).target).unwrap();
+    assert_eq!(unread.get("newly_cochanged"), None);
+    let out = call(&new, Path::new("."), "review", json!({}), Some(&old)).unwrap();
+    assert_eq!(
+        out["markdown"],
+        "**archgraph review**: 0 newly broken slices, 0 other new forbidden imports, 1 newly fixed slice.
+Target: 2 of 2 slices conform (was 1 of 2).
+
+### Newly fixed (1)
+
+- **app-no-domain**: apps never reach a domain (docs/adr/0001.md)
+  - slice b: src/m/b/app/y.ts:3 → src/m/b/domain/e.ts
+
+### Changed together across a claim, no import (1)
+
+- app-no-domain, slice b: src/m/b/app/y.ts ↔ src/m/b/domain/e.ts (3 commits)
+"
+    );
+    assert_eq!(out["newly_cochanged"], target["newly_cochanged"]);
+    validate("review", &out);
 }
 
 #[test]

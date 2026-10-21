@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use crate::model::{
     Cycle, CycleLevel, Diff, Document, Edge, Link, Module, ModuleDelta, SCHEMA, Snapshot, Verdict,
 };
-use crate::target::{Delta, SliceChange};
+use crate::target::{CochangedPair, Delta, SliceChange};
 
 pub fn diff(old: &Document, new: &Document) -> Diff {
     let snapshot = |d: &Document| Snapshot {
@@ -118,6 +118,12 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
         if !t.newly_vacuous.is_empty() {
             out += &format!(", {}", count(t.newly_vacuous.len(), "newly vacuous claim"));
         }
+        if !t.newly_cochanged.is_empty() {
+            out += &format!(
+                ", {}",
+                count(t.newly_cochanged.len(), "newly co-changed pair")
+            );
+        }
         out += ".\n";
     }
     for (title, edges) in [
@@ -192,6 +198,12 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
             out += "\n";
         }
     }
+    if let Some(t) = d.target.as_ref().filter(|t| !t.newly_cochanged.is_empty()) {
+        out += &cochanged_title(&t.newly_cochanged);
+        for p in &t.newly_cochanged {
+            out += &cochanged_row(p);
+        }
+    }
     let change = |pair: [Option<f64>; 2]| match pair {
         [Some(a), Some(b)] => (b - a).abs(),
         _ => 0.0,
@@ -248,6 +260,25 @@ fn progress(t: &Delta) -> String {
     out
 }
 
+fn cochanged_title(pairs: &[CochangedPair]) -> String {
+    format!(
+        "\n### Changed together across a claim, no import ({})\n\n",
+        pairs.len()
+    )
+}
+
+/// `- {claim}, slice {slice}: {from} ↔ {to} ({n} commits)`.
+fn cochanged_row(p: &CochangedPair) -> String {
+    format!(
+        "- {}, slice {}: {} ↔ {} ({} commits)\n",
+        esc(&p.claim),
+        esc(&p.slice),
+        esc(&p.files[0]),
+        esc(&p.files[1]),
+        p.commits
+    )
+}
+
 /// Bytes of `review` markdown before rows give way to a count; totals are always exact.
 const REVIEW_BYTES: usize = 1300;
 
@@ -256,13 +287,17 @@ const REVIEW_BYTES: usize = 1300;
 /// already under a newly broken slice, with their rule's reasons and sources.
 pub fn review(old: &Document, new: &Document) -> Value {
     let d = diff(old, new);
-    let (broken, fixed, vacuous) = d.target.as_ref().map_or((&[][..], &[][..], &[][..]), |t| {
-        (
-            &t.newly_broken[..],
-            &t.newly_fixed[..],
-            &t.newly_vacuous[..],
-        )
-    });
+    let (broken, fixed, vacuous, cochanged) =
+        d.target
+            .as_ref()
+            .map_or((&[][..], &[][..], &[][..], &[][..]), |t| {
+                (
+                    &t.newly_broken[..],
+                    &t.newly_fixed[..],
+                    &t.newly_vacuous[..],
+                    &t.newly_cochanged[..],
+                )
+            });
     let in_broken: BTreeSet<(&str, &str)> = broken
         .iter()
         .flat_map(|c| &c.imports)
@@ -371,6 +406,10 @@ pub fn review(old: &Document, new: &Document) -> Value {
         }
     }
     slices(&mut lines, "Newly fixed", fixed);
+    if !cochanged.is_empty() {
+        lines.push((cochanged_title(cochanged), false));
+        lines.extend(cochanged.iter().map(|p| (cochanged_row(p), true)));
+    }
     let unknown = broken
         .iter()
         .chain(fixed)
@@ -429,6 +468,7 @@ pub fn review(old: &Document, new: &Document) -> Value {
         "newly_broken": broken,
         "newly_fixed": fixed,
         "newly_vacuous": vacuous,
+        "newly_cochanged": cochanged,
         "other_forbidden": other.iter().map(|(e, rule, reasons, sources)| {
             let mut row = json!({"from": e.from, "to": e.to, "rule": rule, "reasons": reasons, "sources": sources});
             if let Some(line) = e.line {

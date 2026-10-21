@@ -641,7 +641,7 @@ pub fn schemas() -> Vec<ToolSchema> {
         ),
         schema(
             "review",
-            "What a pull request changed in the target against a Git base, as markdown for an AI reviewer to quote: newly broken slices, claims made vacuous, other new forbidden imports with their rules' reasons, newly fixed slices, each import at file:line.",
+            "What a pull request changed in the target against a Git base, as markdown for an AI reviewer to quote: newly broken slices, claims made vacuous, other new forbidden imports with their rules' reasons, newly fixed slices, each import at file:line, and files newly changing together across a claim without an import.",
             json!({"base":{"type":"string","minLength":1}}),
             &[],
             {
@@ -656,6 +656,7 @@ pub fn schemas() -> Vec<ToolSchema> {
                     "progress":{"anyOf":[{"type":"null"},object(json!({"conforming":pair,"moved":{"anyOf":[{"type":"null"},pair]}}),&["conforming","moved"])]},
                     "newly_broken":change.clone(),"newly_fixed":change,
                     "newly_vacuous":array(object(json!({"claim":{"type":"string"},"reason":{"type":"string"},"source":{"type":"string"},"notes":strings()}),&["claim","reason","notes"])),
+                    "newly_cochanged":array(object(json!({"claim":{"type":"string"},"reason":{"type":"string"},"source":{"type":"string"},"slice":{"type":"string"},"files":{"type":"array","items":{"type":"string"},"minItems":2,"maxItems":2},"commits":number()}),&["claim","reason","slice","files","commits"])),
                     "other_forbidden":array(object(json!({"from":{"type":"string"},"to":{"type":"string"},"line":number(),"rule":{"type":"string"},"reasons":strings(),"sources":strings(),"known":{"const":true}}),&["from","to","rule","reasons","sources"]))}})
             },
         ),
