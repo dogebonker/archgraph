@@ -66,11 +66,14 @@ Codes are stable for discussion.
   Archgraph has `--cochange` and hidden coupling findings. Reporting files that changed together
   across a claim's two sides, in the pull request summary, would catch coupling through DI,
   events or the database that no import shows.
-- **L7. Mine candidate rules from history, then verify them.** Qodo's Rule Miner and Greptile's
+- **L7. Mine candidate rules from the graph, then verify them.** Qodo's Rule Miner and Greptile's
   suggested rules propose rules from past pull requests for a human to accept. Archgraph's
   `infer-layout` proposes forbids from the graph. Proposing claims from the target's own
   pattern (a direction that holds in most slices, like `layered` in 16 of 18) and showing where
   it breaks would give teams a starting target without a deck.
+  Done: `infer-layout` drafts `infer-claim-*` rules from a direction that holds across sibling
+  slices (`--min-slices`, `--min-share`), with the counts and breaking imports in comments, and
+  `check` gives them the same counts. Intent no slice shows still goes in by hand.
 - **L8. Feedback is a reason, not a vote.** AI reviewers learn from thumbs and dismissals, which
   tunes tone but never makes a rule exact. Archgraph's equivalent is an `allow` with a `reason`
   in the layout, reviewed in the pull request like code. Keep that: an exception should be a
