@@ -321,7 +321,7 @@ pub fn call(
             }
             grown.sort_by_key(Value::to_string);
             Ok(
-                json!({"base":a.base,"new_forbidden":diff.new_forbidden,"new_cyclic_imports":diff.new_cyclic_imports,"new_cycles":new_cycles(old,doc,&[]),"grown_cycles":grown,"findings":findings(doc),"limitations":["Module cycles describe display-folder coupling; new_cyclic_imports supplies concrete runtime cycle evidence. Recipes use current findings; semantic code changes require review."]}),
+                json!({"base":a.base,"new_forbidden":diff.new_forbidden,"new_cyclic_imports":diff.new_cyclic_imports,"stale_known":diff.stale_known,"new_cycles":new_cycles(old,doc,&[]),"grown_cycles":grown,"findings":findings(doc),"limitations":["Module cycles describe display-folder coupling; new_cyclic_imports supplies concrete runtime cycle evidence. Recipes use current findings; semantic code changes require review."]}),
             )
         }
         "review" => {
@@ -637,7 +637,7 @@ pub fn schemas() -> Vec<ToolSchema> {
             "Compare the current scan with a Git base or pre-edit snapshot; report new forbidden imports, concrete newly cyclic imports, advisory folder cycles and stable finding IDs.",
             json!({"base":{"type":"string","minLength":1},"snapshot":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Pre-edit capture ID; mutually exclusive with base."}}),
             &[],
-            json!({"type":"object","required":["new_forbidden","new_cycles","grown_cycles","findings"],"properties":{"new_forbidden":array(json!({"type":"object","required":["from","to"]})),"new_cyclic_imports":array(json!({"type":"object","required":["from","to"],"properties":{"from":{"type":"string"},"to":{"type":"string"}}})),"new_cycles":array(cycle.clone()),"grown_cycles":array(object(json!({"before":cycle.clone(),"after":cycle.clone()}),&["before","after"])),"findings":array(finding.clone())}}),
+            json!({"type":"object","required":["new_forbidden","stale_known","new_cycles","grown_cycles","findings"],"properties":{"new_forbidden":array(json!({"type":"object","required":["from","to"]})),"new_cyclic_imports":array(json!({"type":"object","required":["from","to"],"properties":{"from":{"type":"string"},"to":{"type":"string"}}})),"stale_known":array(json!({"type":"object","required":["from","to","rule"],"properties":{"from":{"type":"string"},"to":{"type":"string"},"rule":{"type":"string"}}})),"new_cycles":array(cycle.clone()),"grown_cycles":array(object(json!({"before":cycle.clone(),"after":cycle.clone()}),&["before","after"])),"findings":array(finding.clone())}}),
         ),
         schema(
             "review",
@@ -655,7 +655,7 @@ pub fn schemas() -> Vec<ToolSchema> {
                     "markdown":{"type":"string"},
                     "progress":{"anyOf":[{"type":"null"},object(json!({"conforming":pair,"moved":{"anyOf":[{"type":"null"},pair]}}),&["conforming","moved"])]},
                     "newly_broken":change.clone(),"newly_fixed":change,
-                    "other_forbidden":array(object(json!({"from":{"type":"string"},"to":{"type":"string"},"line":number(),"rule":{"type":"string"},"reasons":strings(),"sources":strings()}),&["from","to","rule","reasons","sources"]))}})
+                    "other_forbidden":array(object(json!({"from":{"type":"string"},"to":{"type":"string"},"line":number(),"rule":{"type":"string"},"reasons":strings(),"sources":strings(),"known":{"const":true}}),&["from","to","rule","reasons","sources"]))}})
             },
         ),
         schema(

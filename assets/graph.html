@@ -903,7 +903,7 @@ $("stats-text").textContent =
   if (doc.external_edges?.length) stat(doc.external_edges.length, count(doc.external_edges.length, "recorded external import", "recorded external imports"));
   stat(doc.cycles.filter(c => c.level === "module").length, count(doc.cycles.filter(c => c.level === "module").length, "folder dependency loop", "folder dependency loops"));
   stat(doc.cycles.filter(c => c.level === "file").length, count(doc.cycles.filter(c => c.level === "file").length, "within-module file cycle", "within-module file cycles"));
-  stat(forbidden, `${forbidden} forbidden`, forbidden > 0);
+  stat(forbidden, `${forbidden} forbidden${doc.summary.known ? ` (${doc.summary.known} known)` : ""}`, forbidden > 0);
   stat(doc.findings.length, count(doc.findings.length, "finding", "findings"));
 }
 
@@ -4169,7 +4169,7 @@ function verdictSentences() {
   if (c?.of) out.push(share(c, n => `All ${n} slices follow every claim.`, (d, n) => `${d} of ${n} slices follow every claim.`,
     n => `None of ${n} slices follows every claim.`));
   if (m?.of) out.push(share(m, n => `All ${n} slices have moved.`, (d, n) => `${d} of ${n} slices have moved.`, n => `None of ${n} slices has moved.`));
-  if (doc.config.rules) out.push(!s.forbidden ? "No import breaks a rule." : s.forbidden === 1 ? "1 import breaks a rule." : `${nf(s.forbidden)} imports break a rule.`);
+  if (doc.config.rules) out.push(!s.forbidden ? "No import breaks a rule." : (s.forbidden === 1 ? "1 import breaks a rule" : `${nf(s.forbidden)} imports break a rule`) + (s.known ? `, ${nf(s.known)} of them known.` : "."));
   if (s.cycles) out.push(s.cycles === 1 ? "1 cycle remains." : `${nf(s.cycles)} cycles remain.`);
   else if (!out.length) out.push("No cycles.");
   return out;

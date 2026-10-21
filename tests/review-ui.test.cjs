@@ -101,6 +101,8 @@ test('the verdict says in sentences how many slices follow every claim, then mov
   const none = target();
   none.progress = { conforming: { done: 0, of: 20 }, moved: { done: 4, of: 23 } };
   assert.deepEqual(says({ target: none }, { forbidden: 1800 }), ['None of 20 slices follows every claim.', '4 of 23 slices have moved. 1,800 imports break a rule.']);
+  assert.deepEqual(says({ target: none }, { forbidden: 3, known: 2 }), ['None of 20 slices follows every claim.', '4 of 23 slices have moved. 3 imports break a rule, 2 of them known.']);
+  assert.deepEqual(says({ target: none }, { forbidden: 3, known: 0 }), ['None of 20 slices follows every claim.', '4 of 23 slices have moved. 3 imports break a rule.']);
   assert.deepEqual(says({ config: { rules: null } }, { cycles: 1 }), ['1 cycle remains.']);
   assert.deepEqual(says({ config: { rules: null } }), ['No cycles.']);
 });

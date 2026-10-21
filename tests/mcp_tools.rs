@@ -175,6 +175,7 @@ fn diff_distinguishes_grown_cycles_and_schemas_validate() {
     .unwrap();
     assert_eq!(out["grown_cycles"].as_array().unwrap().len(), 1);
     assert_eq!(out["new_cyclic_imports"].as_array().unwrap().len(), 2);
+    assert_eq!(out["stale_known"], json!([]));
     validate("check_diff", &out);
     let output = tool(
         &old,
@@ -497,6 +498,65 @@ Target: 1 of 2 slices conform.
 No rules: nothing was checked; add layout.yaml or pass --rules.
 "
     );
+    validate("review", &out);
+}
+
+#[test]
+fn review_marks_known_other_forbidden_imports_and_counts_stale_entries() {
+    let files = [
+        "src/m/a/domain/d.ts",
+        "src/shared/id.ts",
+        "src/shared/ids.ts",
+    ];
+    let edges = vec![
+        Edge {
+            from: "src/shared/id.ts".into(),
+            to: "src/m/a/domain/d.ts".into(),
+            line: Some(1),
+            ..Default::default()
+        },
+        Edge {
+            from: "src/shared/ids.ts".into(),
+            to: "src/m/a/domain/d.ts".into(),
+            line: Some(2),
+            ..Default::default()
+        },
+    ];
+    let build = |edges: Vec<Edge>| {
+        let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","cruised":3},"git":{"commit":"test","dirty":false},"generated_at":"1970-01-01T00:00:00Z"})).unwrap();
+        let known = |from: &str, to: &str| json!({"from": from, "to": to, "rule": "forbid[0]"});
+        let config: Config = serde_json::from_value(json!({"depth":1,"source_root":"src","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"fixture",
+        "doc":{"version":1,"forbid":[{"from":"src/shared/**","to":"src/m/**","reason":"shared stays a leaf"}]},
+        "known":{"path":"layout.known.yaml","entries":[
+            known("src/gone.ts", "src/m/a/domain/d.ts"),
+            known("src/shared/id.ts", "src/m/a/domain/d.ts")]}}})).unwrap();
+        archgraph::analyze(
+            source,
+            config,
+            files.map(String::from).to_vec(),
+            edges,
+            Vec::new(),
+            None,
+        )
+        .unwrap()
+    };
+    let (old, new) = (build(Vec::new()), build(edges));
+    let out = call(&new, Path::new("."), "review", json!({}), Some(&old)).unwrap();
+    assert_eq!(
+        out["markdown"],
+        "**archgraph review**: 0 newly broken slices, 2 other new forbidden imports, 0 newly fixed slices.
+
+### Other new forbidden imports (2)
+
+- src/shared/id.ts:1 → src/m/a/domain/d.ts, forbid\\[0\\]: shared stays a leaf, listed in layout.known.yaml
+- src/shared/ids.ts:2 → src/m/a/domain/d.ts, forbid\\[0\\]: shared stays a leaf
+
+1 known entry no longer occurs: run archgraph check --update-known shrink.
+"
+    );
+    let rows = out["other_forbidden"].as_array().unwrap();
+    assert_eq!(rows[0]["known"], true);
+    assert!(rows[1].get("known").is_none());
     validate("review", &out);
 }
 

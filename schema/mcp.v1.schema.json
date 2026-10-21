@@ -180,10 +180,33 @@
                         }
                       }
                     }
+                  },
+                  "stale_known": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "from",
+                        "to",
+                        "rule"
+                      ],
+                      "properties": {
+                        "from": {
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        },
+                        "rule": {
+                          "type": "string"
+                        }
+                      }
+                    }
                   }
                 },
                 "required": [
                   "new_forbidden",
+                  "stale_known",
                   "new_cycles",
                   "grown_cycles",
                   "findings"
@@ -1103,6 +1126,9 @@
                           "items": {
                             "type": "string"
                           }
+                        },
+                        "known": {
+                          "const": true
                         }
                       },
                       "required": [

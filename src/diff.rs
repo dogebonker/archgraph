@@ -311,6 +311,9 @@ pub fn review(old: &Document, new: &Document) -> Value {
             }
         }
     }
+    let known_file = rules
+        .and_then(|r| r.known.as_ref())
+        .map_or("the known file", |k| k.path.as_str());
     let mut lines = Vec::new();
     slices(&mut lines, "Newly broken", broken);
     if !other.is_empty() {
@@ -327,6 +330,9 @@ pub fn review(old: &Document, new: &Document) -> Value {
             if !sources.is_empty() {
                 let sources: Vec<String> = sources.iter().map(|s| esc(s)).collect();
                 row += &format!(" ({})", sources.join(", "));
+            }
+            if e.known {
+                row += &format!(", listed in {known_file}");
             }
             lines.push((row + "\n", true));
         }
@@ -346,6 +352,13 @@ pub fn review(old: &Document, new: &Document) -> Value {
                 "{} in `archgraph review --format json`.\n",
                 count(more, "more row")
             );
+        }
+        if !new.stale_known.is_empty() {
+            let line = match new.stale_known.len() {
+                1 => "1 known entry no longer occurs".to_owned(),
+                n => format!("{n} known entries no longer occur"),
+            };
+            out += &format!("{line}: run archgraph check --update-known shrink.\n");
         }
         if unknown > 0 {
             out += &format!(
@@ -386,6 +399,9 @@ pub fn review(old: &Document, new: &Document) -> Value {
             let mut row = json!({"from": e.from, "to": e.to, "rule": rule, "reasons": reasons, "sources": sources});
             if let Some(line) = e.line {
                 row["line"] = json!(line);
+            }
+            if e.known {
+                row["known"] = json!(true);
             }
             row
         }).collect::<Vec<_>>(),
