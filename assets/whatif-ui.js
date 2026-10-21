@@ -26,7 +26,7 @@ function whatifLayoutMoves(moves) {
   if (!moves.length) return "";
   const glob = /[*?[\]{}]/, rows = moves.map(({ file, to }) => {
     const from = file.split("/"), name = from.pop(), dir = dirname(to);
-    if (!dir || /[<>]/.test(file) || from.some(d => glob.test(d)) || glob.test(dir) || name !== to.split("/").pop())
+    if (!dir || /[<>]/.test(file + "/" + to) || from.some(d => glob.test(d)) || glob.test(dir) || name !== to.split("/").pop())
       return `  # ${file} → ${to}: not expressible as a move rule`;
     return `  - { from: ${JSON.stringify([...from, name.replace(/[*?[\]{}]/g, "[$&]")].join("/"))}, to: ${JSON.stringify(dir + "/")} }`;
   });

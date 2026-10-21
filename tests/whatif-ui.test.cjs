@@ -122,6 +122,7 @@ test('layout moves match the exact path, and say when a move cannot be written a
   assert.equal(layout('app/[id].ts', 'web/[id].ts'), head + '  - { from: "app/[[]id[]].ts", to: "web/" }');
   assert.equal(layout('a/x.ts', 'x.ts'), head + '  # a/x.ts → x.ts: not expressible as a move rule');
   assert.equal(layout('p/[q]/x.ts', 'r/x.ts'), head + '  # p/[q]/x.ts → r/x.ts: not expressible as a move rule');
+  assert.equal(layout('p/x.ts', 'r/<s>/x.ts'), head + '  # p/x.ts → r/<s>/x.ts: not expressible as a move rule');
   assert.equal(layout('p/<q>/x.ts', 'r/x.ts'), head + '  # p/<q>/x.ts → r/x.ts: not expressible as a move rule');
   assert.equal(layout('p/x.ts', 'r/{s}/x.ts'), head + '  # p/x.ts → r/{s}/x.ts: not expressible as a move rule');
   assert.equal(layout('p/x.ts', 'r/y.ts'), head + '  # p/x.ts → r/y.ts: not expressible as a move rule');

@@ -189,7 +189,7 @@
     if (doc.target && compiled) {
       const paths = [...nodes.keys()], bySlice = ([a],[b]) => a === null ? -1 : b === null ? 1 : cmp(a,b), conforming = new Map();
       const claims = doc.target.claims.map(({id}) => {
-        const slices = new Map(), bound = new Set(), rules = compiled.forbid.filter(r=>r.id===id);
+        const slices = new Map(), bound = new Set(), rules = compiled.forbid.filter((r,i)=>doc.config.rules.doc.forbid[i].id===id);
         // The preview matches no package: such a claim, and the conforming count it feeds, are not previewed.
         if (rules.some(r=>/^(?:pkg|category):/.test(r.to))) return {id,preview:false};
         for (const r of rules) {

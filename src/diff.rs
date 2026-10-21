@@ -121,8 +121,11 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
         if old != new {
             out += &format!(" (was {} of {})", old.done, old.of);
         }
-        if let Some([_, m]) = t.moved {
+        if let Some([old, m]) = t.moved {
             out += &format!(", {} of {} slices moved", m.done, m.of);
+            if old != m {
+                out += &format!(" (was {} of {})", old.done, old.of);
+            }
         }
         if !t.newly_broken.is_empty() {
             out += &format!(", {}", count(t.newly_broken.len(), "newly broken slice"));

@@ -405,8 +405,16 @@ fn markdown_lists_at_most_twenty_moved_modules() {
     assert!(md.contains("Modules: 1 added, 0 removed."), "{md}");
 }
 
-/// Two slices under one captured claim; `extra` is the head's added import.
-fn target_scan(name: &str, extra: &[(&str, &str)]) -> String {
+/// Two slices under one captured claim; `extra` is the head's added import and `moved` renames
+/// base files.
+fn target_scan(name: &str, extra: &[(&str, &str)], moved: &[(&str, &str)]) -> String {
+    let rename = |p: &str| {
+        moved
+            .iter()
+            .find(|(from, _)| *from == p)
+            .map_or(p, |(_, to)| to)
+            .to_string()
+    };
     let mut edges: Vec<(String, String)> = [
         ("src/m/a/app/x.ts", "src/shared/id.ts"),
         ("src/m/a/domain/d.ts", "src/shared/id.ts"),
@@ -415,7 +423,7 @@ fn target_scan(name: &str, extra: &[(&str, &str)]) -> String {
     ]
     .iter()
     .chain(extra)
-    .map(|(f, t)| (f.to_string(), t.to_string()))
+    .map(|(f, t)| (rename(f), rename(t)))
     .collect();
     edges.sort();
     let (dir, input) = synthetic(name, 5, &edges);
@@ -440,8 +448,26 @@ fn target_scan(name: &str, extra: &[(&str, &str)]) -> String {
 
 #[test]
 fn markdown_reports_target_progress_and_newly_broken_slices() {
-    let old = target_scan("target-old", &[]);
-    let new = target_scan("target-new", &[("src/m/b/app/y.ts", "src/m/b/domain/e.ts")]);
+    let old = target_scan("target-old", &[], &[]);
+    let new = target_scan(
+        "target-new",
+        &[("src/m/b/app/y.ts", "src/m/b/domain/e.ts")],
+        &[],
+    );
+    // A slice that moved shows its old count too. The claim covers only today's paths, so the
+    // moved slice b no longer binds it.
+    let moved = target_scan(
+        "target-moved",
+        &[],
+        &[("src/m/b/app/y.ts", "src/app/b/y.ts")],
+    );
+    let (markdown, _, _) = diff(&[&old, &moved, "--format", "markdown"]);
+    assert!(
+        markdown.contains(
+            "\nTarget: 1 of 1 slices conform (was 2 of 2), 1 of 2 slices moved (was 0 of 2).\n"
+        ),
+        "{markdown}"
+    );
     let (markdown, _, code) = diff(&[&old, &new, "--format", "markdown"]);
     assert_eq!(code, Some(0));
     assert!(
