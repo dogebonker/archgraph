@@ -910,6 +910,9 @@ pub struct Diff {
     pub new_forbidden: Vec<Edge>,
     pub resolved_forbidden: Vec<Edge>,
     pub new_unplanned: Vec<Edge>,
+    /// Entries of the new scan's known list that no forbidden import matches.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub stale_known: Vec<crate::known::Entry>,
     /// Claim progress and the newly broken and fixed slices; absent when neither scan has a target.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target: Option<crate::target::Delta>,

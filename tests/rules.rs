@@ -828,6 +828,74 @@ fn check_fails_only_on_forbidden_imports_missing_from_the_known_file() {
 }
 
 #[test]
+fn sarif_marks_known_imports_suppressed_and_fails_only_on_unlisted_ones() {
+    let rules = write_tmp(
+        "known/sarif-layout.yaml",
+        &std::fs::read_to_string(layout("ts-hexagonal")).unwrap(),
+    );
+    let known = std::path::Path::new(&rules).with_file_name("sarif-layout.known.yaml");
+    let scan = scan_file("ts-hexagonal", &[]);
+    let http = "  - { rule: \"forbid[0]\", from: \"src/adapters/in/http.ts\", to: \"src/adapters/out/pg.ts\" }\n";
+    let queue = "  - { rule: \"forbid[1]\", from: \"src/adapters/out/queue.ts\", to: \"src/adapters/in/cli.ts\" }\n";
+    let user =
+        "  - { rule: \"layers\", from: \"src/domain/user.ts\", to: \"src/adapters/out/pg.ts\" }\n";
+    let suppressed = serde_json::json!([{
+        "kind": "external",
+        "justification": "Listed in sarif-layout.known.yaml."
+    }]);
+    let sarif_of = |listed: &str| {
+        std::fs::write(&known, format!("version: 1\nknown:\n{listed}")).unwrap();
+        let (stdout, _, code) = check(&[&scan, "--rules", &rules, "--format", "sarif"]);
+        let sarif: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+        validate_sarif(&sarif);
+        (sarif["runs"][0]["results"].clone(), code)
+    };
+    // Two listed: their results carry the suppression, the unlisted one none, exit 1.
+    let (results, code) = sarif_of(&format!("{http}{user}"));
+    assert_eq!(code, Some(1));
+    let rows: Vec<(&str, bool)> = results
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| {
+            let uri = r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+                .as_str()
+                .unwrap();
+            if r.get("suppressions").is_some() {
+                assert_eq!(r["suppressions"], suppressed);
+                (uri, true)
+            } else {
+                (uri, false)
+            }
+        })
+        .collect();
+    assert_eq!(rows.len(), 3);
+    let marked: Vec<&str> = rows.iter().filter(|r| r.1).map(|r| r.0).collect();
+    assert!(
+        marked
+            .iter()
+            .any(|u| u.ends_with("src/adapters/in/http.ts")),
+        "{rows:?}"
+    );
+    assert!(
+        marked.iter().any(|u| u.ends_with("src/domain/user.ts")),
+        "{rows:?}"
+    );
+    assert_eq!(marked.len(), 2, "{rows:?}");
+    // All listed: every result is suppressed and the exit is 0.
+    let (results, code) = sarif_of(&format!("{http}{queue}{user}"));
+    assert_eq!(code, Some(0));
+    assert!(
+        results
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|r| r["suppressions"] == suppressed)
+    );
+    std::fs::remove_file(&known).unwrap();
+}
+
+#[test]
 fn check_uses_embedded_rules_and_the_flag_replaces_them() {
     let embedded = scan_file("ts-hexagonal", &["--rules", &layout("ts-hexagonal")]);
     let (stdout, _, code) = check(&[&embedded]);

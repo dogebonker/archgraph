@@ -128,6 +128,56 @@ fn fail_on_new_forbidden_exits_1_only_when_one_appears() {
 }
 
 #[test]
+fn fail_on_stale_known_exits_1_when_a_listed_import_is_fixed() {
+    let rules = write_tmp(
+        "diff/known/layout.yaml",
+        &std::fs::read_to_string(layout("ts-hexagonal")).unwrap(),
+    );
+    std::fs::write(
+        std::path::Path::new(&rules).with_file_name("layout.known.yaml"),
+        "version: 1\nknown:\n  - { rule: \"layers\", from: \"src/domain/user.ts\", to: \"src/adapters/out/pg.ts\" }\n",
+    )
+    .unwrap();
+    let (old, new) = before_after(
+        "ts-hexagonal",
+        &["--rules", &rules],
+        "src/domain/user.ts",
+        "src/adapters/out/pg.ts",
+    );
+    let (stdout, stderr, code) = diff(&[
+        &old,
+        &new,
+        "--fail-on",
+        "stale-known",
+        "--format",
+        "markdown",
+    ]);
+    assert_eq!(code, Some(1), "{stderr}");
+    assert!(
+        stdout.starts_with("**archgraph diff: fail** (stale-known): "),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "\n### Known entries no longer forbidden (1)\n\n- src/domain/user.ts → src/adapters/out/pg.ts (layers)\n"
+        ),
+        "{stdout}"
+    );
+    let (doc, code) = run_json(&["diff", &old, &new, "--fail-on", "stale-known"]);
+    assert_eq!(code, Some(1));
+    assert_eq!(
+        doc["stale_known"],
+        json!([{ "from": "src/domain/user.ts", "to": "src/adapters/out/pg.ts", "rule": "layers" }])
+    );
+    // Not listed in --fail-on: the row shows, the exit stays 0. Old -> old has nothing stale.
+    let (stdout, _, code) = diff(&[&old, &new, "--format", "markdown"]);
+    assert_eq!(code, Some(0));
+    assert!(stdout.starts_with("**archgraph diff: pass**"), "{stdout}");
+    let (_, _, code) = diff(&[&new, &old, "--fail-on", "stale-known"]);
+    assert_eq!(code, Some(0));
+}
+
+#[test]
 fn fail_on_new_cycles_exits_1_on_a_new_cycle() {
     let (old, new) = before_after("ts-cycles", &[], "src/c/z.ts", "src/a/x.ts");
     let (_, _, code) = diff(&[&old, &new, "--fail-on", "new-cycles"]);

@@ -85,6 +85,7 @@ pub fn diff(old: &Document, new: &Document) -> Diff {
         new_forbidden: only_in(new, old, Verdict::Forbidden),
         resolved_forbidden: only_in(old, new, Verdict::Forbidden),
         new_unplanned: only_in(new, old, Verdict::Unplanned),
+        stale_known: new.stale_known.clone(),
         target: crate::target::delta(old, new),
     }
 }
@@ -127,6 +128,15 @@ pub fn markdown(d: &Diff, failed: &[&str]) -> String {
         for e in edges {
             let rule = e.rule.as_deref().unwrap_or_default();
             out += &format!("- {} → {} ({})\n", esc(&e.from), esc(&e.to), esc(rule));
+        }
+    }
+    if !d.stale_known.is_empty() {
+        out += &format!(
+            "\n### Known entries no longer forbidden ({})\n\n",
+            d.stale_known.len()
+        );
+        for e in &d.stale_known {
+            out += &format!("- {} → {} ({})\n", esc(&e.from), esc(&e.to), esc(&e.rule));
         }
     }
     if !d.new_cyclic_imports.is_empty() {

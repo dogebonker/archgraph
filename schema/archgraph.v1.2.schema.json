@@ -3734,6 +3734,13 @@
             "$ref": "#/$defs/edge"
           }
         },
+        "stale_known": {
+          "description": "Entries of the new scan's known list that no forbidden import matches. Absent when empty.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/known-entry"
+          }
+        },
         "target": {
           "description": "Claim progress between the scans, absent when neither has a target. Slices broken in new that were not broken in old are listed with their imports as newly broken, and slices broken in old that are not broken in new, also when no longer bound or gone, as newly fixed.",
           "type": "object",

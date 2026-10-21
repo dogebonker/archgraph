@@ -89,6 +89,16 @@ pub fn sarif(doc: &Document) -> Value {
             })
         })
         .collect();
+    let known: BTreeSet<(&str, &str)> = doc
+        .edges
+        .iter()
+        .chain(&doc.external_edges)
+        .filter(|e| e.known)
+        .map(|e| (e.from.as_str(), e.to.as_str()))
+        .collect();
+    let known_file = rules
+        .and_then(|r| r.known.as_ref())
+        .map_or("the known file", |k| k.path.as_str());
     let root = doc.source.scan_root.as_deref().filter(|r| *r != ".");
     let results: Vec<Value> = found
         .into_iter()
@@ -111,13 +121,20 @@ pub fn sarif(doc: &Document) -> Value {
                 .take(16)
                 .map(|b| format!("{b:02x}"))
                 .collect();
-            json!({
+            let mut result = json!({
                 "ruleId": id,
                 "level": "error",
                 "message": {"text": text},
                 "locations": [{"physicalLocation": location}],
                 "partialFingerprints": {"primaryLocationLineHash": hash},
-            })
+            });
+            if known.contains(&(from, to)) {
+                result["suppressions"] = json!([{
+                    "kind": "external",
+                    "justification": format!("Listed in {known_file}."),
+                }]);
+            }
+            result
         })
         .collect();
     json!({
