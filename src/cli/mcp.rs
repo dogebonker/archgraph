@@ -693,7 +693,7 @@ mod tests {
             .collect();
         let vacuous =
             json!([{"claim":"c","reason":"r","notes":["forbid[0] `from` matches no file"]}]);
-        let payload = json!({"markdown":markdown,"progress":null,"newly_broken":[],"newly_fixed":[],"newly_vacuous":vacuous,"other_forbidden":rows});
+        let payload = json!({"markdown":markdown,"progress":null,"newly_broken":[],"newly_fixed":[],"newly_vacuous":vacuous,"newly_cochanged":[{"claim":"c","reason":"r","slice":"a","files":["a.ts","b.ts"],"commits":3}],"other_forbidden":rows});
         for brief in [true, false] {
             let out = bounded("review", Ok(payload.clone()), brief);
             assert!(size(&out) <= 4000, "{}", size(&out));
@@ -703,6 +703,7 @@ mod tests {
             assert_eq!(v["data"].get("markdown").is_some(), brief, "{v}");
             assert_eq!(v["counts"]["other_forbidden"], 100);
             assert_eq!(v["counts"]["newly_vacuous"], 1, "{v}");
+            assert_eq!(v["counts"]["newly_cochanged"], 1, "{v}");
             assert_eq!(v["truncated"], true);
         }
     }

@@ -378,7 +378,8 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
 }
 
 /// The `pairs` with one file on a rule's `from` side and the other on its `to` side, `from` side
-/// first, that no import in `links` joins.
+/// first, that no chain of imports among the slice's files joins either way: a handler and a
+/// repository changing together through the service between them is the layering at work.
 // ponytail: every pair against every slice's sides, O(pairs × slices × side files); index files
 // by slice if long histories over many slices get slow.
 fn cochanged(
@@ -388,9 +389,34 @@ fn cochanged(
 ) -> Vec<CochangePair> {
     let across =
         |a: &String, b: &String| sides.iter().any(|s| s.from.contains(a) && s.to.contains(b));
+    let files: HashSet<&str> = sides
+        .iter()
+        .flat_map(|s| s.from.iter().chain(&s.to).map(String::as_str))
+        .collect();
+    let mut next: HashMap<&str, Vec<&str>> = HashMap::new();
+    for &(a, b) in links {
+        if files.contains(a) && files.contains(b) {
+            next.entry(a).or_default().push(b);
+        }
+    }
+    let reaches = |from: &str, to: &str| {
+        let (mut seen, mut queue) = (HashSet::from([from]), vec![from]);
+        while let Some(at) = queue.pop() {
+            for &n in next.get(at).into_iter().flatten() {
+                if n == to {
+                    return true;
+                }
+                if seen.insert(n) {
+                    queue.push(n);
+                }
+            }
+        }
+        false
+    };
     pairs
         .iter()
         .filter(|p| !crate::cochange::linked(links, &p.files))
+        .filter(|p| !reaches(&p.files[0], &p.files[1]) && !reaches(&p.files[1], &p.files[0]))
         .filter_map(|p| {
             let [a, b] = &p.files;
             let files = if across(a, b) {

@@ -476,6 +476,34 @@ target: 1 of 2 slices conform
 }
 
 #[test]
+fn a_pair_joined_through_another_file_of_the_slice_is_not_listed() {
+    // e reaches y through z, as a repository reaches a handler through the service between them.
+    let (y, z, e) = (
+        "src/m/b/app/y.ts",
+        "src/m/b/app/z.ts",
+        "src/m/b/domain/e.ts",
+    );
+    let files = ["src/m/a/app/x.ts", "src/m/a/domain/d.ts", y, z, e]
+        .map(String::from)
+        .to_vec();
+    let edge = |from: &str, to: &str| Edge {
+        from: from.into(),
+        to: to.into(),
+        line: Some(1),
+        ..Default::default()
+    };
+    let doc = with_cochange(claims_in(files, vec![edge(e, z), edge(z, y)]), &[(y, e, 3)]);
+    let slices = serde_json::to_value(&doc.target.unwrap().claims[0].slices).unwrap();
+    let b = slices
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["slice"] == "b")
+        .unwrap();
+    assert_eq!(b.get("cochanged"), None, "{b}");
+}
+
+#[test]
 fn diff_and_review_list_pairs_newly_changed_together_across_a_claim() {
     let (y, e) = ("src/m/b/app/y.ts", "src/m/b/domain/e.ts");
     let old = with_cochange(claims(&[(y, e, 3)]), &[(y, e, 3)]);

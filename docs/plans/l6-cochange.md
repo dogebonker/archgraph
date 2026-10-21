@@ -62,7 +62,9 @@ span architectural boundaries" (adamtornhill.com, Kill the Clones); code-maat de
 
 - R1. 3 shared commits is below code-maat (5) and CodeScene's examples (10); small busy slices may
   list incidental pairs.
-- R2. Only direct edges count as a link (a → c → b shows as no import), as in `hidden-coupling`.
+- R2. A chain of imports among the slice's own claim-side files counts as a link (a handler and a
+  repository joined through the service are explained); a chain through a file on no claim side
+  (a shared `types.go`) does not, so such pairs still show.
 - R3. Renames inside a pull request change pair keys, so a pair can show as new.
 - R4. `--cochange` also adds hidden-coupling findings and `git log` time to the push `report`.
 - R5. `check .` on a live directory collects no co-change; `report --cochange` or a saved scan
