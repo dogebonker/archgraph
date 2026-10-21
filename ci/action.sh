@@ -52,7 +52,7 @@ case $engine in
   reference | native | depcruise) ;;
   *) die "engine must be reference, native or depcruise" ;;
 esac
-fail_on=${INPUT_FAIL_ON-new-forbidden,new-cycles,stale-known}
+fail_on=${INPUT_FAIL_ON-new-forbidden,new-cycles,stale-known,new-vacuous}
 fail_on=${fail_on//[[:space:]]/}
 base_ref=${INPUT_BASE_REF:-}
 work=$RUNNER_TEMP/archgraph

@@ -28,8 +28,8 @@ inputs:
     description: Additional globs to exclude, one per line or comma-separated
     default: ""
   fail-on:
-    description: "Pull requests: comma list of new-forbidden, new-cycles, new-unplanned, stale-known that fail the step"
-    default: new-forbidden,new-cycles,stale-known
+    description: "Pull requests: comma list of new-forbidden, new-cycles, new-unplanned, stale-known, new-vacuous that fail the step"
+    default: new-forbidden,new-cycles,stale-known,new-vacuous
   fail-on-rules-change:
     description: "Pull requests: true fails the step when the rules file differs from the base commit's"
     default: "false"
