@@ -52,6 +52,9 @@ else:
     run(0)
     arguments = json.loads((root / "capture").read_text())
     assert arguments[arguments.index("--elixir") + 1] == str(runtime)
+    # Outside git: no co-change and no note.
+    assert "--cochange" not in arguments
+    assert "Co-change" not in (root / "summary").read_text()
     assert "```text\nplain report without code fences\n```" in (root / "summary").read_text()
 
     env["REPORT_TEXT"] = "repository controls ````` these backticks"
@@ -89,6 +92,16 @@ else:
     assert "deletes the rules file `layout.yaml`" in summary, summary
     assert "| forbidden imports |" not in summary, summary
     assert "node_modules" in json.loads((root / "base-scan").read_text())
+    # A full checkout reads co-change; a shallow one says why not.
+    assert "--cochange" in json.loads((root / "capture").read_text())
+    shallow = root / "shallow"
+    subprocess.run(["git", "clone", "-q", "--depth=1", repo.as_uri(), str(shallow)], check=True)
+    env.update(INPUT_PATH=str(shallow), INPUT_BASE_REF="")
+    (root / "summary").write_text("")
+    run(0)
+    assert "--cochange" not in json.loads((root / "capture").read_text())
+    summary = (root / "summary").read_text()
+    assert "\nCo-change not read: shallow checkout; check out with fetch-depth: 0.\n" in summary, summary
 
-print("Elixir action forwarding, runtime errors, detection, summary fences and base comparisons passed")
+print("Elixir action forwarding, runtime errors, detection, summary fences, base comparisons and co-change passed")
 PY

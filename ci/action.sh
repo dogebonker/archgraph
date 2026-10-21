@@ -112,6 +112,16 @@ done < <(printf '%s\n' "${INPUT_EXCLUDE:-}" | awk '{
   print cur
 }' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
 
+# Co-change needs history; the default checkout (fetch-depth: 1) has about one commit.
+cochange_note=
+if shallow=$(git -C "$path" rev-parse --is-shallow-repository 2>/dev/null); then
+  if [[ $shallow == false ]]; then
+    opts+=(--cochange)
+  else
+    cochange_note='Co-change not read: shallow checkout; check out with fetch-depth: 0.'
+  fi
+fi
+
 has() {
   local f
   for f in "$@"; do
@@ -228,6 +238,10 @@ if [[ -z $base_ref ]]; then
     echo "${fence}text"
     cat "$work/report.txt"
     echo "$fence"
+    if [[ -n $cochange_note ]]; then
+      echo
+      echo "$cochange_note"
+    fi
   } >>"$GITHUB_STEP_SUMMARY"
   exit "$status"
 fi
@@ -303,6 +317,10 @@ fi
     echo
   fi
   cat "$work/diff.md"
+  if [[ -n $cochange_note ]]; then
+    echo
+    echo "$cochange_note"
+  fi
 } >"$work/summary.md"
 cat "$work/summary.md"
 cat "$work/summary.md" >>"$GITHUB_STEP_SUMMARY"
