@@ -264,7 +264,7 @@ jobs:
         with: { binary: archgraph, engine: native }
 ```
 
-The action scans the pull request and its base commit and fails only on what the pull request adds: a new forbidden import, or a new or grown cycle. Problems already on the base branch do not fail the check. The summary lands in the job:
+The action scans the pull request and its base commit and fails only on what the pull request adds: a new forbidden import, a new or grown cycle, or a known violation it fixed without shrinking `layout.known.yaml`. Problems already on the base branch do not fail the check. The summary lands in the job:
 
 <img alt="archgraph job summary on a test repository: the diff fails with two new forbidden imports, src/domains/checkout/types.ts to src/domains/cart/types.ts (rule public) and src/shared/format.ts to src/domains/checkout/types.ts (rule shared-no-domain), a new module cycle between domains/cart and domains/checkout, and the two modules' cohesion and instability before and after" src="docs/assets/pr-summary.png" width="100%">
 

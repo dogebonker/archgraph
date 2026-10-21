@@ -8,8 +8,8 @@
 #   ARCHGRAPH_DEPCRUISE, ARCHGRAPH_PYTHON, ARCHGRAPH_GO   a collector to use instead of installing one
 #   ARCHGRAPH_ELIXIR   a preinstalled Elixir executable (default elixir)
 #
-# Without a base ref: `report` on INPUT_PATH, its summary in the job summary, exit 1 when any
-# import is forbidden. With one: `report` on HEAD, a scan of the base commit (in a worktree) with
+# Without a base ref: `report` on INPUT_PATH, its summary in the job summary, exit 1 as `report`
+# exits (a forbidden import the known list does not hold, or a stale known entry). With one: `report` on HEAD, a scan of the base commit (in a worktree) with
 # the same rules file and options, then `diff --fail-on` in markdown into the job summary, exit 1
 # when the diff has a --fail-on condition. Exit 2 on errors.
 set -euo pipefail
