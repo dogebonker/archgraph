@@ -18,8 +18,8 @@ for (const fixture of fixtures) {
     } else {
       assert.deepEqual(plain(result.before), fixture.before);
       assert.deepEqual(plain(result.after), fixture.after);
-      assert.deepEqual(result.warnings, []);
-      assert.equal(result.partial, false);
+      assert.deepEqual(result.warnings, fixture.warnings || []);
+      assert.equal(result.partial, Boolean(fixture.warnings));
     }
   });
 }

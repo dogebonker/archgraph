@@ -127,6 +127,22 @@ test('a move to an existing folder points at its files, one label per folder', (
   assert.deepEqual(Array.from(moves, mv => [mv.file, mv.to, [...mv.at], 'r' in mv, mv.note]),
     [[0, 'internal/sop/h.go', [7, 8], false, 'moves to internal/sop/'], [1, 'internal/sop/r.go', [9, 9], false, null]]);
 });
+test('a what-if target compares progress with the scan and selects nothing', () => {
+  const { ctx, panel } = setup({ target: target() });
+  ctx.box = node(); ctx.t = target();
+  vm.runInContext('targetContext(t, box, { conforming: { done: 2, of: 2 }, moved: { done: 1, of: 2 } })', ctx);
+  assert.equal(panel.children.length, 0);
+  assert.ok(ctx.box.textContent.includes('1 of 2 slices conform (was 2 of 2); 1 of 2 slices moved.'));
+  assert.ok(ctx.box.textContent.includes('Move cost, from the scan (not previewed)'));
+  const rows = descendants(ctx.box).filter(n => n.listeners?.toggle);
+  assert.equal(rows.length, 2);
+  for (const row of rows) open(row);
+  assert.ok(!descendants(ctx.box).some(n => n.textContent === 'Show on map'));
+  // A count the preview cannot recompute is the scan's, marked as such.
+  ctx.box = node(); ctx.t = target({ progress: { conforming: { done: 1, of: 2, preview: false }, moved: { done: 1, of: 2 } } });
+  vm.runInContext('targetContext(t, box, { conforming: { done: 1, of: 2 }, moved: { done: 1, of: 2 } })', ctx);
+  assert.ok(ctx.box.textContent.includes('1 of 2 slices conform (not previewed); 1 of 2 slices moved.'));
+});
 test('a document without a target renders nothing', () => {
   const { ctx, panel } = setup({ files: [] });
   vm.runInContext('targetContext()', ctx);

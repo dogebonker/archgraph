@@ -1,7 +1,7 @@
 //! Canonical Rust results consumed by the dependency-free map preview tests.
 use std::collections::{BTreeMap, BTreeSet};
 
-use archgraph::model::{Config, Document, Edge, EdgeKind, Language, Move, Source};
+use archgraph::model::{Config, Document, Edge, EdgeKind, ImportRecord, Language, Move, Source};
 use serde_json::{Value, json};
 
 fn edge(from: &str, to: &str, kind: EdgeKind) -> Edge {
@@ -67,7 +67,40 @@ fn projection(doc: &Document) -> Value {
             v["kind"].to_string(),
         )
     });
-    json!({"cycles":cycles,"two_way_pairs":pairs,
+    // The target as the preview recomputes it: verdicts and broken imports per slice, progress.
+    // The preview matches no package, so a claim with a `pkg:` or `category:` rule, and the
+    // conforming count it feeds, are not previewed.
+    let packaged = |id: &str| {
+        doc.config.rules.as_ref().is_some_and(|r| {
+            r.doc.forbid.iter().any(|f| {
+                f.id.as_deref() == Some(id)
+                    && (f.to.starts_with("pkg:") || f.to.starts_with("category:"))
+            })
+        })
+    };
+    let target = doc.target.as_ref().map(|t| {
+        let claims: Vec<Value> = t
+            .claims
+            .iter()
+            .map(|c| {
+                if packaged(&c.id) {
+                    return json!({"id":c.id,"preview":false});
+                }
+                let slices: Vec<Value> = c
+                    .slices
+                    .iter()
+                    .map(|s| json!({"slice":s.slice,"broken":s.broken}))
+                    .collect();
+                json!({"id":c.id,"verdict":c.verdict,"slices":slices})
+            })
+            .collect();
+        let mut progress = json!(t.progress);
+        if t.claims.iter().any(|c| packaged(&c.id)) {
+            progress["conforming"] = json!({"preview":false});
+        }
+        json!({"claims":claims,"progress":progress})
+    });
+    json!({"cycles":cycles,"two_way_pairs":pairs,"target":target,
         "largest_cycle":doc.cycles.iter().filter(|c| c.level == archgraph::model::CycleLevel::Module).map(|c| c.members.len()).max().unwrap_or(0),
         "modules":doc.summary.modules,"forbidden":doc.summary.forbidden,"unplanned":doc.summary.unplanned,"verdicts":verdicts})
 }
@@ -116,7 +149,10 @@ fn finish(name: &str, doc: Document, moves: &[(&str, &str)]) -> Value {
             to: (*to).into(),
         })
         .collect();
-    let after = archgraph::simulate::apply(&doc, rules.as_ref(), &moves).unwrap();
+    let mut after = archgraph::simulate::apply(&doc, rules.as_ref(), &moves).unwrap();
+    after.target = rules
+        .as_ref()
+        .and_then(|rules| archgraph::target::analyze(&after, rules));
     let moved = match moves.as_slice() {
         [one] => json!(one),
         many => json!(many),
@@ -377,6 +413,98 @@ fn fixtures() -> Value {
             "moves":[{"from":"src/<name>/handler*.ts","to":"src/app/<name>/handler/"},{"from":"lib/x.ts","to":"core/"}]})),
         Ts,
     ));
+    // Moving the domain file out unbinds slice a: the claim holds where it held in one slice.
+    let sliced = [
+        ("src/m/a/app/x.ts", "src/m/a/domain/d.ts", V),
+        ("src/m/b/app/y.ts", "src/shared/id.ts", V),
+        ("src/m/b/domain/e.ts", "src/shared/id.ts", V),
+        ("src/m/c/domain/f.ts", "src/shared/id.ts", V),
+    ];
+    let claim = json!({"id":"app-no-domain","from":"src/m/<name>/app/**","to":"src/m/<name>/domain/**",
+        "reason":"apps never reach a domain"});
+    cases.push(case(
+        "target-claim-binding",
+        &sliced,
+        "src/m/a/domain/d.ts",
+        "src/shared/d.ts",
+        json!({}),
+        Some(json!({"version":1,"forbid":[claim]})),
+        Ts,
+    ));
+    // An earlier id-less rule takes the import's verdict; the claim still sees it, renamed.
+    cases.push(case(
+        "target-first-match",
+        &sliced,
+        "src/m/a/app/x.ts",
+        "src/m/a/app/w.ts",
+        json!({}),
+        Some(json!({"version":1,"forbid":[{"from":"src/m/*/app/**","to":"src/m/*/domain/**"},
+            {"id":"app-no-domain","from":"src/m/a/app/**","to":"src/m/a/domain/**","reason":"apps never reach a domain"}]})),
+        Ts,
+    ));
+    cases.push(case(
+        "target-reachable-claim",
+        &[
+            ("app/client.ts", "shared/bridge.ts", V),
+            ("shared/bridge.ts", "server/private.ts", V),
+        ],
+        "server/private.ts",
+        "shared/private.ts",
+        json!({}),
+        Some(
+            json!({"version":1,"forbid":[{"id":"no-server","from":"app/**","to":"server/**","reachable":true,"reason":"clients never reach the server"}]}),
+        ),
+        Ts,
+    ));
+    // A package claim is not previewed, nor the conforming count; the file claim is. Package
+    // rules need import accounting, so the scan carries an import record per edge.
+    let config: Config = serde_json::from_value(json!({"depth":1,"source_root":".","excludes":[],"include_tests":false,
+        "rules":{"path":"layout.yaml","sha256":"0000000000000000000000000000000000000000000000000000000000000000","doc":{"version":1,"forbid":[
+            {"id":"no-db","from":"src/<name>/service.ts","to":"src/db/**","reason":"services reach the database through repositories"},
+            {"id":"no-sql","from":"src/<name>/service.ts","to":"src/db/**","reason":"services never use SQL"},
+            {"id":"no-sql","from":"src/<name>/service.ts","to":"pkg:pg","reason":"services never use SQL"}]}}})).unwrap();
+    let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","cruised":0},"git":null,"generated_at":"2026-10-18T00:00:00Z"})).unwrap();
+    let pairs = [
+        ("src/a/service.ts", "src/db/q.ts"),
+        ("src/b/service.ts", "src/shared/x.ts"),
+    ];
+    let config = Config {
+        import_records: Some(
+            pairs
+                .iter()
+                .map(|(from, to)| ImportRecord {
+                    from: (*from).into(),
+                    specifier: (*to).into(),
+                    targets: vec![(*to).into()],
+                    ..Default::default()
+                })
+                .collect(),
+        ),
+        ..config
+    };
+    let doc = archgraph::analyze(
+        source,
+        config,
+        pairs
+            .iter()
+            .flat_map(|(f, t)| [f.to_string(), t.to_string()])
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect(),
+        pairs.iter().map(|(f, t)| edge(f, t, V)).collect(),
+        vec![],
+        None,
+    )
+    .unwrap();
+    let mut package = finish(
+        "target-package-claim",
+        doc,
+        &[("src/b/service.ts", "src/b/svc/service.ts")],
+    );
+    package["warnings"] = json!([
+        "Internal-only preview: external dependency policy verdicts and exposure are not recomputed. Run archgraph simulate for authoritative results."
+    ]);
+    cases.push(package);
     cases.push(case(
         "test-class-survives-rename",
         &[
@@ -501,5 +629,52 @@ fn map_preview_fixtures_match_rust() {
             .unwrap();
         assert_eq!(case["before"]["forbidden"], before);
         assert_eq!(case["after"]["forbidden"], after);
+    }
+    let conform = |done, of| json!({"conforming":{"done":done,"of":of}});
+    let moved = |done, of| json!({"conforming":{"done":1,"of":2},"moved":{"done":done,"of":of}});
+    for (name, before, after) in [
+        (
+            "target-claim-binding",
+            ("holds_in", conform(1, 2)),
+            ("holds", conform(1, 1)),
+        ),
+        (
+            "target-first-match",
+            ("broken", conform(0, 0)),
+            ("broken", conform(0, 0)),
+        ),
+        (
+            "target-reachable-claim",
+            ("broken", conform(0, 0)),
+            ("vacuous", conform(0, 0)),
+        ),
+        (
+            "target-package-claim",
+            ("holds_in", json!({"conforming":{"preview":false}})),
+            ("broken", json!({"conforming":{"preview":false}})),
+        ),
+        (
+            "target-layout",
+            ("holds_in", moved(1, 3)),
+            ("holds_in", moved(2, 3)),
+        ),
+    ] {
+        let case = actual
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["name"] == name)
+            .unwrap();
+        for (side, (verdict, progress)) in [("before", before), ("after", after)] {
+            let target = &case[side]["target"];
+            assert_eq!(target["claims"][0]["verdict"], verdict, "{name} {side}");
+            assert_eq!(target["progress"], progress, "{name} {side}");
+        }
+        if name == "target-package-claim" {
+            assert_eq!(
+                case["before"]["target"]["claims"][1],
+                json!({"id":"no-sql","preview":false})
+            );
+        }
     }
 }

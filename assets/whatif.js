@@ -130,7 +130,8 @@
         const pairs = (xs,name)=>(xs || []).map((r,i)=>({...r,p:pattern(r.from),id:r.id ?? name+'['+i+']'}));
         compiled = {forbid:pairs(rules.forbid,'forbid'),allow:pairs(rules.allow,'allow'),
           entrypoints:Object.entries(rules.entrypoints || {}).sort(([a],[b])=>cmp(a,b)).map(([p,e])=>({p:pattern(p),entry:e})),
-          public:(rules.public || []).map(r=>({...r,p:pattern(r.module)})),layers:(rules.layers || []).map(glob)};
+          public:(rules.public || []).map(r=>({...r,p:pattern(r.module)})),layers:(rules.layers || []).map(glob),
+          moves:(rules.moves || []).map(m=>({p:pattern(m.from),arrived:pattern(m.to+'**')}))};
         for (const r of [...compiled.forbid,...compiled.allow]) { r.p.matches(r.to,'x',''); }
         for (const r of compiled.public) for (const e of r.entries) r.p.matches(e,'x','');
       }
@@ -155,18 +156,21 @@
     const includes = (r,e) => !r.kinds || r.kinds.some(k=>kind({kind:k}) === kind(e));
     const adjacency = new Map();
     for (const e of edges) { if (!adjacency.has(e.from)) adjacency.set(e.from,[]); adjacency.get(e.from).push(e); }
+    /* Rust `forbids`: the value forbid rule `r` binds when it forbids `e` (null without a capture), else undefined. */
+    const forbids = (r, e) => {
+      if (!includes(r,e)) return undefined; const v = r.p.bind(e.from); if (v === undefined) return undefined;
+      if (r.p.matches(r.to,v,e.original_to || e.to)) return v;
+      if (r.reachable) { const queue = [e.to], seen = new Set(queue);
+        for (let i=0;i<queue.length;i++) { const f=queue[i]; if (r.p.matches(r.to,v,f)) return v;
+          for (const next of adjacency.get(f) || []) if (includes(r,next) && !seen.has(next.to)) {seen.add(next.to);queue.push(next.to);} }
+      }
+      return undefined;
+    };
     const verdict = e => {
       if (!rules || !compiled) return {from:e.from,to:e.to,verdict:null,rule:null,kind:kind(e)};
       const written = e.original_to || e.to;
       const answer = (v,r)=>({from:e.from,to:e.to,verdict:v,rule:r,kind:kind(e)});
-      for (const r of compiled.forbid) {
-        if (!includes(r,e)) continue; const v = r.p.bind(e.from); if (v === undefined) continue;
-        if (r.p.matches(r.to,v,written)) return answer('forbidden',r.id);
-        if (r.reachable) { const queue = [e.to], seen = new Set(queue);
-          for (let i=0;i<queue.length;i++) { const f=queue[i]; if (r.p.matches(r.to,v,f)) return answer('forbidden',r.id);
-            for (const next of adjacency.get(f) || []) if (includes(r,next) && !seen.has(next.to)) {seen.add(next.to);queue.push(next.to);} }
-        }
-      }
+      for (const r of compiled.forbid) if (forbids(r,e) !== undefined) return answer('forbidden',r.id);
       for (const r of compiled.entrypoints) { const v=r.p.bind(written); if (v!==undefined && !r.p.matches(r.p.raw,v,e.from) && written!==r.p.instance(r.entry,v)) return answer('forbidden','entrypoints'); }
       for (const r of compiled.allow) { const v=r.p.bind(e.from); if (includes(r,e) && v!==undefined && r.p.matches(r.to,v,written)) return answer('allowed',r.id); }
       const entry = (r,v)=>r.entries.some(x=>r.p.matches(x,v,written));
@@ -179,6 +183,44 @@
       return answer(rules.default==='forbidden'?'forbidden':'unplanned',rules.default==='forbidden'?'default':'none');
     };
     const verdicts = edges.map(verdict).sort((a,b)=>cmp(key(a),key(b)));
+    /* src/target.rs `analyze`: per claim the slices a rule binds on both sides or breaks, and per captured slice whether it
+       conforms and has moved. Slices order as Rust's Option<String>: `*` (null) first. */
+    let target = null;
+    if (doc.target && compiled) {
+      const paths = [...nodes.keys()], bySlice = ([a],[b]) => a === null ? -1 : b === null ? 1 : cmp(a,b), conforming = new Map();
+      const claims = doc.target.claims.map(({id}) => {
+        const slices = new Map(), bound = new Set(), rules = compiled.forbid.filter(r=>r.id===id);
+        // The preview matches no package: such a claim, and the conforming count it feeds, are not previewed.
+        if (rules.some(r=>/^(?:pkg|category):/.test(r.to))) return {id,preview:false};
+        for (const r of rules) {
+          const from = new Set(paths.map(p=>r.p.bind(p)).filter(v=>v!==undefined)), hits = new Map();
+          for (const e of edges) { const v = forbids(r,e); if (v === undefined) continue;
+            if (!hits.has(v)) hits.set(v,[]); hits.get(v).push({from:e.from,to:e.original_to || e.to}); }
+          for (const v of new Set([...from,...hits.keys()])) {
+            if (hits.has(v) || (from.has(v) && paths.some(p=>r.p.matches(r.to,v,p)))) bound.add(v);
+            if (!slices.has(v)) slices.set(v,new Map());
+            for (const h of hits.get(v) || []) slices.get(v).set(key([h.from,h.to]),h);
+          }
+        }
+        const out = [...slices].filter(([v])=>bound.has(v)).sort(bySlice).map(([v,broken]) => {
+          if (v !== null) conforming.set(v,(conforming.get(v) ?? true) && !broken.size);
+          return {slice:v ?? '*',broken:[...broken.values()].sort((a,b)=>cmp(a.from,b.from) || cmp(a.to,b.to))};
+        });
+        const held = out.filter(s=>!s.broken.length).length;
+        return {id,verdict:!out.length ? 'vacuous' : held === out.length ? 'holds' : !held ? 'broken' : 'holds_in',slices:out};
+      });
+      const progress = {conforming:claims.some(c=>c.preview===false) ? {preview:false} : {done:[...conforming.values()].filter(Boolean).length,of:conforming.size}};
+      if (compiled.moves.length) {
+        // Files still to move per captured slice: the first move whose `from` binds a file; files below a `to` add the slice.
+        const pending = new Map();
+        for (const p of paths) {
+          for (const m of compiled.moves) { const v = m.p.bind(p); if (v !== undefined) { if (v !== null) pending.set(v,(pending.get(v) || 0)+1); break; } }
+          for (const m of compiled.moves) { const v = m.arrived.bind(p); if (v != null && !pending.has(v)) pending.set(v,0); }
+        }
+        progress.moved = {done:[...pending.values()].filter(n=>!n).length,of:pending.size};
+      }
+      target = {claims,progress};
+    }
     const production = edges.filter(e=>!testFiles.has(e.from)&&!testFiles.has(e.to));
     const selected = production.filter(e=>config.all_kinds || kind(e)==='runtime');
     const modulePairs = selected.filter(e=>modulesOf.get(e.from)!==modulesOf.get(e.to)).map(e=>[modulesOf.get(e.from),modulesOf.get(e.to)]);
@@ -211,7 +253,7 @@
     for (const id of sorted(stats.keys())) {const s=stats.get(id),w=weighted.get(id);modules[id]={ca:s.ca.size,ce:s.ce.size,weighted_ca:round(w.ca),weighted_ce:round(w.ce),instability:ratio(w.ce,w.ca+w.ce),cohesion:ratio(s.wi,s.wi+s.wo)};
       if (config.granularity!=='file' && !id.startsWith('tests::') && s.files>=2 && modules[id].cohesion!==null && modules[id].cohesion<thresholds.cohesion_max && modules[id].weighted_ca>=thresholds.fan_in_min && s.internal/s.files<thresholds.internal_edges_per_file_max) warnings.push('Grab-bag refinement required for '+id+'; raw cycle preview only.');
     }
-    return {moduleOf:modulesOf,projection:{cycles,two_way_pairs:twoWay,largest_cycle:Math.max(0,...cycles.filter(c=>c.level==='module').map(c=>c.members.length)),modules,forbidden:verdicts.filter(v=>v.verdict==='forbidden').length,unplanned:verdicts.filter(v=>v.verdict==='unplanned').length,verdicts},warnings};
+    return {moduleOf:modulesOf,projection:{cycles,two_way_pairs:twoWay,target,largest_cycle:Math.max(0,...cycles.filter(c=>c.level==='module').map(c=>c.members.length)),modules,forbidden:verdicts.filter(v=>v.verdict==='forbidden').length,unplanned:verdicts.filter(v=>v.verdict==='unplanned').length,verdicts},warnings};
   }
   function analyze(doc) { const result=compute(doc);return {...result.projection,warnings:sorted(new Set(result.warnings)),partial:result.warnings.length>0}; }
   /* One move, or a list applied together like `archgraph simulate --move A B --move C D`. */

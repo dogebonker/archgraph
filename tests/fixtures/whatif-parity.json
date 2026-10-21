@@ -249,6 +249,7 @@
           "b"
         ]
       ],
+      "target": null,
       "largest_cycle": 2,
       "modules": {
         "a": {
@@ -290,6 +291,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -616,6 +618,7 @@
           "b"
         ]
       ],
+      "target": null,
       "largest_cycle": 2,
       "modules": {
         "a": {
@@ -665,6 +668,7 @@
         }
       ],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "b": {
@@ -888,6 +892,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -950,6 +955,7 @@
           "b"
         ]
       ],
+      "target": null,
       "largest_cycle": 2,
       "modules": {
         "a": {
@@ -1178,6 +1184,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -1226,6 +1233,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -1544,6 +1552,7 @@
           "b"
         ]
       ],
+      "target": null,
       "largest_cycle": 2,
       "modules": {
         "a": {
@@ -1585,6 +1594,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -1807,6 +1817,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -1855,6 +1866,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -2070,6 +2082,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "domain/cart": {
@@ -2104,6 +2117,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "domain/cart": {
@@ -2273,6 +2287,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "../lib": {
@@ -2307,6 +2322,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -2524,6 +2540,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "cmd/tool": {
@@ -2573,6 +2590,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "cmd/tool": {
@@ -2813,6 +2831,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -2862,6 +2881,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -3189,6 +3209,7 @@
           "b/two.ts"
         ]
       ],
+      "target": null,
       "largest_cycle": 2,
       "modules": {
         "a/one.ts": {
@@ -3243,6 +3264,7 @@
           "c/one.ts"
         ]
       ],
+      "target": null,
       "largest_cycle": 2,
       "modules": {
         "b/two.ts": {
@@ -3783,6 +3805,7 @@
           "ui"
         ]
       ],
+      "target": null,
       "largest_cycle": 2,
       "modules": {
         "domain": {
@@ -3839,6 +3862,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "domain": {
@@ -4135,6 +4159,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "app": {
@@ -4176,6 +4201,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "app": {
@@ -4457,6 +4483,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "app": {
@@ -4498,6 +4525,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "app": {
@@ -4756,6 +4784,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "domains": {
@@ -4789,6 +4818,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "domains": {
@@ -5086,6 +5116,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "app": {
@@ -5135,6 +5166,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "app": {
@@ -5375,6 +5407,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "lib": {
@@ -5424,6 +5457,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "service": {
@@ -5851,6 +5885,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "lib": {
@@ -5899,6 +5934,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "lib": {
@@ -6348,6 +6384,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "data": {
@@ -6396,6 +6433,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "data": {
@@ -6661,6 +6699,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "data": {
@@ -6695,6 +6734,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "lib": {
@@ -7193,6 +7233,39 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": {
+        "claims": [
+          {
+            "id": "layered",
+            "verdict": "holds_in",
+            "slices": [
+              {
+                "slice": "a",
+                "broken": [
+                  {
+                    "from": "src/a/handler.ts",
+                    "to": "src/a/repo.ts"
+                  }
+                ]
+              },
+              {
+                "slice": "b",
+                "broken": []
+              }
+            ]
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 1,
+            "of": 2
+          },
+          "moved": {
+            "done": 1,
+            "of": 3
+          }
+        }
+      },
       "largest_cycle": 0,
       "modules": {
         "lib": {
@@ -7248,6 +7321,39 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": {
+        "claims": [
+          {
+            "id": "layered",
+            "verdict": "holds_in",
+            "slices": [
+              {
+                "slice": "a",
+                "broken": [
+                  {
+                    "from": "src/app/a/handler/handler.ts",
+                    "to": "src/a/repo.ts"
+                  }
+                ]
+              },
+              {
+                "slice": "b",
+                "broken": []
+              }
+            ]
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 1,
+            "of": 2
+          },
+          "moved": {
+            "done": 2,
+            "of": 3
+          }
+        }
+      },
       "largest_cycle": 0,
       "modules": {
         "lib": {
@@ -7300,6 +7406,1960 @@
         }
       ]
     }
+  },
+  {
+    "name": "target-claim-binding",
+    "document": {
+      "schema": "archgraph/v1.2",
+      "kind": "scan",
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "source": {
+        "language": "typescript",
+        "collector": {
+          "name": "fixture",
+          "version": null,
+          "cruised": 0
+        },
+        "git": null,
+        "generated_at": "2026-10-18T00:00:00Z"
+      },
+      "config": {
+        "depth": 1,
+        "source_root": ".",
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "doc": {
+            "version": 1,
+            "modules": [],
+            "layers": [],
+            "public": [],
+            "forbid": [
+              {
+                "id": "app-no-domain",
+                "from": "src/m/<name>/app/**",
+                "to": "src/m/<name>/domain/**",
+                "reachable": false,
+                "reason": "apps never reach a domain"
+              }
+            ],
+            "allow": []
+          }
+        }
+      },
+      "files": [
+        {
+          "path": "src/m/a/app/x.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/m/a/domain/d.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/m/b/app/y.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/m/b/domain/e.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/m/c/domain/f.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/shared/id.ts",
+          "module": "src",
+          "barrel": false
+        }
+      ],
+      "edges": [
+        {
+          "from": "src/m/a/app/x.ts",
+          "to": "src/m/a/domain/d.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "forbidden",
+          "rule": "app-no-domain"
+        },
+        {
+          "from": "src/m/b/app/y.ts",
+          "to": "src/shared/id.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "allowed",
+          "rule": "same-module"
+        },
+        {
+          "from": "src/m/b/domain/e.ts",
+          "to": "src/shared/id.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "allowed",
+          "rule": "same-module"
+        },
+        {
+          "from": "src/m/c/domain/f.ts",
+          "to": "src/shared/id.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "allowed",
+          "rule": "same-module"
+        }
+      ],
+      "package_entries": [],
+      "modules": [
+        {
+          "id": "src",
+          "files": 6,
+          "ca": 0,
+          "ce": 0,
+          "instability": null,
+          "internal_edges": 4,
+          "outgoing_edges": 0,
+          "cohesion": 1.0,
+          "outgoing_to": {},
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 4.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "module_edges": [],
+      "cycles": [],
+      "type_only_cycles": [],
+      "summary": {
+        "forbidden": 1,
+        "unplanned": 0,
+        "cycles": 0,
+        "type_only_cycles": 0,
+        "modules": {
+          "src": {
+            "cohesion": 1.0,
+            "ca": 0,
+            "ce": 0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 0.0,
+            "instability": null
+          }
+        }
+      },
+      "findings": [
+        {
+          "finding_id": "ag-cfc9779ed5dc39f11cc7cce79dcc65986a538733e102dcbe63e8db557727d22a",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "cut_import",
+                "file": "src/m/a/app/x.ts",
+                "from": "src/m/a/app/x.ts",
+                "to": "src/m/a/domain/d.ts",
+                "detail": {
+                  "operation": "remove_import",
+                  "target": "src/m/a/domain/d.ts",
+                  "specifier": null,
+                  "edge_kind": "runtime",
+                  "original_to": null
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "absent_edges": [
+                  {
+                    "from": "src/m/a/app/x.ts",
+                    "to": "src/m/a/domain/d.ts"
+                  }
+                ]
+              }
+            },
+            "confidence": "medium",
+            "risk_notes": [
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
+              "Policy reason: apps never reach a domain"
+            ]
+          },
+          "kind": "forbidden-edge",
+          "subject": "src/m/a/app/x.ts → src/m/a/domain/d.ts",
+          "evidence": {
+            "edge": {
+              "from": "src/m/a/app/x.ts",
+              "to": "src/m/a/domain/d.ts",
+              "kind": "runtime",
+              "weight": 1.0,
+              "verdict": "forbidden",
+              "rule": "app-no-domain"
+            }
+          }
+        },
+        {
+          "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "split_module",
+                "file": "src/m/a/app/x.ts",
+                "from": ".",
+                "to": "",
+                "detail": {
+                  "operation": "group_files",
+                  "groups": [
+                    {
+                      "files": [
+                        "src/m/a/app/x.ts",
+                        "src/m/a/domain/d.ts"
+                      ],
+                      "suggested_module": "split-1"
+                    },
+                    {
+                      "files": [
+                        "src/m/b/app/y.ts",
+                        "src/m/b/domain/e.ts",
+                        "src/m/c/domain/f.ts",
+                        "src/shared/id.ts"
+                      ],
+                      "suggested_module": "split-2"
+                    }
+                  ],
+                  "evidence_source": "structural"
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "findings_absent": [
+                  "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                ]
+              }
+            },
+            "confidence": "low",
+            "risk_notes": [
+              "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+            ]
+          },
+          "kind": "seam",
+          "subject": ".",
+          "evidence": {
+            "modularity": 0.375,
+            "folder_modularity": 0.0,
+            "clusters": [
+              {
+                "files": [
+                  "src/m/a/app/x.ts",
+                  "src/m/a/domain/d.ts"
+                ],
+                "modules": [
+                  "src"
+                ]
+              },
+              {
+                "files": [
+                  "src/m/b/app/y.ts",
+                  "src/m/b/domain/e.ts",
+                  "src/m/c/domain/f.ts",
+                  "src/shared/id.ts"
+                ],
+                "modules": [
+                  "src"
+                ]
+              }
+            ],
+            "hubs": [],
+            "via_barrel": false
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "finding": {
+            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "kind": "small-repo",
+            "subject": ".",
+            "evidence": {
+              "files": 6,
+              "modules": 1
+            }
+          },
+          "reason": "Evidence does not determine a safe, concrete graph edit; inspect its evidence before changing architecture."
+        }
+      ],
+      "cochange": null,
+      "target": {
+        "claims": [
+          {
+            "id": "app-no-domain",
+            "reason": "apps never reach a domain",
+            "source": null,
+            "verdict": "holds_in",
+            "slices": [
+              {
+                "slice": "a",
+                "files": [
+                  "src/m/a/app/x.ts",
+                  "src/m/a/domain/d.ts"
+                ],
+                "broken": [
+                  {
+                    "from": "src/m/a/app/x.ts",
+                    "to": "src/m/a/domain/d.ts"
+                  }
+                ]
+              },
+              {
+                "slice": "b",
+                "files": [
+                  "src/m/b/app/y.ts",
+                  "src/m/b/domain/e.ts"
+                ],
+                "broken": []
+              }
+            ],
+            "notes": []
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 1,
+            "of": 2
+          }
+        }
+      }
+    },
+    "move": {
+      "file": "src/m/a/domain/d.ts",
+      "to": "src/shared/d.ts"
+    },
+    "before": {
+      "cycles": [],
+      "two_way_pairs": [],
+      "target": {
+        "claims": [
+          {
+            "id": "app-no-domain",
+            "verdict": "holds_in",
+            "slices": [
+              {
+                "slice": "a",
+                "broken": [
+                  {
+                    "from": "src/m/a/app/x.ts",
+                    "to": "src/m/a/domain/d.ts"
+                  }
+                ]
+              },
+              {
+                "slice": "b",
+                "broken": []
+              }
+            ]
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 1,
+            "of": 2
+          }
+        }
+      },
+      "largest_cycle": 0,
+      "modules": {
+        "src": {
+          "cohesion": 1.0,
+          "ca": 0,
+          "ce": 0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0,
+          "instability": null
+        }
+      },
+      "forbidden": 1,
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "src/m/a/app/x.ts",
+          "to": "src/m/a/domain/d.ts",
+          "verdict": "forbidden",
+          "rule": "app-no-domain",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/b/app/y.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/b/domain/e.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/c/domain/f.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        }
+      ]
+    },
+    "after": {
+      "cycles": [],
+      "two_way_pairs": [],
+      "target": {
+        "claims": [
+          {
+            "id": "app-no-domain",
+            "verdict": "holds",
+            "slices": [
+              {
+                "slice": "b",
+                "broken": []
+              }
+            ]
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 1,
+            "of": 1
+          }
+        }
+      },
+      "largest_cycle": 0,
+      "modules": {
+        "src": {
+          "cohesion": 1.0,
+          "ca": 0,
+          "ce": 0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0,
+          "instability": null
+        }
+      },
+      "forbidden": 0,
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "src/m/a/app/x.ts",
+          "to": "src/shared/d.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/b/app/y.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/b/domain/e.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/c/domain/f.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        }
+      ]
+    }
+  },
+  {
+    "name": "target-first-match",
+    "document": {
+      "schema": "archgraph/v1.2",
+      "kind": "scan",
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "source": {
+        "language": "typescript",
+        "collector": {
+          "name": "fixture",
+          "version": null,
+          "cruised": 0
+        },
+        "git": null,
+        "generated_at": "2026-10-18T00:00:00Z"
+      },
+      "config": {
+        "depth": 1,
+        "source_root": ".",
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "doc": {
+            "version": 1,
+            "modules": [],
+            "layers": [],
+            "public": [],
+            "forbid": [
+              {
+                "id": null,
+                "from": "src/m/*/app/**",
+                "to": "src/m/*/domain/**",
+                "reachable": false,
+                "reason": null
+              },
+              {
+                "id": "app-no-domain",
+                "from": "src/m/a/app/**",
+                "to": "src/m/a/domain/**",
+                "reachable": false,
+                "reason": "apps never reach a domain"
+              }
+            ],
+            "allow": []
+          }
+        }
+      },
+      "files": [
+        {
+          "path": "src/m/a/app/x.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/m/a/domain/d.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/m/b/app/y.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/m/b/domain/e.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/m/c/domain/f.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/shared/id.ts",
+          "module": "src",
+          "barrel": false
+        }
+      ],
+      "edges": [
+        {
+          "from": "src/m/a/app/x.ts",
+          "to": "src/m/a/domain/d.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "forbidden",
+          "rule": "forbid[0]"
+        },
+        {
+          "from": "src/m/b/app/y.ts",
+          "to": "src/shared/id.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "allowed",
+          "rule": "same-module"
+        },
+        {
+          "from": "src/m/b/domain/e.ts",
+          "to": "src/shared/id.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "allowed",
+          "rule": "same-module"
+        },
+        {
+          "from": "src/m/c/domain/f.ts",
+          "to": "src/shared/id.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "allowed",
+          "rule": "same-module"
+        }
+      ],
+      "package_entries": [],
+      "modules": [
+        {
+          "id": "src",
+          "files": 6,
+          "ca": 0,
+          "ce": 0,
+          "instability": null,
+          "internal_edges": 4,
+          "outgoing_edges": 0,
+          "cohesion": 1.0,
+          "outgoing_to": {},
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 4.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "module_edges": [],
+      "cycles": [],
+      "type_only_cycles": [],
+      "summary": {
+        "forbidden": 1,
+        "unplanned": 0,
+        "cycles": 0,
+        "type_only_cycles": 0,
+        "modules": {
+          "src": {
+            "cohesion": 1.0,
+            "ca": 0,
+            "ce": 0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 0.0,
+            "instability": null
+          }
+        }
+      },
+      "findings": [
+        {
+          "finding_id": "ag-cfc9779ed5dc39f11cc7cce79dcc65986a538733e102dcbe63e8db557727d22a",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "cut_import",
+                "file": "src/m/a/app/x.ts",
+                "from": "src/m/a/app/x.ts",
+                "to": "src/m/a/domain/d.ts",
+                "detail": {
+                  "operation": "remove_import",
+                  "target": "src/m/a/domain/d.ts",
+                  "specifier": null,
+                  "edge_kind": "runtime",
+                  "original_to": null
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "absent_edges": [
+                  {
+                    "from": "src/m/a/app/x.ts",
+                    "to": "src/m/a/domain/d.ts"
+                  }
+                ]
+              }
+            },
+            "confidence": "medium",
+            "risk_notes": [
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing."
+            ]
+          },
+          "kind": "forbidden-edge",
+          "subject": "src/m/a/app/x.ts → src/m/a/domain/d.ts",
+          "evidence": {
+            "edge": {
+              "from": "src/m/a/app/x.ts",
+              "to": "src/m/a/domain/d.ts",
+              "kind": "runtime",
+              "weight": 1.0,
+              "verdict": "forbidden",
+              "rule": "forbid[0]"
+            }
+          }
+        },
+        {
+          "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "split_module",
+                "file": "src/m/a/app/x.ts",
+                "from": ".",
+                "to": "",
+                "detail": {
+                  "operation": "group_files",
+                  "groups": [
+                    {
+                      "files": [
+                        "src/m/a/app/x.ts",
+                        "src/m/a/domain/d.ts"
+                      ],
+                      "suggested_module": "split-1"
+                    },
+                    {
+                      "files": [
+                        "src/m/b/app/y.ts",
+                        "src/m/b/domain/e.ts",
+                        "src/m/c/domain/f.ts",
+                        "src/shared/id.ts"
+                      ],
+                      "suggested_module": "split-2"
+                    }
+                  ],
+                  "evidence_source": "structural"
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "findings_absent": [
+                  "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                ]
+              }
+            },
+            "confidence": "low",
+            "risk_notes": [
+              "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+            ]
+          },
+          "kind": "seam",
+          "subject": ".",
+          "evidence": {
+            "modularity": 0.375,
+            "folder_modularity": 0.0,
+            "clusters": [
+              {
+                "files": [
+                  "src/m/a/app/x.ts",
+                  "src/m/a/domain/d.ts"
+                ],
+                "modules": [
+                  "src"
+                ]
+              },
+              {
+                "files": [
+                  "src/m/b/app/y.ts",
+                  "src/m/b/domain/e.ts",
+                  "src/m/c/domain/f.ts",
+                  "src/shared/id.ts"
+                ],
+                "modules": [
+                  "src"
+                ]
+              }
+            ],
+            "hubs": [],
+            "via_barrel": false
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "finding": {
+            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "kind": "small-repo",
+            "subject": ".",
+            "evidence": {
+              "files": 6,
+              "modules": 1
+            }
+          },
+          "reason": "Evidence does not determine a safe, concrete graph edit; inspect its evidence before changing architecture."
+        }
+      ],
+      "cochange": null,
+      "target": {
+        "claims": [
+          {
+            "id": "app-no-domain",
+            "reason": "apps never reach a domain",
+            "source": null,
+            "verdict": "broken",
+            "slices": [
+              {
+                "slice": "*",
+                "files": [
+                  "src/m/a/app/x.ts",
+                  "src/m/a/domain/d.ts"
+                ],
+                "broken": [
+                  {
+                    "from": "src/m/a/app/x.ts",
+                    "to": "src/m/a/domain/d.ts"
+                  }
+                ]
+              }
+            ],
+            "notes": []
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 0,
+            "of": 0
+          }
+        }
+      }
+    },
+    "move": {
+      "file": "src/m/a/app/x.ts",
+      "to": "src/m/a/app/w.ts"
+    },
+    "before": {
+      "cycles": [],
+      "two_way_pairs": [],
+      "target": {
+        "claims": [
+          {
+            "id": "app-no-domain",
+            "verdict": "broken",
+            "slices": [
+              {
+                "slice": "*",
+                "broken": [
+                  {
+                    "from": "src/m/a/app/x.ts",
+                    "to": "src/m/a/domain/d.ts"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 0,
+            "of": 0
+          }
+        }
+      },
+      "largest_cycle": 0,
+      "modules": {
+        "src": {
+          "cohesion": 1.0,
+          "ca": 0,
+          "ce": 0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0,
+          "instability": null
+        }
+      },
+      "forbidden": 1,
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "src/m/a/app/x.ts",
+          "to": "src/m/a/domain/d.ts",
+          "verdict": "forbidden",
+          "rule": "forbid[0]",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/b/app/y.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/b/domain/e.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/c/domain/f.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        }
+      ]
+    },
+    "after": {
+      "cycles": [],
+      "two_way_pairs": [],
+      "target": {
+        "claims": [
+          {
+            "id": "app-no-domain",
+            "verdict": "broken",
+            "slices": [
+              {
+                "slice": "*",
+                "broken": [
+                  {
+                    "from": "src/m/a/app/w.ts",
+                    "to": "src/m/a/domain/d.ts"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 0,
+            "of": 0
+          }
+        }
+      },
+      "largest_cycle": 0,
+      "modules": {
+        "src": {
+          "cohesion": 1.0,
+          "ca": 0,
+          "ce": 0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0,
+          "instability": null
+        }
+      },
+      "forbidden": 1,
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "src/m/a/app/w.ts",
+          "to": "src/m/a/domain/d.ts",
+          "verdict": "forbidden",
+          "rule": "forbid[0]",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/b/app/y.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/b/domain/e.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/m/c/domain/f.ts",
+          "to": "src/shared/id.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        }
+      ]
+    }
+  },
+  {
+    "name": "target-reachable-claim",
+    "document": {
+      "schema": "archgraph/v1.2",
+      "kind": "scan",
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "source": {
+        "language": "typescript",
+        "collector": {
+          "name": "fixture",
+          "version": null,
+          "cruised": 0
+        },
+        "git": null,
+        "generated_at": "2026-10-18T00:00:00Z"
+      },
+      "config": {
+        "depth": 1,
+        "source_root": ".",
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "doc": {
+            "version": 1,
+            "modules": [],
+            "layers": [],
+            "public": [],
+            "forbid": [
+              {
+                "id": "no-server",
+                "from": "app/**",
+                "to": "server/**",
+                "reachable": true,
+                "reason": "clients never reach the server"
+              }
+            ],
+            "allow": []
+          }
+        }
+      },
+      "files": [
+        {
+          "path": "app/client.ts",
+          "module": "app",
+          "barrel": false
+        },
+        {
+          "path": "server/private.ts",
+          "module": "server",
+          "barrel": false
+        },
+        {
+          "path": "shared/bridge.ts",
+          "module": "shared",
+          "barrel": false
+        }
+      ],
+      "edges": [
+        {
+          "from": "app/client.ts",
+          "to": "shared/bridge.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "forbidden",
+          "rule": "no-server"
+        },
+        {
+          "from": "shared/bridge.ts",
+          "to": "server/private.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "unplanned",
+          "rule": "none"
+        }
+      ],
+      "package_entries": [],
+      "modules": [
+        {
+          "id": "app",
+          "files": 1,
+          "ca": 0,
+          "ce": 1,
+          "instability": 1.0,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "cohesion": 0.0,
+          "outgoing_to": {
+            "shared": 1
+          },
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "shared": 1.0
+          }
+        },
+        {
+          "id": "server",
+          "files": 1,
+          "ca": 1,
+          "ce": 0,
+          "instability": 0.0,
+          "internal_edges": 0,
+          "outgoing_edges": 0,
+          "cohesion": null,
+          "outgoing_to": {},
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        },
+        {
+          "id": "shared",
+          "files": 1,
+          "ca": 1,
+          "ce": 1,
+          "instability": 0.5,
+          "internal_edges": 0,
+          "outgoing_edges": 1,
+          "cohesion": 0.0,
+          "outgoing_to": {
+            "server": 1
+          },
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "weighted_internal_edges": 0.0,
+          "weighted_outgoing_edges": 1.0,
+          "weighted_outgoing_to": {
+            "server": 1.0
+          }
+        }
+      ],
+      "module_edges": [
+        {
+          "from": "app",
+          "to": "shared",
+          "imports": 1,
+          "forbidden": 1
+        },
+        {
+          "from": "shared",
+          "to": "server",
+          "imports": 1,
+          "forbidden": 0
+        }
+      ],
+      "cycles": [],
+      "type_only_cycles": [],
+      "summary": {
+        "forbidden": 1,
+        "unplanned": 1,
+        "cycles": 0,
+        "type_only_cycles": 0,
+        "modules": {
+          "app": {
+            "cohesion": 0.0,
+            "ca": 0,
+            "ce": 1,
+            "weighted_ca": 0.0,
+            "weighted_ce": 1.0,
+            "instability": 1.0
+          },
+          "server": {
+            "cohesion": null,
+            "ca": 1,
+            "ce": 0,
+            "weighted_ca": 1.0,
+            "weighted_ce": 0.0,
+            "instability": 0.0
+          },
+          "shared": {
+            "cohesion": 0.0,
+            "ca": 1,
+            "ce": 1,
+            "weighted_ca": 1.0,
+            "weighted_ce": 1.0,
+            "instability": 0.5
+          }
+        }
+      },
+      "findings": [
+        {
+          "finding_id": "ag-aa77352ba99b72fdf67ef192290164f999348a26b4b26cc45585b74e8db7684b",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "cut_import",
+                "file": "app/client.ts",
+                "from": "app/client.ts",
+                "to": "shared/bridge.ts",
+                "detail": {
+                  "operation": "remove_import",
+                  "target": "shared/bridge.ts",
+                  "specifier": null,
+                  "edge_kind": "runtime",
+                  "original_to": null
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "absent_edges": [
+                  {
+                    "from": "app/client.ts",
+                    "to": "shared/bridge.ts"
+                  }
+                ]
+              }
+            },
+            "confidence": "medium",
+            "risk_notes": [
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
+              "Policy reason: clients never reach the server"
+            ]
+          },
+          "kind": "forbidden-edge",
+          "subject": "app/client.ts → shared/bridge.ts",
+          "evidence": {
+            "edge": {
+              "from": "app/client.ts",
+              "to": "shared/bridge.ts",
+              "kind": "runtime",
+              "weight": 1.0,
+              "verdict": "forbidden",
+              "rule": "no-server"
+            }
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "finding": {
+            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "kind": "small-repo",
+            "subject": ".",
+            "evidence": {
+              "files": 3,
+              "modules": 3
+            }
+          },
+          "reason": "Evidence does not determine a safe, concrete graph edit; inspect its evidence before changing architecture."
+        }
+      ],
+      "cochange": null,
+      "target": {
+        "claims": [
+          {
+            "id": "no-server",
+            "reason": "clients never reach the server",
+            "source": null,
+            "verdict": "broken",
+            "slices": [
+              {
+                "slice": "*",
+                "files": [
+                  "app/client.ts",
+                  "server/private.ts"
+                ],
+                "broken": [
+                  {
+                    "from": "app/client.ts",
+                    "to": "shared/bridge.ts"
+                  }
+                ]
+              }
+            ],
+            "notes": []
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 0,
+            "of": 0
+          }
+        }
+      }
+    },
+    "move": {
+      "file": "server/private.ts",
+      "to": "shared/private.ts"
+    },
+    "before": {
+      "cycles": [],
+      "two_way_pairs": [],
+      "target": {
+        "claims": [
+          {
+            "id": "no-server",
+            "verdict": "broken",
+            "slices": [
+              {
+                "slice": "*",
+                "broken": [
+                  {
+                    "from": "app/client.ts",
+                    "to": "shared/bridge.ts"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 0,
+            "of": 0
+          }
+        }
+      },
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "cohesion": 0.0,
+          "ca": 0,
+          "ce": 1,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "instability": 1.0
+        },
+        "server": {
+          "cohesion": null,
+          "ca": 1,
+          "ce": 0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "instability": 0.0
+        },
+        "shared": {
+          "cohesion": 0.0,
+          "ca": 1,
+          "ce": 1,
+          "weighted_ca": 1.0,
+          "weighted_ce": 1.0,
+          "instability": 0.5
+        }
+      },
+      "forbidden": 1,
+      "unplanned": 1,
+      "verdicts": [
+        {
+          "from": "app/client.ts",
+          "to": "shared/bridge.ts",
+          "verdict": "forbidden",
+          "rule": "no-server",
+          "kind": "runtime"
+        },
+        {
+          "from": "shared/bridge.ts",
+          "to": "server/private.ts",
+          "verdict": "unplanned",
+          "rule": "none",
+          "kind": "runtime"
+        }
+      ]
+    },
+    "after": {
+      "cycles": [],
+      "two_way_pairs": [],
+      "target": {
+        "claims": [
+          {
+            "id": "no-server",
+            "verdict": "vacuous",
+            "slices": []
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 0,
+            "of": 0
+          }
+        }
+      },
+      "largest_cycle": 0,
+      "modules": {
+        "app": {
+          "cohesion": 0.0,
+          "ca": 0,
+          "ce": 1,
+          "weighted_ca": 0.0,
+          "weighted_ce": 1.0,
+          "instability": 1.0
+        },
+        "shared": {
+          "cohesion": 1.0,
+          "ca": 1,
+          "ce": 0,
+          "weighted_ca": 1.0,
+          "weighted_ce": 0.0,
+          "instability": 0.0
+        }
+      },
+      "forbidden": 0,
+      "unplanned": 1,
+      "verdicts": [
+        {
+          "from": "app/client.ts",
+          "to": "shared/bridge.ts",
+          "verdict": "unplanned",
+          "rule": "none",
+          "kind": "runtime"
+        },
+        {
+          "from": "shared/bridge.ts",
+          "to": "shared/private.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        }
+      ]
+    }
+  },
+  {
+    "name": "target-package-claim",
+    "document": {
+      "schema": "archgraph/v1.2",
+      "kind": "scan",
+      "tool": {
+        "name": "archgraph",
+        "version": "0.1.0"
+      },
+      "source": {
+        "language": "typescript",
+        "collector": {
+          "name": "fixture",
+          "version": null,
+          "cruised": 0
+        },
+        "git": null,
+        "generated_at": "2026-10-18T00:00:00Z"
+      },
+      "config": {
+        "depth": 1,
+        "source_root": ".",
+        "excludes": [],
+        "include_tests": false,
+        "rules": {
+          "path": "layout.yaml",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "doc": {
+            "version": 1,
+            "modules": [],
+            "layers": [],
+            "public": [],
+            "forbid": [
+              {
+                "id": "no-db",
+                "from": "src/<name>/service.ts",
+                "to": "src/db/**",
+                "reachable": false,
+                "reason": "services reach the database through repositories"
+              },
+              {
+                "id": "no-sql",
+                "from": "src/<name>/service.ts",
+                "to": "src/db/**",
+                "reachable": false,
+                "reason": "services never use SQL"
+              },
+              {
+                "id": "no-sql",
+                "from": "src/<name>/service.ts",
+                "to": "pkg:pg",
+                "reachable": false,
+                "reason": "services never use SQL"
+              }
+            ],
+            "allow": []
+          }
+        }
+      },
+      "files": [
+        {
+          "path": "src/a/service.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/b/service.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/db/q.ts",
+          "module": "src",
+          "barrel": false
+        },
+        {
+          "path": "src/shared/x.ts",
+          "module": "src",
+          "barrel": false
+        }
+      ],
+      "edges": [
+        {
+          "from": "src/a/service.ts",
+          "to": "src/db/q.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "forbidden",
+          "rule": "no-db"
+        },
+        {
+          "from": "src/b/service.ts",
+          "to": "src/shared/x.ts",
+          "kind": "runtime",
+          "weight": 1.0,
+          "verdict": "allowed",
+          "rule": "same-module"
+        }
+      ],
+      "package_entries": [],
+      "modules": [
+        {
+          "id": "src",
+          "files": 4,
+          "ca": 0,
+          "ce": 0,
+          "instability": null,
+          "internal_edges": 2,
+          "outgoing_edges": 0,
+          "cohesion": 1.0,
+          "outgoing_to": {},
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0,
+          "weighted_internal_edges": 2.0,
+          "weighted_outgoing_edges": 0.0,
+          "weighted_outgoing_to": {}
+        }
+      ],
+      "module_edges": [],
+      "cycles": [],
+      "type_only_cycles": [],
+      "imports": [
+        {
+          "from": "src/a/service.ts",
+          "specifier": "src/db/q.ts",
+          "line": null,
+          "kind": "runtime",
+          "targets": [
+            "src/db/q.ts"
+          ]
+        },
+        {
+          "from": "src/b/service.ts",
+          "specifier": "src/shared/x.ts",
+          "line": null,
+          "kind": "runtime",
+          "targets": [
+            "src/shared/x.ts"
+          ]
+        }
+      ],
+      "import_resolution": {
+        "imports": 2,
+        "resolved": 2,
+        "unresolved": 0,
+        "resolved_percent": 100.0
+      },
+      "external_exposure": {
+        "threshold_percent": 80.0,
+        "modules": [
+          {
+            "module": "src",
+            "imports": 2,
+            "external_imports": 0,
+            "external_packages": 0,
+            "external_weight": 0.0,
+            "total_weight": 2.0,
+            "external_percent": 0.0,
+            "weighted_external_percent": 0.0,
+            "unresolved_imports": 0,
+            "exceeds_threshold": false,
+            "packages": []
+          }
+        ]
+      },
+      "summary": {
+        "forbidden": 1,
+        "unplanned": 0,
+        "cycles": 0,
+        "type_only_cycles": 0,
+        "modules": {
+          "src": {
+            "cohesion": 1.0,
+            "ca": 0,
+            "ce": 0,
+            "weighted_ca": 0.0,
+            "weighted_ce": 0.0,
+            "instability": null
+          }
+        }
+      },
+      "findings": [
+        {
+          "finding_id": "ag-8826a9a089a62a6916184dfc89bddb59ab1b1b23a83a56914b7166cba1b0d922",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "cut_import",
+                "file": "src/a/service.ts",
+                "from": "src/a/service.ts",
+                "to": "src/db/q.ts",
+                "detail": {
+                  "operation": "remove_import",
+                  "target": "src/db/q.ts",
+                  "specifier": "src/db/q.ts",
+                  "edge_kind": "runtime",
+                  "original_to": null
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "absent_edges": [
+                  {
+                    "from": "src/a/service.ts",
+                    "to": "src/db/q.ts"
+                  }
+                ]
+              }
+            },
+            "confidence": "medium",
+            "risk_notes": [
+              "Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.",
+              "Policy reason: services reach the database through repositories"
+            ]
+          },
+          "kind": "forbidden-edge",
+          "subject": "src/a/service.ts → src/db/q.ts",
+          "evidence": {
+            "edge": {
+              "from": "src/a/service.ts",
+              "to": "src/db/q.ts",
+              "kind": "runtime",
+              "weight": 1.0,
+              "verdict": "forbidden",
+              "rule": "no-db"
+            }
+          }
+        },
+        {
+          "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+          "recipe": {
+            "steps": [
+              {
+                "kind": "split_module",
+                "file": "src/a/service.ts",
+                "from": ".",
+                "to": "",
+                "detail": {
+                  "operation": "group_files",
+                  "groups": [
+                    {
+                      "files": [
+                        "src/a/service.ts",
+                        "src/db/q.ts"
+                      ],
+                      "suggested_module": "split-1"
+                    },
+                    {
+                      "files": [
+                        "src/b/service.ts",
+                        "src/shared/x.ts"
+                      ],
+                      "suggested_module": "split-2"
+                    }
+                  ],
+                  "evidence_source": "structural"
+                },
+                "mechanical": false
+              }
+            ],
+            "expected": {
+              "pairs_removed": null,
+              "cycle_size_after": null,
+              "new_cycles": null,
+              "instability_delta": {}
+            },
+            "verify": {
+              "predicate": "recipe_deltas_match && all(structured)",
+              "structured": {
+                "findings_absent": [
+                  "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                ]
+              }
+            },
+            "confidence": "low",
+            "risk_notes": [
+              "Groups use structural evidence. Choose meaningful folders and update their consumers; no numerical delta is promised before destinations are chosen."
+            ]
+          },
+          "kind": "seam",
+          "subject": ".",
+          "evidence": {
+            "modularity": 0.5,
+            "folder_modularity": 0.0,
+            "clusters": [
+              {
+                "files": [
+                  "src/a/service.ts",
+                  "src/db/q.ts"
+                ],
+                "modules": [
+                  "src"
+                ]
+              },
+              {
+                "files": [
+                  "src/b/service.ts",
+                  "src/shared/x.ts"
+                ],
+                "modules": [
+                  "src"
+                ]
+              }
+            ],
+            "hubs": [],
+            "via_barrel": false
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "finding": {
+            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "kind": "small-repo",
+            "subject": ".",
+            "evidence": {
+              "files": 4,
+              "modules": 1
+            }
+          },
+          "reason": "Evidence does not determine a safe, concrete graph edit; inspect its evidence before changing architecture."
+        }
+      ],
+      "cochange": null,
+      "target": {
+        "claims": [
+          {
+            "id": "no-db",
+            "reason": "services reach the database through repositories",
+            "source": null,
+            "verdict": "holds_in",
+            "slices": [
+              {
+                "slice": "a",
+                "files": [
+                  "src/a/service.ts",
+                  "src/db/q.ts"
+                ],
+                "broken": [
+                  {
+                    "from": "src/a/service.ts",
+                    "to": "src/db/q.ts"
+                  }
+                ]
+              },
+              {
+                "slice": "b",
+                "files": [
+                  "src/b/service.ts",
+                  "src/db/q.ts"
+                ],
+                "broken": []
+              }
+            ],
+            "notes": []
+          },
+          {
+            "id": "no-sql",
+            "reason": "services never use SQL",
+            "source": null,
+            "verdict": "holds_in",
+            "slices": [
+              {
+                "slice": "a",
+                "files": [
+                  "src/a/service.ts",
+                  "src/db/q.ts"
+                ],
+                "broken": [
+                  {
+                    "from": "src/a/service.ts",
+                    "to": "src/db/q.ts"
+                  }
+                ]
+              },
+              {
+                "slice": "b",
+                "files": [
+                  "src/b/service.ts",
+                  "src/db/q.ts"
+                ],
+                "broken": []
+              }
+            ],
+            "notes": [
+              "forbid[2] `to` matches no file"
+            ]
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "done": 1,
+            "of": 2
+          }
+        }
+      }
+    },
+    "move": {
+      "file": "src/b/service.ts",
+      "to": "src/b/svc/service.ts"
+    },
+    "before": {
+      "cycles": [],
+      "two_way_pairs": [],
+      "target": {
+        "claims": [
+          {
+            "id": "no-db",
+            "verdict": "holds_in",
+            "slices": [
+              {
+                "slice": "a",
+                "broken": [
+                  {
+                    "from": "src/a/service.ts",
+                    "to": "src/db/q.ts"
+                  }
+                ]
+              },
+              {
+                "slice": "b",
+                "broken": []
+              }
+            ]
+          },
+          {
+            "id": "no-sql",
+            "preview": false
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "preview": false
+          }
+        }
+      },
+      "largest_cycle": 0,
+      "modules": {
+        "src": {
+          "cohesion": 1.0,
+          "ca": 0,
+          "ce": 0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0,
+          "instability": null
+        }
+      },
+      "forbidden": 1,
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "src/a/service.ts",
+          "to": "src/db/q.ts",
+          "verdict": "forbidden",
+          "rule": "no-db",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/b/service.ts",
+          "to": "src/shared/x.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        }
+      ]
+    },
+    "after": {
+      "cycles": [],
+      "two_way_pairs": [],
+      "target": {
+        "claims": [
+          {
+            "id": "no-db",
+            "verdict": "broken",
+            "slices": [
+              {
+                "slice": "a",
+                "broken": [
+                  {
+                    "from": "src/a/service.ts",
+                    "to": "src/db/q.ts"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "no-sql",
+            "preview": false
+          }
+        ],
+        "progress": {
+          "conforming": {
+            "preview": false
+          }
+        }
+      },
+      "largest_cycle": 0,
+      "modules": {
+        "src": {
+          "cohesion": 1.0,
+          "ca": 0,
+          "ce": 0,
+          "weighted_ca": 0.0,
+          "weighted_ce": 0.0,
+          "instability": null
+        }
+      },
+      "forbidden": 1,
+      "unplanned": 0,
+      "verdicts": [
+        {
+          "from": "src/a/service.ts",
+          "to": "src/db/q.ts",
+          "verdict": "forbidden",
+          "rule": "no-db",
+          "kind": "runtime"
+        },
+        {
+          "from": "src/b/svc/service.ts",
+          "to": "src/shared/x.ts",
+          "verdict": "allowed",
+          "rule": "same-module",
+          "kind": "runtime"
+        }
+      ]
+    },
+    "warnings": [
+      "Internal-only preview: external dependency policy verdicts and exposure are not recomputed. Run archgraph simulate for authoritative results."
+    ]
   },
   {
     "name": "test-class-survives-rename",
@@ -7502,6 +9562,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -7551,6 +9612,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "a": {
@@ -7771,6 +9833,7 @@
     "before": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "app": {
@@ -7812,6 +9875,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "app": {
@@ -8340,6 +10404,7 @@
           "domain"
         ]
       ],
+      "target": null,
       "largest_cycle": 2,
       "modules": {
         "app": {
@@ -8411,6 +10476,7 @@
         }
       ],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "app": {
@@ -8985,6 +11051,7 @@
           "utils"
         ]
       ],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "app": {
@@ -9101,6 +11168,7 @@
     "after": {
       "cycles": [],
       "two_way_pairs": [],
+      "target": null,
       "largest_cycle": 0,
       "modules": {
         "app": {

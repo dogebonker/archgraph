@@ -290,6 +290,16 @@ function whatifShow() {
     const changed = [...new Set([...Object.keys(before.modules), ...Object.keys(after.modules)])].filter(id => JSON.stringify(before.modules[id]) !== JSON.stringify(after.modules[id]));
     const metrics = changed.slice(0, 12).map(id => [id, before.modules[id]?.instability ?? null, after.modules[id]?.instability ?? null]);
     if (metrics.length) whatifUI.result.append(whatifDetails(`Instability · ${count(changed.length, "module", "modules")} changed`, "", whatifTable(metrics, false)));
+    if (doc.target && after.target) {
+      // Live verdicts and progress; reasons, sources, the move cost and what the preview cannot recompute come from the scan.
+      const scan = new Map(doc.target.claims.map(c => [c.id, c])), box = el("div"), { conforming, moved } = after.target.progress;
+      targetContext({ ...doc.target, claims: after.target.claims.map(c => c.preview === false
+        ? { ...scan.get(c.id), notes: ["package rules are not previewed"] }
+        : { ...c, reason: scan.get(c.id).reason, source: scan.get(c.id).source, notes: [] }),
+      progress: { conforming: conforming.preview === false ? { ...doc.target.progress.conforming, preview: false } : conforming, ...(moved && { moved }) },
+      notes: [] }, box, doc.target.progress);
+      whatifUI.result.append(box);
+    }
     whatifUI.commands.hidden = false; whatifCommands();
     const text = `Preview: ${count(after.cycles.length, "cycle", "cycles")}, ${count(after.forbidden, "forbidden import", "forbidden imports")}. Original report retained; Rust verification required.`;
     $("stats").replaceChildren(el("span", {}, text)); $("stats-text").textContent = text;

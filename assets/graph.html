@@ -4008,43 +4008,46 @@ function targetMoves(m) {
 }
 const moveSel = m => ({ ...targetSel("Pending move", m.slice, m.files.map(f => f.file), m.new_cycles || [], () => [el("p", {}, moveCost(m)), ...moveRows(m)]),
   moves: targetMoves(m) });
-/* An expandable row whose inside opens with a button selecting it on the map. */
+/* An expandable row whose inside opens with a button selecting it on the map, when `sel` is given. */
 function targetRow(title, sel, rows) {
   const detail = el("details", { class: "kind" });
   detail.append(el("summary", {}, title));
   detail.addEventListener("toggle", () => {
     if (!detail.open || detail.childNodes.length > 1) return;
     const inner = el("div", { class: "inner" }), acts = el("div", { class: "actions" });
-    acts.append(btn("Show on map", "act", () => go(sel())));
-    inner.append(acts, ...rows());
+    if (sel) { acts.append(btn("Show on map", "act", () => go(sel()))); inner.append(acts); }
+    inner.append(...rows());
     detail.append(inner);
   });
   return detail;
 }
-function targetContext() {
-  const target = doc.target;
+/* `was`, the scan's progress, marks a what-if preview: counts say what they were, and nothing selects, since selection
+   is off while previewing. */
+function targetContext(target = doc.target, out = panel, was) {
   if (!target) return;
-  panel.append(el("h3", {}, "Target"));
+  out.append(el("h3", {}, "Target"));
   for (const claim of target.claims) {
-    panel.append(el("p", {}, `${claim.id}: ${claimVerdict(claim)}`), el("p", { class: "muted" }, claim.reason + (claim.source ? ` (${claim.source})` : "")));
-    for (const note of claim.notes) panel.append(el("p", { class: "note" }, note));
+    out.append(el("p", {}, `${claim.id}: ${claimVerdict(claim)}`), el("p", { class: "muted" }, claim.reason + (claim.source ? ` (${claim.source})` : "")));
+    for (const note of claim.notes) out.append(el("p", { class: "note" }, note));
     const broken = claim.slices.filter(s => s.broken.length);
     if (!broken.length) continue;
     const list = el("div", { class: "kinds" });
     for (const slice of broken) list.append(targetRow(`${slice.slice}: ${count(slice.broken.length, "broken import", "broken imports")}`,
-      () => sliceSel(claim, slice), () => [linkRows(slice.broken)]));
-    panel.append(list);
+      !was && (() => sliceSel(claim, slice)), () => [linkRows(slice.broken)]));
+    out.append(list);
   }
   const { conforming, moved } = target.progress;
-  panel.append(el("p", {}, `${conforming.done} of ${conforming.of} slices conform` + (moved ? `; ${moved.done} of ${moved.of} slices moved` : "") + "."));
+  const progress = (c, old, what) => `${c.done} of ${c.of} slices ${what}` + (c.preview === false ? " (not previewed)"
+    : old && (old.done !== c.done || old.of !== c.of) ? ` (was ${old.done} of ${old.of})` : "");
+  out.append(el("p", {}, progress(conforming, was?.conforming, "conform") + (moved ? "; " + progress(moved, was?.moved, "moved") : "") + "."));
   const pending = (target.moves || []).filter(m => m.files.length);
   if (pending.length) {
-    panel.append(el("h3", {}, "Move cost"));
+    out.append(el("h3", {}, was ? "Move cost, from the scan (not previewed)" : "Move cost"));
     const list = el("div", { class: "kinds" });
-    for (const m of pending) list.append(targetRow(`${m.slice} · ${moveCost(m)}`, () => moveSel(m), () => moveRows(m)));
-    panel.append(list);
+    for (const m of pending) list.append(targetRow(`${m.slice} · ${moveCost(m)}`, !was && (() => moveSel(m)), () => moveRows(m)));
+    out.append(list);
   }
-  for (const note of target.notes || []) panel.append(el("p", { class: "note" }, note));
+  for (const note of target.notes || []) out.append(el("p", { class: "note" }, note));
 }
 function targetPanel(t) {
   head(t.kind, t.title);

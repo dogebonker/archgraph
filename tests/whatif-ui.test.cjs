@@ -190,3 +190,35 @@ test('a claims-only layout leaves an import no rule decides neutral in the previ
   assert.equal(s.context.whatifResult.after.unplanned, 1);
   assert.deepEqual(Array.from(s.run('whatifDrawing.files'), f => f.tone), ['neutral', 'neutral']);
 });
+
+test('a target layout preview shows live claim verdicts and slice progress against the scan', () => {
+  const fixture = fixtures.find(f => f.name === 'target-layout'), s = setup(fixture.name), calls = [];
+  const plain = value => JSON.parse(JSON.stringify(value));
+  s.context.targetContext = (...args) => calls.push(args);
+  s.$('whatif-file').value = fixture.move.file; s.$('whatif-folder').value = path.posix.dirname(fixture.move.to); s.run('runWhatif()');
+  assert.equal(calls.length, 1);
+  const [target, box, was] = calls[0];
+  assert.deepEqual(plain(target.claims), [{ id: 'layered', reason: 'Handlers reach storage through services.', source: 'docs/adr/ADR-0003.md',
+    verdict: 'holds_in', notes: [], slices: [
+      { slice: 'a', broken: [{ from: 'src/app/a/handler/handler.ts', to: 'src/a/repo.ts' }] },
+      { slice: 'b', broken: [] }] }]);
+  assert.deepEqual(plain(target.progress), { conforming: { done: 1, of: 2 }, moved: { done: 2, of: 3 } });
+  assert.deepEqual(plain(target.notes), []);
+  assert.equal(target.moves, s.doc.target.moves, 'move cost stays the scan\'s');
+  assert.equal(was, s.doc.target.progress);
+  assert.deepEqual(plain(was), { conforming: { done: 1, of: 2 }, moved: { done: 1, of: 3 } });
+  assert(s.$('whatif-result').childNodes.includes(box));
+});
+
+test('a claim with a package rule keeps its scan verdict in the preview, and so does the conforming count', () => {
+  const fixture = fixtures.find(f => f.name === 'target-package-claim'), s = setup(fixture.name), calls = [];
+  const plain = value => JSON.parse(JSON.stringify(value));
+  s.context.targetContext = (...args) => calls.push(args);
+  s.$('whatif-file').value = fixture.move.file; s.$('whatif-folder').value = path.posix.dirname(fixture.move.to); s.run('runWhatif()');
+  const [target, , was] = calls[0];
+  assert.deepEqual(plain(target.claims.map(c => [c.id, c.verdict, c.notes])),
+    [['no-db', 'broken', []], ['no-sql', 'holds_in', ['package rules are not previewed']]]);
+  assert.deepEqual(plain(target.claims[1].slices.map(s => s.slice)), ['a', 'b']);
+  assert.deepEqual(plain(target.progress), { conforming: { done: 1, of: 2, preview: false } });
+  assert.deepEqual(plain(was), { conforming: { done: 1, of: 2 } });
+});
