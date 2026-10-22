@@ -390,6 +390,14 @@ pub fn plan(root: &Path, before: &Document, finding_id: &str) -> Result<Plan> {
         if from == edge.from && to == physical {
             continue;
         }
+        // A host global use has no import to rewrite.
+        if before
+            .external_nodes
+            .iter()
+            .any(|node| node.id == physical && node.global)
+        {
+            continue;
+        }
         if matches!(before.source.language, Language::Elixir | Language::Go) {
             continue;
         }

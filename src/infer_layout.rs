@@ -699,7 +699,7 @@ mod tests {
                 .iter()
                 .map(|f| (f.path.clone(), f.module.clone()))
                 .collect(),
-            &[("external:typescript:prisma".into(), "prisma".into())]
+            &[("external:typescript:prisma".into(), "pkg:prisma".into())]
                 .into_iter()
                 .collect(),
         );

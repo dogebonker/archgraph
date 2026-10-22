@@ -616,8 +616,11 @@ impl Compiled {
             id.clone().unwrap_or_else(|| format!("{kind}[{i}]"))
         };
         let pair = |from: &str, to: &str| -> Result<Pattern> {
-            if from.starts_with("pkg:") || from.starts_with("category:") {
-                bail!("package selectors are supported only as rule targets (`to`)");
+            if ["pkg:", "category:", "global:"]
+                .iter()
+                .any(|prefix| from.starts_with(prefix))
+            {
+                bail!("package and global selectors are supported only as rule targets (`to`)");
             }
             let from = Pattern::new(from)?;
             from.check_template(to)?;
@@ -633,6 +636,11 @@ impl Compiled {
                     bail!("pkg: requires a package glob");
                 }
                 glob(&from.instance(package, Some("x")))?;
+            } else if let Some(name) = to.strip_prefix("global:") {
+                if name.is_empty() || !captures(to)?.is_empty() {
+                    bail!("global: requires a name glob without captures");
+                }
+                glob(name)?;
             } else {
                 glob(&from.instance(to, Some("x")))?;
             }
@@ -647,8 +655,11 @@ impl Compiled {
         }
         let mut moves = Vec::new();
         for (i, m) in rules.moves.iter().enumerate() {
-            if m.from.starts_with("pkg:") || m.from.starts_with("category:") {
-                bail!("moves[{i}].from must be a file glob, not a package selector");
+            if ["pkg:", "category:", "global:"]
+                .iter()
+                .any(|prefix| m.from.starts_with(prefix))
+            {
+                bail!("moves[{i}].from must be a file glob, not a package or global selector");
             }
             let from = Pattern::new(&m.from).with_context(|| format!("moves[{i}].from"))?;
             from.check_template(&m.to)
@@ -877,7 +888,11 @@ impl Compiled {
         paths: &[String],
     ) -> Result<BTreeMap<Option<String>, Vec<String>>> {
         let target = to
-            .filter(|to| !to.starts_with("pkg:") && !to.starts_with("category:"))
+            .filter(|to| {
+                !to.starts_with("pkg:")
+                    && !to.starts_with("category:")
+                    && !to.starts_with("global:")
+            })
             .map(Pattern::new)
             .transpose()?;
         let mut matches: BTreeMap<Option<String>, Vec<String>> = BTreeMap::new();
@@ -1010,7 +1025,18 @@ impl Compiled {
         out
     }
 
-    /// Whether `target` (a file, or an external node by its package) matches `selector`.
+    /// Whether a `global:` target of `forbid` or `allow` names the host global `name`.
+    pub fn names_global(&self, name: &str) -> bool {
+        self.forbid
+            .iter()
+            .map(|f| &f.2)
+            .chain(self.allow.iter().map(|a| &a.2))
+            .filter_map(|to| to.strip_prefix("global:"))
+            .any(|pattern| self.bound_match(pattern, name))
+    }
+
+    /// Whether `target` (a file, or an external node by its policy name, `pkg:<package>` or
+    /// `global:<name>`) matches `selector`.
     fn matches_target(
         &self,
         externals: &BTreeMap<String, String>,
@@ -1018,13 +1044,19 @@ impl Compiled {
         target: &str,
     ) -> bool {
         match externals.get(target) {
-            Some(package) => {
+            Some(name) => {
+                let package = name.strip_prefix("pkg:");
                 if let Some(pattern) = selector.strip_prefix("pkg:") {
-                    self.bound_match(pattern, package)
+                    package.is_some_and(|package| self.bound_match(pattern, package))
                 } else if let Some(category) = selector.strip_prefix("category:") {
-                    self.categories
-                        .get(category)
-                        .is_some_and(|patterns| patterns.iter().any(|p| p.is_match(package)))
+                    package.is_some_and(|package| {
+                        self.categories
+                            .get(category)
+                            .is_some_and(|patterns| patterns.iter().any(|p| p.is_match(package)))
+                    })
+                } else if let Some(pattern) = selector.strip_prefix("global:") {
+                    name.strip_prefix("global:")
+                        .is_some_and(|global| self.bound_match(pattern, global))
                 } else {
                     false
                 }
@@ -1032,6 +1064,7 @@ impl Compiled {
             None => {
                 !selector.starts_with("pkg:")
                     && !selector.starts_with("category:")
+                    && !selector.starts_with("global:")
                     && self.bound_match(selector, target)
             }
         }

@@ -96,6 +96,12 @@ test('external dots are visible without drawing every package link; selected pac
   assert.ok(calls.some(call => call[0] === 'fillText' && call[1] === 'pkg:typeorm'));
   assert.equal(context.ctx.textAlign, 'start', 'the centred package label must not leak into later labels');
 });
+test('a host global is labelled global:<name>, a package pkg:<name>', () => {
+  const globalNode = { id: 'external:typescript:global:process', external: true, package: 'process', global: true };
+  const { run, calls } = setup({ external_nodes: [packageNode, globalNode] });
+  for (const node of [globalNode, packageNode]) run(`externalPanel(externalById.get(${JSON.stringify(node.id)}))`);
+  assert.deepEqual(calls.filter(call => call[0] === 'External package').map(call => call[1]), ['global:process', 'pkg:typeorm']);
+});
 test('ring integrates camera bounds, hit testing, search, selection and module context', () => {
   for (const [start, end, expected] of [
     ['function extent()', '/* Past the extent', /externalPositions/],

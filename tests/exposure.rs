@@ -222,6 +222,10 @@ fn category_and_threshold_validation_and_capture_binding() {
         json!({"version":1,"external_exposure":{"max_percent":101}}),
         json!({"version":1,"forbid":[{"from":"src/<x>/**","to":"category:<x>"}]}),
         json!({"version":1,"forbid":[{"from":"**","to":"pkg:"}]}),
+        json!({"version":1,"forbid":[{"from":"**","to":"global:"}]}),
+        json!({"version":1,"allow":[{"from":"global:process","to":"**"}]}),
+        json!({"version":1,"forbid":[{"from":"src/<x>/**","to":"global:<x>"}]}),
+        json!({"version":1,"moves":[{"from":"global:process","to":"src/a/"}]}),
     ] {
         assert!(rules::Compiled::new(&serde_json::from_value(layout).unwrap()).is_err());
     }
@@ -325,6 +329,26 @@ fn absent_policy_has_no_verdict_and_package_like_file_names_are_not_external() {
         ]),
     );
     assert_eq!(edges[0].verdict, Some(Verdict::Unplanned));
+    let compiled = rules::Compiled::new(
+        &serde_json::from_value(
+            json!({"version":1,"forbid":[{"from":"**","to":"global:process"}]}),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let mut edges = vec![Edge {
+        from: "src/domain/a.ts".into(),
+        to: "global:process".into(),
+        ..Default::default()
+    }];
+    compiled.decide(
+        &mut edges,
+        &std::collections::BTreeMap::from([
+            ("src/domain/a.ts".into(), "domain".into()),
+            ("global:process".into(), "elsewhere".into()),
+        ]),
+    );
+    assert_eq!(edges[0].verdict, Some(Verdict::Unplanned));
 }
 
 #[test]
@@ -409,6 +433,15 @@ fn external_ids_cannot_spoof_ordinary_file_policy_targets_or_move_destinations()
     );
     let mut saved = serde_json::to_value(&doc).unwrap();
     saved["files"].as_array_mut().unwrap().push(json!({"path":"external:typescript:typeorm","module":"external:typescript:typeorm","barrel":false}));
+    assert!(
+        archgraph::validate_scan(&serde_json::from_value(saved).unwrap())
+            .unwrap_err()
+            .to_string()
+            .contains("collides")
+    );
+    let mut saved = serde_json::to_value(&doc).unwrap();
+    saved["globals"] = json!([{"from":"src/domain/a.ts","name":"process","line":1}]);
+    saved["files"].as_array_mut().unwrap().push(json!({"path":"external:typescript:global:process","module":"external:typescript:global:process","barrel":false}));
     assert!(
         archgraph::validate_scan(&serde_json::from_value(saved).unwrap())
             .unwrap_err()

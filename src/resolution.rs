@@ -1,5 +1,5 @@
 //! Explicit import accounting is independent of the internal symbol-reference graph.
-use crate::model::{Document, Edge, ExternalNode, ImportResolution};
+use crate::model::{Document, Edge, EdgeKind, ExternalNode, ImportResolution};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub fn attach(doc: &mut Document) {
@@ -22,14 +22,28 @@ pub fn attach(doc: &mut Document) {
     doc.external_exposure = crate::exposure::report(doc);
 }
 
-/// Build package identities and deduplicated edges before applying policy.
+/// Build package identities and deduplicated edges before applying policy. A host global becomes
+/// a node and a runtime edge only when a `global:` rule names it, so other layouts keep their
+/// verdicts.
 pub fn external_graph(
     source: &crate::model::Source,
     config: &crate::model::Config,
+    rules: Option<&crate::rules::Compiled>,
 ) -> (Vec<ExternalNode>, Vec<Edge>) {
     let mut packages = BTreeMap::new();
+    let mut globals = BTreeMap::new();
     let mut edges = BTreeSet::new();
     let mut external_edges = Vec::new();
+    let weight = |kind| {
+        Some(
+            config
+                .rules
+                .as_ref()
+                .and_then(|r| r.doc.edge_weights)
+                .unwrap_or_default()
+                .weight(kind),
+        )
+    };
     for import in config.import_records.iter().flatten() {
         if let Some(package) = &import.external {
             let id = external_id(source.language, package);
@@ -41,28 +55,55 @@ pub fn external_graph(
                     kind: import.kind,
                     specifier: Some(import.specifier.clone()),
                     line: import.line,
-                    weight: Some(
-                        config
-                            .rules
-                            .as_ref()
-                            .and_then(|r| r.doc.edge_weights)
-                            .unwrap_or_default()
-                            .weight(import.kind),
-                    ),
+                    weight: weight(import.kind),
                     ..Default::default()
                 });
             }
         }
     }
-    let external_nodes = packages
-        .into_iter()
-        .map(|(package, id)| ExternalNode {
+    for global in config.globals.iter().flatten() {
+        if !rules.is_some_and(|r| r.names_global(&global.name)) {
+            continue;
+        }
+        let id = global_id(source.language, &global.name);
+        globals.insert(global.name.clone(), id.clone());
+        if edges.insert((global.from.clone(), id.clone(), EdgeKind::Static)) {
+            external_edges.push(Edge {
+                from: global.from.clone(),
+                to: id,
+                kind: EdgeKind::Static,
+                specifier: Some(global.name.clone()),
+                line: Some(global.line),
+                weight: weight(EdgeKind::Static),
+                ..Default::default()
+            });
+        }
+    }
+    let node = |global: bool| {
+        move |(package, id)| ExternalNode {
             id,
             external: true,
             package,
-        })
+            global,
+        }
+    };
+    let external_nodes = packages
+        .into_iter()
+        .map(node(false))
+        .chain(globals.into_iter().map(node(true)))
         .collect();
     (external_nodes, external_edges)
+}
+
+/// The external nodes by id, named as rules select them: `pkg:<package>` or `global:<name>`.
+pub fn policy_names(nodes: &[ExternalNode]) -> BTreeMap<String, String> {
+    nodes
+        .iter()
+        .map(|n| {
+            let prefix = if n.global { "global" } else { "pkg" };
+            (n.id.clone(), format!("{prefix}:{}", n.package))
+        })
+        .collect()
 }
 
 pub fn validate(
@@ -122,20 +163,27 @@ pub fn validate(
     Ok(())
 }
 
-/// Explicit package policy cannot produce an authoritative verdict without collector accounting.
+/// Explicit package or global policy cannot produce an authoritative verdict without collector
+/// accounting.
 pub fn require_policy_accounting(config: &crate::model::Config) -> anyhow::Result<()> {
-    if config.import_records.is_none()
-        && config.rules.as_ref().is_some_and(|r| {
+    let names = |prefixes: &[&str]| {
+        config.rules.as_ref().is_some_and(|r| {
             r.doc
                 .forbid
                 .iter()
                 .map(|r| &r.to)
                 .chain(r.doc.allow.iter().map(|r| &r.to))
-                .any(|to| to.starts_with("pkg:") || to.starts_with("category:"))
+                .any(|to| prefixes.iter().any(|p| to.starts_with(p)))
         })
-    {
+    };
+    if config.import_records.is_none() && names(&["pkg:", "category:"]) {
         anyhow::bail!(
             "package rules require import accounting; rescan with a collector that records external imports"
+        );
+    }
+    if config.globals.is_none() && names(&["global:"]) {
+        anyhow::bail!(
+            "global rules require a native JavaScript/TypeScript scan, rescan with --engine native"
         );
     }
     Ok(())
@@ -148,10 +196,15 @@ fn external_id(language: crate::model::Language, package: &str) -> String {
     )
 }
 
-/// File identities and derived package identities must remain disjoint.
+fn global_id(language: crate::model::Language, name: &str) -> String {
+    external_id(language, &format!("global:{name}"))
+}
+
+/// File identities and derived package and global identities must remain disjoint.
 pub fn validate_external_identities(
     source: &crate::model::Source,
     imports: Option<&[crate::model::ImportRecord]>,
+    globals: Option<&[crate::model::GlobalUse]>,
     files: &[crate::model::File],
 ) -> anyhow::Result<()> {
     let packages: BTreeSet<_> = imports
@@ -159,6 +212,12 @@ pub fn validate_external_identities(
         .flatten()
         .filter_map(|record| record.external.as_ref())
         .map(|package| external_id(source.language, package))
+        .chain(
+            globals
+                .into_iter()
+                .flatten()
+                .map(|global| global_id(source.language, &global.name)),
+        )
         .collect();
     if let Some(file) = files.iter().find(|file| packages.contains(&file.path)) {
         anyhow::bail!(

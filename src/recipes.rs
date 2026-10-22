@@ -337,7 +337,7 @@ fn move_step(m: &Move) -> Step {
 fn external_matches(doc: &Document, id: &str, package: &str) -> bool {
     doc.external_nodes
         .iter()
-        .any(|n| n.id == id && n.package == package)
+        .any(|n| n.id == id && n.package == package && !n.global)
 }
 fn cut_step(doc: &Document, e: &Edge) -> Step {
     let records: Vec<_> = doc

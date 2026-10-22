@@ -177,11 +177,7 @@ pub fn analyze(doc: &Document, rules: &Compiled) -> Option<Report> {
     }
     let files: Vec<&str> = doc.files.iter().map(|f| f.path.as_str()).collect();
     let edges: Vec<&Edge> = doc.edges.iter().chain(&doc.external_edges).collect();
-    let externals = doc
-        .external_nodes
-        .iter()
-        .map(|n| (n.id.clone(), n.package.clone()))
-        .collect();
+    let externals = crate::resolution::policy_names(&doc.external_nodes);
     let evidence = rules.forbid_slices(&files, &edges, &externals);
     let pairs = doc.cochange.as_ref().map_or(&[][..], |c| &c.pairs[..]);
     let links: HashSet<(&str, &str)> = doc

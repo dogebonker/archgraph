@@ -135,11 +135,9 @@ fn summary(
     } else {
         out += "  import resolution accounting unavailable in this recording; rescan with the live collector\n";
     }
-    if !doc.external_nodes.is_empty() {
-        out += &format!(
-            "  {} known external packages (outside internal metrics)\n",
-            doc.external_nodes.len()
-        );
+    let packages = doc.external_nodes.iter().filter(|n| !n.global).count();
+    if packages > 0 {
+        out += &format!("  {packages} known external packages (outside internal metrics)\n");
     }
     if let Some(coverage) = &doc.test_coverage {
         out += &format!(

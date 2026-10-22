@@ -89,16 +89,14 @@ pub fn load(rules: &Path) -> Result<Option<File>> {
     }))
 }
 
-/// `path` as `check` prints a target: `pkg:<package>` for a known external.
+/// `path` as `check` prints a target: `pkg:<package>` or `global:<name>` for a known external.
 pub fn policy_target(doc: &Document, path: &str) -> String {
     target(&doc.external_nodes, path)
 }
 
 fn target(externals: &[ExternalNode], path: &str) -> String {
-    externals
-        .iter()
-        .find(|node| node.id == path)
-        .map(|node| format!("pkg:{}", node.package))
+    crate::resolution::policy_names(externals)
+        .remove(path)
         .unwrap_or_else(|| path.to_owned())
 }
 

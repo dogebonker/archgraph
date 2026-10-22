@@ -2000,6 +2000,10 @@
               "package": {
                 "type": "string",
                 "minLength": 1
+              },
+              "global": {
+                "description": "A host global a global: rule names; package then holds the global's name.",
+                "const": true
               }
             }
           }
@@ -2655,7 +2659,7 @@
               "to": {
                 "type": "string",
                 "minLength": 1,
-                "description": "Internal file glob, pkg:<package glob>, or category:<declared category>. Package selectors match known external identities only."
+                "description": "Internal file glob, pkg:<package glob>, category:<declared category>, or global:<host global glob>. Package and global selectors match known external identities only."
               },
               "reachable": {
                 "type": "boolean"
@@ -2703,7 +2707,7 @@
               "to": {
                 "type": "string",
                 "minLength": 1,
-                "description": "Internal file glob, pkg:<package glob>, or category:<declared category>. Package selectors match known external identities only."
+                "description": "Internal file glob, pkg:<package glob>, category:<declared category>, or global:<host global glob>. Package and global selectors match known external identities only."
               },
               "reason": {
                 "type": [

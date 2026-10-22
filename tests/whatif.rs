@@ -68,13 +68,15 @@ fn projection(doc: &Document) -> Value {
         )
     });
     // The target as the preview recomputes it: verdicts and broken imports per slice, progress.
-    // The preview matches no package, so a claim with a `pkg:` or `category:` rule, and the
-    // conforming count it feeds, are not previewed.
+    // The preview matches no package or global, so a claim with a `pkg:`, `category:` or
+    // `global:` rule, and the conforming count it feeds, are not previewed.
     let packaged = |id: &str| {
         doc.config.rules.as_ref().is_some_and(|r| {
             r.doc.forbid.iter().any(|f| {
                 f.id.as_deref() == Some(id)
-                    && (f.to.starts_with("pkg:") || f.to.starts_with("category:"))
+                    && ["pkg:", "category:", "global:"]
+                        .iter()
+                        .any(|prefix| f.to.starts_with(prefix))
             })
         })
     };

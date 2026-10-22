@@ -187,6 +187,7 @@ pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
     resolution::validate_external_identities(
         &input.source,
         input.imports.as_deref(),
+        input.globals.as_deref(),
         &input.files,
     )?;
     resolution::require_policy_accounting(&config)?;
@@ -364,7 +365,7 @@ fn build_inner(
             (f, module)
         })
         .collect();
-    let (external_nodes, mut external_edges) = resolution::external_graph(&source, &config);
+    let (external_nodes, mut external_edges) = resolution::external_graph(&source, &config, rules);
     let internal_count = edges.len();
     edges.append(&mut external_edges);
     match rules {
@@ -390,10 +391,7 @@ fn build_inner(
             rules.decide_with_externals(
                 &mut edges,
                 &policy_modules,
-                &external_nodes
-                    .iter()
-                    .map(|n| (n.id.clone(), n.package.clone()))
-                    .collect(),
+                &resolution::policy_names(&external_nodes),
             );
         }
         None => {

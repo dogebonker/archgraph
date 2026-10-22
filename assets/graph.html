@@ -917,6 +917,7 @@ const scanDirs = new Set(doc.files.flatMap(f => f.path.split("/").slice(0, -1).m
 /* ---------- external model ---------- */
 const externalNodes = (doc.external_nodes || []).filter(n => n.external && typeof n.package === "string").slice().sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 const externalById = new Map(externalNodes.map((node, i) => [node.id, i]));
+const externalLabel = node => (node.global ? "global:" : "pkg:") + node.package;
 const externalEdges = (doc.external_edges || []).filter(e => externalById.has(e.to) && fileIndex.has(e.from));
 const exposureByModule = new Map((doc.external_exposure?.modules || []).map(row => [row.module, row]));
 function externalPositions() {
@@ -1607,7 +1608,7 @@ const assessment = (() => {
     if (verdict === "unplanned" && unflagged) continue;
     const external = externalEdges.filter(edge => edge.verdict === verdict);
     if (external.length) {
-      const first = external[0], target = { pkg: externalById.get(first.to), label: `pkg:${externalNodes[externalById.get(first.to)].package}` };
+      const first = external[0], target = { pkg: externalById.get(first.to), label: externalLabel(externalNodes[externalById.get(first.to)]) };
       (verdict === "forbidden" ? bad : coverage).push({ touch: new Set(external.map(edge => edge.from)).size,
         parts: [`${count(external.length, "recorded external import is", "recorded external imports are")} ${verdict}; `,
           "inspect ", target, verdict === "forbidden" ? ` (first rule: ${first.rule || "no named rule"}).` : ": no rule covers these package dependencies."] });
@@ -2636,7 +2637,7 @@ function verdictLine(v) {
   return parts.join(", ");
 }
 function tipLines(h) {
-  if (h.type === "external") return [`pkg:${externalNodes[h.i].package}`, `${externalEdges.filter(e => e.to === externalNodes[h.i].id).length} recorded imports; external package, excluded from internal cycles`];
+  if (h.type === "external") return [externalLabel(externalNodes[h.i]), `${externalEdges.filter(e => e.to === externalNodes[h.i].id).length} recorded imports; external package, excluded from internal cycles`];
   if (whatifResult) {
     const lines = whatifTip(h);
     if (lines) return lines;
@@ -3455,7 +3456,7 @@ function find(q) {
   if (i >= 0) { go({ type: "module", i }); return true; }
   i = files.findIndex(f => f.path.toLowerCase().includes(lq));
   if (i >= 0) { go({ type: "file", i }); return true; }
-  i = externalNodes.findIndex(n => n.package.toLowerCase().includes(lq) || ("pkg:" + n.package).toLowerCase() === lq);
+  i = externalNodes.findIndex(n => n.package.toLowerCase().includes(lq) || externalLabel(n).toLowerCase() === lq);
   if (i >= 0) { go({ type: "external", i }); return true; }
   return false;
 }
@@ -4473,7 +4474,7 @@ function drawExternals(px) {
     const active = target?.type === "external" && target.i === p.i;
     ctx.globalAlpha = 1; ctx.fillStyle = C.surface; ctx.strokeStyle = active ? C.focus : C.muted; ctx.lineWidth = (active ? 2 : 1) * px;
     ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(p.r, 4 * px), 0, TAU); ctx.fill(); ctx.stroke();
-    if (active) { ctx.font = `12px ${MONO}`; ctx.fillStyle = C.fg; ctx.save(); ctx.textAlign = "center"; ctx.translate(p.x, p.y + p.r + 16 * px); ctx.scale(px, px); ctx.fillText("pkg:" + p.package, 0, 0); ctx.restore(); }
+    if (active) { ctx.font = `12px ${MONO}`; ctx.fillStyle = C.fg; ctx.save(); ctx.textAlign = "center"; ctx.translate(p.x, p.y + p.r + 16 * px); ctx.scale(px, px); ctx.fillText(externalLabel(p), 0, 0); ctx.restore(); }
   }
   ctx.globalAlpha = 1;
 }
@@ -4491,13 +4492,13 @@ function externalContext(moduleId) {
   detail.append(summary); detail.addEventListener("toggle", () => {
     if (!detail.open || detail.childNodes.length > 1) return;
     const list = el("div", { class: "actions" });
-    for (const node of rows) list.append(btn("pkg:" + node.package, "link", () => go({ type: "external", i: externalById.get(node.id) })));
+    for (const node of rows) list.append(btn(externalLabel(node), "link", () => go({ type: "external", i: externalById.get(node.id) })));
     detail.append(list);
   });
   panel.append(detail);
 }
 function externalPanel(i) {
-  const node = externalNodes[i]; head("External package", "pkg:" + node.package);
+  const node = externalNodes[i]; head("External package", externalLabel(node));
   panel.append(el("p", { class: "note" }, "Recorded imports only. External packages do not participate in internal cycles or cohesion; this is not a complete dependency or vulnerability inventory."));
   const categories = Object.entries(doc.config.rules?.doc?.["pkg-category"] || {}).filter(([, names]) => names.includes(node.package)).map(([name]) => name);
   if (categories.length) panel.append(el("p", {}, "Exact category memberships: " + categories.join(", ")));

@@ -110,7 +110,7 @@
     const edges = (doc.edges || []).map(e=>({...e,from:rename(e.from),to:rename(e.to),original_to:e.original_to ? rename(e.original_to) : undefined}));
     const nodes = new Map(files.map(f=>[rename(f.path),{...f,path:rename(f.path)}]));
     if ((doc.external_nodes || []).length || (doc.external_edges || []).length || doc.external_exposure ||
-      [...(rules?.forbid || []), ...(rules?.allow || [])].some(r => /^(?:pkg|category):/.test(r.to || ""))) {
+      [...(rules?.forbid || []), ...(rules?.allow || [])].some(r => /^(?:pkg|category|global):/.test(r.to || ""))) {
       warnings.push('Internal-only preview: external dependency policy verdicts and exposure are not recomputed. Run archgraph simulate for authoritative results.');
     }
     let moduleRules = [], compiled = null;
@@ -190,8 +190,8 @@
       const paths = [...nodes.keys()], bySlice = ([a],[b]) => a === null ? -1 : b === null ? 1 : cmp(a,b), conforming = new Map();
       const claims = doc.target.claims.map(({id}) => {
         const slices = new Map(), bound = new Set(), rules = compiled.forbid.filter((r,i)=>doc.config.rules.doc.forbid[i].id===id);
-        // The preview matches no package: such a claim, and the conforming count it feeds, are not previewed.
-        if (rules.some(r=>/^(?:pkg|category):/.test(r.to))) return {id,preview:false};
+        // The preview matches no package or global: such a claim, and the conforming count it feeds, are not previewed.
+        if (rules.some(r=>/^(?:pkg|category|global):/.test(r.to))) return {id,preview:false};
         for (const r of rules) {
           const from = new Set(paths.map(p=>r.p.bind(p)).filter(v=>v!==undefined)), hits = new Map();
           for (const e of edges) { const v = forbids(r,e); if (v === undefined) continue;

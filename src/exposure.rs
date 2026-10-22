@@ -123,6 +123,7 @@ pub fn validate(doc: &Document) -> Result<()> {
     crate::resolution::validate_external_identities(
         &doc.source,
         doc.imports.as_deref(),
+        doc.globals.as_deref(),
         &doc.files,
     )?;
     if doc.external_exposure.as_ref().is_some_and(|report| {

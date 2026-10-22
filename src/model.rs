@@ -380,7 +380,11 @@ pub struct ImportResolution {
 pub struct ExternalNode {
     pub id: String,
     pub external: bool,
+    /// The package name, or the host global's name when `global`.
     pub package: String,
+    /// A host global a `global:` rule names, not an imported package.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub global: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
