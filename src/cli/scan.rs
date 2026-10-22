@@ -177,6 +177,12 @@ pub(super) fn scan_doc(
             output.symbols.complete = false;
             output.symbols.limitations.push("Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.".into());
         }
+        if output.raw.globals.is_some() && layout.is_some_and(rules::Rules::names_globals) {
+            output
+                .symbols
+                .limitations
+                .push(collect::native::typescript::GLOBALS_LIMITATION.into());
+        }
         output.symbols.limitations.sort();
         output.symbols.limitations.dedup();
         output

@@ -166,6 +166,15 @@ pub struct Allow {
 }
 
 impl Rules {
+    /// Whether a `forbid` or `allow` target is a `global:` selector.
+    pub fn names_globals(&self) -> bool {
+        self.forbid
+            .iter()
+            .map(|r| &r.to)
+            .chain(self.allow.iter().map(|r| &r.to))
+            .any(|to| to.starts_with("global:"))
+    }
+
     /// Reasons for the decision label retained on an edge, including implicit layer order.
     pub fn reasons(&self, decision: &str) -> Vec<&str> {
         let mut reasons = Vec::new();

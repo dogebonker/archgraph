@@ -166,22 +166,21 @@ pub fn validate(
 /// Explicit package or global policy cannot produce an authoritative verdict without collector
 /// accounting.
 pub fn require_policy_accounting(config: &crate::model::Config) -> anyhow::Result<()> {
-    let names = |prefixes: &[&str]| {
-        config.rules.as_ref().is_some_and(|r| {
+    if config.import_records.is_none()
+        && config.rules.as_ref().is_some_and(|r| {
             r.doc
                 .forbid
                 .iter()
                 .map(|r| &r.to)
                 .chain(r.doc.allow.iter().map(|r| &r.to))
-                .any(|to| prefixes.iter().any(|p| to.starts_with(p)))
+                .any(|to| to.starts_with("pkg:") || to.starts_with("category:"))
         })
-    };
-    if config.import_records.is_none() && names(&["pkg:", "category:"]) {
+    {
         anyhow::bail!(
             "package rules require import accounting; rescan with a collector that records external imports"
         );
     }
-    if config.globals.is_none() && names(&["global:"]) {
+    if config.globals.is_none() && config.rules.as_ref().is_some_and(|r| r.doc.names_globals()) {
         anyhow::bail!(
             "global rules require a native JavaScript/TypeScript scan, rescan with --engine native"
         );

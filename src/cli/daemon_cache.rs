@@ -86,7 +86,12 @@ impl Warm {
             parsed = update.parsed_files;
             let normalize_started = Instant::now();
             let mut output = update.output;
-            let excluded = normalize(&mut output, &policy, &mut selection)?;
+            let excluded = normalize(
+                &mut output,
+                &policy,
+                &mut selection,
+                doc.config.rules.as_ref().map(|r| &r.doc),
+            )?;
             raw_fingerprint = Some(fingerprint(&output.raw, &excluded)?);
             timings.normalize_ms = normalize_started.elapsed().as_secs_f64() * 1000.0;
             let analyze_started = Instant::now();
@@ -283,7 +288,12 @@ impl Warm {
         }
         let normalize_started = Instant::now();
         let mut output = update.output;
-        let excluded = normalize(&mut output, &policy, &mut self.selection)?;
+        let excluded = normalize(
+            &mut output,
+            &policy,
+            &mut self.selection,
+            self.doc.config.rules.as_ref().map(|r| &r.doc),
+        )?;
         let fingerprint = fingerprint(&output.raw, &excluded)?;
         let unchanged = self.raw_fingerprint.as_ref() == Some(&fingerprint);
         self.timings.normalize_ms = normalize_started.elapsed().as_secs_f64() * 1000.0;
@@ -318,6 +328,20 @@ impl Warm {
             let mut doc = (*self.doc).clone();
             doc.source = source;
             doc.config = config;
+            // The fingerprint leaves global lines out: refresh them, and the edges they place.
+            doc.globals.clone_from(&doc.config.globals);
+            for edge in &mut doc.external_edges {
+                if let Some(global) = doc.globals.iter().flatten().find(|g| {
+                    g.from == edge.from
+                        && edge.specifier.as_deref() == Some(g.name.as_str())
+                        && doc
+                            .external_nodes
+                            .iter()
+                            .any(|n| n.global && n.id == edge.to)
+                }) {
+                    edge.line = Some(global.line);
+                }
+            }
             doc
         } else {
             eprintln!(
@@ -483,6 +507,7 @@ fn normalize(
     output: &mut collect::native::Output,
     policy: &collect::excludes::Policy,
     selection: &mut Option<Selection>,
+    rules: Option<&archgraph::rules::Rules>,
 ) -> Result<Vec<String>> {
     if output
         .raw
@@ -492,6 +517,12 @@ fn normalize(
     {
         output.symbols.complete = false;
         output.symbols.limitations.push("Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.".into());
+    }
+    if output.raw.globals.is_some() && rules.is_some_and(archgraph::rules::Rules::names_globals) {
+        output
+            .symbols
+            .limitations
+            .push(collect::native::typescript::GLOBALS_LIMITATION.into());
     }
     output.symbols.limitations.sort();
     output.symbols.limitations.dedup();
@@ -556,7 +587,13 @@ fn fingerprint(raw: &collect::RawGraph, excluded: &[String]) -> Result<Vec<u8>> 
         &raw.files,
         &raw.edges,
         &raw.imports,
-        &raw.globals,
+        // Lines are left out: a shifted first use changes no verdict.
+        raw.globals.as_ref().map(|globals| {
+            globals
+                .iter()
+                .map(|g| (&g.from, &g.name))
+                .collect::<Vec<_>>()
+        }),
         metadata,
         excluded,
     ))?)
@@ -648,6 +685,26 @@ mod tests {
             serde_json::to_value(&*warm.doc).unwrap(),
             serde_json::to_value(fixture.fresh(warm)).unwrap()
         );
+    }
+
+    #[test]
+    fn warm_global_line_shift_reuses_architecture_and_refreshes_lines() {
+        let fixture = Fixture::new();
+        fixture.write(
+            "policy.yaml",
+            "version: 1\nforbid:\n  - {from: 'b/**', to: 'global:process'}\n",
+        );
+        fixture.write("b/b.ts", "export const value = process.env.X;\n");
+        let mut warm = fixture.warm();
+        let fingerprint = warm.raw_fingerprint.clone();
+        fixture.write("b/b.ts", "\n\nexport const value = process.env.X;\n");
+        warm.refresh(&[fixture.0.join("b/b.ts")]).unwrap();
+        assert_eq!(warm.raw_fingerprint, fingerprint);
+        assert_eq!(warm.doc.globals.as_ref().unwrap()[0].line, 3);
+        assert_eq!(warm.doc.external_edges[0].line, Some(3));
+        let limitations = &warm.doc.source.collector.limitations;
+        assert!(limitations.iter().any(|l| l.starts_with("Host globals")));
+        assert_fresh(&fixture, &warm);
     }
 
     #[test]

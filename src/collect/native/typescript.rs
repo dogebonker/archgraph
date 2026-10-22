@@ -101,7 +101,13 @@ fn bound_names(root: Node<'_>, source: &str) -> BTreeSet<String> {
         let bound = match node.kind() {
             "variable_declarator"
             | "function_declaration"
+            | "function_expression"
+            | "generator_function"
+            | "generator_function_declaration"
+            | "function_signature"
             | "class_declaration"
+            | "internal_module"
+            | "enum_declaration"
             | "required_parameter"
             | "optional_parameter" => node
                 .child_by_field_name("name")
@@ -114,6 +120,7 @@ fn bound_names(root: Node<'_>, source: &str) -> BTreeSet<String> {
                 node.child_by_field_name("left")
             }
             "pair_pattern" => node.child_by_field_name("value"),
+            "import_require_clause" => named_children(node).first().copied(),
             _ => None,
         };
         names.extend(bound.map(|n| text(n, source).to_owned()));
@@ -133,6 +140,8 @@ fn bound_names(root: Node<'_>, source: &str) -> BTreeSet<String> {
     }
     names
 }
+/// Added to a scan's limitations when its rules name a host global.
+pub const GLOBALS_LIMITATION: &str = "Host globals: a name declared anywhere in a file hides that global in the whole file, `globalThis.process` counts only `globalThis`, and shorthand `{ process }` is not counted.";
 /// Host globals recorded when a file uses one without declaring it.
 const GLOBALS: &[&str] = &[
     "process",
@@ -427,12 +436,18 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
             "identifier" => {
                 let mut parent = node.parent();
                 let mut import = false;
+                let mut reexport = false;
                 let mut type_context = node.kind() == "type_identifier";
                 let mut type_query = false;
                 while let Some(ancestor) = parent {
                     if ancestor.kind() == "import_statement" {
                         import = true;
                         break;
+                    }
+                    if ancestor.kind() == "export_statement"
+                        && ancestor.child_by_field_name("source").is_some()
+                    {
+                        reexport = true;
                     }
                     if ancestor.kind() == "type_query" {
                         type_query = true;
@@ -460,11 +475,15 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                 // `typeof window` in a type is a type use; a runtime `typeof window` is not.
                 let name = text(node, source);
                 if !import
+                    && !reexport
                     && !type_context
+                    && !type_query
                     && node.kind() == "identifier"
                     && GLOBALS.contains(&name)
                     && !bound.contains(name)
-                    && !file.ends_with(".d.ts")
+                    && ![".d.ts", ".d.mts", ".d.cts"]
+                        .iter()
+                        .any(|suffix| file.ends_with(suffix))
                 {
                     let line = node.start_position().row + 1;
                     parsed
@@ -1254,7 +1273,6 @@ pub(crate) fn collect_cached(
     graph.collector.cruised = parsed_files.len();
     graph.collector.unresolved = Some(unresolved_count(graph.imports.as_ref().unwrap()));
     symbols.limitations.push("Implicit types require interface/type-alias declarations and exclusively type-context uses; uncertain usage remains runtime. CommonJS export surfaces are not indexed.".into());
-    symbols.limitations.push("Host globals: a name declared anywhere in a file hides that global in the whole file, and `globalThis.process` counts only `globalThis`.".into());
     symbols.complete = false;
     Ok(super::Output {
         raw: graph,
