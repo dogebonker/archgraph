@@ -130,3 +130,57 @@ replace the hand-written services manifest.
 - R4. A forbidden global gets a non-mechanical cut step (no import record matches,
   `src/recipes.rs:341-378`), so `apply` never edits it.
 - R5. Scans grow by one `globals` entry per file and global. P3 measures it.
+
+## Results
+
+P3 scans, native engine, TypeScript, `--depth 2`, release build at head `e74168b`. Main is `78597da`.
+
+| Repository | Files | `globals` entries | Distinct names | Files with any | JSON size | Main size | Growth |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| trpc (`packages/server`) | 76 | 12 | 5 | 6 | 262669 B | 261266 B | +1403 B (0.5%) |
+| excalidraw (`packages/excalidraw`) | 364 | 156 | 15 | 85 | 1589117 B | 1573434 B | +15683 B (1.0%) |
+
+Top five names:
+
+- trpc: `setTimeout` 4, `clearTimeout` 3, `Buffer` 2, `globalThis` 2, `window` 1.
+- excalidraw: `console` 46, `window` 34, `document` 30, `setTimeout` 13, `clearTimeout` 12.
+
+R5 is small. Growth stays near one percent.
+
+### trpc, first ten entries by (from, name)
+
+| Location | Name | Verdict | Reason |
+| --- | --- | --- | --- |
+| `src/adapters/aws-lambda/getPlanner.ts:241` | Buffer | real | `Buffer.from(...)`, no declaration |
+| `src/adapters/ws.ts:184` | globalThis | real | `globalThis.setImmediate` |
+| `src/adapters/ws.ts:471` | Buffer | real | `Buffer.isBuffer(...)` |
+| `src/adapters/ws.ts:587` | setTimeout | real | call, only `ping` is a local |
+| `src/adapters/ws.ts:599` | clearTimeout | real | call, no declaration |
+| `src/unstable-core-do-not-import/http/resolveResponse.ts:361` | clearTimeout | real | call, no declaration |
+| `src/unstable-core-do-not-import/http/resolveResponse.ts:366` | setTimeout | real | call, `timer` is the local |
+| `src/unstable-core-do-not-import/rootConfig.ts:21` | window | real | `typeof window`, no declaration |
+| `src/unstable-core-do-not-import/rootConfig.ts:24` | globalThis | real | `globalThis.process` |
+| `src/unstable-core-do-not-import/stream/utils/timerResource.ts:25` | clearTimeout | real | call, no declaration |
+
+Misreads: 0 of 10.
+
+### excalidraw, first ten entries by (from, name)
+
+| Location | Name | Verdict | Reason |
+| --- | --- | --- | --- |
+| `actions/actionClipboard.tsx:70` | console | real | `console.error`, no declaration |
+| `actions/actionElementLink.ts:25` | window | real | `window.location` |
+| `actions/actionElementLink.ts:59` | console | real | `console.error` |
+| `actions/actionExport.tsx:222` | console | real | `console.warn` |
+| `actions/actionProperties.tsx:213` | console | real | `console.error` |
+| `actions/actionProperties.tsx:1325` | document | real | `?? document`, no declaration |
+| `actions/manager.tsx:47` | console | real | `console.error` |
+| `analytics.ts:20` | window | real | `typeof window` |
+| `analytics.ts:37` | console | real | `console.info` |
+| `animatedTrail.ts:47` | document | real | `document.createElementNS` |
+
+Misreads: 0 of 10.
+
+### Gate
+
+Passed. Zero misreads in both samples, so P1 needs no fix.
