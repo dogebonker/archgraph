@@ -98,9 +98,15 @@ test('external dots are visible without drawing every package link; selected pac
 });
 test('a host global is labelled global:<name>, a package pkg:<name>', () => {
   const globalNode = { id: 'external:typescript:global:process', external: true, package: 'process', global: true };
-  const { run, calls } = setup({ external_nodes: [packageNode, globalNode] });
-  for (const node of [globalNode, packageNode]) run(`externalPanel(externalById.get(${JSON.stringify(node.id)}))`);
-  assert.deepEqual(calls.filter(call => call[0] === 'External package').map(call => call[1]), ['global:process', 'pkg:typeorm']);
+  const { run, calls, panel } = setup({ config: { rules: { doc: { 'pkg-category': { node: ['process'] } } } },
+    external_nodes: [packageNode, globalNode], external_edges: [packageEdge, { ...packageEdge, to: globalNode.id, specifier: 'process' }] });
+  run(`externalPanel(externalById.get(${JSON.stringify(globalNode.id)}))`);
+  assert.doesNotMatch(panel.textContent, /category/);
+  run(`externalPanel(externalById.get(${JSON.stringify(packageNode.id)}))`);
+  assert.deepEqual(calls.filter(call => /^(Host global|External package)$/.test(call[0])),
+    [['Host global', 'global:process'], ['External package', 'pkg:typeorm']]);
+  panel.textContent = ''; run('externalContext()');
+  assert.match(panel.textContent, /1 recorded external packages, 1 host globals/);
 });
 test('ring integrates camera bounds, hit testing, search, selection and module context', () => {
   for (const [start, end, expected] of [

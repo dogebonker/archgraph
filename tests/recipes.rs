@@ -450,6 +450,44 @@ fn external_cut_removes_package_edges_and_accounting_record() {
     assert!(after.external_edges.is_empty());
     assert!(after.external_nodes.is_empty());
     assert_eq!(after.import_resolution.unwrap().imports, 0);
+
+    // A forbidden host global use is replaced by hand, not cut as an import.
+    let mut config = doc.config.clone();
+    config.rules = serde_json::from_value(json!({"path":"layout.yaml","sha256":"test",
+        "doc":{"version":1,"forbid":[{"from":"domain/**","to":"global:process"}]}}))
+    .unwrap();
+    config.globals = Some(vec![archgraph::model::GlobalUse {
+        from: "domain/model.ts".into(),
+        name: "process".into(),
+        line: 4,
+    }]);
+    let doc = archgraph::analyze(
+        doc.source,
+        config,
+        vec!["domain/model.ts".into()],
+        vec![],
+        vec![],
+        None,
+    )
+    .unwrap();
+    let recipe = doc
+        .findings
+        .iter()
+        .find(|f| f.kind == FindingKind::ForbiddenEdge)
+        .unwrap()
+        .recipe
+        .as_ref()
+        .unwrap();
+    assert_eq!(recipe.confidence, Confidence::Low);
+    assert_eq!(recipe.steps[0].detail["operation"], "replace_global_use");
+    assert_eq!(recipe.steps[0].line, Some(4));
+    assert!(!recipe.steps[0].mechanical);
+    assert_eq!(
+        recipe.risk_notes,
+        [
+            "Replace the use of host global `process` in domain/model.ts with an injected dependency; every use in the file must go before the global edge does."
+        ]
+    );
 }
 
 #[test]

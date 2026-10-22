@@ -454,6 +454,10 @@ pub fn plan(root: &Path, before: &Document, finding_id: &str) -> Result<Plan> {
                     ensure!(step.mechanical, "{}: move requires agent work", step.file)
                 }
                 StepKind::CutImport => {
+                    ensure!(
+                        step.detail["operation"] != "replace_global_use",
+                        "replacing a host global use requires agent work"
+                    );
                     let buffer = if let Some(b) = buffers.get(&step.file) {
                         b
                     } else {

@@ -340,6 +340,17 @@ fn external_matches(doc: &Document, id: &str, package: &str) -> bool {
         .any(|n| n.id == id && n.package == package && !n.global)
 }
 fn cut_step(doc: &Document, e: &Edge) -> Step {
+    if let Some(node) = doc.external_nodes.iter().find(|n| n.global && n.id == e.to) {
+        return Step {
+            kind: StepKind::CutImport,
+            file: e.from.clone(),
+            line: e.line,
+            from: e.from.clone(),
+            to: e.to.clone(),
+            detail: json!({"operation":"replace_global_use","target":e.to,"global":node.package,"edge_kind":e.kind}),
+            mechanical: false,
+        };
+    }
     let records: Vec<_> = doc
         .imports
         .iter()
@@ -405,7 +416,29 @@ fn cut_recipe(doc: &Document, edges: Vec<&Edge>, scope: Vec<String>) -> Option<R
             to: e.to.clone(),
         })
         .collect();
-    Some(recipe(steps,Confidence::Medium,Predicate{absent_edges,scope,..Predicate::default()},vec!["Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.".into()]))
+    let globals: Vec<String> = steps
+        .iter()
+        .filter(|s| s.detail["operation"] == "replace_global_use")
+        .map(|s| format!("Replace the use of host global `{}` in {} with an injected dependency; every use in the file must go before the global edge does.", s.detail["global"].as_str().unwrap_or_default(), s.file))
+        .collect();
+    let (confidence, mut notes) = if globals.is_empty() {
+        (Confidence::Medium, Vec::new())
+    } else {
+        (Confidence::Low, globals)
+    };
+    if notes.len() < steps.len() {
+        notes.push("Removing an import can leave references undefined or remove initialization side effects; run language checks and tests after editing.".into());
+    }
+    Some(recipe(
+        steps,
+        confidence,
+        Predicate {
+            absent_edges,
+            scope,
+            ..Predicate::default()
+        },
+        notes,
+    ))
 }
 
 fn generate(

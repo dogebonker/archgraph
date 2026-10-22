@@ -4488,7 +4488,8 @@ function externalContext(moduleId) {
   } else if (!externalNodes.length) return;
   const rows = moduleId === undefined ? externalNodes : externalNodes.filter(node => externalEdges.some(e => e.to === node.id && files[fileIndex.get(e.from)].mod === modIndex.get(moduleId)));
   if (!rows.length) return;
-  const detail = el("details"), summary = el("summary", {}, `${rows.length} recorded external packages`);
+  const globalCount = rows.filter(node => node.global).length;
+  const detail = el("details"), summary = el("summary", {}, `${rows.length - globalCount} recorded external packages` + (globalCount ? `, ${globalCount} host globals` : ""));
   detail.append(summary); detail.addEventListener("toggle", () => {
     if (!detail.open || detail.childNodes.length > 1) return;
     const list = el("div", { class: "actions" });
@@ -4498,11 +4499,11 @@ function externalContext(moduleId) {
   panel.append(detail);
 }
 function externalPanel(i) {
-  const node = externalNodes[i]; head("External package", externalLabel(node));
-  panel.append(el("p", { class: "note" }, "Recorded imports only. External packages do not participate in internal cycles or cohesion; this is not a complete dependency or vulnerability inventory."));
-  const categories = Object.entries(doc.config.rules?.doc?.["pkg-category"] || {}).filter(([, names]) => names.includes(node.package)).map(([name]) => name);
+  const node = externalNodes[i]; head(node.global ? "Host global" : "External package", externalLabel(node));
+  panel.append(el("p", { class: "note" }, node.global ? "First use per file only, where a global: rule names it. Host globals do not participate in internal cycles or cohesion." : "Recorded imports only. External packages do not participate in internal cycles or cohesion; this is not a complete dependency or vulnerability inventory."));
+  const categories = node.global ? [] : Object.entries(doc.config.rules?.doc?.["pkg-category"] || {}).filter(([, names]) => names.includes(node.package)).map(([name]) => name);
   if (categories.length) panel.append(el("p", {}, "Exact category memberships: " + categories.join(", ")));
-  if (doc.config.rules?.doc?.["pkg-category"]) panel.append(el("p", { class: "note" }, "Package globs are evaluated by the CLI; the recorded verdict and rule are authoritative."));
+  if (!node.global && doc.config.rules?.doc?.["pkg-category"]) panel.append(el("p", { class: "note" }, "Package globs are evaluated by the CLI; the recorded verdict and rule are authoritative."));
   const rows = externalEdges.filter(edge => edge.to === node.id);
   const list = el("ul");
   for (const edge of rows) {

@@ -342,6 +342,8 @@ impl Warm {
                     edge.line = Some(global.line);
                 }
             }
+            // Forbidden-edge findings and their recipes carry those lines.
+            archgraph::recipes::attach(&mut doc)?;
             doc
         } else {
             eprintln!(
@@ -647,17 +649,15 @@ mod tests {
             fs::write(path, text).unwrap();
         }
         fn warm(&self) -> Warm {
-            let cli = Cli::try_parse_from([
-                "archgraph",
-                "serve",
-                self.0.to_str().unwrap(),
-                "--engine",
-                "native",
-                "--symbols",
-                "--rules",
-                self.0.join("policy.yaml").to_str().unwrap(),
-            ])
-            .unwrap();
+            self.warm_with(true)
+        }
+        fn warm_with(&self, symbols: bool) -> Warm {
+            let root = self.0.to_str().unwrap();
+            let rules = self.0.join("policy.yaml");
+            let mut args = vec!["archgraph", "serve", root, "--engine", "native"];
+            args.extend(symbols.then_some("--symbols"));
+            args.extend(["--rules", rules.to_str().unwrap()]);
+            let cli = Cli::try_parse_from(args).unwrap();
             let Cmd::Serve(args) = cli.command else {
                 unreachable!()
             };
@@ -689,13 +689,18 @@ mod tests {
 
     #[test]
     fn warm_global_line_shift_reuses_architecture_and_refreshes_lines() {
+        for symbols in [true, false] {
+            global_line_shift(symbols);
+        }
+    }
+    fn global_line_shift(symbols: bool) {
         let fixture = Fixture::new();
         fixture.write(
             "policy.yaml",
             "version: 1\nforbid:\n  - {from: 'b/**', to: 'global:process'}\n",
         );
         fixture.write("b/b.ts", "export const value = process.env.X;\n");
-        let mut warm = fixture.warm();
+        let mut warm = fixture.warm_with(symbols);
         let fingerprint = warm.raw_fingerprint.clone();
         fixture.write("b/b.ts", "\n\nexport const value = process.env.X;\n");
         warm.refresh(&[fixture.0.join("b/b.ts")]).unwrap();
