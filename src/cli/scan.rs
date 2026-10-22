@@ -330,6 +330,9 @@ pub(super) fn scan_doc(
     if let Some(imports) = &mut raw.imports {
         imports.retain(|i| kept.contains(&i.from));
     }
+    if let Some(globals) = &mut raw.globals {
+        globals.retain(|g| kept.contains(&g.from));
+    }
     if args.engine != collect::Engine::Native {
         let all = bound.len();
         raw.collector.bound = go::bound_pairs(bound, &raw.files);
@@ -400,6 +403,7 @@ pub(super) fn scan_doc(
         file_metadata: raw.metadata,
         legacy_module_classes: false,
         import_records: raw.imports,
+        globals: raw.globals,
     };
     if let Some(owners) = &config.codeowners {
         for warning in &owners.warnings {

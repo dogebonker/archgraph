@@ -221,6 +221,7 @@ pub fn parse(json: &[u8]) -> Result<Parsed> {
         .collect();
     let raw = RawGraph {
         imports: dump.imports,
+        globals: None,
         metadata: dump
             .files
             .iter()

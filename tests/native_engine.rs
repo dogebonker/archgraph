@@ -26,7 +26,7 @@ fn native_scan_and_symbols_need_no_external_collectors() {
     );
     common::write_tmp(
         "native-cli-ts/src/app/main.ts",
-        "import { Model } from '../core';\nexport const model = new Model();\n",
+        "import { Model } from '../core';\nexport const model = new Model();\nconsole.log(model);\n",
     );
     let doc = native(&[
         "scan",
@@ -53,6 +53,10 @@ fn native_scan_and_symbols_need_no_external_collectors() {
                 && e["original_to"] == "src/core/index.ts")
     );
     assert!(!doc["symbols"]["exports"].as_array().unwrap().is_empty());
+    assert_eq!(
+        doc["globals"],
+        serde_json::json!([{"from": "src/app/main.ts", "name": "console", "line": 3}])
+    );
     let graph = common::write_tmp(
         "native-cli-ts/graph.json",
         &serde_json::to_string(&doc).unwrap(),
@@ -93,6 +97,7 @@ fn native_scan_and_symbols_need_no_external_collectors() {
             .iter()
             .any(|e| e["from"] == "pkg/main.py" && e["to"] == "pkg/models.py")
     );
+    assert!(doc.get("globals").is_none());
 }
 
 #[test]

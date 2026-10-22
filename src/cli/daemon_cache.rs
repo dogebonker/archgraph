@@ -441,6 +441,7 @@ fn native_config(
     config.source_root.clone_from(&output.source_root);
     config.file_metadata = std::mem::take(&mut output.raw.metadata);
     config.import_records = output.raw.imports.take();
+    config.globals = output.raw.globals.take();
     config.excluded_files = excluded;
     config.include_tests = opts.include_tests
         || opts.no_default_excludes
@@ -528,6 +529,9 @@ fn normalize(
     if let Some(imports) = &mut output.raw.imports {
         imports.retain(|import| kept.contains(&import.from));
     }
+    if let Some(globals) = &mut output.raw.globals {
+        globals.retain(|global| kept.contains(&global.from));
+    }
     output
         .symbols
         .exports
@@ -552,6 +556,7 @@ fn fingerprint(raw: &collect::RawGraph, excluded: &[String]) -> Result<Vec<u8>> 
         &raw.files,
         &raw.edges,
         &raw.imports,
+        &raw.globals,
         metadata,
         excluded,
     ))?)

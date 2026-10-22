@@ -72,6 +72,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
         edges: Vec::new(),
         metadata: Default::default(),
         imports: Some(Vec::new()),
+        globals: None,
         collector: Collector {
             name: "tree-sitter-java".into(),
             version: Some("0.23.5".into()),

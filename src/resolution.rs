@@ -67,10 +67,22 @@ pub fn external_graph(
 
 pub fn validate(
     imports: Option<&[crate::model::ImportRecord]>,
+    globals: Option<&[crate::model::GlobalUse]>,
     files: &[crate::model::File],
 ) -> anyhow::Result<()> {
     use anyhow::bail;
     let paths: BTreeSet<_> = files.iter().map(|f| f.path.as_str()).collect();
+    if let Some(global) = globals
+        .into_iter()
+        .flatten()
+        .find(|g| !paths.contains(g.from.as_str()) || g.line == 0)
+    {
+        bail!(
+            "global use {} in {} must name a scanned file and a positive source line",
+            global.name,
+            global.from
+        );
+    }
     if let Some(imports) = imports {
         for import in imports {
             if !paths.contains(import.from.as_str()) {

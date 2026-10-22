@@ -32,6 +32,8 @@ pub struct Document {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub imports: Option<Vec<ImportRecord>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub globals: Option<Vec<GlobalUse>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub import_resolution: Option<ImportResolution>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub unresolved: Vec<ImportRecord>,
@@ -78,6 +80,8 @@ pub struct ScanInput {
     #[serde(default)]
     pub imports: Option<Vec<ImportRecord>>,
     #[serde(default)]
+    pub globals: Option<Vec<GlobalUse>>,
+    #[serde(default)]
     pub package_entries: Vec<String>,
     #[serde(default)]
     pub cochange: Option<Cochange>,
@@ -99,6 +103,7 @@ impl ScanInput {
     /// Carries the persisted import records and file attributes into `config` for analysis.
     pub fn hydrate_config(&mut self) {
         self.config.import_records = self.imports.clone();
+        self.config.globals = self.globals.clone();
         self.config.file_metadata = self
             .files
             .iter()
@@ -245,6 +250,8 @@ pub struct Config {
     pub legacy_module_classes: bool,
     #[serde(skip)]
     pub import_records: Option<Vec<ImportRecord>>,
+    #[serde(skip)]
+    pub globals: Option<Vec<GlobalUse>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -325,6 +332,14 @@ pub struct ImportRecord {
         skip_serializing_if = "Option::is_none"
     )]
     pub unresolved: Option<ImportReason>,
+}
+
+/// A host global a file uses without declaring it, at its first use; not an import.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GlobalUse {
+    pub from: String,
+    pub name: String,
+    pub line: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]

@@ -444,6 +444,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
             files: all,
             edges: edges.into_values().collect(),
             imports: Some(records),
+            globals: None,
             metadata: Default::default(),
             collector: Collector {
                 name: "tree-sitter-elixir".into(),

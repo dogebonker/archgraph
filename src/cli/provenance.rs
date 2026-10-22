@@ -163,6 +163,7 @@ pub(super) fn probe_with_symbols(
     let mut config = original.config.clone();
     config.file_metadata = collected.config.file_metadata;
     config.import_records = collected.imports;
+    config.globals = collected.globals;
     let saved_symbols = collected.symbols.clone();
     let mut doc = archgraph::analyze(
         collected.source,

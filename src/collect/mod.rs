@@ -59,6 +59,8 @@ pub struct RawGraph {
     pub collector: Collector,
     pub metadata: std::collections::BTreeMap<String, NodeMetadata>,
     pub imports: Option<Vec<crate::model::ImportRecord>>,
+    /// Host globals used without a declaration; native JavaScript/TypeScript only.
+    pub globals: Option<Vec<crate::model::GlobalUse>>,
 }
 
 /// Extensions dependency-cruiser files must have to count as source; imports of anything else

@@ -86,6 +86,16 @@ pub fn apply(doc: &Document, rules: Option<&Compiled>, moves: &[Move]) -> Result
             })
             .collect()
     });
+    config.globals = doc.globals.as_ref().map(|globals| {
+        globals
+            .iter()
+            .cloned()
+            .map(|mut g| {
+                g.from = rename(&g.from);
+                g
+            })
+            .collect()
+    });
     crate::resolution::require_policy_accounting(&config)?;
     config.file_metadata = doc
         .files
@@ -294,6 +304,7 @@ mod tests {
             file_metadata: Default::default(),
             legacy_module_classes: false,
             import_records: None,
+            globals: None,
         };
         let files = ["a/x.ts", "a/y.ts", "b/z.ts"].map(String::from).to_vec();
         crate::build(source, config, files, Vec::new(), Vec::new(), None, None)

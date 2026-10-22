@@ -695,6 +695,7 @@ pub fn project(doc: &Document, recipe: &Recipe) -> Result<Document> {
     let mut edges = moved.edges.clone();
     let mut config = moved.config.clone();
     config.import_records = moved.imports.clone();
+    config.globals = moved.globals.clone();
     for step in &recipe.steps {
         match step.kind {
             StepKind::MoveFile => {}

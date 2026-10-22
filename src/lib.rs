@@ -126,6 +126,7 @@ pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
         .transpose()?;
     let mut config = input.config.clone();
     config.import_records = input.imports.clone();
+    config.globals = input.globals.clone();
     // Saved modules follow the document's own granularity, also when exported as legacy v1.
     config.legacy_module_classes = false;
     let mut paths = BTreeSet::new();
@@ -178,7 +179,11 @@ pub fn validate_scan(input: &model::ScanInput) -> Result<()> {
             bail!("bound names must not contain control characters");
         }
     }
-    resolution::validate(input.imports.as_deref(), &input.files)?;
+    resolution::validate(
+        input.imports.as_deref(),
+        input.globals.as_deref(),
+        &input.files,
+    )?;
     resolution::validate_external_identities(
         &input.source,
         input.imports.as_deref(),
@@ -282,7 +287,7 @@ fn analyze_inner(
     }) {
         bail!("edge_weights overflow the weighted metrics; use smaller finite weights");
     }
-    resolution::validate(doc.imports.as_deref(), &doc.files)?;
+    resolution::validate(doc.imports.as_deref(), doc.globals.as_deref(), &doc.files)?;
     exposure::validate(&doc)?;
     findings::place_registrars(&mut doc, rules.as_ref(), owners.as_ref());
     doc.cochange = cochange;
@@ -487,6 +492,7 @@ fn build_inner(
         type_only_cycles,
         test_coverage,
         imports: config.import_records.clone(),
+        globals: config.globals.clone(),
         import_resolution: None,
         unresolved: Vec::new(),
         external_nodes,

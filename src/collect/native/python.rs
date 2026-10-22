@@ -250,6 +250,7 @@ pub(crate) fn collect_cached(
         edges: Vec::new(),
         metadata: Default::default(),
         imports: Some(Vec::new()),
+        globals: None,
         collector: Collector {
             name: "tree-sitter-python".into(),
             version: Some("0.25.0".into()),

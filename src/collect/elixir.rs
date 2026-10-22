@@ -178,6 +178,7 @@ pub fn parse(bytes: &[u8]) -> Result<RawGraph> {
         files: dump.files.into_iter().chain(dump.excluded_files).collect(),
         edges: dump.edges,
         imports: Some(dump.imports),
+        globals: None,
         metadata: Default::default(),
     })
 }

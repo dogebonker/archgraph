@@ -13,7 +13,7 @@ use crate::collect::{
     imports::{ImportStatement, ImportedName},
     typescript_resolution::package_name,
 };
-use crate::model::{Collector, Edge, EdgeKind, ImportReason, ImportRecord};
+use crate::model::{Collector, Edge, EdgeKind, GlobalUse, ImportReason, ImportRecord};
 use crate::surface::{SymbolImport, Symbols};
 
 use super::{named_children, self_export, text, unresolved_count};
@@ -93,42 +93,74 @@ fn inside_function(mut node: Node<'_>) -> bool {
     }
     false
 }
-fn binds_require(node: Node<'_>, source: &str) -> bool {
-    if matches!(
-        node.kind(),
-        "variable_declarator"
+/// Names a declaration, parameter, pattern or import binds anywhere in the file, in any scope.
+fn bound_names(root: Node<'_>, source: &str) -> BTreeSet<String> {
+    let mut names = BTreeSet::new();
+    let mut pending = vec![root];
+    while let Some(node) = pending.pop() {
+        let bound = match node.kind() {
+            "variable_declarator"
             | "function_declaration"
             | "class_declaration"
-            | "import_specifier"
             | "required_parameter"
-            | "optional_parameter"
-    ) && node
-        .child_by_field_name("name")
-        .or_else(|| node.child_by_field_name("pattern"))
-        .is_some_and(|n| text(n, source) == "require")
-    {
-        return true;
+            | "optional_parameter" => node
+                .child_by_field_name("name")
+                .or_else(|| node.child_by_field_name("pattern")),
+            "import_specifier" => node
+                .child_by_field_name("alias")
+                .or_else(|| node.child_by_field_name("name")),
+            "arrow_function" | "catch_clause" => node.child_by_field_name("parameter"),
+            "for_in_statement" | "assignment_pattern" | "object_assignment_pattern" => {
+                node.child_by_field_name("left")
+            }
+            "pair_pattern" => node.child_by_field_name("value"),
+            _ => None,
+        };
+        names.extend(bound.map(|n| text(n, source).to_owned()));
+        let children = named_children(node);
+        if matches!(
+            node.kind(),
+            "import_clause"
+                | "namespace_import"
+                | "formal_parameters"
+                | "object_pattern"
+                | "array_pattern"
+                | "rest_pattern"
+        ) {
+            names.extend(children.iter().map(|n| text(*n, source).to_owned()));
+        }
+        pending.extend(children);
     }
-    if node.kind() == "import_clause"
-        && named_children(node)
-            .iter()
-            .any(|n| n.kind() == "identifier" && text(*n, source) == "require")
-    {
-        return true;
-    }
-    if matches!(
-        node.kind(),
-        "formal_parameters" | "object_pattern" | "array_pattern"
-    ) && named_children(node)
-        .iter()
-        .any(|n| text(*n, source) == "require")
-    {
-        return true;
-    }
-    named_children(node)
-        .into_iter()
-        .any(|n| binds_require(n, source))
+    names
 }
+/// Host globals recorded when a file uses one without declaring it.
+const GLOBALS: &[&str] = &[
+    "process",
+    "Buffer",
+    "global",
+    "globalThis",
+    "window",
+    "self",
+    "document",
+    "navigator",
+    "location",
+    "localStorage",
+    "sessionStorage",
+    "indexedDB",
+    "fetch",
+    "XMLHttpRequest",
+    "WebSocket",
+    "console",
+    "setTimeout",
+    "setInterval",
+    "setImmediate",
+    "clearTimeout",
+    "clearInterval",
+    "queueMicrotask",
+    "crypto",
+    "__dirname",
+    "__filename",
+];
 
 /// Explicit declarations only; structural implementations cannot be established from syntax.
 #[derive(Clone, Default)]
@@ -236,6 +268,8 @@ struct Parsed {
     architecture: ArchitectureFacts,
     type_uses: BTreeSet<String>,
     value_uses: BTreeSet<String>,
+    /// Undeclared host globals with the line of their first use.
+    globals: BTreeMap<String, usize>,
 }
 fn parse(file: &str, source: &str) -> Result<Parsed> {
     let javascript = matches!(
@@ -284,14 +318,16 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
         architecture: architecture_facts(root, source),
         type_uses: BTreeSet::new(),
         value_uses: BTreeSet::new(),
+        globals: BTreeMap::new(),
     };
     if root.has_error() {
         parsed.limitations.push(format!(
             "{file}: tree-sitter reported syntax errors; valid import captures retained"
         ));
     }
-    // shortcut: any lexical require binding suppresses require calls in the file; use scope binding analysis when this loses useful edges.
-    let shadowed = binds_require(root, source);
+    // shortcut: any lexical binding of a name hides it in the whole file (require calls, globals); use scope binding analysis when this loses useful edges.
+    let bound = bound_names(root, source);
+    let shadowed = bound.contains("require");
     let mut cursor = QueryCursor::new();
     let mut captures = cursor.captures(query, root, source.as_bytes());
     while let Some((m, i)) = captures.next() {
@@ -420,6 +456,22 @@ fn parse(file: &str, source: &str) -> Result<Parsed> {
                     } else {
                         parsed.value_uses.insert(text(node, source).into());
                     }
+                }
+                // `typeof window` in a type is a type use; a runtime `typeof window` is not.
+                let name = text(node, source);
+                if !import
+                    && !type_context
+                    && node.kind() == "identifier"
+                    && GLOBALS.contains(&name)
+                    && !bound.contains(name)
+                    && !file.ends_with(".d.ts")
+                {
+                    let line = node.start_position().row + 1;
+                    parsed
+                        .globals
+                        .entry(name.to_owned())
+                        .and_modify(|first| *first = (*first).min(line))
+                        .or_insert(line);
                 }
             }
             "call" => {
@@ -844,6 +896,7 @@ pub(crate) fn collect_cached(
         edges: Vec::new(),
         metadata: BTreeMap::new(),
         imports: Some(Vec::new()),
+        globals: Some(Vec::new()),
         collector: Collector {
             name: "tree-sitter-typescript".into(),
             version: Some("tree-sitter 0.27.1; oxc_resolver 11.24.3".into()),
@@ -876,6 +929,15 @@ pub(crate) fn collect_cached(
             symbols.limitations.extend(parsed.limitations);
         }
         type_declarations.insert(file.clone(), parsed.type_declarations.clone());
+        graph
+            .globals
+            .as_mut()
+            .unwrap()
+            .extend(parsed.globals.into_iter().map(|(name, line)| GlobalUse {
+                from: file.clone(),
+                name,
+                line,
+            }));
         let mut module = BarrelModule {
             file: file.clone(),
             pure: parsed.pure,
@@ -1192,6 +1254,7 @@ pub(crate) fn collect_cached(
     graph.collector.cruised = parsed_files.len();
     graph.collector.unresolved = Some(unresolved_count(graph.imports.as_ref().unwrap()));
     symbols.limitations.push("Implicit types require interface/type-alias declarations and exclusively type-context uses; uncertain usage remains runtime. CommonJS export surfaces are not indexed.".into());
+    symbols.limitations.push("Host globals: a name declared anywhere in a file hides that global in the whole file, and `globalThis.process` counts only `globalThis`.".into());
     symbols.complete = false;
     Ok(super::Output {
         raw: graph,

@@ -385,6 +385,7 @@ pub(crate) fn collect_cached(
             files: all_files,
             edges: edges.into_values().collect(),
             imports: Some(imports),
+            globals: None,
         },
     })
 }

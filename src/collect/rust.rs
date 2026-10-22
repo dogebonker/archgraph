@@ -888,6 +888,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
     };
     Ok(RawGraph {
         imports: dump.imports,
+        globals: None,
         metadata: Default::default(),
         files: dump.documents.into_iter().map(|d| d.path).collect(),
         edges,

@@ -288,6 +288,7 @@ pub fn parse(json: &[u8]) -> Result<RawGraph> {
     };
     Ok(RawGraph {
         imports: None,
+        globals: None,
         metadata: Default::default(),
         files,
         edges,

@@ -818,6 +818,7 @@ pub fn collect(root: &Path, policy: &Policy) -> Result<super::Output> {
             .collect(),
         edges: Vec::new(),
         imports: Some(Vec::new()),
+        globals: None,
         metadata: BTreeMap::new(),
         collector: Collector {
             name: "tree-sitter-rust".into(),

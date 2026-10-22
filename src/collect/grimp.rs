@@ -218,6 +218,7 @@ pub fn parse(json: &[u8], root: &Path, source_dir: &str) -> Result<RawGraph> {
     };
     let mut graph = RawGraph {
         imports: dump.import_records,
+        globals: None,
         files,
         edges,
         collector,

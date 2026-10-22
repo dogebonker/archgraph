@@ -1921,6 +1921,31 @@
             "$ref": "#/$defs/import-record"
           }
         },
+        "globals": {
+          "description": "Host globals each file uses without declaring them, at their first use. Native JavaScript/TypeScript scans only; absent when not collected.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "from",
+              "name",
+              "line"
+            ],
+            "properties": {
+              "from": {
+                "$ref": "#/$defs/path"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
         "unresolved": {
           "type": "array",
           "items": {
