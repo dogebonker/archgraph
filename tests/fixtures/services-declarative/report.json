@@ -1,0 +1,152 @@
+{
+  "schema": "archgraph/v1.2",
+  "kind": "services",
+  "source": {
+    "collector": "declarative",
+    "path": "services.yaml",
+    "complete": false
+  },
+  "services": [
+    "billing",
+    "db-service",
+    "frontend-bff",
+    "notifications"
+  ],
+  "edges": [
+    {
+      "from": "frontend-bff",
+      "to": "billing",
+      "kind": "http",
+      "confidence": "high",
+      "source": {
+        "file": "apps/frontend/src/invoices.ts",
+        "line": 18
+      },
+      "operation": "POST /invoices",
+      "verdict": "allowed"
+    },
+    {
+      "from": "billing",
+      "to": "frontend-bff",
+      "kind": "grpc",
+      "confidence": "high",
+      "source": {
+        "file": "services/billing/customer.go",
+        "line": 42
+      },
+      "operation": "Frontend.GetCustomer",
+      "verdict": "allowed"
+    },
+    {
+      "from": "billing",
+      "to": "notifications",
+      "kind": "queue",
+      "confidence": "medium",
+      "source": {
+        "file": "services/billing/events.py",
+        "line": 27
+      },
+      "operation": "invoice.created",
+      "verdict": "allowed"
+    },
+    {
+      "from": "frontend-bff",
+      "to": "db-service",
+      "kind": "http",
+      "confidence": "high",
+      "source": {
+        "file": "apps/frontend/src/customer.ts",
+        "line": 9
+      },
+      "operation": "GET /customers",
+      "verdict": "forbidden",
+      "rule": "bff-must-use-service-api"
+    },
+    {
+      "from": "billing",
+      "to": "db-service",
+      "kind": "grpc",
+      "confidence": "high",
+      "source": {
+        "file": "services/billing/database.go",
+        "line": 14
+      },
+      "operation": "Database.GetCustomer",
+      "verdict": "allowed"
+    }
+  ],
+  "forbid": [
+    {
+      "id": "bff-must-use-service-api",
+      "from": "frontend-*",
+      "to": "db-service",
+      "reason": "Use the billing service API instead of accessing storage directly."
+    }
+  ],
+  "modules": [
+    {
+      "id": "billing",
+      "fan_in": 1,
+      "fan_out": 3,
+      "instability": 0.75
+    },
+    {
+      "id": "db-service",
+      "fan_in": 2,
+      "fan_out": 0,
+      "instability": 0.0
+    },
+    {
+      "id": "frontend-bff",
+      "fan_in": 1,
+      "fan_out": 2,
+      "instability": 0.6667
+    },
+    {
+      "id": "notifications",
+      "fan_in": 1,
+      "fan_out": 0,
+      "instability": 0.0
+    }
+  ],
+  "cycles": [
+    {
+      "members": [
+        "billing",
+        "frontend-bff"
+      ],
+      "edge_indices": [
+        0,
+        1
+      ],
+      "confidence": "high"
+    }
+  ],
+  "hubs": [
+    {
+      "service": "db-service",
+      "fan_in": 2,
+      "callers": [
+        "billing",
+        "frontend-bff"
+      ]
+    }
+  ],
+  "forbidden_calls": [
+    3
+  ],
+  "summary": {
+    "services": 4,
+    "calls": 5,
+    "cycles": 1,
+    "largest_cycle": 2,
+    "hubs": 1,
+    "forbidden_calls": 1,
+    "low_confidence_calls": 0
+  },
+  "caveats": [
+    "Only declared calls are analyzed; this graph does not claim completeness.",
+    "Source locations and confidence are supplied by the manifest and are not verified.",
+    "A service cycle is a review signal, not proof of deadlock or deploy-order failure; queue calls may be asynchronous."
+  ]
+}

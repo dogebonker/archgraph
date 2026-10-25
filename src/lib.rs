@@ -24,6 +24,7 @@ pub mod hotspots;
 pub mod impact;
 pub mod incremental;
 pub mod infer_layout;
+pub mod infer_services;
 pub mod known;
 pub mod mcp_tools;
 pub mod model;

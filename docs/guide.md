@@ -409,15 +409,71 @@ archgraph diff before.json after.json --fail-on new-forbidden,new-cycles --forma
 
 `check`, `simulate` and `render` take `--rules layout.yaml` to replace the rules embedded in the scan.
 
-## Declared cross-service edges
+## Service architecture
 
-This first service-level milestone uses declarations. It does not discover OpenAPI clients, protobuf stubs or queue strings. Teams and external tools can feed the same versioned YAML/JSON manifest; no plugin executable is loaded or run.
+`archgraph services <directory>` infers service boundaries, infrastructure clients, HTTP calls and
+queue topics from local source. It does not run the application or contact infrastructure.
+TypeScript, JavaScript, Go, and Python are supported. Reports stay incomplete because configuration,
+indirect calls and dynamic values can hide evidence.
 
 ```sh
-archgraph services                              # read ./services.yaml, print Markdown
+archgraph services . --format json
+archgraph services . --manifest services.yaml --output services-report.json
 archgraph services examples/services.yaml --format json
-archgraph services services.yaml --output services-report.json
 ```
+
+With no path, the command reads `./services.yaml` when that file exists, otherwise it infers `.`.
+A file path always reads a declarative YAML or JSON manifest, preserving the existing report.
+
+Boundaries use `Dockerfile`, runtime `start` or `serve` scripts, application project targets, Go
+`package main` with `func main`, and bound startup expressions. Build watchers do not count.
+Nested application roots split a root image automatically. A root image without its own startup
+or application facts outside child packages is dropped when nested applications are found. Startup commands targeting `build/server` or
+`dist/server` map to the source `server` directory when present. A library's `main` field alone
+never creates a service. Hidden directories, symlinks, tests, generated files, fixtures, examples
+and ignored files are excluded. Each file belongs to its deepest service directory.
+
+The infrastructure catalog recognizes common SQL, MongoDB, Prisma, TypeORM, Sequelize, Kysely,
+Knex, Redis, Kafka, BullMQ, AMQP and SQS constructors in TypeScript. Go recognizes database/sql,
+pgx, pgxpool, go-redis, and NATS clients. Python recognizes SQLAlchemy, psycopg, Redis, and Celery.
+Each resource has a package, source file and line,
+confidence, and rule verdict. A client constructed inside a service has high confidence. A client
+in shared code has medium confidence for each service directly importing that file at runtime.
+Unattributed facts are counted in the report's caveats.
+
+Express, Fastify, Koa router, Hono and Nest routes can match fetch or axios calls. Go supports
+net/http routes, calls and requests dispatched through a known client. Python supports FastAPI
+and Flask routes, requests and httpx calls, and named Celery task topics. Literal methods and paths
+match with high confidence. Parameter paths, static template tails and Go methodless routes have
+medium confidence. A literal remote host must identify the target service, so a Stripe URL does
+not become a local call merely because its path matches. Matching several services emits no edge.
+Kafka, BullMQ and NATS topic matches point from publisher to consumer. Unmatched HTTP calls remain
+resources.
+
+`--manifest` applies only to a directory input. If its service IDs name existing directories,
+those directories replace the entire inferred boundary set. Other IDs remain declared-only
+services. A manifest containing only declared-only IDs preserves inferred boundaries. Declared
+edges are appended and all edges use the same cycle and forbid analyzer.
+
+Infrastructure rules use explicit package targets. Ordinary service globs judge only service
+calls. Omit `kinds` for database and cache rules. A transport filter can match HTTP or queue
+resources. Resource violations have separate `forbidden_resources` indices and counts and do not
+change service cycles, hubs or instability.
+
+```yaml
+version: 1
+services: [api, worker]
+edges: []
+forbid:
+  - {id: worker-no-postgres, from: worker, to: 'pkg:pg'}
+  - {id: worker-no-api, from: worker, to: api}
+```
+
+Inference follows local bindings conservatively. CommonJS destructuring, clients hidden by
+framework providers, cross-file receiver wiring, configured URLs or topics, and router plugin
+prefixes can be missed. Python uses deployment or declared boundaries. Unsupported deeply nested
+TypeScript receiver chains remain unknown. Repeated binding names can hide valid Python facts.
+Runtime roles sharing one entrypoint remain one service. gRPC and calls across repositories can be supplied through the declarative manifest below.
 
 ```yaml
 version: 1

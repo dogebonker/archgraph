@@ -16,6 +16,10 @@ use crate::surface::{SymbolImport, SymbolTarget, Symbols};
 
 use super::{named_children, self_export, text, unresolved_count};
 
+#[path = "go_app.rs"]
+mod app;
+pub(crate) use app::app_facts;
+
 #[derive(Clone, Default, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct Package {

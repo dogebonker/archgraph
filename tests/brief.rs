@@ -444,4 +444,36 @@ fn brief_services_captures_markdown_but_preserves_complete_report_export() {
     assert_eq!(full["kind"], "services");
     assert_eq!(full["edges"].as_array().unwrap().len(), 1);
     assert_eq!(full["schema"], "archgraph/v1.2");
+    let package = common::write_tmp(
+        "brief-services-directory/package.json",
+        r#"{"scripts":{"start":"node main.js"},"dependencies":{"pg":"*"}}"#,
+    );
+    common::write_tmp(
+        "brief-services-directory/main.ts",
+        "import {Pool} from 'pg'; new Pool();",
+    );
+    let root = std::path::Path::new(&package).parent().unwrap();
+    let export = root.join("services-report.json");
+    let output = common::archgraph(&[
+        "--brief",
+        "services",
+        root.to_str().unwrap(),
+        "-o",
+        export.to_str().unwrap(),
+    ]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let brief: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert!(
+        brief["result"]["text"]
+            .as_str()
+            .unwrap()
+            .contains("Inferred service architecture")
+    );
+    let full: Value = serde_json::from_slice(&std::fs::read(export).unwrap()).unwrap();
+    assert_eq!(full["source"]["collector"], "inferred");
+    assert_eq!(full["summary"]["resources"], 1);
 }

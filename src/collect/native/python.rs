@@ -13,6 +13,10 @@ use crate::surface::{SymbolExport, SymbolImport, SymbolTarget, Symbols};
 
 use super::{named_children, self_export, text, unresolved_count};
 
+#[path = "python_app.rs"]
+mod app;
+pub(crate) use app::app_facts;
+
 #[derive(Clone)]
 struct Import {
     module: String,

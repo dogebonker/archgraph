@@ -167,7 +167,7 @@ enum Cmd {
     Context(context_cli::ContextArgs),
     /// Print a module reading tour, grouping cycles into a single stop
     Tour(tour_cli::TourArgs),
-    /// Analyze declared HTTP, gRPC and queue dependencies between services
+    /// Infer services and infrastructure, or analyze declared service dependencies
     Services(services_cli::ServicesArgs),
     /// List default file exclusions and their categories
     ShowExcludes,

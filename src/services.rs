@@ -99,8 +99,46 @@ pub struct Report {
     pub cycles: Vec<Cycle>,
     pub hubs: Vec<Hub>,
     pub forbidden_calls: Vec<usize>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub resources: Vec<Resource>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub forbidden_resources: Vec<usize>,
     pub summary: Summary,
     pub caveats: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Resource {
+    pub service: String,
+    pub kind: ResourceKind,
+    pub package: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operation: Option<String>,
+    pub confidence: Confidence,
+    pub source: SourceLocation,
+    pub verdict: Verdict,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rule: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ResourceKind {
+    Database,
+    Cache,
+    Queue,
+    Http,
+}
+
+impl ResourceKind {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Database => "database",
+            Self::Cache => "cache",
+            Self::Queue => "queue",
+            Self::Http => "http",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -157,6 +195,14 @@ pub struct Summary {
     pub hubs: usize,
     pub forbidden_calls: usize,
     pub low_confidence_calls: usize,
+    #[serde(skip_serializing_if = "is_zero")]
+    pub resources: usize,
+    #[serde(skip_serializing_if = "is_zero")]
+    pub forbidden_resources: usize,
+}
+
+fn is_zero(value: &usize) -> bool {
+    *value == 0
 }
 
 /// YAML and JSON share the same strict manifest shape.
@@ -395,11 +441,14 @@ pub fn analyze(manifest: Manifest, path: &str) -> Result<Report> {
             .iter()
             .filter(|edge| edge.call.confidence == Confidence::Low)
             .count(),
+        resources: 0,
+        forbidden_resources: 0,
     };
     Ok(Report {
         schema: SCHEMA.to_owned(), kind: "services".to_owned(),
         source: Source { collector: "declarative".to_owned(), path: path.to_owned(), complete: false },
         services, edges, forbid: manifest.forbid, modules, cycles, hubs, forbidden_calls, summary,
+        resources: Vec::new(), forbidden_resources: Vec::new(),
         caveats: vec![
             "Only declared calls are analyzed; this graph does not claim completeness.".to_owned(),
             "Source locations and confidence are supplied by the manifest and are not verified.".to_owned(),
@@ -426,15 +475,60 @@ fn escape(value: &str) -> String {
     out
 }
 
+pub(crate) fn attach_resources(report: &mut Report, mut resources: Vec<Resource>) -> Result<()> {
+    let rules = report
+        .forbid
+        .iter()
+        .filter_map(|rule| rule.to.strip_prefix("pkg:").map(|package| (rule, package)))
+        .map(|(rule, package)| {
+            Ok((
+                rule,
+                crate::collect::globset(std::slice::from_ref(&rule.from))?,
+                crate::collect::globset(&[package.to_owned()])?,
+            ))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    for (index, resource) in resources.iter_mut().enumerate() {
+        resource.rule = rules
+            .iter()
+            .find(|(rule, from, package)| {
+                from.is_match(&resource.service)
+                    && package.is_match(&resource.package)
+                    && rule.kinds.as_ref().is_none_or(|kinds| {
+                        let protocol = match resource.kind {
+                            ResourceKind::Http => Some(Protocol::Http),
+                            ResourceKind::Queue => Some(Protocol::Queue),
+                            ResourceKind::Database | ResourceKind::Cache => None,
+                        };
+                        protocol.is_some_and(|protocol| kinds.contains(&protocol))
+                    })
+            })
+            .map(|(rule, _, _)| rule.id.clone());
+        if resource.rule.is_some() {
+            resource.verdict = Verdict::Forbidden;
+            report.forbidden_resources.push(index);
+        }
+    }
+    report.summary.resources = resources.len();
+    report.summary.forbidden_resources = report.forbidden_resources.len();
+    report.resources = resources;
+    Ok(())
+}
+
 pub fn markdown(report: &Report) -> String {
     let mut out = String::new();
-    writeln!(out, "# Declared service architecture\n").unwrap();
+    let inferred = report.source.collector != "declarative";
+    let mode = if inferred { "Inferred" } else { "Declared" };
+    writeln!(out, "# {mode} service architecture\n").unwrap();
     let count = |n: usize, noun: &str| format!("{n} {noun}{}", if n == 1 { "" } else { "s" });
     writeln!(
         out,
         "{}, {}, {} (largest: {} services), {}, {}.\n",
         count(report.summary.services, "service"),
-        count(report.summary.calls, "declared call"),
+        count(
+            report.summary.calls,
+            if inferred { "call" } else { "declared call" }
+        ),
         count(report.summary.cycles, "cycle"),
         report.summary.largest_cycle,
         count(report.summary.hubs, "hub"),
@@ -444,9 +538,49 @@ pub fn markdown(report: &Report) -> String {
     for caveat in &report.caveats {
         writeln!(out, "> {}\n", escape(caveat)).unwrap();
     }
+    if inferred {
+        writeln!(out, "## Infrastructure\n").unwrap();
+        if report.resources.is_empty() {
+            writeln!(out, "No infrastructure clients inferred.\n").unwrap();
+        }
+        for resource in &report.resources {
+            writeln!(
+                out,
+                "- {}: {} via {}{}; {} confidence; {}:{}; {}.",
+                escape(&resource.service),
+                resource.kind.label(),
+                escape(&resource.package),
+                resource
+                    .operation
+                    .as_ref()
+                    .map(|op| format!(" ({})", escape(op)))
+                    .unwrap_or_default(),
+                resource.confidence.label(),
+                escape(&resource.source.file),
+                resource.source.line,
+                resource
+                    .rule
+                    .as_ref()
+                    .map(|rule| format!("forbidden by {}", escape(rule)))
+                    .unwrap_or_else(|| "allowed".into())
+            )
+            .unwrap();
+        }
+        writeln!(
+            out,
+            "\n{} resources, {} forbidden resources.\n",
+            report.summary.resources, report.summary.forbidden_resources
+        )
+        .unwrap();
+    }
     writeln!(out, "## Cycles\n").unwrap();
     if report.cycles.is_empty() {
-        writeln!(out, "No cross-service cycles among declared calls.\n").unwrap();
+        writeln!(
+            out,
+            "No cross-service cycles among {}calls.\n",
+            if inferred { "" } else { "declared " }
+        )
+        .unwrap();
     }
     for cycle in &report.cycles {
         writeln!(
@@ -501,9 +635,14 @@ pub fn markdown(report: &Report) -> String {
         )
         .unwrap();
     }
-    writeln!(out, "\n## Declared calls\n\nCall numbers below are one-based; JSON edge indices are zero-based. Allowed means no declared forbid rule matched.\n").unwrap();
+    writeln!(out, "\n## {mode} calls\n\nCall numbers below are one-based; JSON edge indices are zero-based. Allowed means no declared forbid rule matched.\n").unwrap();
     if report.edges.is_empty() {
-        writeln!(out, "No calls declared.\n").unwrap();
+        writeln!(
+            out,
+            "No calls {}.\n",
+            if inferred { "inferred" } else { "declared" }
+        )
+        .unwrap();
     }
     for (index, edge) in report.edges.iter().enumerate() {
         let call = &edge.call;
