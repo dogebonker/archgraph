@@ -39,6 +39,7 @@ pub mod resolution;
 pub mod rewrite;
 pub mod rules;
 pub mod sarif;
+pub mod service_diff;
 pub mod services;
 pub mod simulate;
 pub mod surface;

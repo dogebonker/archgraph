@@ -1,7 +1,8 @@
 # Architecture contracts, project skills, and visual change review
 
-Status: W1a implemented and independently reviewed. The remaining outcomes are a product-direction
-map, not implemented features or an approved storage/API design.
+Status: W1a shipped. W1b, W2, and W3 are authorized for sequential implementation on
+`feat/architecture-workflow` from merged main `185f2c0`. Each increment requires targeted tests
+and independent review before the next one starts.
 User direction recorded 2026-10-25 after the service reports and MCP queries shipped.
 
 ## Requested outcomes
@@ -82,7 +83,44 @@ The 62 targeted service, MCP-tool, and stdio tests pass. The full Rust run passe
 Independent code review found no issues. No new dependency, policy language, or automatic
 adoption step was added.
 
+### W1b delivery contract
+
+Implemented and independently approved. The 57 targeted tests pass, followed by 23 focused
+diff tests after the dispatch memory refinement. Clippy, formatting, and whitespace checks pass.
+
+`archgraph diff before-services.json after-services.json --fail-on new-forbidden` compares two
+validated service reports. Both evidence sets use the after-report's ordered forbid rules.
+The `services-diff` JSON separates policy changes from new, existing, and no-longer-observed
+forbidden calls and client usages. Each logical relationship retains before and after occurrences.
+Its identity includes the source file, endpoints or owner/package, transport or resource kind,
+and operation. Line numbers, confidence, and rule labels do not create new relationships.
+
+Service reports lack a Git revision, analyzer version, collection configuration, and boundary
+manifest provenance. The result therefore compares supplied evidence rather than proving that a
+code edit caused a change. Different collector modes and mixed report kinds are rejected.
+Only `new-forbidden` is supported as a service diff gate. An explicit gate without authored
+after-report forbid rules is an error. Existing import diff output and gates stay unchanged.
+
 ## W2. Analyze, draft, review, adopt
+
+### W2 delivery contract
+
+`skill draft` writes `.archgraph/drafts/project-architecture/SKILL.md`, outside automatic skill
+discovery. Native module/import and service evidence informs the draft. Existing policy files
+remain authoritative. Without a layout, inference writes a separate create-only layout proposal.
+Adoption requires a reviewed root layout and a fresh draft made against it.
+
+`skill adopt` installs the reviewed draft in `.agents/skills/project-architecture/SKILL.md`.
+It verifies the checksummed owned block and current layout/manifest digests, then copies that
+reviewed content without regeneration. Updates preserve frontmatter and notes outside the owned
+block. Edited owned blocks, duplicate fences, unowned installed files, and symlink paths fail
+without overwriting them. Reuse the existing sync-rules ownership and write checks.
+
+Generated instructions distinguish draft-time observations from policy, refer to policy files,
+show source-backed examples, require fresh scans before edits, and leave semantic constraints
+unverified. Service gates appear only with authored service forbid rules. Other repositories get
+advisory service evidence commands. Repository data stays literal data, including escaped JSON
+metadata, rather than executable shell text.
 
 Extend the existing bootstrap path. A proposed project skill should include the observed module
 and service structure, authoritative rule-file references, source-backed allowed/forbidden
@@ -99,6 +137,25 @@ is detected by the generated checking workflow; source edits and manual instruct
 preserved across regeneration; unsupported semantic claims remain clearly unverified.
 
 ## W3. Visual change review
+
+### W3 delivery contract
+
+`archgraph diff before.json after.json --html changes.html` renders two validated import scans.
+It preserves the existing JSON diff and gate behavior. A separate typed visualization projection
+includes internal and external imports, exact module IDs, structural additions and removals,
+changed verdicts and rule reasons, module-assignment changes, and source evidence updates.
+
+Read original analyzer metadata before restoration. Compare recorded language, collector identity
+and version, scan root, collection and selection settings, and grouping. Counters, timestamps,
+Git revisions, derived excluded-file lists, and package inventories are evidence rather than
+collection settings. Policy changes are disclosed separately. Missing provenance produces a
+visible unverified state. Known incompatible settings fail before HTML export. Matching recorded
+settings do not establish that the two reports came from the same repository.
+
+The offline module graph, searchable change list, and before/after inspector follow `DESIGN.md`.
+Removed relationships remain selectable, and status labels work without colour. Reject input
+aliases as output paths. HTML service comparisons and legacy-v1 HTML are outside this increment.
+The existing diff command supplies the first process integration. History can reuse the view later.
 
 First define a source-evidence delta, then render it. The user selected modules, imports and
 code-rule violations as the first visual-diff level. Show added and removed imports, module

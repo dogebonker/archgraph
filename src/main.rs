@@ -301,9 +301,9 @@ struct Render {
 
 #[derive(Args)]
 struct DiffArgs {
-    /// The earlier scan document
+    /// The earlier scan or services report
     old: PathBuf,
-    /// The later scan document
+    /// The later report of the same kind
     new: PathBuf,
     /// Exit 1 when any of these is in the diff: new-forbidden, new-cycles, new-unplanned,
     /// stale-known, new-vacuous
@@ -622,6 +622,52 @@ fn render(args: Render) -> Result<()> {
 }
 
 fn diff(args: DiffArgs) -> Result<ExitCode> {
+    #[derive(serde::Deserialize)]
+    struct Header {
+        kind: Option<String>,
+    }
+    let before = fs::read_to_string(&args.old)
+        .with_context(|| format!("reading report {}", args.old.display()))?;
+    let after = fs::read_to_string(&args.new)
+        .with_context(|| format!("reading report {}", args.new.display()))?;
+    let old_header: Header = serde_json::from_str(&before).context("parse earlier report JSON")?;
+    let new_header: Header = serde_json::from_str(&after).context("parse later report JSON")?;
+    if old_header.kind.as_deref() == Some("services")
+        || new_header.kind.as_deref() == Some("services")
+    {
+        if old_header.kind.as_deref() != Some("services")
+            || new_header.kind.as_deref() != Some("services")
+        {
+            bail!(
+                "diff requires two reports of the same kind; do not mix scans and services reports"
+            );
+        }
+        if globals().legacy_v1 {
+            bail!("services diffs require the current schema; omit --legacy-v1");
+        }
+        if args
+            .fail_on
+            .iter()
+            .any(|flag| !matches!(flag, FailOn::Forbidden))
+        {
+            bail!("service diffs support only --fail-on new-forbidden");
+        }
+        let old = archgraph::services::read_report(&before)?;
+        let new = archgraph::services::read_report(&after)?;
+        if !args.fail_on.is_empty() && new.forbid.is_empty() {
+            bail!(
+                "--fail-on new-forbidden requires authored forbid rules in the after service report"
+            );
+        }
+        let report = archgraph::service_diff::diff(&old, &new)?;
+        let failed = !args.fail_on.is_empty() && report.has_new_forbidden();
+        match args.format {
+            Format::Json => write(None, &report)?,
+            Format::Markdown => print!("{}", archgraph::service_diff::markdown(&report, failed)),
+        }
+        return Ok(ExitCode::from(u8::from(failed)));
+    }
+    drop((before, after));
     let (old, new) = (recompute(&args.old, None)?, recompute(&args.new, None)?);
     let d = diff::diff(&old, &new);
     let failed: Vec<&str> = args

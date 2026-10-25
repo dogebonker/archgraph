@@ -514,6 +514,30 @@ It does not compare a baseline. Invalid input, a failed output write, or a check
 forbid rules exits 2. Without the flag, a valid report exits 0 even when it contains violations.
 `--brief` changes presentation, while `-o` saves the full JSON report. Neither changes the check.
 
+To check only newly observed service violations, save reports before and after an edit:
+
+```sh
+archgraph services . --manifest services.yaml --format json -o .archgraph/services-before.json
+# Make the code change, then collect again.
+archgraph services . --manifest services.yaml --format json -o .archgraph/services-after.json
+archgraph diff .archgraph/services-before.json .archgraph/services-after.json --fail-on new-forbidden --format markdown
+```
+
+Service diffs evaluate both reports under the after-report's ordered rules. JSON uses
+`kind: services-diff` and separate new, existing, and no-longer-observed forbidden calls and
+infrastructure usages. Each relationship retains its before and after source occurrences.
+Line or confidence changes do not introduce a new relationship. `policy_changed` and the two
+rule arrays disclose policy changes separately. A policy-only edit does not become a new code
+violation. Exit 1 means a new forbidden relationship was observed. Existing violations do not fail
+this gate. Exit 2 covers invalid or mixed report kinds, different collector modes, an unsupported
+failure condition, or an explicit gate without after-report forbid rules.
+
+The comparison uses supplied evidence. Service reports lack analyzer versions, Git revisions,
+collection settings, and boundary-manifest digests, so collection parity remains unavailable.
+No-longer-observed evidence does not prove a runtime relationship was removed. Import diffs keep
+their existing output and failure conditions. Service diffs support only `new-forbidden` and do
+not yet participate in edit hooks or MCP baseline queries.
+
 Inference follows local bindings conservatively. CommonJS destructuring, clients hidden by
 framework providers, cross-file receiver wiring, configured URLs or topics, and router plugin
 prefixes can be missed. Python uses deployment or declared boundaries. Unsupported deeply nested
