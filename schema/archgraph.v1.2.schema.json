@@ -23,6 +23,7 @@
         "package-splits",
         "context",
         "services",
+        "services-diff",
         "recipe",
         "apply-plan",
         "apply",
@@ -210,9 +211,166 @@
       "then": {
         "$ref": "#/$defs/verification"
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "services-diff"
+          }
+        }
+      },
+      "then": {
+        "$ref": "#/$defs/services-diff"
+      }
     }
   ],
   "$defs": {
+    "services-diff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "kind",
+        "policy_basis",
+        "policy_changed",
+        "before",
+        "after",
+        "new_forbidden_calls",
+        "existing_forbidden_calls",
+        "resolved_forbidden_calls",
+        "new_forbidden_resources",
+        "existing_forbidden_resources",
+        "resolved_forbidden_resources",
+        "caveats"
+      ],
+      "properties": {
+        "schema": {
+          "const": "archgraph/v1.2"
+        },
+        "kind": {
+          "const": "services-diff"
+        },
+        "policy_basis": {
+          "const": "after"
+        },
+        "policy_changed": {
+          "type": "boolean"
+        },
+        "before": {
+          "$ref": "#/$defs/service-diff-snapshot"
+        },
+        "after": {
+          "$ref": "#/$defs/service-diff-snapshot"
+        },
+        "new_forbidden_calls": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/service-call-change"
+          }
+        },
+        "existing_forbidden_calls": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/service-call-change"
+          }
+        },
+        "resolved_forbidden_calls": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/service-call-change"
+          }
+        },
+        "new_forbidden_resources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/service-resource-change"
+          }
+        },
+        "existing_forbidden_resources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/service-resource-change"
+          }
+        },
+        "resolved_forbidden_resources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/service-resource-change"
+          }
+        },
+        "caveats": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "service-diff-snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "forbid",
+        "caveats"
+      ],
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/services/properties/source"
+        },
+        "forbid": {
+          "$ref": "#/$defs/services/properties/forbid"
+        },
+        "caveats": {
+          "$ref": "#/$defs/services/properties/caveats"
+        }
+      }
+    },
+    "service-call-change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "before",
+        "after"
+      ],
+      "properties": {
+        "before": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/services/properties/edges/items"
+          }
+        },
+        "after": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/services/properties/edges/items"
+          }
+        }
+      }
+    },
+    "service-resource-change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "before",
+        "after"
+      ],
+      "properties": {
+        "before": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/services/properties/resources/items"
+          }
+        },
+        "after": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/services/properties/resources/items"
+          }
+        }
+      }
+    },
     "known-entry": {
       "description": "A forbidden import by importer, written target as check prints it and first-match rule.",
       "type": "object",

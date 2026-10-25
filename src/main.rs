@@ -73,6 +73,8 @@ mod report_cli;
 mod scan_cli;
 #[path = "cli/services.rs"]
 mod services_cli;
+#[path = "cli/skill.rs"]
+mod skill_cli;
 #[path = "cli/surface.rs"]
 mod surface_cli;
 #[path = "cli/sync_rules.rs"]
@@ -117,6 +119,8 @@ enum Cmd {
     SyncRules(sync_rules_cli::SyncRules),
     /// Create a reasoned day-zero layout and show its first findings
     Init(init_cli::Init),
+    /// Draft and explicitly adopt a repository-specific architecture skill
+    Skill(skill_cli::Skill),
     /// Install and run architecture checks around agent edits
     Hook(hooks_cli::Hook),
     /// Inspect architecture rule-fire counts
@@ -301,9 +305,9 @@ struct Render {
 
 #[derive(Args)]
 struct DiffArgs {
-    /// The earlier scan document
+    /// The earlier scan or services report
     old: PathBuf,
-    /// The later scan document
+    /// The later report of the same kind
     new: PathBuf,
     /// Exit 1 when any of these is in the diff: new-forbidden, new-cycles, new-unplanned,
     /// stale-known, new-vacuous
@@ -312,6 +316,9 @@ struct DiffArgs {
     /// The diff document, or a markdown summary for a pull request
     #[arg(long, value_enum, default_value_t = Format::Json)]
     format: Format,
+    /// Also write an offline module/import comparison (scan inputs only)
+    #[arg(long, value_name = "FILE")]
+    html: Option<PathBuf>,
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -455,6 +462,7 @@ fn execute_inner(cli: Cli) -> ExitCode {
         Cmd::Adr(args) => adr_cli::run(args),
         Cmd::SyncRules(args) => sync_rules_cli::run(args),
         Cmd::Init(args) => init_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Skill(args) => skill_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Hook(args) => hooks_cli::run(args),
         Cmd::Fires(args) => hooks_cli::fires(args),
         Cmd::Propose(args) => recipes_cli::propose(args).map(|()| ExitCode::SUCCESS),
@@ -622,7 +630,78 @@ fn render(args: Render) -> Result<()> {
 }
 
 fn diff(args: DiffArgs) -> Result<ExitCode> {
-    let (old, new) = (recompute(&args.old, None)?, recompute(&args.new, None)?);
+    #[derive(serde::Deserialize)]
+    struct Header {
+        kind: Option<String>,
+    }
+    let before = fs::read_to_string(&args.old)
+        .with_context(|| format!("reading report {}", args.old.display()))?;
+    let after = fs::read_to_string(&args.new)
+        .with_context(|| format!("reading report {}", args.new.display()))?;
+    let old_header: Header = serde_json::from_str(&before).context("parse earlier report JSON")?;
+    let new_header: Header = serde_json::from_str(&after).context("parse later report JSON")?;
+    if args.html.is_some() && globals().legacy_v1 {
+        bail!("--html requires the current schema; omit --legacy-v1");
+    }
+    if old_header.kind.as_deref() == Some("services")
+        || new_header.kind.as_deref() == Some("services")
+    {
+        if args.html.is_some() {
+            bail!("--html supports import scans; service comparisons do not have an HTML view yet");
+        }
+        if old_header.kind.as_deref() != Some("services")
+            || new_header.kind.as_deref() != Some("services")
+        {
+            bail!(
+                "diff requires two reports of the same kind; do not mix scans and services reports"
+            );
+        }
+        if globals().legacy_v1 {
+            bail!("services diffs require the current schema; omit --legacy-v1");
+        }
+        if args
+            .fail_on
+            .iter()
+            .any(|flag| !matches!(flag, FailOn::Forbidden))
+        {
+            bail!("service diffs support only --fail-on new-forbidden");
+        }
+        let old = archgraph::services::read_report(&before)?;
+        let new = archgraph::services::read_report(&after)?;
+        if !args.fail_on.is_empty() && new.forbid.is_empty() {
+            bail!(
+                "--fail-on new-forbidden requires authored forbid rules in the after service report"
+            );
+        }
+        let report = archgraph::service_diff::diff(&old, &new)?;
+        let failed = !args.fail_on.is_empty() && report.has_new_forbidden();
+        match args.format {
+            Format::Json => write(None, &report)?,
+            Format::Markdown => print!("{}", archgraph::service_diff::markdown(&report, failed)),
+        }
+        return Ok(ExitCode::from(u8::from(failed)));
+    }
+    let (old, new) = if let Some(output) = &args.html {
+        refuse_comparison_input_alias(output, &args.old, &args.new)?;
+        let label = |path: &Path| {
+            path.file_name()
+                .unwrap_or(path.as_os_str())
+                .to_string_lossy()
+                .into_owned()
+        };
+        let (old, old_provenance) = archgraph::comparison::read(&before, &label(&args.old))?;
+        let (new, new_provenance) = archgraph::comparison::read(&after, &label(&args.new))?;
+        let mut old = archgraph::restore_scan(prepare_scan(old, &args.old)?)?;
+        let mut new = archgraph::restore_scan(prepare_scan(new, &args.new)?)?;
+        archgraph::recipes::rank(&mut old, globals().rank);
+        archgraph::recipes::rank(&mut new, globals().rank);
+        let view = archgraph::comparison::project(&old, &old_provenance, &new, &new_provenance)?;
+        write_file(output, render::render_comparison(&view)?.as_bytes())?;
+        (old, new)
+    } else {
+        drop((before, after));
+        (recompute(&args.old, None)?, recompute(&args.new, None)?)
+    };
     let d = diff::diff(&old, &new);
     let failed: Vec<&str> = args
         .fail_on
@@ -648,6 +727,25 @@ fn diff(args: DiffArgs) -> Result<ExitCode> {
     } else {
         ExitCode::from(1)
     })
+}
+
+fn refuse_comparison_input_alias(output: &Path, old: &Path, new: &Path) -> Result<()> {
+    let target = if output.exists() {
+        output.canonicalize()?
+    } else {
+        let parent = output
+            .parent()
+            .filter(|path| !path.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        parent
+            .canonicalize()
+            .context("HTML output parent must be an existing directory")?
+            .join(output.file_name().context("HTML output must name a file")?)
+    };
+    if target == old.canonicalize()? || target == new.canonicalize()? {
+        bail!("HTML output must differ from both input reports");
+    }
+    Ok(())
 }
 
 /// A scan document recomputed from its files, edges and config, with `rules` replacing the
@@ -691,8 +789,12 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
         return Ok(serde_json::from_value(serde_json::to_value(doc)?)?);
     }
     let text = fs::read(path).with_context(|| format!("reading {}", path.display()))?;
-    let mut input: ScanInput = serde_json::from_slice(&text)
+    let input: ScanInput = serde_json::from_slice(&text)
         .with_context(|| format!("reading scan document {}", path.display()))?;
+    prepare_scan(input, path)
+}
+
+fn prepare_scan(mut input: ScanInput, path: &Path) -> Result<ScanInput> {
     if !archgraph::model::supported_schema(&input.schema) || input.kind != "scan" {
         bail!(
             "{} is `{}` `{}`, expected a `{SCHEMA}` scan document",

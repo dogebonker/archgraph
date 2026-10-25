@@ -31,7 +31,7 @@ pub struct Report {
     /// UTF-8 bytes / 4, matching context's deliberately rough estimate.
     pub estimated_tokens: usize,
 }
-fn hash(bytes: &[u8]) -> String {
+pub(crate) fn hash(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
         .map(|b| format!("{b:02x}"))
@@ -166,7 +166,7 @@ fn lines(rules: &RulesRef) -> Vec<String> {
     }
     lines
 }
-fn block(rules: &RulesRef, full: bool, body: &str) -> String {
+pub(crate) fn block(rules: &RulesRef, full: bool, body: &str) -> String {
     let payload = format!(
         "<!-- archgraph:layout-sha256 {} -->\n<!-- archgraph:mode {} -->\n{body}",
         rules.sha256,
@@ -208,7 +208,7 @@ pub fn render(rules: &RulesRef, full: bool) -> String {
     )
 }
 
-fn path(root: &Path, relative: &str) -> Result<std::path::PathBuf> {
+pub(crate) fn path(root: &Path, relative: &str) -> Result<std::path::PathBuf> {
     let mut path = root.to_path_buf();
     for component in Path::new(relative).components() {
         ensure!(
@@ -235,7 +235,7 @@ fn matches(bytes: &[u8], needle: &str) -> Vec<usize> {
         .filter_map(|(index, v)| (v == needle.as_bytes()).then_some(index))
         .collect()
 }
-fn span(bytes: &[u8]) -> Result<Option<(usize, usize)>> {
+pub(crate) fn span(bytes: &[u8]) -> Result<Option<(usize, usize)>> {
     let starts = matches(bytes, START);
     let ends = matches(bytes, END);
     if starts.is_empty() && ends.is_empty() {
@@ -247,7 +247,7 @@ fn span(bytes: &[u8]) -> Result<Option<(usize, usize)>> {
     );
     Ok(Some((starts[0], ends[0] + END.len())))
 }
-fn owned_mode(bytes: &[u8]) -> Option<bool> {
+pub(crate) fn owned_mode(bytes: &[u8]) -> Option<bool> {
     let owned = std::str::from_utf8(bytes).ok()?;
     let content = owned
         .strip_prefix(START)?
@@ -277,7 +277,12 @@ fn diff(name: &str, old: &[u8], new: &str) -> String {
     )
 }
 
-fn write_updated(root: &Path, name: &str, original: &[u8], updated: &[u8]) -> Result<()> {
+pub(crate) fn write_updated(
+    root: &Path,
+    name: &str,
+    original: &[u8],
+    updated: &[u8],
+) -> Result<()> {
     let target = path(root, name)?;
     fs::create_dir_all(target.parent().context("missing rule-file parent")?)?;
     path(root, name)?;

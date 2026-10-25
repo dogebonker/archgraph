@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>archgraph architecture comparison</title>
+<style>
+:root { color-scheme: dark; --base:#000; --surface:#1c1c1e; --line:#424246; --text:#f5f5f7; --muted:#aaaab1; --blue:#0a84ff; --teal:#64d2ff; --purple:#bf5af2; --orange:#ff9f0a; --red:#ff453a; --sans:-apple-system,BlinkMacSystemFont,system-ui,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace; }
+* { box-sizing:border-box; scrollbar-color:#55555a var(--base); scrollbar-width:thin; }
+body { margin:0; background:var(--base); color:var(--text); font:400 14px/1.5 var(--sans); font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased; }
+button,input { font:inherit; color:inherit; }
+button { cursor:pointer; border:1px solid var(--line); border-radius:8px; background:transparent; padding:8px 12px; text-align:left; }
+button:hover { background:#ffffff0d; }
+button[aria-pressed="true"] { border-color:var(--blue); background:#0a84ff25; }
+button:focus-visible,input:focus-visible,[tabindex]:focus-visible { outline:2px solid var(--blue); outline-offset:3px; }
+h1 { margin:0; font-size:22px; line-height:1.3; letter-spacing:-.02em; font-weight:650; }
+h1 span { color:var(--muted); font-weight:400; }
+h2 { margin:0; font-size:15px; font-weight:600; }
+h3 { margin:20px 0 8px; font-size:13px; }
+p { margin:8px 0 0; }
+header { display:flex; align-items:start; justify-content:space-between; gap:24px; padding:24px 28px 20px; border-bottom:1px solid var(--line); }
+.meta,.muted { color:var(--muted); font-size:12px; }
+.path,code { font-family:var(--mono); overflow-wrap:anywhere; font-size:12px; }
+#snapshots { overflow-wrap:anywhere; }
+#totals { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px 18px; margin:0; max-width:480px; }
+#totals div { display:flex; gap:6px; align-items:baseline; } #totals dt { color:var(--muted); } #totals dd { margin:0; font-weight:600; }
+.notice { padding:12px 28px; border-bottom:1px solid var(--line); background:#141416; font-size:13px; }
+#compatibility { font-weight:600; } #compatibility.unverified { color:var(--orange); }
+#policy-notice { color:var(--orange); } #warnings { color:var(--muted); padding-left:18px; margin:8px 0 0; } #warnings li+li { margin-top:4px; }
+.layout { display:grid; grid-template-columns:240px minmax(320px,1fr) 360px; min-height:calc(100vh - 190px); }
+.catalog { padding:20px 16px; border-right:1px solid var(--line); min-width:0; }
+.section-head { display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
+label { display:block; margin:16px 0 6px; color:var(--muted); font-size:12px; }
+.search { display:flex; gap:8px; }
+input { width:100%; min-width:0; border:1px solid var(--line); border-radius:8px; padding:9px 10px; background:#141416; caret-color:var(--blue); }
+#clear { flex:none; padding:8px; font-size:12px; }
+.modes { display:flex; gap:6px; margin-top:12px; } .modes button { flex:1; font-size:12px; text-align:center; }
+#filter-label { min-height:36px; overflow-wrap:anywhere; }
+#node-list { display:flex; flex-direction:column; gap:4px; margin-top:12px; max-height:65vh; overflow:auto; }
+.node-row { width:100%; border-color:transparent; padding:10px; }
+.node-row strong,.import-row strong { display:block; overflow-wrap:anywhere; font-size:13px; font-weight:500; }
+.node-row .meta,.import-row .meta { display:block; margin-top:4px; overflow-wrap:anywhere; }
+.main { min-width:0; padding:20px 24px 32px; }
+#graph-wrap { overflow:auto; margin-top:12px; background:#101012; border-radius:12px; }
+#module-graph { display:block; width:100%; }
+.graph-edge { fill:none; stroke:#a7a7b2; stroke-width:2; }
+.graph-edge.added { stroke:var(--teal); } .graph-edge.removed { stroke:var(--orange); stroke-dasharray:6 4; }
+.graph-edge.changed,.graph-edge.mixed { stroke:var(--purple); } .graph-edge.forbidden { stroke:var(--red); }
+.graph-hit { fill:none; stroke:transparent; stroke-width:18; cursor:pointer; }
+.graph-hit:focus-visible { stroke:#0a84ff55; outline:none; }
+.graph-label { fill:var(--muted); font:12px var(--sans); pointer-events:none; }
+.graph-node { cursor:pointer; } .graph-node rect { fill:var(--surface); stroke:#66666d; }
+.graph-node.added rect { stroke:var(--teal); } .graph-node.removed rect { stroke:var(--orange); stroke-dasharray:5 3; }
+.graph-node.changed rect { stroke:var(--purple); } .graph-node.selected rect,.graph-node:focus-visible rect { stroke:var(--blue); stroke-width:2; }
+.graph-node text { fill:var(--text); font:13px var(--sans); } .graph-node .node-meta { fill:var(--muted); font-size:11px; }
+.legend { margin-top:10px; font-size:12px; color:var(--muted); }
+#connection-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; } .connection-row { font-size:12px; max-width:100%; overflow-wrap:anywhere; }
+#import-list { margin-top:12px; max-height:65vh; overflow:auto; }
+.import-row { display:block; width:100%; margin-bottom:8px; padding:11px 12px; }
+.added-label { color:var(--teal); } .removed-label { color:var(--orange); } .changed-label { color:var(--purple); } .bad { color:var(--red); }
+#inspector { padding:20px; background:#141416; border-left:1px solid var(--line); min-width:0; }
+#inspector-content { position:sticky; top:20px; max-height:calc(100vh - 40px); overflow:auto; }
+#inspector-title { margin-top:8px; font-size:18px; line-height:1.35; overflow-wrap:anywhere; }
+#inspector-body { overflow-wrap:anywhere; } #inspector-body ul { padding-left:18px; }
+.side { margin-top:18px; padding-top:2px; border-top:1px solid var(--line); }
+.details { margin:8px 0 0; } .details div { display:grid; grid-template-columns:86px minmax(0,1fr); gap:10px; padding:6px 0; }
+.details dt { color:var(--muted); } .details dd { margin:0; overflow-wrap:anywhere; }
+.evidence { padding:10px 0; border-bottom:1px solid #333336; } .source { display:block; margin:4px 0 8px; user-select:text; }
+.copy { font-size:12px; color:var(--teal); padding:5px 8px; }
+.empty { color:var(--muted); padding:16px 0; } #back { margin-top:20px; }
+.sr { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+@media(max-width:1180px) { .layout { grid-template-columns:220px minmax(0,1fr); } #inspector { grid-column:1/-1; border-left:0; border-top:1px solid var(--line); } #inspector-content { position:static; max-height:none; max-width:840px; overflow:visible; } }
+@media(max-width:680px) { header { display:block; padding:20px 16px; } h1 { font-size:20px; } #totals { justify-content:flex-start; margin-top:14px; gap:6px 14px; font-size:13px; } .notice { padding:12px 16px; } .layout { display:block; } .catalog { padding:16px; border-right:0; border-bottom:1px solid var(--line); } #node-list { max-height:220px; } .main,#inspector { padding:20px 16px; } #import-list { max-height:440px; } .section-head { align-items:start; } }
+@media(prefers-contrast:more) { :root { --muted:#d5d5dc; --line:#7d7d85; } }
+</style>
+</head>
+<body>
+<header><div><h1>archgraph <span>Architecture changes</span></h1><p id="snapshots" class="meta"></p></div><dl id="totals" aria-label="Complete comparison totals"></dl></header>
+<section class="notice" aria-label="Comparison limits"><p id="compatibility"></p><p id="policy-notice"></p><p class="muted">Static snapshot evidence, not complete runtime architecture or proof of repository identity.</p><ul id="warnings"></ul></section>
+<main class="layout">
+<section class="catalog" aria-labelledby="nodes-title"><div class="section-head"><h2 id="nodes-title">Modules and dependencies</h2><span id="node-count" class="meta"></span></div><label for="search">Find a change or dependency</label><div class="search"><input type="search" id="search" placeholder="Path, module, package, or rule" autocomplete="off"><button type="button" id="clear">Clear</button></div><div class="modes"><button type="button" id="changes-mode" aria-pressed="true">Changes</button><button type="button" id="all-mode" aria-pressed="false">All imports</button></div><p id="filter-label" class="meta"></p><div id="node-list"></div></section>
+<section class="main" aria-labelledby="graph-title"><div class="section-head"><h2 id="graph-title">Module connections</h2><span id="graph-count" class="meta"></span></div><div id="graph-wrap"><svg id="module-graph" role="group" aria-label="Before and after module connections"></svg></div><p id="graph-empty" class="empty"></p><p class="legend">+ Added · − Removed, dashed · Membership moved in/out · Rule changed · Evidence only. Red means a forbidden verdict on either side.</p><div id="connection-list" aria-label="Connection selections"></div><div class="section-head"><h3 id="imports-title" tabindex="-1">Import and rule evidence</h3><span id="import-count" class="meta"></span></div><p id="change-summary" class="meta"></p><div id="import-list"></div></section>
+<aside id="inspector" aria-labelledby="inspector-title"><div id="inspector-content"><div id="inspector-kind" class="meta">Before / after inspector</div><h2 id="inspector-title" tabindex="-1">Select a module or import</h2><div id="inspector-body"></div><button type="button" id="back">Back to changes</button></div></aside>
+</main>
+<p id="announcement" class="sr" role="status" aria-live="polite"></p>
+<script type="application/json" id="comparison">{{COMPARISON}}</script>
+<script>
+'use strict';
+const view = JSON.parse(document.getElementById('comparison').textContent);
+const nodes = view.nodes;
+const imports = view.imports;
+const nodeById = new Map(nodes.map(node => [node.id, node]));
+const $ = id => document.getElementById(id);
+const ns = 'http://www.w3.org/2000/svg';
+const focusTargets = new Map();
+let showAll = false;
+let selection = null;
+let nodeFilter = null;
+let connectionFilter = null;
+function el(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (className) node.setAttribute('class', className);
+  return node;
+}
+function svg(tag, attrs, text) {
+  const node = document.createElementNS(ns, tag);
+  for (const [name, value] of Object.entries(attrs || {})) node.setAttribute(name, String(value));
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function button(text, action, className) {
+  const node = el('button', text, className);
+  node.setAttribute('type', 'button');
+  node.addEventListener('click', action);
+  return node;
+}
+function activate(node, action) {
+  node.addEventListener('click', action);
+  node.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); action(); }
+  });
+}
+function announce(text) { $('announcement').textContent = text; }
+function nodeLabel(id) { return nodeById.get(id)?.label || id; }
+function evidenceOnly(row) { return row.changes.length === 1 && row.changes[0] === 'evidence'; }
+function ruleChanged(row) { return row.changes.includes('rule') || row.changes.includes('verdict'); }
+function rowLabel(row) {
+  if (row.status === 'added') return '+ Added';
+  if (row.status === 'removed') return '− Removed';
+  if (evidenceOnly(row)) return 'Evidence only';
+  if (row.status === 'unchanged') return 'Unchanged';
+  return row.changes.map(change => ({ verdict: 'Verdict changed', rule: 'Rule changed', module: 'Membership moved', evidence: 'Evidence updated' })[change]).join(' · ');
+}
+function nodeStatus(node) { return ({ added: '+ Added', removed: '− Removed', changed: 'Membership changed', unchanged: 'Unchanged' })[node.status]; }
+function rowNodes(row) { return [...new Set([row.before, row.after].filter(Boolean).flatMap(side => [side.from_node, side.to_node]))]; }
+function rowText(row) { return [row.from, row.to, row.kind, rowLabel(row), ...rowNodes(row).map(nodeLabel), ...[row.before, row.after].filter(Boolean).flatMap(side => side.evidence.flatMap(e => [e.rule || '', e.verdict || '', ...e.reasons, ...e.sources]))].join(' ').toLowerCase(); }
+function forbidden(side) { return !!side && side.evidence.some(e => e.verdict === 'forbidden'); }
+const connections = [];
+const pairs = new Map();
+imports.forEach((row, index) => {
+  for (const side of ['before', 'after']) {
+    if (!row[side]) continue;
+    const { from_node: from, to_node: to } = row[side];
+    if (!pairs.has(from)) pairs.set(from, new Map());
+    const destinations = pairs.get(from);
+    if (!destinations.has(to)) {
+      const connection = { from, to, before: new Set(), after: new Set(), index: connections.length };
+      destinations.set(to, connection); connections.push(connection);
+    }
+    destinations.get(to)[side].add(index);
+  }
+});
+function indices(connection) { return new Set([...connection.before, ...connection.after]); }
+function stats(connection) {
+  const result = { added:0, removed:0, movedIn:0, movedOut:0, rules:0, evidence:0 };
+  for (const index of indices(connection)) {
+    const row = imports[index];
+    if (row.status === 'added' && connection.after.has(index)) result.added++;
+    if (row.status === 'removed' && connection.before.has(index)) result.removed++;
+    if (row.changes.includes('module')) {
+      if (connection.after.has(index) && !connection.before.has(index)) result.movedIn++;
+      if (connection.before.has(index) && !connection.after.has(index)) result.movedOut++;
+    }
+    if (ruleChanged(row)) result.rules++;
+    if (evidenceOnly(row)) result.evidence++;
+  }
+  return result;
+}
+function connectionLabel(connection) {
+  const s = stats(connection);
+  const labels = [];
+  if (s.added) labels.push(`+${s.added} added`);
+  if (s.removed) labels.push(`−${s.removed} removed`);
+  if (s.movedIn) labels.push(`${s.movedIn} moved in`);
+  if (s.movedOut) labels.push(`${s.movedOut} moved out`);
+  if (s.rules) labels.push(`${s.rules} rule changed`);
+  if (s.evidence) labels.push(`${s.evidence} evidence only`);
+  return labels.join(' · ') || 'Unchanged';
+}
+function navigateAfterSelection(key, target) {
+  if (matchMedia('(max-width:1180px)').matches) {
+    $(target).focus({ preventScroll:true });
+    $(target === 'inspector-title' ? 'inspector' : target).scrollIntoView({ block:'start' });
+  } else {
+    focusTargets.get(key)?.focus();
+  }
+}
+function selectNode(id, key) {
+  selection = { type:'node', id }; nodeFilter = id; connectionFilter = null;
+  render(); navigateAfterSelection(key, 'inspector-title');
+  announce(`Selected ${nodeLabel(id)}. Before and after membership is in the inspector.`);
+}
+function selectImport(index, key) {
+  selection = { type:'import', index };
+  render(); navigateAfterSelection(key, 'inspector-title');
+  announce(`Selected ${imports[index].from} to ${imports[index].to}. Before and after evidence is in the inspector.`);
+}
+function selectConnection(connection, key) {
+  showAll = true; nodeFilter = null; connectionFilter = indices(connection); $('search').value = '';
+  selection = { type:'connection', connection };
+  render(); navigateAfterSelection(key, 'imports-title');
+  announce(`Selected connection ${nodeLabel(connection.from)} to ${nodeLabel(connection.to)}. Showing its before and after imports.`);
+}
+function visibleRows() {
+  const query = $('search').value.trim().toLowerCase();
+  return imports.map((row,index) => ({ row,index })).filter(({ row,index }) =>
+    (showAll || row.status !== 'unchanged') && (!query || rowText(row).includes(query)) &&
+    (!nodeFilter || rowNodes(row).includes(nodeFilter)) && (!connectionFilter || connectionFilter.has(index)));
+}
+function visibleNodes(rows) {
+  const query = $('search').value.trim().toLowerCase();
+  const ids = new Set(rows.flatMap(({row}) => rowNodes(row)));
+  for (const node of nodes) {
+    if ((showAll || node.status !== 'unchanged') && (!query || `${node.label} ${node.kind} ${node.before?.files.join(' ') || ''} ${node.after?.files.join(' ') || ''}`.toLowerCase().includes(query)) && !connectionFilter && (!nodeFilter || node.id === nodeFilter)) ids.add(node.id);
+  }
+  if (nodeFilter) ids.add(nodeFilter);
+  return nodes.filter(node => ids.has(node.id));
+}
+function renderCatalog(visible) {
+  $('node-count').textContent = `Showing ${visible.length} of ${nodes.length}`;
+  $('node-list').replaceChildren();
+  if (!visible.length) $('node-list').append(el('p', $('search').value.trim() ? 'No matching modules or dependencies.' : 'No changed modules or dependencies.', 'empty'));
+  for (const node of visible) {
+    const index = nodes.indexOf(node); const key = `catalog:${index}`;
+    const row = button(undefined, () => selectNode(node.id, key), 'node-row');
+    row.append(el('strong', node.label), el('span', `${node.kind} · ${nodeStatus(node)}`, 'meta'));
+    row.setAttribute('aria-pressed', String(selection?.type === 'node' && selection.id === node.id));
+    focusTargets.set(key, row); $('node-list').append(row);
+  }
+}
+function renderGraph(visible, rows) {
+  const graph = $('module-graph'); graph.replaceChildren();
+  const rowIndices = new Set(rows.map(({index}) => index));
+  const visibleIds = new Set(visible.map(node => node.id));
+  const links = connections.filter(connection => visibleIds.has(connection.from) && visibleIds.has(connection.to) && [...indices(connection)].some(index => rowIndices.has(index)));
+  $('graph-count').textContent = `${visible.length} nodes · ${links.length} connections`;
+  $('graph-empty').textContent = visible.length ? '' : 'No changed modules or relationships to draw.';
+  $('graph-wrap').hidden = !visible.length;
+  $('connection-list').replaceChildren();
+  if (!visible.length) return;
+  const width = Math.max(230, Math.min(380, Math.max(...visible.map(node => [...node.label].length)) * 7 + 38));
+  const columns = Math.min(3, visible.length); const canvasWidth = columns * (width + 54) + 20;
+  const canvasHeight = Math.ceil(visible.length / columns) * 140 + 60;
+  graph.setAttribute('viewBox', `0 0 ${canvasWidth} ${canvasHeight}`); graph.style.minWidth = `${canvasWidth}px`;
+  const positions = new Map(visible.map((node,index) => [node.id, { x:34 + (index % columns) * (width + 54), y:55 + Math.floor(index / columns) * 140 }]));
+  const defs = svg('defs'); const marker = svg('marker', { id:'comparison-arrow', viewBox:'0 0 10 10', refX:9, refY:5, markerWidth:7, markerHeight:7, orient:'auto-start-reverse' });
+  marker.append(svg('path', { d:'M 0 0 L 10 5 L 0 10 z', fill:'#a7a7b2' })); defs.append(marker); graph.append(defs);
+  for (const connection of links) {
+    const from = positions.get(connection.from); const to = positions.get(connection.to); const s = stats(connection);
+    let d, labelX, labelY;
+    if (connection.from === connection.to) {
+      d = `M ${from.x+width-24} ${from.y} C ${from.x+width+35} ${from.y-48} ${from.x-35} ${from.y-48} ${from.x+24} ${from.y}`;
+      labelX = from.x+width/2; labelY = from.y-22;
+    } else {
+      const dx = to.x-from.x; const dy = to.y-from.y;
+      const scale = Math.min(Math.abs(dx) ? width/2/Math.abs(dx) : Infinity, Math.abs(dy) ? 32/Math.abs(dy) : Infinity);
+      const sx = from.x+width/2+dx*scale; const sy = from.y+32+dy*scale;
+      const tx = to.x+width/2-dx*scale; const ty = to.y+32-dy*scale;
+      const bend = connection.from < connection.to ? -26 : 26;
+      labelX = (sx+tx)/2; labelY = (sy+ty)/2+bend;
+      d = `M ${sx} ${sy} Q ${labelX} ${labelY} ${tx} ${ty}`;
+    }
+    let style = s.added && s.removed ? 'mixed' : s.added ? 'added' : s.removed ? 'removed' : s.rules || s.movedIn || s.movedOut ? 'changed' : '';
+    if ([...indices(connection)].some(index => forbidden(imports[index].before) || forbidden(imports[index].after))) style += ' forbidden';
+    graph.append(svg('path', { d, class:`graph-edge ${style}`.trim(), 'marker-end':'url(#comparison-arrow)', 'aria-hidden':'true' }));
+    const key = `link:${connection.index}`; const label = `${nodeLabel(connection.from)} → ${nodeLabel(connection.to)}: ${connectionLabel(connection)}`;
+    const hit = svg('path', { d, class:'graph-hit', tabindex:0, role:'button', 'aria-label':label });
+    activate(hit, () => selectConnection(connection, key)); graph.append(hit); focusTargets.set(key, hit);
+    graph.append(svg('text', { x:labelX, y:labelY-7, class:'graph-label', 'text-anchor':'middle' }, connectionLabel(connection)));
+    const listKey = `connection:${connection.index}`; const list = button(label, () => selectConnection(connection, listKey), 'connection-row');
+    focusTargets.set(listKey, list); $('connection-list').append(list);
+  }
+  for (const node of visible) {
+    const {x,y} = positions.get(node.id); const key = `node:${nodes.indexOf(node)}`;
+    const group = svg('g', { class:`graph-node ${node.status}${selection?.type === 'node' && selection.id === node.id ? ' selected' : ''}`, tabindex:0, role:'button', 'aria-label':`Inspect ${node.kind} ${node.label}, ${nodeStatus(node)}` });
+    group.append(svg('title', {}, node.label), svg('rect', { x,y,width,height:64,rx:10 }));
+    const chars = [...node.label]; const shown = chars.length > 45 ? chars.slice(0,42).join('')+'…' : node.label;
+    group.append(svg('text', { x:x+14,y:y+25 }, shown), svg('text', { x:x+14,y:y+46,class:'node-meta' }, `${node.kind} · ${nodeStatus(node)}`));
+    activate(group, () => selectNode(node.id, key)); graph.append(group); focusTargets.set(key, group);
+  }
+}
+function renderImports(rows) {
+  const total = showAll ? imports.length : imports.filter(row => row.status !== 'unchanged').length;
+  $('import-count').textContent = `Showing ${rows.length} of ${total}`;
+  $('import-list').replaceChildren();
+  if (!rows.length) {
+    const filtering = $('search').value.trim() || nodeFilter || connectionFilter;
+    const structural = imports.some(row => row.status === 'added' || row.status === 'removed' || row.changes.some(change => change !== 'evidence')) || nodes.some(node => node.status !== 'unchanged');
+    $('import-list').append(el('p', filtering ? `No matching ${showAll ? 'imports' : 'changes'}. Clear filters or choose All imports.` : structural ? 'No changed imports in this view.' : 'No structural or rule changes observed in the supplied snapshots.', 'empty'));
+  }
+  for (const {row,index} of rows) {
+    const key = `import:${index}`; const buttonRow = button(undefined, () => selectImport(index,key), 'import-row');
+    const badge = el('span', `${rowLabel(row)} · ${row.kind}`, `${row.status}-label`);
+    buttonRow.append(badge, el('strong', `${row.from} → ${row.to}`), el('span', `Before: ${row.before ? row.before.evidence.map(e => e.verdict || 'unavailable').join(', ') : 'not present'} · After: ${row.after ? row.after.evidence.map(e => e.verdict || 'unavailable').join(', ') : 'not present'}`, 'meta'));
+    buttonRow.setAttribute('aria-pressed', String(selection?.type === 'import' && selection.index === index));
+    focusTargets.set(key, buttonRow); $('import-list').append(buttonRow);
+  }
+}
+function details(values) {
+  const list = el('dl', undefined, 'details');
+  for (const [name,value] of values) { const line = el('div'); line.append(el('dt',name),el('dd',value)); list.append(line); }
+  return list;
+}
+function snapshotInfo(side) {
+  const snapshot = view.comparison[side]; const block = el('section',undefined,'side'); block.append(el('h3',side === 'before' ? 'Before snapshot' : 'After snapshot'));
+  const dirty = snapshot.dirty === true ? 'dirty working tree' : snapshot.dirty === false ? 'clean working tree' : 'working-tree state unavailable';
+  block.append(details([['Report',snapshot.label],['Recorded base',snapshot.commit || 'Unavailable'],['Tree state',dirty],['Analyzer',snapshot.tool_version || 'Unavailable'],['Collector',`${snapshot.collector.name} · ${snapshot.collector.version || 'version unavailable'}`],['Scan root',snapshot.scan_root || 'Unavailable'],['Policy',snapshot.policy ? `${snapshot.policy.path} · ${snapshot.policy.sha256}` : 'Unavailable']]));
+  return block;
+}
+function inspectImport(row) {
+  for (const side of ['before','after']) {
+    const block = el('section',undefined,'side'); block.append(el('h3',side === 'before' ? 'Before' : 'After'));
+    const state = row[side];
+    if (!state) { block.append(el('p',`Not present in the ${side} snapshot.`, 'muted')); $('inspector-body').append(block); continue; }
+    block.append(el('p',`${nodeLabel(state.from_node)} → ${nodeLabel(state.to_node)}`, 'path'));
+    for (const evidence of state.evidence) {
+      const card = el('div',undefined,'evidence'); const source = `${row.from}${evidence.line === null ? '' : `:${evidence.line}`}`;
+      card.append(el('code',source,'source'));
+      const copy = button('Copy source location', async () => {
+        try { await navigator.clipboard.writeText(source); announce('Source location copied.'); }
+        catch (_) { announce('Copy unavailable. Select and copy the displayed source location.'); }
+      },'copy'); card.append(copy);
+      card.append(details([['Line',evidence.line === null ? 'Unavailable' : String(evidence.line)],['Kind',row.kind],['Specifier',evidence.specifier === null ? 'Unavailable' : evidence.specifier],['Original target',evidence.original_to === null ? 'Not recorded' : evidence.original_to],['Reexport',evidence.is_reexport ? 'Yes' : 'No'],['Verdict',evidence.verdict || 'Unavailable'],['Rule',evidence.rule || 'Unavailable'],['Known',evidence.known ? 'Recorded known violation' : 'Not listed as known']]));
+      card.append(el('p',`Reasons: ${evidence.reasons.length ? evidence.reasons.join(' · ') : 'Unavailable'}`));
+      card.append(el('p',`Policy sources: ${evidence.sources.length ? evidence.sources.join(' · ') : 'Unavailable'}`, 'path'));
+      block.append(card);
+    }
+    $('inspector-body').append(block);
+  }
+}
+function renderInspector() {
+  $('inspector-body').replaceChildren();
+  if (!selection) {
+    $('inspector-kind').textContent = 'Before / after inspector'; $('inspector-title').textContent = 'Select a module or import';
+    $('inspector-body').append(el('p','Choose a module, connection, or import to inspect the recorded evidence.','muted'),snapshotInfo('before'),snapshotInfo('after')); return;
+  }
+  if (selection.type === 'node') {
+    const node = nodeById.get(selection.id); $('inspector-kind').textContent = `${node.kind} · ${nodeStatus(node)}`; $('inspector-title').textContent = node.label;
+    for (const side of ['before','after']) {
+      const block = el('section',undefined,'side'); block.append(el('h3',side === 'before' ? 'Before' : 'After'));
+      if (!node[side]) block.append(el('p',`Not present in the ${side} snapshot.`, 'muted'));
+      else if (node.kind !== 'module') block.append(el('p',`External ${node.kind}. No source-file membership.`, 'muted'));
+      else { block.append(el('p',`${node[side].files.length} recorded files`)); const list = el('ul',undefined,'path'); for (const file of node[side].files) list.append(el('li',file)); block.append(list); }
+      $('inspector-body').append(block);
+    }
+  } else if (selection.type === 'import') {
+    const row = imports[selection.index]; $('inspector-kind').textContent = `${rowLabel(row)} · ${row.kind}`; $('inspector-title').textContent = `${row.from} → ${row.to}`; inspectImport(row);
+  } else {
+    const connection = selection.connection; $('inspector-kind').textContent = 'Module connection'; $('inspector-title').textContent = `${nodeLabel(connection.from)} → ${nodeLabel(connection.to)}`;
+    $('inspector-body').append(el('p',connectionLabel(connection)),details([['Before',`${connection.before.size} import identities`],['After',`${connection.after.size} import identities`]]),el('p','The list includes every import on this connection, including removed imports. Select a row for its before/after source evidence.','muted'));
+  }
+}
+function render() {
+  focusTargets.clear();
+  $('changes-mode').setAttribute('aria-pressed',String(!showAll)); $('all-mode').setAttribute('aria-pressed',String(showAll));
+  $('filter-label').textContent = connectionFilter ? 'Focused on one connection. Clear to show all.' : nodeFilter ? `Focused on ${nodeLabel(nodeFilter)}. Clear to show all.` : 'Graph nodes include context for the displayed imports.';
+  const rows = visibleRows(); const visible = visibleNodes(rows);
+  renderCatalog(visible); renderGraph(visible,rows); renderImports(rows); renderInspector();
+}
+function initialize() {
+  const summary = [['Modules',nodes.filter(node => node.kind === 'module').length],['Imports',imports.length],['+ Added',imports.filter(row => row.status === 'added').length],['− Removed',imports.filter(row => row.status === 'removed').length],['Rule changed',imports.filter(ruleChanged).length],['Evidence only',imports.filter(evidenceOnly).length]];
+  for (const [name,value] of summary) { const item = el('div'); item.append(el('dt',name),el('dd',String(value))); $('totals').append(item); }
+  $('snapshots').textContent = `${view.comparison.before.label} → ${view.comparison.after.label}`;
+  $('compatibility').textContent = view.comparison.status === 'unverified' ? 'Unverified comparison' : 'Recorded collection settings match';
+  $('compatibility').setAttribute('class',view.comparison.status);
+  $('policy-notice').textContent = view.comparison.policy_changed ? 'Policy changed. Verdict changes may come from policy edits.' : 'No recorded policy change.';
+  for (const warning of view.comparison.warnings) $('warnings').append(el('li',warning));
+  const structural = imports.filter(row => row.status === 'added' || row.status === 'removed' || row.changes.includes('module')).length;
+  $('change-summary').textContent = `${structural} structural import changes · ${imports.filter(ruleChanged).length} rule changes · ${imports.filter(evidenceOnly).length} evidence-only updates. These counts describe the complete comparison.`;
+  $('search').addEventListener('input',() => { nodeFilter = null; connectionFilter = null; render(); announce($('import-count').textContent); });
+  $('clear').addEventListener('click',() => { $('search').value = ''; nodeFilter = null; connectionFilter = null; selection = null; render(); $('search').focus(); announce('Filters cleared.'); });
+  $('changes-mode').addEventListener('click',() => { showAll = false; nodeFilter = null; connectionFilter = null; render(); announce('Showing changes.'); });
+  $('all-mode').addEventListener('click',() => { showAll = true; nodeFilter = null; connectionFilter = null; render(); announce('Showing all imports.'); });
+  $('back').addEventListener('click',() => { $('search').focus(); $('search').scrollIntoView?.({block:'center'}); });
+  render();
+}
+initialize();
+</script>
+</body>
+</html>
