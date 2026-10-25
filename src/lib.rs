@@ -32,6 +32,7 @@ pub mod modules;
 pub mod output;
 pub mod package_splits;
 pub mod presets;
+pub mod project_skill;
 pub mod quality;
 pub mod recipes;
 pub mod render;

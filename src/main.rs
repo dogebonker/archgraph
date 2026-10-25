@@ -73,6 +73,8 @@ mod report_cli;
 mod scan_cli;
 #[path = "cli/services.rs"]
 mod services_cli;
+#[path = "cli/skill.rs"]
+mod skill_cli;
 #[path = "cli/surface.rs"]
 mod surface_cli;
 #[path = "cli/sync_rules.rs"]
@@ -117,6 +119,8 @@ enum Cmd {
     SyncRules(sync_rules_cli::SyncRules),
     /// Create a reasoned day-zero layout and show its first findings
     Init(init_cli::Init),
+    /// Draft and explicitly adopt a repository-specific architecture skill
+    Skill(skill_cli::Skill),
     /// Install and run architecture checks around agent edits
     Hook(hooks_cli::Hook),
     /// Inspect architecture rule-fire counts
@@ -455,6 +459,7 @@ fn execute_inner(cli: Cli) -> ExitCode {
         Cmd::Adr(args) => adr_cli::run(args),
         Cmd::SyncRules(args) => sync_rules_cli::run(args),
         Cmd::Init(args) => init_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Skill(args) => skill_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Hook(args) => hooks_cli::run(args),
         Cmd::Fires(args) => hooks_cli::fires(args),
         Cmd::Propose(args) => recipes_cli::propose(args).map(|()| ExitCode::SUCCESS),

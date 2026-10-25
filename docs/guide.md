@@ -97,6 +97,41 @@ Init synchronizes these files after creating its draft. Live `check` warns when 
 
 Content and layout hashes distinguish manual edits from a changed source policy. A hand-edited owned block refuses the entire write batch and prints a diff; move custom instructions outside the fence, restore the generated block, then sync again. Missing/duplicate/malformed fences are refused. Original bytes outside existing fences, including line endings and non-UTF-8 bytes, remain unchanged. New blocks append to existing content. All targets are checked for symlink paths before writes; file permissions are preserved. Each replacement checks the preflight bytes again to reject an observed concurrent edit. Replacements are atomic per file; an I/O failure can leave other files stale, so rerun `--check` after correcting it.
 
+## Project architecture skill
+
+```sh
+archgraph skill draft .
+# Review the inactive SKILL.md and its policy references.
+archgraph skill adopt .
+```
+
+`skill draft [root]` uses native source analysis and writes
+`.archgraph/drafts/project-architecture/SKILL.md`. It describes observed modules and services,
+available source-backed examples, current policy references, and commands to collect a baseline
+and check an edit. The examples describe draft-time evidence. The instructions require a fresh
+scan before changing code. Runnable snippets target POSIX shells. Semantic and runtime
+requirements remain unverified.
+
+Drafting does not change active policy, source files, or host instructions. Without a root
+`layout.yaml`, it creates a separate layout proposal in the draft directory and preserves an
+existing proposal. Review the intended constraints and create the root layout, then draft again.
+Observed dependencies do not establish intended architecture.
+
+An optional `--manifest` selects a repository-relative service manifest. Otherwise an existing
+`services.yaml` supplies service policy. Generated service commands use the new-only gate only
+when the manifest contains authored forbid rules. Without those rules, service collection remains
+advisory, so a repository without services receives a usable workflow.
+
+`skill adopt [root]` verifies the reviewed draft and current policy fingerprints, then installs
+`.agents/skills/project-architecture/SKILL.md`. It copies the reviewed content without generating
+new observations. A changed policy requires a fresh draft. Adoption installs the skill workflow,
+and does not apply a proposed layout or enable hooks.
+
+Draft regeneration and installed-skill updates preserve frontmatter and notes outside the owned
+block. A hand-edited generated block, malformed or duplicate fences, a symlink path component,
+or an occupied unowned installation fails instead of overwriting that content. Review the new
+draft before adopting an update. The existing policy files remain the rule source of truth.
+
 ## ADR import and lifecycle checks
 
 `archgraph adr import docs/adr` proposes a YAML fragment; it leaves the layout unchanged until `--apply`. Use `--json` for the full inventory or `--brief` for its bounded envelope. Clear positive import prohibitions in Decision/Decision Outcome sections map to reasoned rules; existing module IDs resolve to unique declared file globs. Examples, alternatives, ambiguous scopes and call restrictions stay informational. Proposals include the ADR ID/title, repository-relative `source`, and source digest; apply rechecks source/lifecycle and layout bytes before publishing. It preserves existing comments and refuses ambiguous flow-style/anchor edits.

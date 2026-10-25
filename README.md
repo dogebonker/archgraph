@@ -286,6 +286,11 @@ The action scans the pull request and its base commit and fails only on what the
 
 ## For coding agents
 
+Generate a project-specific architecture workflow with `archgraph skill draft .`. Review the
+inactive draft and the referenced policies, then run `archgraph skill adopt .` to install it in
+`.agents/skills/project-architecture/SKILL.md`. Drafting keeps inferred observations separate from
+active policy. See [project architecture skills](docs/guide.md#project-architecture-skill).
+
 Five skills in the open Agent Skills format, for Claude Code, Codex, Cursor and anything else that reads them:
 
 - **[archgraph](skills/archgraph/SKILL.md)** runs the tool and reads its output correctly.

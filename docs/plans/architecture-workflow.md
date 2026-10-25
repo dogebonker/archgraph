@@ -105,6 +105,11 @@ after-report forbid rules is an error. Existing import diff output and gates sta
 
 ### W2 delivery contract
 
+Implemented and independently approved. All 28 targeted lifecycle, init, inference, and ownership
+tests pass. All-target clippy, formatting, and whitespace checks pass. Generated command execution
+tests cover planted import/resource violations, literal shell metacharacters, and leading-dash
+manifest names. Runnable snippets target POSIX shells.
+
 `skill draft` writes `.archgraph/drafts/project-architecture/SKILL.md`, outside automatic skill
 discovery. Native module/import and service evidence informs the draft. Existing policy files
 remain authoritative. Without a layout, inference writes a separate create-only layout proposal.
