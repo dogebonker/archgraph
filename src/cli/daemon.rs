@@ -433,6 +433,9 @@ pub(super) fn forward(cli: &Cli) -> Result<Option<archgraph::output::Output>> {
     if cli.no_daemon {
         return Ok(None);
     }
+    if matches!(&cli.command, Cmd::McpCall(args) if args.tool == "services") {
+        return Ok(None);
+    }
     if !matches!(
         cli.command,
         Cmd::Scan(_)

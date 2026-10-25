@@ -87,7 +87,8 @@ pub struct Rule {
     pub reason: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Report {
     pub schema: String,
     pub kind: String,
@@ -99,18 +100,59 @@ pub struct Report {
     pub cycles: Vec<Cycle>,
     pub hubs: Vec<Hub>,
     pub forbidden_calls: Vec<usize>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub resources: Vec<Resource>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub forbidden_resources: Vec<usize>,
     pub summary: Summary,
     pub caveats: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Resource {
+    pub service: String,
+    pub kind: ResourceKind,
+    pub package: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operation: Option<String>,
+    pub confidence: Confidence,
+    pub source: SourceLocation,
+    pub verdict: Verdict,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rule: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ResourceKind {
+    Database,
+    Cache,
+    Queue,
+    Http,
+}
+
+impl ResourceKind {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Database => "database",
+            Self::Cache => "cache",
+            Self::Queue => "queue",
+            Self::Http => "http",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Source {
     pub collector: String,
     pub path: String,
     pub complete: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Edge {
     #[serde(flatten)]
     pub call: Call,
@@ -119,14 +161,15 @@ pub struct Edge {
     pub rule: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Verdict {
     Allowed,
     Forbidden,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Module {
     pub id: String,
     pub fan_in: usize,
@@ -134,21 +177,24 @@ pub struct Module {
     pub instability: Option<f64>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Cycle {
     pub members: Vec<String>,
     pub edge_indices: Vec<usize>,
     pub confidence: Confidence,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Hub {
     pub service: String,
     pub fan_in: usize,
     pub callers: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Summary {
     pub services: usize,
     pub calls: usize,
@@ -157,6 +203,14 @@ pub struct Summary {
     pub hubs: usize,
     pub forbidden_calls: usize,
     pub low_confidence_calls: usize,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub resources: usize,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub forbidden_resources: usize,
+}
+
+fn is_zero(value: &usize) -> bool {
+    *value == 0
 }
 
 /// YAML and JSON share the same strict manifest shape.
@@ -164,6 +218,70 @@ pub fn parse(text: &str) -> Result<Manifest> {
     let manifest: Manifest = serde_yaml_ng::from_str(text).context("parse service manifest")?;
     validate(&manifest)?;
     Ok(manifest)
+}
+
+/// Read an exported report without trusting its stored metrics, verdicts or indices.
+pub fn read_report(text: &str) -> Result<Report> {
+    let input: Report = serde_json::from_str(text).context("parse services report")?;
+    if input.schema != SCHEMA || input.kind != "services" {
+        bail!("expected a services report with schema {SCHEMA}");
+    }
+    if !matches!(
+        input.source.collector.as_str(),
+        "declarative" | "inferred" | "inferred+declarative"
+    ) {
+        bail!(
+            "unsupported services collector {:?}",
+            input.source.collector
+        );
+    }
+    if input.source.complete {
+        bail!("services reports must declare incomplete source evidence");
+    }
+    if input
+        .caveats
+        .iter()
+        .any(|caveat| caveat.chars().any(char::is_control))
+    {
+        bail!("service caveats must contain no control characters");
+    }
+    let services: BTreeSet<_> = input.services.iter().map(String::as_str).collect();
+    for (index, resource) in input.resources.iter().enumerate() {
+        if !services.contains(resource.service.as_str()) {
+            bail!(
+                "resource {index} references an unknown service {:?}",
+                resource.service
+            );
+        }
+        if resource.package.trim().is_empty() || resource.package.chars().any(char::is_control) {
+            bail!("resource {index} package must be nonempty and contain no control characters");
+        }
+        if !valid_source(&resource.source) {
+            bail!("resource {index} requires a relative source file and a positive source line");
+        }
+        if resource
+            .operation
+            .as_ref()
+            .is_some_and(|value| value.chars().any(char::is_control))
+        {
+            bail!("resource {index} operation must contain no control characters");
+        }
+    }
+    let manifest = Manifest {
+        version: 1,
+        services: input.services,
+        edges: input.edges.into_iter().map(|edge| edge.call).collect(),
+        forbid: input.forbid,
+    };
+    let mut report = analyze(manifest, &input.source.path)?;
+    report.source = input.source;
+    report.caveats = input.caveats;
+    attach_resources(&mut report, input.resources)?;
+    Ok(report)
+}
+
+fn valid_source(source: &SourceLocation) -> bool {
+    crate::collect::is_relative_path(&source.file, false) && source.line > 0
 }
 
 fn validate(manifest: &Manifest) -> Result<()> {
@@ -196,7 +314,7 @@ fn validate(manifest: &Manifest) -> Result<()> {
                 edge.to
             );
         }
-        if !crate::collect::is_relative_path(&edge.source.file, false) || edge.source.line == 0 {
+        if !valid_source(&edge.source) {
             bail!("call {index} requires a relative source file and a positive source line");
         }
         if edge
@@ -395,11 +513,14 @@ pub fn analyze(manifest: Manifest, path: &str) -> Result<Report> {
             .iter()
             .filter(|edge| edge.call.confidence == Confidence::Low)
             .count(),
+        resources: 0,
+        forbidden_resources: 0,
     };
     Ok(Report {
         schema: SCHEMA.to_owned(), kind: "services".to_owned(),
         source: Source { collector: "declarative".to_owned(), path: path.to_owned(), complete: false },
         services, edges, forbid: manifest.forbid, modules, cycles, hubs, forbidden_calls, summary,
+        resources: Vec::new(), forbidden_resources: Vec::new(),
         caveats: vec![
             "Only declared calls are analyzed; this graph does not claim completeness.".to_owned(),
             "Source locations and confidence are supplied by the manifest and are not verified.".to_owned(),
@@ -426,15 +547,62 @@ fn escape(value: &str) -> String {
     out
 }
 
+pub(crate) fn attach_resources(report: &mut Report, mut resources: Vec<Resource>) -> Result<()> {
+    let rules = report
+        .forbid
+        .iter()
+        .filter_map(|rule| rule.to.strip_prefix("pkg:").map(|package| (rule, package)))
+        .map(|(rule, package)| {
+            Ok((
+                rule,
+                crate::collect::globset(std::slice::from_ref(&rule.from))?,
+                crate::collect::globset(&[package.to_owned()])?,
+            ))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    report.forbidden_resources.clear();
+    for (index, resource) in resources.iter_mut().enumerate() {
+        resource.verdict = Verdict::Allowed;
+        resource.rule = rules
+            .iter()
+            .find(|(rule, from, package)| {
+                from.is_match(&resource.service)
+                    && package.is_match(&resource.package)
+                    && rule.kinds.as_ref().is_none_or(|kinds| {
+                        let protocol = match resource.kind {
+                            ResourceKind::Http => Some(Protocol::Http),
+                            ResourceKind::Queue => Some(Protocol::Queue),
+                            ResourceKind::Database | ResourceKind::Cache => None,
+                        };
+                        protocol.is_some_and(|protocol| kinds.contains(&protocol))
+                    })
+            })
+            .map(|(rule, _, _)| rule.id.clone());
+        if resource.rule.is_some() {
+            resource.verdict = Verdict::Forbidden;
+            report.forbidden_resources.push(index);
+        }
+    }
+    report.summary.resources = resources.len();
+    report.summary.forbidden_resources = report.forbidden_resources.len();
+    report.resources = resources;
+    Ok(())
+}
+
 pub fn markdown(report: &Report) -> String {
     let mut out = String::new();
-    writeln!(out, "# Declared service architecture\n").unwrap();
+    let inferred = report.source.collector != "declarative";
+    let mode = if inferred { "Inferred" } else { "Declared" };
+    writeln!(out, "# {mode} service architecture\n").unwrap();
     let count = |n: usize, noun: &str| format!("{n} {noun}{}", if n == 1 { "" } else { "s" });
     writeln!(
         out,
         "{}, {}, {} (largest: {} services), {}, {}.\n",
         count(report.summary.services, "service"),
-        count(report.summary.calls, "declared call"),
+        count(
+            report.summary.calls,
+            if inferred { "call" } else { "declared call" }
+        ),
         count(report.summary.cycles, "cycle"),
         report.summary.largest_cycle,
         count(report.summary.hubs, "hub"),
@@ -444,9 +612,49 @@ pub fn markdown(report: &Report) -> String {
     for caveat in &report.caveats {
         writeln!(out, "> {}\n", escape(caveat)).unwrap();
     }
+    if inferred {
+        writeln!(out, "## Infrastructure\n").unwrap();
+        if report.resources.is_empty() {
+            writeln!(out, "No infrastructure clients inferred.\n").unwrap();
+        }
+        for resource in &report.resources {
+            writeln!(
+                out,
+                "- {}: {} via {}{}; {} confidence; {}:{}; {}.",
+                escape(&resource.service),
+                resource.kind.label(),
+                escape(&resource.package),
+                resource
+                    .operation
+                    .as_ref()
+                    .map(|op| format!(" ({})", escape(op)))
+                    .unwrap_or_default(),
+                resource.confidence.label(),
+                escape(&resource.source.file),
+                resource.source.line,
+                resource
+                    .rule
+                    .as_ref()
+                    .map(|rule| format!("forbidden by {}", escape(rule)))
+                    .unwrap_or_else(|| "allowed".into())
+            )
+            .unwrap();
+        }
+        writeln!(
+            out,
+            "\n{} resources, {} forbidden resources.\n",
+            report.summary.resources, report.summary.forbidden_resources
+        )
+        .unwrap();
+    }
     writeln!(out, "## Cycles\n").unwrap();
     if report.cycles.is_empty() {
-        writeln!(out, "No cross-service cycles among declared calls.\n").unwrap();
+        writeln!(
+            out,
+            "No cross-service cycles among {}calls.\n",
+            if inferred { "" } else { "declared " }
+        )
+        .unwrap();
     }
     for cycle in &report.cycles {
         writeln!(
@@ -501,9 +709,14 @@ pub fn markdown(report: &Report) -> String {
         )
         .unwrap();
     }
-    writeln!(out, "\n## Declared calls\n\nCall numbers below are one-based; JSON edge indices are zero-based. Allowed means no declared forbid rule matched.\n").unwrap();
+    writeln!(out, "\n## {mode} calls\n\nCall numbers below are one-based; JSON edge indices are zero-based. Allowed means no declared forbid rule matched.\n").unwrap();
     if report.edges.is_empty() {
-        writeln!(out, "No calls declared.\n").unwrap();
+        writeln!(
+            out,
+            "No calls {}.\n",
+            if inferred { "inferred" } else { "declared" }
+        )
+        .unwrap();
     }
     for (index, edge) in report.edges.iter().enumerate() {
         let call = &edge.call;

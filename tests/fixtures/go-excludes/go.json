@@ -18,8 +18,8 @@
    "together": true
   },
   {
-   "from": "app/chain/c_darwin.go",
-   "to": "app/chain/b_windows.go",
+   "from": "app/chain/b_windows.go",
+   "to": "app/chain/c_darwin.go",
    "together": true
   },
   {

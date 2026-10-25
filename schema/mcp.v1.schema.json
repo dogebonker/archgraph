@@ -2235,6 +2235,584 @@
         "omitted"
       ],
       "type": "object"
+    },
+    "services_input": {
+      "additionalProperties": false,
+      "properties": {
+        "brief": {
+          "default": true,
+          "description": "Prefer compact output. All responses retain a hard output cap.",
+          "type": "boolean"
+        },
+        "manifest": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "minLength": 1,
+              "not": {
+                "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+              },
+              "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+              "type": "string"
+            }
+          ]
+        },
+        "service": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "allOf": [
+                {
+                  "not": {
+                    "pattern": "[\\s*?\\[\\]{}<>]"
+                  }
+                }
+              ],
+              "minLength": 1,
+              "not": {
+                "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+              },
+              "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "services_output": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "not": {
+              "required": [
+                "error"
+              ]
+            },
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "additionalProperties": false,
+                "properties": {
+                  "calls": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "confidence": {
+                          "default": "low",
+                          "enum": [
+                            "low",
+                            "medium",
+                            "high"
+                          ]
+                        },
+                        "from": {
+                          "allOf": [
+                            {
+                              "not": {
+                                "pattern": "[\\s*?\\[\\]{}<>]"
+                              }
+                            }
+                          ],
+                          "minLength": 1,
+                          "not": {
+                            "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                          },
+                          "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": [
+                            "http",
+                            "grpc",
+                            "queue"
+                          ]
+                        },
+                        "operation": {
+                          "anyOf": [
+                            {
+                              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "rule": {
+                          "minLength": 1,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                          "type": "string"
+                        },
+                        "source": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "file": {
+                              "minLength": 1,
+                              "not": {
+                                "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                              },
+                              "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                              "type": "string"
+                            },
+                            "line": {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "file",
+                            "line"
+                          ],
+                          "type": "object"
+                        },
+                        "to": {
+                          "allOf": [
+                            {
+                              "not": {
+                                "pattern": "[\\s*?\\[\\]{}<>]"
+                              }
+                            }
+                          ],
+                          "minLength": 1,
+                          "not": {
+                            "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                          },
+                          "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                          "type": "string"
+                        },
+                        "verdict": {
+                          "enum": [
+                            "allowed",
+                            "forbidden"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to",
+                        "kind",
+                        "source",
+                        "confidence",
+                        "verdict"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "caveats": {
+                    "items": {
+                      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "forbid": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "from": {
+                          "allOf": [
+                            {
+                              "not": {
+                                "pattern": "[<>]"
+                              }
+                            },
+                            {
+                              "pattern": "\\S"
+                            }
+                          ],
+                          "minLength": 1,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                          "type": "string"
+                        },
+                        "id": {
+                          "allOf": [
+                            {
+                              "pattern": "\\S"
+                            }
+                          ],
+                          "minLength": 1,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                          "type": "string"
+                        },
+                        "kinds": {
+                          "anyOf": [
+                            {
+                              "items": {
+                                "enum": [
+                                  "http",
+                                  "grpc",
+                                  "queue"
+                                ]
+                              },
+                              "minItems": 1,
+                              "type": "array"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "reason": {
+                          "anyOf": [
+                            {
+                              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "to": {
+                          "allOf": [
+                            {
+                              "not": {
+                                "pattern": "[<>]"
+                              }
+                            },
+                            {
+                              "pattern": "\\S"
+                            }
+                          ],
+                          "minLength": 1,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "from",
+                        "to"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "global_summary": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "calls": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "cycles": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "forbidden_calls": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "forbidden_resources": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "hubs": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "largest_cycle": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "low_confidence_calls": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "resources": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "services": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "services",
+                      "calls",
+                      "cycles",
+                      "largest_cycle",
+                      "hubs",
+                      "forbidden_calls",
+                      "low_confidence_calls"
+                    ],
+                    "type": "object"
+                  },
+                  "policy_source": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "path": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "sha256": {
+                            "pattern": "^[0-9a-f]{64}$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "sha256"
+                        ],
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "resources": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "confidence": {
+                          "default": "low",
+                          "enum": [
+                            "low",
+                            "medium",
+                            "high"
+                          ]
+                        },
+                        "kind": {
+                          "enum": [
+                            "database",
+                            "cache",
+                            "queue",
+                            "http"
+                          ]
+                        },
+                        "operation": {
+                          "anyOf": [
+                            {
+                              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "package": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "rule": {
+                          "minLength": 1,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                          "type": "string"
+                        },
+                        "service": {
+                          "allOf": [
+                            {
+                              "not": {
+                                "pattern": "[\\s*?\\[\\]{}<>]"
+                              }
+                            }
+                          ],
+                          "minLength": 1,
+                          "not": {
+                            "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                          },
+                          "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                          "type": "string"
+                        },
+                        "source": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "file": {
+                              "minLength": 1,
+                              "not": {
+                                "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                              },
+                              "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                              "type": "string"
+                            },
+                            "line": {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "file",
+                            "line"
+                          ],
+                          "type": "object"
+                        },
+                        "verdict": {
+                          "enum": [
+                            "allowed",
+                            "forbidden"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "service",
+                        "kind",
+                        "package",
+                        "confidence",
+                        "source",
+                        "verdict"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "scope": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "service": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "service"
+                    ],
+                    "type": "object"
+                  },
+                  "services": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "fan_in": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "fan_out": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "id": {
+                          "allOf": [
+                            {
+                              "not": {
+                                "pattern": "[\\s*?\\[\\]{}<>]"
+                              }
+                            }
+                          ],
+                          "minLength": 1,
+                          "not": {
+                            "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                          },
+                          "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                          "type": "string"
+                        },
+                        "instability": {
+                          "maximum": 1,
+                          "minimum": 0,
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "fan_in",
+                        "fan_out",
+                        "instability"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "source": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "collector": {
+                        "enum": [
+                          "declarative",
+                          "inferred",
+                          "inferred+declarative"
+                        ]
+                      },
+                      "complete": {
+                        "const": false
+                      },
+                      "path": {
+                        "minLength": 1,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "collector",
+                      "path",
+                      "complete"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "source",
+                  "scope",
+                  "global_summary",
+                  "services",
+                  "calls",
+                  "resources",
+                  "forbid",
+                  "policy_source",
+                  "caveats"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "data": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "omitted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "data",
+        "truncated",
+        "omitted"
+      ],
+      "type": "object"
     }
   },
   "$id": "https://github.com/dogebonker/archgraph/schema/mcp.v1.schema.json",

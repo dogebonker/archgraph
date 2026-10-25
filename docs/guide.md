@@ -137,7 +137,7 @@ claude mcp add --transport stdio archgraph -- archgraph mcp . --engine native --
 archgraph mcp /absolute/path/to/repo --engine native --symbols
 ```
 
-`mcp [root]` serves the nine tools below using the official [Rust MCP SDK](https://github.com/modelcontextprotocol/rust-sdk). The client starts a local stdio process: stdout contains MCP messages and diagnostics go to stderr. It accepts the shared scan options, including `--rules`, `--hotspots`, language selection and exclusions. Hotspot/history facts remain unavailable unless collected; unavailable facts are never treated as zero. The reference engine remains the default; the examples explicitly select the experimental native engine and enable symbol evidence. Recorded `--collector-input` snapshots are rejected because MCP verification requires live source collection. Collector trust requirements and language limits still apply.
+`mcp [root]` serves the ten tools below using the official [Rust MCP SDK](https://github.com/modelcontextprotocol/rust-sdk). The client starts a local stdio process: stdout contains MCP messages and diagnostics go to stderr. It accepts the shared scan options, including `--rules`, `--hotspots`, language selection and exclusions. Hotspot/history facts remain unavailable unless collected; unavailable facts are never treated as zero. The reference engine remains the default; the examples explicitly select the experimental native engine and enable symbol evidence. Recorded `--collector-input` snapshots are rejected because MCP verification requires live source collection. Collector trust requirements and language limits still apply.
 
 Use the [Claude Code config](mcp/claude-code.json) as a project `.mcp.json`, the [Cursor config](mcp/cursor.json) as `.cursor/mcp.json`, or merge [the Codex TOML](mcp/codex.toml) into your Codex configuration. Replace `/absolute/path/to/repo` in the Claude/Codex examples; Cursor expands `${workspaceFolder}` from the folder containing `.cursor/mcp.json`. Install `archgraph` on the client's PATH, or set `command` to its absolute executable path. Merge existing configuration rather than overwriting other servers. Client configuration details: [Claude Code](https://code.claude.com/docs/en/mcp), [Cursor](https://cursor.com/docs/mcp), [Codex](https://developers.openai.com/codex/mcp).
 
@@ -152,12 +152,26 @@ Use the [Claude Code config](mcp/claude-code.json) as a project `.mcp.json`, the
 | `rules` | `paths` | Relevant configured layout rules and surface constraints. |
 | `review` | Optional `base` | What the working tree changed in the target since `base`, as `data.markdown` (also the text content) for an AI reviewer to quote: newly broken slices, other new forbidden imports with their rules' reasons, newly fixed slices, each import at `file:line`, a `Base` line, and a note on the rows `layout.known.yaml` lists (`known: true` in JSON) and on listed entries that no longer occur. The JSON arrays hold every row; `brief` drops them. `archgraph review [root] [--base <ref>] [--format markdown\|json]` prints the same markdown. |
 | `target` | none | The scan's `target` (claim verdicts, slice progress, pending move cost), or `null` when the rules state no claim or move. |
+| `services` | Optional `manifest`, exact `service` | Live service metrics, call evidence, owned client usages, authored `forbid` rules, `policy_source`, and caveats. `global_summary` and policy cover the whole model. `scope.service` identifies an optional evidence focus. |
+
+The `services` tool uses native service inference directly and does not run the reference import
+collector. Its optional manifest must be a file inside the MCP repository root, including after
+symlink resolution. Service IDs are exact, not globs. With no manifest it infers the root, like
+`archgraph services .`. Calls include either direction for a selected service; client usages
+belong to that service. It returns a compact view, not a complete CLI report with graph indices.
+`forbid` preserves all authored rules in precedence order, including rules with no observed match.
+`policy_source` contains the resolved repository-relative manifest path and the SHA-256 of the
+bytes used for this report. Without an explicit manifest, `policy_source` is `null` and `forbid`
+is empty. That means no service policy was supplied, rather than approved architecture.
+The service tool namespace and each rule's `id` identify the policy. Import rules remain in
+`layout.yaml` and the `rules` tool. Use `archgraph services . --manifest services.yaml --format json`
+for complete evidence when the MCP response is truncated. Omit `--manifest` if none was supplied.
 
 Tool input and output JSON Schemas are advertised by MCP `tools/list`; use discovery as the contract rather than parsing display text. Every tool accepts `brief: bool`, default `true`. MCP `propose` returns the typed recipe once in `structuredContent.data`, with a short text pointer, so duplicated JSON does not consume its output cap. A truncated recipe is incomplete; use `archgraph propose <finding_id>` for the full contract. Lists use deterministic ordering. Finding IDs derive from semantic identity rather than array positions, scores or timestamps; use an ID from the current findings when calling `propose`. A fixed commit and collection inputs retain the same IDs. A changed finding can have a new identity. Proposed steps are import-graph evidence, not proof that code compiles; run the project's tests after editing. Tools inspect or simulate code, and do not apply code changes.
 
 Results use an envelope `{data, truncated, omitted, counts?, hint?, error?}`. `data` is an object or `null`; `omitted` counts removed values and `counts` records original top-level array counts where available. Both brief projection and hard-cap pruning set `truncated: true` with a hint, so an original count can exceed the displayed array length. Read the marker before interpreting a partial answer. Errors carry an actionable message and MCP error status.
 
-Responses have a hard cap of **2,000 UTF-8 bytes** for the serialized MCP tool result, including repeated text and structured content. `explain` uses **300 bytes** and `review` **4,000 bytes**. These conservative byte limits bound token usage without choosing a client tokenizer; they often leave less room than 2,000/300 natural-language tokens. Truncation is explicit and includes a hint. `brief: false` requests more detail within the same hard cap; narrow the task, seed files or paths, or use the CLI for complete evidence. Verification evaluates the full result before truncating its presentation. Do not interpret omitted findings as absent. `explain` returns a compact `data.summary`; the same compact summary is included as text for clients that only render text content. `?` means unavailable or unclassified, rather than zero. It prioritizes import/importer examples and counts, layer, rule ID and available hotspot/history facts. Long identifiers may require a counts-only summary with an explicit truncation marker.
+Responses have a hard cap of **2,000 UTF-8 bytes** for the serialized MCP tool result, including repeated text and structured content. `explain` uses **300 bytes**. `review` and `services` use **4,000 bytes**. These conservative byte limits bound token usage without choosing a client tokenizer; they often leave less room than 2,000/300 natural-language tokens. Truncation is explicit and includes a hint. `brief: false` requests more detail within the same hard cap; narrow the task, seed files or paths, or use the CLI for complete evidence. Verification evaluates the full result before truncating its presentation. Do not interpret omitted findings as absent. `explain` returns a compact `data.summary`; the same compact summary is included as text for clients that only render text content. `?` means unavailable or unclassified, rather than zero. It prioritizes import/importer examples and counts, layer, rule ID and available hotspot/history facts. Long identifiers may require a counts-only summary with an explicit truncation marker.
 
 Without an explicit `base`, `check_diff` uses the guard's merge-base selection: `origin/HEAD`, then `main` or `master`, falling back to `HEAD` when none exists. An explicit base resolves to a commit. The head snapshot includes uncommitted edits. Both snapshots use the current layout rules, and policy changes are disclosed; the result does not claim a rule existed at the base revision. New/grown cycles use the existing architecture diff semantics. `check_diff` includes current v1.2 findings and their recipes; call `propose` to save a live verification baseline before editing.
 
@@ -409,15 +423,102 @@ archgraph diff before.json after.json --fail-on new-forbidden,new-cycles --forma
 
 `check`, `simulate` and `render` take `--rules layout.yaml` to replace the rules embedded in the scan.
 
-## Declared cross-service edges
+## Service architecture
 
-This first service-level milestone uses declarations. It does not discover OpenAPI clients, protobuf stubs or queue strings. Teams and external tools can feed the same versioned YAML/JSON manifest; no plugin executable is loaded or run.
+`archgraph services <directory>` infers service boundaries, infrastructure clients, HTTP calls and
+queue topics from local source. It does not run the application or contact infrastructure.
+TypeScript, JavaScript, Go, and Python are supported. Reports stay incomplete because configuration,
+indirect calls and dynamic values can hide evidence.
 
 ```sh
-archgraph services                              # read ./services.yaml, print Markdown
+archgraph services . --format json
+archgraph services . --manifest services.yaml --output services-report.json
 archgraph services examples/services.yaml --format json
-archgraph services services.yaml --output services-report.json
 ```
+
+With no path, the command reads `./services.yaml` when that file exists, otherwise it infers `.`.
+A file path always reads a declarative YAML or JSON manifest, preserving the existing report.
+
+
+To inspect the model in a browser, export its JSON and render it:
+
+```sh
+archgraph services . --format json -o services-report.json
+archgraph render services-report.json -o services.html
+```
+
+The offline page has a searchable service catalog, directed calls, per-service client usages,
+and an evidence inspector. Select a service or call, then its source location to inspect or copy
+`file:line`. Keyboard controls work in both the catalog and diagram. Narrow screens scroll the
+diagram horizontally to preserve readable labels. No source files or remote assets are fetched.
+
+The reader validates service reports and recalculates metrics and rule verdicts from their calls
+and resources. `--rules` applies to import reports and is rejected for service input. Generate the
+service JSON with `--manifest` to apply service rules before rendering. A report with no inferred
+calls explicitly shows that state. It does not imply that the services have no connections.
+
+Boundaries use `Dockerfile`, runtime `start` or `serve` scripts, application project targets, Go
+`package main` with `func main`, and bound startup expressions. Build watchers do not count.
+Nested application roots split a root image automatically. A root image without its own startup
+or application facts outside child packages is dropped when nested applications are found. Startup commands targeting `build/server` or
+`dist/server` map to the source `server` directory when present. A library's `main` field alone
+never creates a service. Hidden directories, symlinks, tests, generated files, fixtures, examples
+and ignored files are excluded. Each file belongs to its deepest service directory.
+
+The infrastructure catalog recognizes common SQL, MongoDB, Prisma, TypeORM, Sequelize, Kysely,
+Knex, Redis, Kafka, BullMQ, AMQP and SQS constructors in TypeScript. Go recognizes database/sql,
+pgx, pgxpool, go-redis, and NATS clients. Python recognizes SQLAlchemy, psycopg, Redis, and Celery.
+Each resource has a package, source file and line,
+confidence, and rule verdict. A client constructed inside a service has high confidence. A client
+in shared code has medium confidence for each service directly importing that file at runtime.
+Unattributed facts are counted in the report's caveats.
+
+Express, Fastify, Koa router, Hono and Nest routes can match fetch or axios calls. Go supports
+net/http routes, calls and requests dispatched through a known client. Python supports FastAPI
+and Flask routes, requests and httpx calls, and named Celery task topics. Literal methods and paths
+match with high confidence. Parameter paths, static template tails and Go methodless routes have
+medium confidence. A literal remote host must identify the target service, so a Stripe URL does
+not become a local call merely because its path matches. Matching several services emits no edge.
+Kafka, BullMQ and NATS topic matches point from publisher to consumer. Unmatched HTTP calls remain
+resources.
+
+`--manifest` applies only to a directory input. If its service IDs name existing directories,
+those directories replace the entire inferred boundary set. Other IDs remain declared-only
+services. A manifest containing only declared-only IDs preserves inferred boundaries. Declared
+edges are appended and all edges use the same cycle and forbid analyzer.
+
+Infrastructure rules use explicit package targets. Ordinary service globs judge only service
+calls. Omit `kinds` for database and cache rules. A transport filter can match HTTP or queue
+resources. Resource violations have separate `forbidden_resources` indices and counts and do not
+change service cycles, hubs or instability.
+
+```yaml
+version: 1
+services: [api, worker]
+edges: []
+forbid:
+  - {id: worker-no-postgres, from: worker, to: 'pkg:pg', reason: 'Database access belongs to the API.'}
+  - {id: worker-no-api, from: worker, to: api, reason: 'Workers consume jobs without calling the API.'}
+```
+
+To check the authored rules in a script or CI job:
+
+```sh
+archgraph services . --manifest services.yaml --fail-on-forbidden --format json -o services-report.json
+```
+
+`--fail-on-forbidden` emits the normal report and exits 1 when the full report contains a forbidden
+call or infrastructure usage. Exit 0 means no violation was observed in the collected evidence.
+It does not establish complete architectural compliance. This check includes existing violations.
+It does not compare a baseline. Invalid input, a failed output write, or a check with no authored
+forbid rules exits 2. Without the flag, a valid report exits 0 even when it contains violations.
+`--brief` changes presentation, while `-o` saves the full JSON report. Neither changes the check.
+
+Inference follows local bindings conservatively. CommonJS destructuring, clients hidden by
+framework providers, cross-file receiver wiring, configured URLs or topics, and router plugin
+prefixes can be missed. Python uses deployment or declared boundaries. Unsupported deeply nested
+TypeScript receiver chains remain unknown. Repeated binding names can hide valid Python facts.
+Runtime roles sharing one entrypoint remain one service. gRPC and calls across repositories can be supplied through the declarative manifest below.
 
 ```yaml
 version: 1
@@ -461,7 +562,7 @@ Forbid rules use existing glob semantics: `*` stays within one namespace segment
 
 JSON reports use `schema: archgraph/v1.1`, `kind: services`. Their transport-valued edges have their own schema definition; source-import kinds are unchanged. [Manifest schema](../schema/services.v1.schema.json) validates the input structure, while [the v1.1 schema](../schema/archgraph.v1.1.schema.json) validates reports. Cross-references and semantic constraints are additionally checked by Rust. Array indices in cycle and forbidden-call evidence are zero-based; Markdown numbers calls from one. Report source metadata says `collector: declarative`, `complete: false`.
 
-This is a standalone report type. Import commands such as `check`, `render`, `simulate`, `tour` and `context` do not consume service reports. Service-map integration and automatic collectors are separate milestones; there is no legacy-v1 export. Valid reports exit 0 even when they contain cycles or forbidden calls; invalid declarations exit 2. JSON may be saved with `--output` while Markdown is printed; the output path must differ from the input manifest. All declared transports participate; file `--granularity` does not apply.
+This is a standalone report type. `render` accepts it, while import-only commands such as `check`, `simulate`, `tour` and `context` do not. There is no legacy-v1 service export. Valid reports exit 0 even when they contain cycles or forbidden calls; invalid declarations exit 2. JSON may be saved with `--output` while Markdown is printed; the output path must differ from the input manifest. All declared transports participate; file `--granularity` does not apply.
 
 **Interpretation:** a call cycle is communication-coupling evidence. It does not prove a distributed deadlock or a deployment-order failure, especially when queues are asynchronous. The inventory can be incomplete or wrong. Review the displayed confidence and evidence before acting; this mode makes no completeness claim.
 

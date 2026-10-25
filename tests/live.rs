@@ -183,6 +183,36 @@ fn go_live_matches_recorded() {
         // go list -mod=readonly never writes go.sum (or go.mod).
         assert!(!dir.join("go.sum").exists(), "go wrote into {name}");
     }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let recordings = ["go-misplaced", "go-excludes"].map(|name| {
+            let (recorded, _, _) = scan_recorded(name, &[]);
+            (fixture(name), recorded)
+        });
+        for platform in ["darwin", "linux", "windows"] {
+            // Cross-list the fixture while compiling and running the helper for this host.
+            let script = common::write_tmp(
+                &format!("go-live-platform/{platform}"),
+                &format!(
+                    "#!/bin/sh\nif [ \"$1\" = list ]; then\n  export GOOS={platform}\nfi\nexec '{}' \"$@\"\n",
+                    go.replace('\'', "'\\''")
+                ),
+            );
+            fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+            for (dir, recorded) in &recordings {
+                let (live, _, _) = scan(&[dir.to_str().unwrap(), "--go", &script]);
+                assert_eq!(
+                    live["source"]["collector"]["bound"],
+                    recorded["source"]["collector"]["bound"],
+                    "{} platform variants under GOOS={platform}",
+                    dir.display()
+                );
+            }
+        }
+    }
 }
 
 /// A module under the test temp dir with `go_mod` and one package `a` of `files`.

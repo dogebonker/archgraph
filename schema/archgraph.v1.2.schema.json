@@ -2670,7 +2670,11 @@
                   "null"
                 ]
               },
-              "source": { "type": "string", "minLength": 1, "description": "Repository-relative ADR path supplying this rule." },
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Repository-relative ADR path supplying this rule."
+              },
               "kinds": {
                 "type": "array",
                 "items": {
@@ -2715,7 +2719,11 @@
                   "null"
                 ]
               },
-              "source": { "type": "string", "minLength": 1, "description": "Repository-relative ADR path supplying this rule." },
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Repository-relative ADR path supplying this rule."
+              },
               "kinds": {
                 "type": "array",
                 "items": {
@@ -4618,7 +4626,11 @@
           ],
           "properties": {
             "collector": {
-              "const": "declarative"
+              "enum": [
+                "declarative",
+                "inferred",
+                "inferred+declarative"
+              ]
             },
             "path": {
               "type": "string",
@@ -5036,6 +5048,14 @@
             "low_confidence_calls": {
               "type": "integer",
               "minimum": 0
+            },
+            "resources": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "forbidden_resources": {
+              "type": "integer",
+              "minimum": 0
             }
           }
         },
@@ -5044,6 +5064,110 @@
           "items": {
             "type": "string",
             "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+          }
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "service",
+              "kind",
+              "package",
+              "confidence",
+              "source",
+              "verdict"
+            ],
+            "properties": {
+              "service": {
+                "type": "string",
+                "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                "minLength": 1,
+                "not": {
+                  "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                },
+                "allOf": [
+                  {
+                    "not": {
+                      "pattern": "[\\s*?\\[\\]{}<>]"
+                    }
+                  }
+                ]
+              },
+              "kind": {
+                "enum": [
+                  "database",
+                  "cache",
+                  "queue",
+                  "http"
+                ]
+              },
+              "package": {
+                "type": "string",
+                "minLength": 1
+              },
+              "operation": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "default": "low"
+              },
+              "source": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "file",
+                  "line"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
+                    "minLength": 1,
+                    "not": {
+                      "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
+                    }
+                  },
+                  "line": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              "verdict": {
+                "enum": [
+                  "allowed",
+                  "forbidden"
+                ]
+              },
+              "rule": {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "forbidden_resources": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 0
           }
         }
       }

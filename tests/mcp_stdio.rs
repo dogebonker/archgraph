@@ -106,6 +106,30 @@ impl Fixture {
         )
         .unwrap();
     }
+    fn services(&self) {
+        fs::write(
+            self.root.join("package.json"),
+            r#"{"dependencies":{"express":"*","pg":"*"}}"#,
+        )
+        .unwrap();
+        for service in ["api", "worker"] {
+            fs::create_dir_all(self.root.join(service)).unwrap();
+            fs::write(self.root.join(service).join("Dockerfile"), "FROM node\n").unwrap();
+        }
+        fs::write(
+            self.root.join("api/main.ts"),
+            "import express from 'express'; const app = express(); app.get('/x', () => {});\n",
+        )
+        .unwrap();
+        self.service_worker("x");
+    }
+    fn service_worker(&self, path: &str) {
+        fs::write(
+            self.root.join("worker/main.ts"),
+            format!("import {{Pool}} from 'pg'; new Pool(); fetch('http://api/{path}');\n"),
+        )
+        .unwrap();
+    }
     fn start_daemon(&mut self) {
         self.start_daemon_options(self.options());
     }
@@ -228,6 +252,7 @@ impl Client {
                 "propose",
                 "review",
                 "rules",
+                "services",
                 "simulate",
                 "target",
                 "verify"
@@ -287,7 +312,7 @@ impl Client {
         let result = self.request("tools/call", json!({"name":name,"arguments":args}));
         let limit = match name {
             "explain" => 300,
-            "review" => 4000,
+            "review" | "services" => 4000,
             _ => 2000,
         };
         assert!(
@@ -322,6 +347,219 @@ impl Drop for Client {
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
+}
+
+#[test]
+fn services_stdio_bypasses_collectors_and_layout_and_refreshes_live_source() {
+    let f = Fixture::new();
+    f.services();
+    fs::write(f.root.join("layout.yaml"), "invalid: [unterminated\n").unwrap();
+    let options = vec![
+        ".".into(),
+        "--depcruise".into(),
+        f.root
+            .join("missing-depcruise")
+            .to_string_lossy()
+            .into_owned(),
+    ];
+    let mut c = Client::start_options(&f, true, options, "2025-11-25");
+    let all = c.ok("services", json!({"brief":false}));
+    assert_eq!(all["source"]["collector"], "inferred");
+    assert_eq!(all["scope"]["service"], Value::Null);
+    assert_eq!(all["global_summary"]["services"], 2);
+    assert_eq!(all["calls"].as_array().unwrap().len(), 1);
+    assert_eq!(all["resources"].as_array().unwrap().len(), 1);
+    assert_eq!(all, c.ok("services", json!({"brief":false})));
+
+    let worker = c.ok("services", json!({"service":"worker","brief":false}));
+    assert_eq!(worker["scope"]["service"], "worker");
+    assert_eq!(worker["global_summary"]["services"], 2);
+    assert_eq!(worker["services"].as_array().unwrap().len(), 1);
+    assert_eq!(worker["services"][0]["id"], "worker");
+    assert_eq!(worker["calls"][0]["operation"], "GET /x");
+    assert_eq!(worker["resources"][0]["service"], "worker");
+    for arguments in [
+        json!({"service":"missing"}),
+        json!({"service":"../escape"}),
+        json!({"manifest":"../escape.yaml"}),
+        json!({"brief":"wrong"}),
+        json!({"unknown":true}),
+    ] {
+        assert_eq!(c.tool("services", arguments)["isError"], true);
+    }
+    f.service_worker("unmatched");
+    let refreshed = c.ok("services", json!({"service":"worker","brief":false}));
+    assert_eq!(refreshed["global_summary"]["calls"], 0);
+    assert!(refreshed["calls"].as_array().unwrap().is_empty());
+    assert_eq!(refreshed["resources"].as_array().unwrap().len(), 2);
+}
+
+#[test]
+fn services_stdio_applies_contained_manifest_rules_and_rejects_escapes() {
+    let f = Fixture::new();
+    f.services();
+    let manifest = json!({"version":1,"services":["api","worker"],"edges":[],"forbid":[
+        {"id":"no-worker-api","from":"worker","to":"api"},
+        {"id":"no-db","from":"worker","to":"pkg:pg"}
+    ]});
+    fs::write(f.root.join("services.yaml"), manifest.to_string()).unwrap();
+    let mut c = Client::start(&f, true);
+    let report = c.ok(
+        "services",
+        json!({"manifest":"services.yaml","service":"worker","brief":false}),
+    );
+    assert_eq!(report["source"]["collector"], "inferred+declarative");
+    assert_eq!(report["global_summary"]["forbidden_calls"], 1);
+    assert_eq!(report["global_summary"]["forbidden_resources"], 1);
+    assert_eq!(report["calls"][0]["rule"], "no-worker-api");
+    assert_eq!(report["resources"][0]["rule"], "no-db");
+    assert_eq!(report["forbid"], manifest["forbid"]);
+    assert_eq!(report["policy_source"]["path"], "services.yaml");
+    for arguments in [
+        json!({"manifest":"services.yaml/../services.yaml"}),
+        json!({"manifest":f.root.join("services.yaml").to_str().unwrap()}),
+        json!({"manifest":"api"}),
+    ] {
+        assert_eq!(c.tool("services", arguments)["isError"], true);
+    }
+    #[cfg(unix)]
+    {
+        let outside = Fixture::new();
+        let secret = "OUTSIDE_MANIFEST_MUST_NOT_BE_READ";
+        fs::write(outside.root.join("outside.yaml"), secret).unwrap();
+        std::os::unix::fs::symlink(
+            outside.root.join("outside.yaml"),
+            f.root.join("escape.yaml"),
+        )
+        .unwrap();
+        let escaped = c.tool("services", json!({"manifest":"escape.yaml"}));
+        assert_eq!(escaped["isError"], true);
+        assert!(!escaped.to_string().contains(secret));
+    }
+    assert_eq!(c.ok("services", json!({}))["global_summary"]["calls"], 1);
+}
+
+#[test]
+fn services_stdio_discloses_omitted_report_wide_policy_even_without_matches() {
+    let f = Fixture::new();
+    f.services();
+    let rules: Vec<_> = (0..80)
+        .map(|i| json!({"id":format!("unmatched-{i}"),"from":"api","to":"worker","reason":"Keep this authored policy even without observed calls"}))
+        .collect();
+    fs::write(
+        f.root.join("services.yaml"),
+        json!({
+            "version":1,"services":["api","worker"],"edges":[],"forbid":rules,
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let mut c = Client::start(&f, true);
+    for brief in [true, false] {
+        let result = c.tool(
+            "services",
+            json!({"manifest":"services.yaml","service":"api","brief":brief}),
+        );
+        assert!(serde_json::to_vec(&result).unwrap().len() <= 4000);
+        assert_ne!(result["isError"], true, "{result}");
+        let envelope = &result["structuredContent"];
+        assert_eq!(envelope["counts"]["forbid"], 80);
+        assert_eq!(envelope["truncated"], true);
+        assert!(envelope["omitted"].as_u64().unwrap() > 0);
+        assert!(envelope["data"]["forbid"].as_array().unwrap().len() < 80);
+        assert_eq!(envelope["data"]["policy_source"]["path"], "services.yaml");
+        assert!(
+            envelope["hint"]
+                .as_str()
+                .unwrap()
+                .contains("--manifest <file> --format json")
+        );
+    }
+}
+
+#[test]
+fn services_stdio_caps_large_results_without_losing_scope_or_original_counts() {
+    let f = Fixture::new();
+    f.services();
+    let many = (0..80)
+        .map(|i| format!("new Pool(); fetch('http://api/unknown-{i}');\n"))
+        .collect::<String>();
+    fs::write(
+        f.root.join("worker/main.ts"),
+        format!("import {{Pool}} from 'pg';\n{many}"),
+    )
+    .unwrap();
+    let mut c = Client::start(&f, true);
+    for brief in [true, false] {
+        let result = c.tool("services", json!({"service":"worker","brief":brief}));
+        assert_ne!(result["isError"], true, "{result}");
+        let envelope = &result["structuredContent"];
+        assert_eq!(envelope["truncated"], true);
+        assert_eq!(envelope["counts"]["resources"], 160);
+        assert_eq!(envelope["counts"]["services"], 1);
+        assert_eq!(envelope["data"]["scope"]["service"], "worker");
+        assert_eq!(envelope["data"]["global_summary"]["services"], 2);
+        assert_eq!(envelope["data"]["global_summary"]["resources"], 160);
+        assert!(envelope["data"]["resources"].as_array().unwrap().len() < 160);
+        assert!(envelope["omitted"].as_u64().unwrap() > 0);
+    }
+}
+
+#[test]
+fn services_mcp_call_does_not_require_an_import_collector() {
+    let f = Fixture::new();
+    f.services();
+    fs::write(f.root.join("layout.yaml"), "broken: [\n").unwrap();
+    let output = f
+        .command()
+        .args([
+            "--no-daemon",
+            "mcp-call",
+            ".",
+            "--depcruise",
+            "missing-reference-collector",
+            "--tool",
+            "services",
+            "--arguments",
+            r#"{"service":"worker"}"#,
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let data: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(data["scope"]["service"], "worker");
+    assert_eq!(data["global_summary"]["calls"], 1);
+    assert_eq!(data["calls"][0]["operation"], "GET /x");
+}
+
+#[test]
+fn services_stay_fresh_with_a_matching_daemon_and_broken_scan_rules() {
+    let mut f = Fixture::new();
+    f.services();
+    f.start_daemon();
+    let mut c = Client::start(&f, false);
+    assert_eq!(c.ok("services", json!({}))["global_summary"]["calls"], 1);
+    fs::write(f.root.join("layout.yaml"), "broken: [\n").unwrap();
+    f.service_worker("unmatched");
+    assert_eq!(c.ok("services", json!({}))["global_summary"]["calls"], 0);
+    let output = f
+        .command()
+        .args(["mcp-call"])
+        .args(f.options())
+        .args(["--tool", "services", "--arguments", "{}"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let data: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(data["global_summary"]["calls"], 0);
 }
 
 #[test]

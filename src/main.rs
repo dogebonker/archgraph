@@ -143,7 +143,7 @@ enum Cmd {
     Report(report_cli::Report),
     /// Recompute a scan document under rules and list forbidden and unplanned imports
     Check(check_cli::Check),
-    /// Write one self-contained HTML page showing the module graph
+    /// Write a self-contained HTML page for an import graph or services report
     Render(Render),
     /// Compare forbidden imports, cycles and module metrics before and after moving a file
     Simulate(Simulate),
@@ -167,7 +167,7 @@ enum Cmd {
     Context(context_cli::ContextArgs),
     /// Print a module reading tour, grouping cycles into a single stop
     Tour(tour_cli::TourArgs),
-    /// Analyze declared HTTP, gRPC and queue dependencies between services
+    /// Infer services and infrastructure, or analyze declared service dependencies
     Services(services_cli::ServicesArgs),
     /// List default file exclusions and their categories
     ShowExcludes,
@@ -289,7 +289,7 @@ struct CollectorOpts {
 
 #[derive(Args)]
 struct Render {
-    /// Scan document
+    /// Scan or services report
     graph: PathBuf,
     /// Rules replacing the ones embedded in the document
     #[arg(long)]
@@ -499,7 +499,7 @@ fn execute_inner(cli: Cli) -> ExitCode {
         Cmd::PackageSplits(args) => package_splits_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Context(args) => context_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Tour(args) => tour_cli::run(args).map(|()| ExitCode::SUCCESS),
-        Cmd::Services(args) => services_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Services(args) => services_cli::run(args),
         Cmd::ShowExcludes => show_excludes().map(|()| ExitCode::SUCCESS),
         Cmd::Unresolved(args) => unresolved(args).map(|()| ExitCode::SUCCESS),
     };
@@ -596,7 +596,22 @@ fn simulate(args: Simulate) -> Result<()> {
 }
 
 fn render(args: Render) -> Result<()> {
-    let html = render::render(&recompute(&args.graph, args.rules.as_deref())?)?;
+    #[derive(serde::Deserialize)]
+    struct Header {
+        kind: Option<String>,
+    }
+    let text = fs::read_to_string(&args.graph)
+        .with_context(|| format!("reading report {}", args.graph.display()))?;
+    let input: Header = serde_json::from_str(&text).context("parse report JSON")?;
+    let html = if input.kind.as_deref() == Some("services") {
+        if args.rules.is_some() {
+            bail!("--rules applies to import scans; service rules come from the service manifest");
+        }
+        render::render_services(&archgraph::services::read_report(&text)?)?
+    } else {
+        drop(text);
+        render::render(&recompute(&args.graph, args.rules.as_deref())?)?
+    };
     match &args.output {
         Some(path) => write_file(path, html.as_bytes()),
         None => {

@@ -18,6 +18,10 @@ use crate::surface::{SymbolImport, Symbols};
 
 use super::{named_children, self_export, text, unresolved_count};
 
+#[path = "typescript_app.rs"]
+mod app;
+pub(crate) use app::app_facts;
+
 fn literal(node: Node<'_>, source: &str) -> Option<String> {
     if node.kind() != "string" {
         return None;

@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+- MCP gains a read-only `services` tool with exact service focus and a repository-contained
+  manifest override. It bypasses reference import collection and retains a 4,000-byte response
+  cap with explicit counts and omissions.
+
+- `render` accepts exported service reports and produces an offline service catalog, directed
+  call diagram, infrastructure client list, and source-evidence inspector. It validates report
+  evidence and recomputes metrics and rule verdicts. Existing import reports and manifest output
+  keep their behaviour.
+- Service inference resolves immutable local Go string aliases for NATS topics. A source-labelled
+  benchmark records application misses separately from positive reference-program coverage.
+
+- Go move-together constraints use a stable file order and preserve platform-variant groups when
+  a file is excluded. Live scans agree with recorded fixtures across operating systems.
+
+- `services` accepts repository directories and infers TypeScript, JavaScript, Go, and Python services,
+  infrastructure clients, HTTP calls and queue topics. Nested runtime applications split root
+  images automatically. `--manifest` overrides boundaries and supplies declarations and rules.
+  Explicit `pkg:` targets forbid infrastructure use, with resource verdicts separate from calls.
+  Manifest-file JSON and Markdown remain byte-identical. The services report schema gains optional
+  resource fields and inferred collector labels.
+
 - `forbid` and `allow` take `global:<glob>` as `to` for host globals a file uses without declaring them, from the `globals` field of native JavaScript/TypeScript scans: `{ from: "src/domain/**", to: "global:process" }` makes `check` print `forbidden src/domain/a.ts -> global:process` at the first use. A global a `global:` selector names becomes an `external_nodes` entry with `global: true` (`package` its name, id `external:<language>:global:<name>`) and a runtime `external_edges` link, so `check`, SARIF, diff, simulate, the known list (`to: "global:process"`) and the map include it; layouts without `global:` keep identical verdicts, external arrays and `check` output. `pkg:**` never selects a global, `global:*` never a package, and `from`/`moves[].from` reject it. Naming a global makes its other uses `default` forbidden or unplanned until an `allow` covers them. A scan without collected globals (reference engine, other languages, older scans) exits 2 on a `global:` rule. `report` counts packages only.
 - Native JavaScript/TypeScript scans gain an optional `globals` field: one `{from, name, line}` entry per file and host global (`process`, `window`, `fetch`, `console`, `setTimeout` and 20 others) at its first use, unless the file binds that name anywhere. Type positions (`type W = typeof window`, `x as typeof window`), re-exports (`export { fetch } from './api'`), property names, object keys and `.d.ts`/`.d.mts`/`.d.cts` files do not count. Reference-engine and other-language scans omit it.
 - `infer-layout` drafts claims from a direction that holds across sibling slices: for folders with at least `--min-slices` (default 5) children, roles cut from the next path segment (`handler_documents.go` is `handler`), it proposes `infer-claim-N` `from: "<root>/<name>/B{/**,.*,_*}"` `to: "<root>/<name>/A{/**,.*,_*}"` when A imports B in at least `--min-slices` slices and the claim binds at least as many and holds in at least `--min-share` (default 0.8) of them, with the counts and breaking imports in comments and the reason `B does not import A (drafted from the graph; review intent)`. Claims come first in `forbid` and share `--max-rules`; a `# N eligible slice claims; M omitted by --max-rules.` line reports them.

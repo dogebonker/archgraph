@@ -1,4 +1,4 @@
-//! One self-contained HTML page per scan document.
+//! Self-contained HTML pages for scan and service reports.
 
 use anyhow::Result;
 
@@ -19,4 +19,10 @@ pub(crate) fn template() -> String {
 pub fn render(doc: &Document) -> Result<String> {
     let json = serde_json::to_string(doc)?.replace('<', "\\u003c");
     Ok(template().replacen("{{GRAPH}}", &json, 1))
+}
+
+/// The self-contained service catalog, with repository strings embedded only as JSON data.
+pub fn render_services(report: &crate::services::Report) -> Result<String> {
+    let json = serde_json::to_string(report)?.replace('<', "\\u003c");
+    Ok(include_str!("../assets/services.html").replacen("{{SERVICES}}", &json, 1))
 }
