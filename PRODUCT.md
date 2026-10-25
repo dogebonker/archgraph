@@ -38,12 +38,15 @@ Existing import collectors have their own tooling and safety constraints documen
 - Configuration, indirect wrappers, and unsupported transports can hide real relationships.
 - The HTML artifact works offline and does not fetch source code or third-party assets.
 
-## Planned architecture workflow
+## Architecture workflow
 
-The [architecture workflow plan](docs/plans/architecture-workflow.md) records three requested outcomes:
-formal project constraints that agents can follow and check, source-backed project skill drafts,
-and visual change review integrated with the edit process. Visual diffs start with modules,
-imports, and code-rule violations. Service and infrastructure diffs follow later.
+The [architecture workflow plan](docs/plans/architecture-workflow.md) records the delivered increments
+and their limits. Service-report diffs distinguish newly observed violations from existing ones
+under the later policy. Project skills have separate inactive drafting and explicit adoption.
+Import comparison pages show module, dependency, rule, and source-evidence changes.
+
+Visual diffs cover modules, imports, and code-rule violations. Service and infrastructure visual
+diffs remain a later extension. Missing provenance and incomplete static evidence stay visible.
 
 Existing code structure is evidence for a draft. Authored policy defines the intended architecture.
 Generated skills must preserve that distinction and reference the policy files.

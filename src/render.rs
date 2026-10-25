@@ -26,3 +26,9 @@ pub fn render_services(report: &crate::services::Report) -> Result<String> {
     let json = serde_json::to_string(report)?.replace('<', "\\u003c");
     Ok(include_str!("../assets/services.html").replacen("{{SERVICES}}", &json, 1))
 }
+
+/// An offline before/after view. Repository data cannot terminate the JSON script element.
+pub fn render_comparison(view: &crate::comparison::View) -> Result<String> {
+    let json = serde_json::to_string(view)?.replace('<', "\\u003c");
+    Ok(include_str!("../assets/comparison.html").replacen("{{COMPARISON}}", &json, 1))
+}

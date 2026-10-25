@@ -1,8 +1,8 @@
 # Architecture contracts, project skills, and visual change review
 
-Status: W1a shipped. W1b, W2, and W3 are authorized for sequential implementation on
-`feat/architecture-workflow` from merged main `185f2c0`. Each increment requires targeted tests
-and independent review before the next one starts.
+Status: W1a shipped. W1b, W2, and W3 are implemented and independently approved on
+`feat/architecture-workflow` from merged main `185f2c0`. Each increment passed targeted tests and
+independent review. Remaining broader integrations are listed separately from delivered behavior.
 User direction recorded 2026-10-25 after the service reports and MCP queries shipped.
 
 ## Requested outcomes
@@ -17,11 +17,11 @@ rather than introducing another policy language merely to combine their presenta
 
 ## What exists and what is missing
 
-| Outcome | Existing implementation | Missing vertical slice |
+| Outcome | Delivered implementation | Remaining limits |
 | --- | --- | --- |
-| W1 | `layout.yaml` modules, layers, public surfaces, forbid/allow claims, reasons and ADR sources; target verdicts and new-only edit gates. Separate service/client verdicts in `services` reports. | One contract view for import rules, service rules, provenance and explicitly manual constraints. Service policies do not yet participate in hooks or change checks. |
-| W2 | `init` performs native analysis, drafts a layout and synchronizes four owned instruction blocks. Five generic architecture skills already ship with the repository. | A repository-specific skill draft, concrete source-backed examples, and an explicit acceptance/lifecycle bridge that does not confuse observations with intended policy. |
-| W3 | Import diffs, pre-edit snapshots, PR review summaries, a history chart and snapshot navigation. | An added/removed/changed relationship overlay. Services and resource usages have no comparison model or history path. |
+| W1 | Existing layout rules, reasons, ADR sources, target verdicts and edit gates. Service policy retrieval and saved-report new-only checks. | A unified manual-constraint view and service edit-hook integration. Service reports cannot establish collection parity. |
+| W2 | Native project-skill drafts, source-backed examples, policy fingerprints, reviewed adoption and protected updates. Existing init and five bundled skills remain available. | Architecture intent and semantic constraints still need review. Runnable snippets target POSIX shells. |
+| W3 | Offline module/import/rule comparisons, retained before/after evidence, compatibility notices and keyboard/mobile navigation. Existing snapshots and PR summaries remain available. | History-view reuse and service/resource visual comparisons remain separate extensions. |
 
 Source seams: `src/rules.rs`, `src/target.rs`, `src/adr.rs`, `src/cli/init.rs`,
 `src/sync_rules.rs`, `src/context.rs`, `src/cli/hooks.rs`, `src/edit_gate.rs`, `src/services.rs`,
@@ -44,7 +44,7 @@ Classify enforceability explicitly:
 Do not turn absence of evidence into a successful check. Service rules currently lack ADR-source
 metadata. The `rules` MCP tool covers layout rules. By default, a valid `services` command exits
 successfully even when violations are reported. W1a adds an explicit whole-report check. A service
-change gate still needs a comparison contract before integration into the edit loop.
+edit-hook transaction still needs a baseline/provenance contract before integration into that loop.
 
 Acceptance: an agent can retrieve the relevant contract with reasons and limitations, evaluate a
 code change against the same contract, and distinguish a new violation from an existing one or
@@ -145,6 +145,18 @@ preserved across regeneration; unsupported semantic claims remain clearly unveri
 
 ### W3 delivery contract
 
+Implemented and independently approved. The 46 targeted Rust tests and 28 nearby UI tests pass.
+The complete regression run passes 932 Rust tests with 38 existing tool-dependent tests ignored,
+plus 136 UI tests. All-target clippy, formatting, and whitespace checks pass.
+
+Chrome QA used native before/after snapshots from an actual fixture edit, with a new forbidden
+import, removed module/import, line-only movement, package import, and host global. Desktop
+1365x900 and mobile 390x844 checks cover selection, keyboard activation, filtering, readable graph
+scrolling, no horizontal page overflow, retained removed evidence, and source/rule inspection.
+Policy-only and unverified empty comparisons keep their explanatory states. Browser console errors
+were zero. Responsive selection reveals the inspector or filtered rows. Decision comparisons
+retain their original-entrypoint associations, covered by a swapped-verdict regression.
+
 `archgraph diff before.json after.json --html changes.html` renders two validated import scans.
 It preserves the existing JSON diff and gate behavior. A separate typed visualization projection
 includes internal and external imports, exact module IDs, structural additions and removals,
@@ -182,16 +194,15 @@ Acceptance: one actual code change produces a truthful before/after view, a plan
 relationship is highlighted with its reason, removed relationships stay inspectable, and missing
 or incompatible snapshots never look like a clean no-change result.
 
-## Proposed sequence
+## Delivery sequence
 
-1. W1: expose existing policy and its checking limits to agents, then add service-policy change checks.
-2. W2: project architecture skill drafting and controlled adoption using those contracts.
-3. W3: module/import/rule-violation delta and visual overlay, then extend the same interaction to
-   services and resource usages.
+1. W1a and W1b expose existing service policy and compare supplied before/after service evidence.
+2. W2 drafts and adopts project architecture skills using those contracts.
+3. W3 adds the module/import/rule-violation comparison view to the existing diff workflow.
 
 Confirmed preference: visual diffs start with modules, imports and code-rule violations.
-Services/infrastructure comparison is a later extension.
-No product rename, new dependency, policy schema, or new command name is selected here.
+Service/infrastructure visual comparison is a later extension.
+The current product name and policy formats remain. No new dependencies were added.
 
 ## HTTP experiment checkpoint
 
@@ -201,7 +212,7 @@ Independent review also found stale captured-variable effects and route rollback
 unrelated method call. Passing unit tests did not resolve those failures.
 
 The experiment is preserved locally in `experiment/http-linker-20261025` at `9d53bba`.
-It is excluded from `feat/app-model` and the PR. Further work requires a bounded effect model,
+It is excluded from the merged app-model delivery and this workflow branch. Further work requires a bounded effect model,
 the existing precision probes, and the reduced real registration fixture. Reintegration requires
 the unchanged corpus to recover A3 and at least 4 of 11 flows while retaining the reference flows
 and negative controls. Additional predictions need independent review.

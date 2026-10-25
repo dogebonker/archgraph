@@ -449,12 +449,38 @@ archgraph render graph.json -o graph.html
 ```sh
 archgraph diff before.json after.json
 archgraph diff before.json after.json --fail-on new-forbidden,new-cycles --format markdown >> "$GITHUB_STEP_SUMMARY"
+archgraph diff before.json after.json --html changes.html
 ```
 
 - `--fail-on <list>`: comma list of `new-forbidden`, `new-cycles`, `new-unplanned`, `stale-known` (an entry of the new scan's [known list](#known-violations) that no forbidden import matches, listed under `stale_known` and in markdown as `### Known entries no longer forbidden`), `new-vacuous` (a [claim](#claims) vacuous in the new scan that the old scan states and that is not vacuous there, listed under `target.newly_vacuous` with the claim's notes and in markdown as `### Newly vacuous claims`; a claim the old scan lacks never counts); any other value is a usage error (exit 2). Exit 1 when any listed condition is in the diff, else 0. The document is printed either way.
   - A **new forbidden** (or **new unplanned**) import is a file pair `from -> to` that is forbidden (unplanned) in new and is missing, or has another verdict, in old.
   - A **new cycle** is an entry of `new_cycles`: a cycle in new whose level and member set appear in no cycle of old. Cycles are strongly connected components, so a cycle that grows (`a <-> b` becomes `a -> b -> c -> a`) is new, and its old member set is listed in `resolved_cycles`; a cycle that keeps its members while its imports change is not new. Both module cycles and file cycles inside one module count.
 - `--format json|markdown` (default `json`): `markdown` prints a compact summary for a pull request or CI job summary instead of the document: a pass or fail headline naming the failed `--fail-on` conditions, new forbidden and unplanned imports (`file → file (rule)`), new and resolved cycles, a `Target: 15 of 18 slices conform (was 16 of 18), 0 of 23 slices moved, 1 newly broken slice.` line when either scan has a claim or a move ("was" only when the count changed, "moved" only when both scans have moves, the broken part only when non-zero), then a `### Newly broken slices` list of each slice a claim newly breaks with its imports; the JSON document has the counts as `[old, new]` pairs of `{done, of}` and the broken slices under `target`, a table of modules whose cohesion or instability moved by 0.05 or more (largest move first, at most 20 rows, then "and N more"), and the numbers of added and removed modules. Paths and module ids are backslash-escaped (backslash, `|`, backtick, `<`, `>`, `*`, `_`, `[`, `]`) and line breaks become spaces, since they come from the scanned repository.
+
+### Visual architecture diff
+
+`diff BEFORE AFTER --html FILE` writes an offline import comparison alongside the normal JSON or
+Markdown result. Failure gates still inspect the full diff. A new forbidden import can therefore
+exit 1 while leaving its comparison page available for review. Service comparisons and
+`--legacy-v1` do not support HTML in this increment.
+
+The module graph and searchable list show added and removed imports, changed rule verdicts,
+module assignments, and source evidence. Select a row, module, or graph connection to inspect
+before and after evidence. Removed relationships remain inspectable. A line-only move is labelled
+"Evidence only". A module with different files is labelled "Membership changed". Package and host
+global dependencies remain distinct from local modules. Changes and All imports views keep global
+totals separate from filtered counts.
+
+The header discloses policy changes and recorded collection compatibility. Different known
+languages, collectors, scope, or collection settings fail before export. Missing provenance is
+shown as unverified even when no changes are observed. Recorded analyzer versions are read before
+recomputation. Matching recorded settings do not prove repository identity, identical binaries,
+or complete dependency coverage. Commit labels retain the recorded clean or dirty state.
+
+The page is self-contained and fetches neither source nor remote assets. Repository strings stay
+literal text. Output paths that alias either input are rejected. Existing import JSON diffs retain
+their schema and semantics, including their per-snapshot policy verdicts. The HTML output directory
+must already exist. Policy-only rule effects are identified separately in the visual view.
 
 `check`, `simulate` and `render` take `--rules layout.yaml` to replace the rules embedded in the scan.
 

@@ -7,6 +7,7 @@ pub mod bisect;
 pub mod cochange;
 pub mod codeowners;
 pub mod collect;
+pub mod comparison;
 pub mod compat;
 pub mod context;
 pub mod diff;
