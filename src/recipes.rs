@@ -167,7 +167,7 @@ pub fn recipe_for<'a>(doc: &'a Document, id: &str) -> Result<&'a Recipe> {
         })?
         .recipe
         .as_ref()
-        .context("finding has no recipe: rescan with the current archgraph version")
+        .context("finding has no recipe: rescan with the current boundrail version")
 }
 
 pub fn rank(doc: &mut Document, rank: Rank) {

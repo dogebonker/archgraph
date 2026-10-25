@@ -4,7 +4,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use archgraph::package_splits::workspaces::discover;
+use boundrail::package_splits::workspaces::discover;
 
 struct Scratch(PathBuf);
 static NEXT_SCRATCH: AtomicUsize = AtomicUsize::new(0);

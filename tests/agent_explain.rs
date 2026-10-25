@@ -1,11 +1,11 @@
 #[path = "../src/cli/explain.rs"]
 mod explain;
 
-use archgraph::model::Document;
+use boundrail::model::Document;
 use serde_json::{Value, json};
 
 fn document() -> Document {
-    archgraph::analyze(
+    boundrail::analyze(
         serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","version":null,"cruised":2},"git":null,"generated_at":"test"})).unwrap(),
         serde_json::from_value(json!({"depth":2,"source_root":".","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"fixture","doc":{"version":1,"modules":[{"id":"domain","path":"domain/**"},{"id":"adapters","path":"adapters/**"}],"layers":["domain/**","adapters/**"],"forbid":[{"id":"boundary","from":"domain/**","to":"adapters/**","reason":"Keep domain independent"}]}}})).unwrap(),
         vec!["domain/a.ts".into(), "adapters/b.ts".into()],
@@ -86,7 +86,7 @@ fn cli_flag_emits_compact_json_for_a_new_file() {
         std::process::id()
     ));
     std::fs::write(&graph, serde_json::to_vec(&document()).unwrap()).unwrap();
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args([
             "explain",
             "domain/new.ts",

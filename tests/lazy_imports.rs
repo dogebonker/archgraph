@@ -1,5 +1,5 @@
-use archgraph::collect::depcruise;
-use archgraph::model::EdgeKind;
+use boundrail::collect::depcruise;
+use boundrail::model::EdgeKind;
 use serde_json::{Value, json};
 use std::{
     fs,
@@ -20,14 +20,14 @@ impl Source {
         Self(path)
     }
 
-    fn parse(&self, dependencies: Value) -> Vec<archgraph::model::Edge> {
+    fn parse(&self, dependencies: Value) -> Vec<boundrail::model::Edge> {
         let input = json!({
             "modules": [{"source": "entry.ts", "dependencies": dependencies}, {"source": "target.ts"}],
             "summary": {"totalCruised": 2}
         });
         depcruise::parse_at(
             &serde_json::to_vec(&input).unwrap(),
-            &mut archgraph::collect::imports::Sources::new(&self.0).unwrap(),
+            &mut boundrail::collect::imports::Sources::new(&self.0).unwrap(),
         )
         .unwrap()
         .edges

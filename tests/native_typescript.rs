@@ -1,4 +1,4 @@
-use archgraph::{
+use boundrail::{
     collect::{
         excludes::{Options, Policy},
         native::typescript,
@@ -27,7 +27,7 @@ impl Fixture {
         }
         Self(root)
     }
-    fn scan(&self) -> archgraph::collect::native::Output {
+    fn scan(&self) -> boundrail::collect::native::Output {
         let policy = Policy::new(&self.0, Language::Typescript, Options::default()).unwrap();
         typescript::collect(&self.0, ".", &policy, true).unwrap()
     }

@@ -10,7 +10,7 @@ import unittest
 import prepare
 
 HERE = Path(__file__).resolve().parent
-BINARY = Path(os.environ.get('ARCHGRAPH_TEST_BINARY', HERE.parents[1] / 'target/debug/archgraph'))
+BINARY = Path(os.environ.get('ARCHGRAPH_TEST_BINARY', HERE.parents[1] / 'target/debug/boundrail'))
 
 
 def write(root, name, value):
@@ -77,7 +77,7 @@ def implement(root, case, tempting=False):
 
 class UsefulnessPreflight(unittest.TestCase):
     def test_declared_challenges(self):
-        self.assertTrue(BINARY.is_file(), 'build archgraph or set ARCHGRAPH_TEST_BINARY first')
+        self.assertTrue(BINARY.is_file(), 'build boundrail or set ARCHGRAPH_TEST_BINARY first')
         with tempfile.TemporaryDirectory(prefix='archgraph-usefulness-preflight-') as temporary:
             parent = Path(temporary)
             manifest = prepare.prepare(parent / 'prepared', Path(sys.executable))

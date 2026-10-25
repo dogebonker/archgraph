@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use archgraph::collect::{excludes, incremental, native};
-use archgraph::model::Language;
+use boundrail::collect::{excludes, incremental, native};
+use boundrail::model::Language;
 
 struct Fixture(PathBuf);
 impl Fixture {

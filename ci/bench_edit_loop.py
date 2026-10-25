@@ -176,7 +176,7 @@ def benchmark(binary, work, repeats, timeout):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--archgraph", type=Path, default=Path(__file__).resolve().parents[1] / "target/release/archgraph")
+    parser.add_argument("--boundrail", "--archgraph", dest="archgraph", metavar="BINARY", type=Path, default=Path(__file__).resolve().parents[1] / "target/release/boundrail")
     parser.add_argument("--work", type=Path, help="new artifact directory; fixtures must not exist")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--repeats", type=int, default=5)

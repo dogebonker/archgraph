@@ -9,16 +9,16 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-with tempfile.TemporaryDirectory(prefix="archgraph-elixir-action-") as temp:
+with tempfile.TemporaryDirectory(prefix="boundrail-elixir-action-") as temp:
     root = Path(temp)
     project = root / "project"
     project.mkdir()
     (project / "mix.exs").write_text('raise "must not execute"\n')
-    binary = root / "archgraph"
+    binary = root / "boundrail"
     binary.write_text('''#!/usr/bin/env python3
 import json, os, pathlib, sys
 if "--version" in sys.argv:
-    print("archgraph test")
+    print("boundrail test")
 elif sys.argv[1] == "scan":
     pathlib.Path(os.environ["BASE_SCAN"]).write_text(json.dumps(os.listdir(sys.argv[2])))
     pathlib.Path(sys.argv[sys.argv.index("-o") + 1]).write_text('{"summary":{"forbidden":0}}')

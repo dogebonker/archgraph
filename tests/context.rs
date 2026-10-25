@@ -1,6 +1,6 @@
 mod common;
 
-use archgraph::model::{Config, Edge, Source};
+use boundrail::model::{Config, Edge, Source};
 use serde_json::{Value, json};
 use std::{
     fs,
@@ -39,7 +39,7 @@ impl Fixture {
             "depth":1, "source_root":".", "excludes":[], "include_tests":false
         }))
         .unwrap();
-        let doc = archgraph::analyze(
+        let doc = boundrail::analyze(
             source,
             config,
             vec!["a.ts".into(), "lib/b.ts".into()],
@@ -59,7 +59,7 @@ impl Fixture {
         self.run_task("Edit the named source", extra)
     }
     fn run_task(&self, task: &str, extra: &[&str]) -> Output {
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .current_dir(&self.0)
             .args(["context", "--graph", "graph.json", "--task", task])
             .args(extra)
@@ -69,7 +69,7 @@ impl Fixture {
     fn graph(&self, paths: &[&str], edges: &[(&str, &str)]) {
         let original: Value =
             serde_json::from_slice(&fs::read(self.0.join("graph.json")).unwrap()).unwrap();
-        let doc = archgraph::analyze(
+        let doc = boundrail::analyze(
             serde_json::from_value(original["source"].clone()).unwrap(),
             serde_json::from_value(original["config"].clone()).unwrap(),
             paths.iter().map(|path| (*path).into()).collect(),
@@ -211,7 +211,7 @@ fn reads_legacy_graph_but_rejects_legacy_context_json_output() {
     let fixture = Fixture::new();
     let mut graph: Value =
         serde_json::from_slice(&fs::read(fixture.0.join("graph.json")).unwrap()).unwrap();
-    archgraph::compat::v1(&mut graph).unwrap();
+    boundrail::compat::v1(&mut graph).unwrap();
     assert_eq!(graph["schema"], "archgraph/v1");
     fs::write(
         fixture.0.join("graph.json"),

@@ -36,16 +36,16 @@ pub(super) fn run(args: Adr) -> Result<ExitCode> {
             apply,
             json,
         } => {
-            let report = archgraph::adr::import(&root, &dir)?;
+            let report = boundrail::adr::import(&root, &dir)?;
             if apply {
-                archgraph::adr::apply(&root, &report)?;
+                boundrail::adr::apply(&root, &report)?;
             }
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else if globals().brief {
                 write(None, &report)?;
             } else {
-                print!("{}", archgraph::adr::yaml(&report)?);
+                print!("{}", boundrail::adr::yaml(&report)?);
             }
             Ok(ExitCode::SUCCESS)
         }
@@ -53,7 +53,7 @@ pub(super) fn run(args: Adr) -> Result<ExitCode> {
             root,
             require_source,
         } => {
-            let report = archgraph::adr::check(&root, require_source)?;
+            let report = boundrail::adr::check(&root, require_source)?;
             let failed = !report.stale.is_empty()
                 || !report.missing.is_empty()
                 || report

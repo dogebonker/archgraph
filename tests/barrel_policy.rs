@@ -1,10 +1,10 @@
-use archgraph::{
+use boundrail::{
     model::{Config, Edge, EdgeKind, Move, NodeMetadata, Source, Verdict},
     simulate,
 };
 use serde_json::json;
 
-fn document(include_entry: bool) -> archgraph::model::Document {
+fn document(include_entry: bool) -> boundrail::model::Document {
     let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"dependency-cruiser","version":null,"cruised":4},"git":null,"generated_at":"test"})).unwrap();
     let mut config: Config = serde_json::from_value(json!({"depth":1,"source_root":".","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"0".repeat(64),"doc":{"version":1,"entrypoints":{"api/**":"api/index.ts"}}}})).unwrap();
     config.file_metadata.insert(
@@ -42,19 +42,19 @@ fn document(include_entry: bool) -> archgraph::model::Document {
             ..Default::default()
         });
     }
-    archgraph::analyze(source, config, files, edges, vec![], None).unwrap()
+    boundrail::analyze(source, config, files, edges, vec![], None).unwrap()
 }
 
 #[test]
 fn written_boundaries_survive_resolution_restore_and_entry_moves() {
     let doc = document(true);
-    let policy = |doc: &archgraph::model::Document, from: &str| {
+    let policy = |doc: &boundrail::model::Document, from: &str| {
         doc.edges.iter().find(|e| e.from == from).unwrap().verdict
     };
     assert_eq!(policy(&doc, "app/via.ts"), Some(Verdict::Allowed));
     assert_eq!(policy(&doc, "app/deep.ts"), Some(Verdict::Forbidden));
     let input = serde_json::from_value(serde_json::to_value(&doc).unwrap()).unwrap();
-    let restored = archgraph::restore_scan(input).unwrap();
+    let restored = boundrail::restore_scan(input).unwrap();
     assert!(
         restored
             .files
@@ -66,7 +66,7 @@ fn written_boundaries_survive_resolution_restore_and_entry_moves() {
     assert_eq!(policy(&restored, "app/via.ts"), Some(Verdict::Allowed));
     let moved = simulate::apply(
         &restored,
-        archgraph::rules::compile(&restored.config)
+        boundrail::rules::compile(&restored.config)
             .unwrap()
             .as_ref(),
         &[Move {
@@ -84,7 +84,7 @@ fn written_boundaries_survive_resolution_restore_and_entry_moves() {
             .barrel
     );
     assert_eq!(policy(&moved, "app/via.ts"), Some(Verdict::Forbidden));
-    let surface = archgraph::surface::analyze(&doc, 50).unwrap();
+    let surface = boundrail::surface::analyze(&doc, 50).unwrap();
     assert!(
         surface
             .modules
@@ -98,7 +98,7 @@ fn written_boundaries_survive_resolution_restore_and_entry_moves() {
 fn excluded_facade_is_still_a_valid_written_policy_target() {
     let doc = document(false);
     let input = serde_json::from_value(serde_json::to_value(&doc).unwrap()).unwrap();
-    let restored = archgraph::restore_scan(input).unwrap();
+    let restored = boundrail::restore_scan(input).unwrap();
     assert_eq!(
         restored
             .edges
@@ -113,14 +113,14 @@ fn excluded_facade_is_still_a_valid_written_policy_target() {
 #[test]
 fn boundary_finding_names_the_written_facade_when_definition_is_elsewhere() {
     let mut doc = document(true);
-    doc.files.push(archgraph::model::File {
+    doc.files.push(boundrail::model::File {
         path: "api/extra.ts".into(),
         owners: vec![],
         module: "api".into(),
         barrel: true,
         class: None,
     });
-    doc.files.push(archgraph::model::File {
+    doc.files.push(boundrail::model::File {
         path: "leaf/impl.ts".into(),
         owners: vec![],
         module: "leaf".into(),
@@ -135,15 +135,15 @@ fn boundary_finding_names_the_written_facade_when_definition_is_elsewhere() {
     edge.original_to = Some("api/extra.ts".into());
     edge.to = "leaf/impl.ts".into();
     let input = serde_json::from_value(serde_json::to_value(&doc).unwrap()).unwrap();
-    let restored = archgraph::restore_scan(input).unwrap();
+    let restored = boundrail::restore_scan(input).unwrap();
     let finding = restored
         .findings
         .iter()
         .chain(restored.diagnostics.iter().map(|d| &d.finding))
-        .find(|f| f.kind == archgraph::model::FindingKind::InternalsReach)
+        .find(|f| f.kind == boundrail::model::FindingKind::InternalsReach)
         .unwrap();
     assert_eq!(finding.subject, "api/**");
-    if let archgraph::model::Evidence::InternalsReach {
+    if let boundrail::model::Evidence::InternalsReach {
         module, entries, ..
     } = &finding.evidence
     {
@@ -174,12 +174,12 @@ fn reexport_loops_are_findings_and_survive_restore() {
         },
     ]);
     let input = serde_json::from_value(serde_json::to_value(&doc).unwrap()).unwrap();
-    let restored = archgraph::restore_scan(input).unwrap();
+    let restored = boundrail::restore_scan(input).unwrap();
     assert!(
         restored
             .findings
             .iter()
-            .any(|f| f.kind == archgraph::model::FindingKind::ReexportCycle)
+            .any(|f| f.kind == boundrail::model::FindingKind::ReexportCycle)
     );
     assert!(restored.cycles.is_empty());
 }

@@ -635,7 +635,7 @@ def results_markdown(result, frozen):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("mode", choices=["select", "score"])
-    p.add_argument("--binary", type=Path, default=REPO / "target/release/archgraph")
+    p.add_argument("--binary", type=Path, default=REPO / "target/release/boundrail")
     p.add_argument(
         "--depcruise",
         default="/private/tmp/archgraph-impact-collectors/node_modules/.bin/depcruise",

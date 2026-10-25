@@ -1,4 +1,4 @@
-# Builds, attests and releases the binaries for a `v*` tag, then publishes archgraph-cli to npm
+# Builds, attests and releases the binaries for a `v*` tag, then publishes boundrail-cli to npm
 # when the NPM_TOKEN secret is set.
 #
 # After a failure, use "Re-run failed jobs", not "Re-run all jobs": once the release job has
@@ -59,16 +59,16 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          stem=archgraph-$GITHUB_REF_NAME-$TARGET
+          stem=boundrail-$GITHUB_REF_NAME-$TARGET
           mkdir -p "dist/$stem"
           cp LICENSE-MIT LICENSE-APACHE THIRD_PARTY_NOTICES.md README.md "dist/$stem/"
           cp -R skills "dist/$stem/"
           cd dist
           if [ "$RUNNER_OS" = Windows ]; then
-            cp "../target/$TARGET/release/archgraph.exe" "$stem/"
+            cp "../target/$TARGET/release/boundrail.exe" "$stem/"
             7z a -tzip "$stem.zip" "$stem"
           else
-            cp "../target/$TARGET/release/archgraph" "$stem/"
+            cp "../target/$TARGET/release/boundrail" "$stem/"
             tar -czf "$stem.tar.gz" "$stem"
           fi
         env:
@@ -96,7 +96,7 @@ jobs:
           merge-multiple: true
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: dist/archgraph-*
+          subject-path: dist/boundrail-*
 
   release:
     needs: [build, attest]
@@ -109,7 +109,7 @@ jobs:
           pattern: dist-*
           path: dist
           merge-multiple: true
-      - run: cd dist && sha256sum archgraph-* > SHA256SUMS && cat SHA256SUMS
+      - run: cd dist && sha256sum boundrail-* > SHA256SUMS && cat SHA256SUMS
       - run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -126,7 +126,7 @@ jobs:
       HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
     steps:
       - if: env.HAS_NPM_TOKEN != 'true'
-        run: echo "::notice::NPM_TOKEN is not set; archgraph-cli is not published"
+        run: echo "::notice::NPM_TOKEN is not set; boundrail-cli is not published"
       - if: env.HAS_NPM_TOKEN == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

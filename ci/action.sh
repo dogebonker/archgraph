@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The archgraph GitHub Action (action.yml). Every input arrives as an INPUT_* environment
+# The boundrail GitHub Action (action.yml). Every input arrives as an INPUT_* environment
 # variable, so this runs outside Actions too, given RUNNER_TEMP, GITHUB_OUTPUT and
 # GITHUB_STEP_SUMMARY:
 #
@@ -32,7 +32,7 @@ cleanup() {
   echo "::$token::"
   # Exit 1 is a gate result the summary explains; 2 and above is a failure to run.
   if ((status >= 2)); then
-    echo "::error::archgraph: ${failure:-failed with exit $status; see the log above}"
+    echo "::error::boundrail: ${failure:-failed with exit $status; see the log above}"
   fi
 }
 trap cleanup EXIT
@@ -55,20 +55,20 @@ esac
 fail_on=${INPUT_FAIL_ON-new-forbidden,new-cycles,stale-known,new-vacuous}
 fail_on=${fail_on//[[:space:]]/}
 base_ref=${INPUT_BASE_REF:-}
-work=$RUNNER_TEMP/archgraph
+work=$RUNNER_TEMP/boundrail
 rm -rf "$work"
 mkdir -p "$work"
 
 if [[ -n ${INPUT_BINARY:-} ]]; then
-  archgraph=$INPUT_BINARY
-  command -v "$archgraph" >/dev/null || die "binary $archgraph is not an executable"
+  boundrail=$INPUT_BINARY
+  command -v "$boundrail" >/dev/null || die "binary $boundrail is not an executable"
 else
   # The release this checkout of the action was cut from.
   version=${INPUT_VERSION:-$(sed -n 's/^version = "\(.*\)"$/\1/p' "$here/Cargo.toml" | head -n 1)}
   ARCHGRAPH_VERSION=$version ARCHGRAPH_INSTALL_DIR=$work/bin sh "$here/install.sh"
-  archgraph=$work/bin/archgraph
+  boundrail=$work/bin/boundrail
 fi
-"$archgraph" --version
+"$boundrail" --version
 
 # Options shared by the HEAD report and the base scan.
 # Keep reference defaults compatible with previously released binaries that lack --engine.
@@ -137,7 +137,7 @@ if [[ $lang == typescript ]] || { [[ -z $lang ]] && has package.json tsconfig.js
       die "TypeScript scans need Node 22 or later on PATH: add actions/setup-node"
     ((node_major >= 22)) ||
       die "dependency-cruiser 18.4.0 needs Node 22 or later, found $(node --version): add actions/setup-node"
-    tools=$RUNNER_TEMP/archgraph-tools
+    tools=$RUNNER_TEMP/boundrail-tools
     mkdir -p "$tools"
     cp "$here/ci/tools/package.json" "$here/ci/tools/package-lock.json" "$tools/"
     npm ci --prefix "$tools" --ignore-scripts --no-audit --no-fund --loglevel=error
@@ -148,7 +148,7 @@ fi
 if [[ $lang == python ]] || { [[ -z $lang ]] && has pyproject.toml setup.py setup.cfg; }; then
   python=${ARCHGRAPH_PYTHON:-}
   if [[ -z $python ]]; then
-    venv=$RUNNER_TEMP/archgraph-venv
+    venv=$RUNNER_TEMP/boundrail-venv
     python3 -m venv "$venv"
     "$venv/bin/python" -c 'import sys; sys.exit(not (3, 10) <= sys.version_info[:2] <= (3, 14))' ||
       die "grimp 3.17 has wheels for CPython 3.10 to 3.14, found $("$venv/bin/python" --version): add actions/setup-python"
@@ -162,7 +162,7 @@ fi
 if [[ $lang == go ]] || { [[ -z $lang ]] && has go.mod go.work; }; then
   go=${ARCHGRAPH_GO:-}
   if [[ -z $go ]]; then
-    # Go 1.27.1 from go.dev, checked against these SHA-256 sums. archgraph runs it with
+    # Go 1.27.1 from go.dev, checked against these SHA-256 sums. boundrail runs it with
     # GOTOOLCHAIN=local, GOPROXY=off, GOWORK=off, CGO_ENABLED=0 and GOFLAGS=-mod=readonly.
     case $(uname -s)-$(uname -m) in
       Linux-x86_64) platform=linux-amd64 sum=63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445 ;;
@@ -171,7 +171,7 @@ if [[ $lang == go ]] || { [[ -z $lang ]] && has go.mod go.work; }; then
       Darwin-arm64) platform=darwin-arm64 sum=ee215d57e0ec269c60cc9ceca68e6bda321ba9ee5afe24f4b0988703c2d87d12 ;;
       *) die "no Go 1.27.1 download for $(uname -s) $(uname -m): set ARCHGRAPH_GO" ;;
     esac
-    goroot=$RUNNER_TEMP/archgraph-go
+    goroot=$RUNNER_TEMP/boundrail-go
     rm -rf "$goroot"
     mkdir -p "$goroot"
     curl --proto '=https' --tlsv1.2 -fsSL -o "$goroot/go.tar.gz" "https://go.dev/dl/go1.27.1.$platform.tar.gz" ||
@@ -204,7 +204,7 @@ fi
 
 head=$work/head
 status=0
-"$archgraph" report "$path" ${opts[@]+"${opts[@]}"} --out-dir "$head" >"$work/report.txt" || status=$?
+"$boundrail" report "$path" ${opts[@]+"${opts[@]}"} --out-dir "$head" >"$work/report.txt" || status=$?
 cat "$work/report.txt"
 ((status <= 1)) || exit "$status"
 {
@@ -216,7 +216,7 @@ cat "$work/report.txt"
 # SARIF for github/codeql-action/upload-sarif, from HEAD's rules; exit 1 is "forbidden imports".
 if [[ -n $rules ]]; then
   sarif_status=0
-  "$archgraph" check "$head/archgraph.json" --format sarif >"$head/archgraph.sarif" || sarif_status=$?
+  "$boundrail" check "$head/archgraph.json" --format sarif >"$head/archgraph.sarif" || sarif_status=$?
   ((sarif_status <= 1)) || die "check --format sarif failed with exit $sarif_status"
   echo "sarif=$head/archgraph.sarif" >>"$GITHUB_OUTPUT"
 fi
@@ -233,7 +233,7 @@ if [[ -z $base_ref ]]; then
   } END { print m + 0 }' "$work/report.txt")
   while ((${#fence} <= longest)); do fence+='`'; done
   {
-    echo '### archgraph report'
+    echo '### boundrail report'
     echo
     echo "${fence}text"
     cat "$work/report.txt"
@@ -263,12 +263,12 @@ worktree_added=1
 if [[ -d $repo/${prefix}node_modules && ! -e $worktree/${prefix}node_modules ]]; then
   ln -s "$repo/${prefix}node_modules" "$worktree/${prefix}node_modules"
 fi
-"$archgraph" scan "$worktree${prefix:+/${prefix%/}}" ${opts[@]+"${opts[@]}"} -o "$work/base.json" ||
+"$boundrail" scan "$worktree${prefix:+/${prefix%/}}" ${opts[@]+"${opts[@]}"} -o "$work/base.json" ||
   die "scanning the base commit $base failed"
 
-"$archgraph" diff "$work/base.json" "$head/archgraph.json" >"$work/diff.json"
+"$boundrail" diff "$work/base.json" "$head/archgraph.json" >"$work/diff.json"
 status=0
-"$archgraph" diff "$work/base.json" "$head/archgraph.json" ${fail_on:+--fail-on "$fail_on"} \
+"$boundrail" diff "$work/base.json" "$head/archgraph.json" ${fail_on:+--fail-on "$fail_on"} \
   --format markdown >"$work/diff.md" || status=$?
 ((status <= 1)) || exit "$status"
 
@@ -302,7 +302,7 @@ fi
       # check exits 1 on forbidden imports; `?` when the base's rules do not load.
       count() {
         rm -f "$work/under-base.json"
-        "$archgraph" check "$1" --rules "$base_rules" -o "$work/under-base.json" >/dev/null || true
+        "$boundrail" check "$1" --rules "$base_rules" -o "$work/under-base.json" >/dev/null || true
         jq '.summary.forbidden' "$work/under-base.json" 2>/dev/null || echo '?'
       }
       echo "| forbidden imports | under the base's rules | under HEAD's rules |"

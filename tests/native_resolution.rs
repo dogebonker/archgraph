@@ -1,7 +1,7 @@
 mod common;
 
-use archgraph::collect::{java, rust};
-use archgraph::model::ImportReason;
+use boundrail::collect::{java, rust};
+use boundrail::model::ImportReason;
 use serde_json::json;
 
 #[test]

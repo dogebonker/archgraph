@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<title>archgraph architecture comparison</title>
+<title>Boundrail architecture comparison</title>
 <style>
 :root { color-scheme: dark; --base:#000; --surface:#1c1c1e; --line:#424246; --text:#f5f5f7; --muted:#aaaab1; --blue:#0a84ff; --teal:#64d2ff; --purple:#bf5af2; --orange:#ff9f0a; --red:#ff453a; --sans:-apple-system,BlinkMacSystemFont,system-ui,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace; }
 * { box-sizing:border-box; scrollbar-color:#55555a var(--base); scrollbar-width:thin; }
@@ -77,7 +77,7 @@ input { width:100%; min-width:0; border:1px solid var(--line); border-radius:8px
 </style>
 </head>
 <body>
-<header><div><h1>archgraph <span>Architecture changes</span></h1><p id="snapshots" class="meta"></p></div><dl id="totals" aria-label="Complete comparison totals"></dl></header>
+<header><div><h1>Boundrail <span>Architecture changes</span></h1><p id="snapshots" class="meta"></p></div><dl id="totals" aria-label="Complete comparison totals"></dl></header>
 <section class="notice" aria-label="Comparison limits"><p id="compatibility"></p><p id="policy-notice"></p><p class="muted">Static snapshot evidence, not complete runtime architecture or proof of repository identity.</p><ul id="warnings"></ul></section>
 <main class="layout">
 <section class="catalog" aria-labelledby="nodes-title"><div class="section-head"><h2 id="nodes-title">Modules and dependencies</h2><span id="node-count" class="meta"></span></div><label for="search">Find a change or dependency</label><div class="search"><input type="search" id="search" placeholder="Path, module, package, or rule" autocomplete="off"><button type="button" id="clear">Clear</button></div><div class="modes"><button type="button" id="changes-mode" aria-pressed="true">Changes</button><button type="button" id="all-mode" aria-pressed="false">All imports</button></div><p id="filter-label" class="meta"></p><div id="node-list"></div></section>

@@ -1,6 +1,6 @@
 use super::*;
-use archgraph::git;
-use archgraph::impact::{self, Impact};
+use boundrail::git;
+use boundrail::impact::{self, Impact};
 use std::collections::BTreeSet;
 
 #[derive(Args)]
@@ -76,10 +76,10 @@ fn check_graph(doc: &Document, commit: &str) -> Result<()> {
 fn enrich(root: &Path, doc: &mut Document, args: &ImpactArgs, changed: &[String]) -> Vec<String> {
     let mut limitations = Vec::new();
     if doc.hotspots.is_none() {
-        match archgraph::hotspots::collect(
+        match boundrail::hotspots::collect(
             root,
             doc,
-            &archgraph::hotspots::Options {
+            &boundrail::hotspots::Options {
                 since: args
                     .hotspots
                     .hotspots
@@ -89,7 +89,7 @@ fn enrich(root: &Path, doc: &mut Document, args: &ImpactArgs, changed: &[String]
                 authors: args.hotspots.hotspot_authors,
             },
         ) {
-            Ok(report) => archgraph::apply_hotspots(doc, report),
+            Ok(report) => boundrail::apply_hotspots(doc, report),
             Err(error) => limitations.push(format!("Hotspot history unavailable: {error:#}")),
         }
     }

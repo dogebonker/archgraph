@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use archgraph::project_skill::{DRAFT, INSTALLED, PROPOSAL};
+use boundrail::project_skill::{DRAFT, INSTALLED, PROPOSAL};
 
 const LAYOUT: &str = "version: 1\nmodules:\n  - {id: domain, path: 'src/domain/**'}\n  - {id: adapters, path: 'src/adapters/**'}\n  - {id: shared, path: 'src/shared/**'}\nforbid:\n  - {id: no-adapters, from: 'src/domain/**', to: 'src/adapters/**', reason: 'Keep policy independent.'}\nallow:\n  - {from: 'src/domain/**', to: 'src/shared/**'}\n";
 
@@ -41,7 +41,7 @@ impl Fixture {
         fs::read_to_string(self.0.join(path)).unwrap()
     }
     fn run(&self, args: &[&str]) -> Output {
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .arg("--no-daemon")
             .args(args)
             .current_dir(&self.0)
@@ -73,7 +73,7 @@ impl Fixture {
     }
     #[cfg(unix)]
     fn shell(&self, command: &str) -> Output {
-        let binary = PathBuf::from(env!("CARGO_BIN_EXE_archgraph"));
+        let binary = PathBuf::from(env!("CARGO_BIN_EXE_boundrail"));
         let inherited_path = std::env::var_os("PATH").unwrap_or_default();
         let paths = std::iter::once(binary.parent().unwrap().to_path_buf())
             .chain(std::env::split_paths(&inherited_path));

@@ -126,10 +126,10 @@ pub fn run(root: &Path, go: &str, dirs: &[String]) -> Result<Vec<u8>> {
     if !out.status.success() {
         // The helper compiles with Go 1.21 or later; a compile error names its own file.
         let hint = if stderr.contains("requires go >=") {
-            "\na go.mod asks for a newer Go than this toolchain, and archgraph never downloads one \
+            "\na go.mod asks for a newer Go than this toolchain, and boundrail never downloads one \
              (GOTOOLCHAIN=local): install that version from https://go.dev/dl and pass --go <path>"
         } else if stderr.contains("go_dump.go:") {
-            "\narchgraph's Go helper did not compile with this Go: it needs Go 1.21 or later \
+            "\nBoundrail's Go helper did not compile with this Go: it needs Go 1.21 or later \
              (tested with 1.27.1, https://go.dev/dl); pass --go <path> to pick one"
         } else {
             ""

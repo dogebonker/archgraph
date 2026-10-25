@@ -89,10 +89,10 @@ fn embedded_ownership_survives_recompute_and_simulated_destinations_reassign_own
     common::validate(&recomputed);
     assert_eq!(recomputed["files"], doc["files"]);
     assert_eq!(recomputed["findings"], doc["findings"]);
-    let input: archgraph::model::ScanInput = serde_json::from_str(&text).unwrap();
-    let rules = archgraph::rules::compile(&input.config).unwrap();
-    let owners = archgraph::codeowners::compile(input.config.codeowners.as_ref().unwrap()).unwrap();
-    let before = archgraph::build(
+    let input: boundrail::model::ScanInput = serde_json::from_str(&text).unwrap();
+    let rules = boundrail::rules::compile(&input.config).unwrap();
+    let owners = boundrail::codeowners::compile(input.config.codeowners.as_ref().unwrap()).unwrap();
+    let before = boundrail::build(
         input.source,
         input.config,
         input.files.into_iter().map(|f| f.path).collect(),
@@ -101,10 +101,10 @@ fn embedded_ownership_survives_recompute_and_simulated_destinations_reassign_own
         rules.as_ref(),
         Some(&owners),
     );
-    let after = archgraph::simulate::apply(
+    let after = boundrail::simulate::apply(
         &before,
         rules.as_ref(),
-        &[archgraph::model::Move {
+        &[boundrail::model::Move {
             file: "src/a/f.ts".into(),
             to: "src/t/f.ts".into(),
         }],

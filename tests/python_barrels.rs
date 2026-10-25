@@ -2,8 +2,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-use archgraph::collect::grimp;
-use archgraph::model::EdgeKind;
+use boundrail::collect::grimp;
+use boundrail::model::EdgeKind;
 
 fn fixture(name: &str, sources: &[(&str, &str)]) -> (PathBuf, Vec<u8>) {
     fixture_options(name, sources, false)
@@ -335,7 +335,7 @@ fn included_external_tests_cover_modules_without_creating_cycles() {
     );
     let recording = root.join("grimp.json");
     fs::write(&recording, dump).unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let output = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .arg("scan")
         .arg(&root)
         .args([

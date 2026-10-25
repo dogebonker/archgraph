@@ -142,7 +142,9 @@ pub fn sarif(doc: &Document) -> Value {
         "version": "2.1.0",
         "runs": [{
             "tool": {"driver": {
-                "name": env!("CARGO_PKG_NAME"),
+                // GitHub code scanning matches existing results by this persisted identity.
+                "name": "archgraph",
+                "fullName": "Boundrail",
                 "version": env!("CARGO_PKG_VERSION"),
                 "informationUri": env!("CARGO_PKG_REPOSITORY"),
                 "rules": descriptors,

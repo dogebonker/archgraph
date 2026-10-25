@@ -1,4 +1,4 @@
-use archgraph::{
+use boundrail::{
     model::{Config, Document, Edge, EdgeKind, ImportReason, ImportRecord, Move, Source, Verdict},
     rules,
 };
@@ -26,7 +26,7 @@ fn scan(
     edges: Vec<Edge>,
 ) -> anyhow::Result<Document> {
     let source: Source = serde_json::from_value(json!({"language":language,"collector":{"name":"fixture","version":null,"cruised":2},"git":null,"generated_at":"test"})).unwrap();
-    archgraph::analyze(
+    boundrail::analyze(
         source,
         configuration(layout, records),
         vec!["src/domain/a.ts".into(), "src/adapter/b.ts".into()],
@@ -116,7 +116,7 @@ fn reachable_package_policy_marks_internal_path_and_survives_move_and_diff() {
         &["src/adapter/b.ts", "external:typescript:typeorm"]
     );
     let compiled = rules::compile(&doc.config).unwrap();
-    let moved = archgraph::simulate::apply(
+    let moved = boundrail::simulate::apply(
         &doc,
         compiled.as_ref(),
         &[Move {
@@ -127,8 +127,8 @@ fn reachable_package_policy_marks_internal_path_and_survives_move_and_diff() {
     .unwrap();
     assert_eq!(moved.external_edges[0].verdict, Some(Verdict::Forbidden));
     assert_eq!(moved.summary.forbidden, 2);
-    assert_eq!(archgraph::diff::diff(&doc, &moved).new_forbidden.len(), 2);
-    let restored = archgraph::restore_scan(
+    assert_eq!(boundrail::diff::diff(&doc, &moved).new_forbidden.len(), 2);
+    let restored = boundrail::restore_scan(
         serde_json::from_value(serde_json::to_value(&moved).unwrap()).unwrap(),
     )
     .unwrap();
@@ -211,7 +211,7 @@ fn unavailable_ledger_is_not_false_zero_or_false_policy_pass() {
     );
     let mut saved = serde_json::to_value(&doc).unwrap();
     saved["config"]["rules"]["doc"]["allow"] = json!([{"from":"**","to":"pkg:*"}]);
-    assert!(archgraph::restore_scan(serde_json::from_value(saved).unwrap()).is_err());
+    assert!(boundrail::restore_scan(serde_json::from_value(saved).unwrap()).is_err());
 }
 
 #[test]
@@ -300,7 +300,7 @@ fn absent_policy_has_no_verdict_and_package_like_file_names_are_not_external() {
     );
     config.rules = None;
     let source:Source=serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","version":null,"cruised":2},"git":null,"generated_at":"test"})).unwrap();
-    let doc = archgraph::analyze(
+    let doc = boundrail::analyze(
         source,
         config,
         vec!["src/domain/a.ts".into()],
@@ -355,7 +355,7 @@ fn absent_policy_has_no_verdict_and_package_like_file_names_are_not_external() {
 fn simulation_lists_added_and_removed_external_violations_by_kind() {
     let doc=scan("typescript",json!({"version":1,"forbid":[{"from":"src/domain/**","to":"pkg:typeorm","kinds":["runtime"]},{"from":"**","to":"pkg:typeorm","kinds":["type"]}]}),Some(vec![import("src/adapter/b.ts","typeorm",EdgeKind::Static),import("src/adapter/b.ts","typeorm",EdgeKind::Type)]),vec![]).unwrap();
     let compiled = rules::compile(&doc.config).unwrap();
-    let result = archgraph::simulate::simulate(
+    let result = boundrail::simulate::simulate(
         &doc,
         compiled.as_ref(),
         "src/adapter/b.ts",
@@ -365,7 +365,7 @@ fn simulation_lists_added_and_removed_external_violations_by_kind() {
     assert_eq!(result.new_forbidden.len(), 1);
     assert_eq!(result.new_forbidden[0].kind, EdgeKind::Static);
     assert!(result.removed_forbidden.is_empty());
-    let moved = archgraph::simulate::apply(
+    let moved = boundrail::simulate::apply(
         &doc,
         compiled.as_ref(),
         &[Move {
@@ -374,7 +374,7 @@ fn simulation_lists_added_and_removed_external_violations_by_kind() {
         }],
     )
     .unwrap();
-    let back = archgraph::simulate::simulate(
+    let back = boundrail::simulate::simulate(
         &moved,
         compiled.as_ref(),
         "src/domain/b.ts",
@@ -389,7 +389,7 @@ fn simulation_lists_added_and_removed_external_violations_by_kind() {
         serde_json::from_value(json!({"from":"**","to":"pkg:typeorm","kinds":["runtime"]}))
             .unwrap(),
     );
-    let updated = archgraph::analyze(
+    let updated = boundrail::analyze(
         doc.source.clone(),
         changed,
         doc.files.iter().map(|f| f.path.clone()).collect(),
@@ -398,7 +398,7 @@ fn simulation_lists_added_and_removed_external_violations_by_kind() {
         None,
     )
     .unwrap();
-    let diff = archgraph::diff::diff(&doc, &updated);
+    let diff = boundrail::diff::diff(&doc, &updated);
     assert_eq!(diff.new_forbidden.len(), 1);
     assert_eq!(diff.new_forbidden[0].kind, EdgeKind::Static);
 }
@@ -419,7 +419,7 @@ fn external_ids_cannot_spoof_ordinary_file_policy_targets_or_move_destinations()
     let mut paths: Vec<_> = doc.files.iter().map(|f| f.path.clone()).collect();
     paths.push("external:typescript:typeorm".into());
     assert!(
-        archgraph::analyze(
+        boundrail::analyze(
             doc.source.clone(),
             doc.config.clone(),
             paths,
@@ -434,7 +434,7 @@ fn external_ids_cannot_spoof_ordinary_file_policy_targets_or_move_destinations()
     let mut saved = serde_json::to_value(&doc).unwrap();
     saved["files"].as_array_mut().unwrap().push(json!({"path":"external:typescript:typeorm","module":"external:typescript:typeorm","barrel":false}));
     assert!(
-        archgraph::validate_scan(&serde_json::from_value(saved).unwrap())
+        boundrail::validate_scan(&serde_json::from_value(saved).unwrap())
             .unwrap_err()
             .to_string()
             .contains("collides")
@@ -443,14 +443,14 @@ fn external_ids_cannot_spoof_ordinary_file_policy_targets_or_move_destinations()
     saved["globals"] = json!([{"from":"src/domain/a.ts","name":"process","line":1}]);
     saved["files"].as_array_mut().unwrap().push(json!({"path":"external:typescript:global:process","module":"external:typescript:global:process","barrel":false}));
     assert!(
-        archgraph::validate_scan(&serde_json::from_value(saved).unwrap())
+        boundrail::validate_scan(&serde_json::from_value(saved).unwrap())
             .unwrap_err()
             .to_string()
             .contains("collides")
     );
     let compiled = rules::compile(&doc.config).unwrap();
     assert!(
-        archgraph::simulate::apply(
+        boundrail::simulate::apply(
             &doc,
             compiled.as_ref(),
             &[Move {

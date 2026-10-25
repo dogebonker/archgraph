@@ -1015,7 +1015,7 @@ fn a_failed_type_marking_run_is_recorded() {
 #[test]
 fn a_tool_running_past_the_tool_timeout_is_killed_and_reported() {
     // Keep repository/Git probes outside the one-second child-process timeout check.
-    let fixture = archgraph::collect::TempDir::new("tool-timeout").unwrap();
+    let fixture = boundrail::collect::TempDir::new("tool-timeout").unwrap();
     let dir = fixture.path();
     fs::create_dir_all(dir.join("src")).unwrap();
     fs::write(dir.join("src/a.ts"), "export const a = 1;\n").unwrap();

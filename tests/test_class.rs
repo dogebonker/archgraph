@@ -1,4 +1,4 @@
-use archgraph::model::{Config, Edge, Language, ModuleClass, Source};
+use boundrail::model::{Config, Edge, Language, ModuleClass, Source};
 use serde_json::json;
 
 #[test]
@@ -25,7 +25,7 @@ fn included_tests_never_close_cycles_and_report_direct_import_coverage() {
                 ..Default::default()
             })
             .collect();
-        let doc = archgraph::analyze(
+        let doc = boundrail::analyze(
             source,
             config,
             vec![
@@ -47,7 +47,7 @@ fn included_tests_never_close_cycles_and_report_direct_import_coverage() {
         let coverage = doc.test_coverage.as_ref().unwrap();
         assert_eq!((coverage.modules, coverage.covered), (2, 1));
         assert_eq!(coverage.without_importing_tests, ["untested"]);
-        let restored = archgraph::restore_scan(
+        let restored = boundrail::restore_scan(
             serde_json::from_value(serde_json::to_value(&doc).unwrap()).unwrap(),
         )
         .unwrap();
@@ -59,18 +59,18 @@ fn included_tests_never_close_cycles_and_report_direct_import_coverage() {
                 .any(|m| m.class == Some(ModuleClass::Tests))
         );
         let mut legacy = serde_json::to_value(&doc).unwrap();
-        archgraph::compat::v1(&mut legacy).unwrap();
+        boundrail::compat::v1(&mut legacy).unwrap();
         assert!(legacy["cycles"].as_array().unwrap().is_empty());
         assert_eq!(legacy["test_coverage"]["covered"], 1);
-        let legacy_input: archgraph::model::ScanInput = serde_json::from_value(legacy).unwrap();
+        let legacy_input: boundrail::model::ScanInput = serde_json::from_value(legacy).unwrap();
         for file in &legacy_input.files {
             assert_eq!(file.class, None);
             assert_eq!(
                 file.module,
-                archgraph::modules::assigned(&file.path, &legacy_input.config, language, None)
+                boundrail::modules::assigned(&file.path, &legacy_input.config, language, None)
             );
         }
-        let migrated = archgraph::restore_scan(legacy_input).unwrap();
+        let migrated = boundrail::restore_scan(legacy_input).unwrap();
         assert!(migrated.cycles.is_empty());
     }
 }

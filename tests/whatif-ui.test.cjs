@@ -60,7 +60,7 @@ test('preview updates findings and commands; clear restores the immutable graph 
   assert.match(s.$('whatif-result').textContent, /Improves the structure[\s\S]*largest module cycle 2 → 0/);
   assert.match(s.$('whatif-result').textContent, /Resolved[\s\S]*Module cycle · 2/);
   assert.equal(s.files[i].path, 'b/three.ts');
-  assert.equal(s.$('whatif-cli').value, "archgraph simulate 'graph.json' --move 'a/three.ts' 'b/three.ts'");
+  assert.equal(s.$('whatif-cli').value, "boundrail simulate 'graph.json' --move 'a/three.ts' 'b/three.ts'");
   assert.equal(s.$('whatif-rules').value, 'No layout rules are embedded in this scan.');
   assert.equal(JSON.stringify(s.doc), before);
   s.run('clearWhatif()');
@@ -86,7 +86,7 @@ test('the move list previews chained moves together and exports one script, comm
   assert.deepEqual(listed(), fixture.move);
   assert.deepEqual(plain(s.context.whatifResult.before), fixture.before);
   assert.deepEqual(plain(s.context.whatifResult.after), fixture.after);
-  assert.equal(s.$('whatif-cli').value, "archgraph simulate 'graph.json' --move 'app/helper.ts' 'domain/helper.ts' --move 'infra/db.ts' 'domain/store/db.ts'");
+  assert.equal(s.$('whatif-cli').value, "boundrail simulate 'graph.json' --move 'app/helper.ts' 'domain/helper.ts' --move 'infra/db.ts' 'domain/store/db.ts'");
   assert.equal(s.$('whatif-git').value, "set -e\nmkdir -p -- 'domain/store'\ngit mv -- 'app/helper.ts' 'domain/helper.ts'\ngit mv -- 'infra/db.ts' 'domain/store/db.ts'");
   assert.equal(s.$('whatif-rules').value,
     'app/helper.ts: leaves layer "app/**", enters layer "domain/**", enters forbid no-infra from "domain/**"\n' +
@@ -100,7 +100,7 @@ test('the move list previews chained moves together and exports one script, comm
   assert.equal(list.childNodes.length, 2);
   list.childNodes[0].childNodes[1].listeners.click();
   assert.deepEqual(listed(), [fixture.move[1]]);
-  assert.equal(s.$('whatif-cli').value, "archgraph simulate 'graph.json' --move 'infra/db.ts' 'domain/store/db.ts'");
+  assert.equal(s.$('whatif-cli').value, "boundrail simulate 'graph.json' --move 'infra/db.ts' 'domain/store/db.ts'");
   assert.equal(s.files.find(f => f.path.endsWith('helper.ts')).path, 'app/helper.ts');
   assert(list.childNodes[0].childNodes[1].focused);
   // Clear all restores the original graph and empties the list.
@@ -157,7 +157,7 @@ test('commands are shell-quoted data and unavailable clipboard falls back to sel
   const s = setup();
   s.$('whatif-file').value = 'a/three.ts'; s.$('whatif-folder').value = "folder'quote;$x";
   s.$('whatif-graph').value = "my graph'$(whoami).json"; s.run('runWhatif()');
-  assert.equal(s.$('whatif-cli').value, "archgraph simulate 'my graph'\\''$(whoami).json' --move 'a/three.ts' 'folder'\\''quote;$x/three.ts'");
+  assert.equal(s.$('whatif-cli').value, "boundrail simulate 'my graph'\\''$(whoami).json' --move 'a/three.ts' 'folder'\\''quote;$x/three.ts'");
   s.$('whatif-graph').value = '- odd graph.json'; s.run('whatifCommands()');
   assert.match(s.$('whatif-cli').value, /simulate '\.\/- odd graph.json'/);
   await s.run('whatifCopy(whatifUI.cli)');

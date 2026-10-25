@@ -2,8 +2,8 @@ mod common;
 
 use std::path::Path;
 
-use archgraph::collect::{detect_language, source_dir};
-use archgraph::model::Language;
+use boundrail::collect::{detect_language, source_dir};
+use boundrail::model::Language;
 
 #[test]
 fn detection_keeps_typescript_and_python_in_output_named_source_folders() {

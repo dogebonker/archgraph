@@ -197,7 +197,7 @@ def bench(entry, args, work):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--archgraph", type=Path, default=REPO / "target/release/archgraph")
+    parser.add_argument("--boundrail", "--archgraph", dest="archgraph", metavar="BINARY", type=Path, default=REPO / "target/release/boundrail")
     parser.add_argument("--cache", type=Path, help="existing pristine showcase repository clones; originals are never edited")
     parser.add_argument("--work", type=Path, help="new directory for isolated checkouts and daemon logs")
     parser.add_argument("--output", type=Path, help="also save the JSON measurements here")

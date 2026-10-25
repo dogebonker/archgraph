@@ -12,7 +12,7 @@ pub(super) struct SyncRules {
     full: bool,
 }
 pub(super) fn run(args: SyncRules) -> Result<ExitCode> {
-    let report = archgraph::sync_rules::run(&args.root, args.full, args.check)?;
+    let report = boundrail::sync_rules::run(&args.root, args.full, args.check)?;
     if globals().brief {
         write(None, &report)?;
     } else {

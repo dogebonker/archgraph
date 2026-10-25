@@ -1,7 +1,7 @@
 {
-  "name": "archgraph-cli",
+  "name": "boundrail-cli",
   "version": "0.1.0",
-  "description": "Runs the archgraph CLI: import-graph evidence for architecture decisions",
+  "description": "Runs the boundrail CLI: import-graph evidence for architecture decisions",
   "license": "MIT OR Apache-2.0",
   "repository": {
     "type": "git",
@@ -10,7 +10,7 @@
   },
   "homepage": "https://github.com/dogebonker/archgraph#readme",
   "bin": {
-    "archgraph": "bin/archgraph.js"
+    "boundrail": "bin/boundrail.js"
   },
   "files": [
     "bin/",

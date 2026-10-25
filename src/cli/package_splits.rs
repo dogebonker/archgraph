@@ -1,5 +1,5 @@
 use super::*;
-use archgraph::package_splits::{self, Options};
+use boundrail::package_splits::{self, Options};
 
 #[derive(Args)]
 pub(super) struct PackageSplitsArgs {

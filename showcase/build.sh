@@ -5,7 +5,7 @@
 #
 #   showcase/build.sh [--only <name>] [--work <dir>] [--out <dir>] [--keep] [--compare <dir>]
 #
-#   ARCHGRAPH            archgraph binary (default: target/release/archgraph of this repository)
+#   ARCHGRAPH            archgraph binary (default: target/release/boundrail of this repository)
 #   ARCHGRAPH_DEPCRUISE  dependency-cruiser executable for TypeScript entries (required for them)
 #   ARCHGRAPH_PYTHON     Python with grimp 3.17 for Python entries (default: python3)
 #   ARCHGRAPH_GO         Go 1.27.1 for Go entries (default: go)
@@ -23,7 +23,7 @@ set -euo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 manifest=$here/repos.json
 template=$here/index.template.html
-archgraph=${ARCHGRAPH:-$here/../target/release/archgraph}
+archgraph=${ARCHGRAPH:-$here/../target/release/boundrail}
 python=${ARCHGRAPH_PYTHON:-python3}
 depcruise=${ARCHGRAPH_DEPCRUISE:-}
 go=${ARCHGRAPH_GO:-go}

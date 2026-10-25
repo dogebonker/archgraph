@@ -44,7 +44,7 @@ pub(super) fn run(args: ServicesArgs) -> Result<ExitCode> {
         .map(|manifest| {
             let text = fs::read_to_string(manifest)
                 .with_context(|| format!("reading service declarations {}", manifest.display()))?;
-            archgraph::services::parse(&text)
+            boundrail::services::parse(&text)
         })
         .transpose()?;
     if let (Some(output), Some(input)) = (args.output.as_deref(), manifest_path)
@@ -53,13 +53,13 @@ pub(super) fn run(args: ServicesArgs) -> Result<ExitCode> {
         bail!("output must differ from the service manifest");
     }
     let report = if directory {
-        archgraph::infer_services::infer(&path, manifest)?
+        boundrail::infer_services::infer(&path, manifest)?
     } else {
         let name = path
             .file_name()
             .and_then(|name| name.to_str())
             .context("service manifest must have a UTF-8 filename")?;
-        archgraph::services::analyze(manifest.context("missing service manifest")?, name)?
+        boundrail::services::analyze(manifest.context("missing service manifest")?, name)?
     };
     if args.fail_on_forbidden && report.forbid.is_empty() {
         bail!("--fail-on-forbidden requires authored forbid rules in a service manifest");
@@ -72,7 +72,7 @@ pub(super) fn run(args: ServicesArgs) -> Result<ExitCode> {
     match args.format {
         Format::Json => write(None, &report)?,
         Format::Markdown => {
-            print!("{}", archgraph::services::markdown(&report));
+            print!("{}", boundrail::services::markdown(&report));
         }
     }
     Ok(ExitCode::from(u8::from(failed)))

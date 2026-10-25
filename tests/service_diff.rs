@@ -3,7 +3,7 @@ mod common;
 use std::process::Output;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use archgraph::services::{self, Manifest};
+use boundrail::services::{self, Manifest};
 use common::{archgraph, validate, write_tmp};
 use serde_json::{Value, json};
 

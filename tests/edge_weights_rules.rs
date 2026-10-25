@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use archgraph::model::{Edge, EdgeKind, Verdict};
-use archgraph::rules::{Compiled, EdgeWeights, Rules};
+use boundrail::model::{Edge, EdgeKind, Verdict};
+use boundrail::rules::{Compiled, EdgeWeights, Rules};
 
 fn edge(from: &str, to: &str, kind: EdgeKind) -> Edge {
     Edge {
@@ -114,9 +114,9 @@ fn layout_loader_accepts_new_keys_and_rejects_nested_typos() {
         std::process::id()
     ));
     std::fs::write(&path, "version: 1\nedge_weights: {runtime: 1}\npublic: [{module: 'api/**', entries: [api/index], kinds: [type]}]\nforbid: [{from: a, to: b, kinds: [type]}]\nallow: [{from: b, to: a, kinds: [type]}]").unwrap();
-    archgraph::rules::load(&path).unwrap();
+    boundrail::rules::load(&path).unwrap();
     std::fs::write(&path, "version: 1\nedge_weights: {runtim: 1}").unwrap();
-    let error = archgraph::rules::load(&path).unwrap_err();
+    let error = boundrail::rules::load(&path).unwrap_err();
     assert!(format!("{error:#}").contains("unknown field `runtim` in edge_weights"));
     std::fs::remove_file(path).unwrap();
 }

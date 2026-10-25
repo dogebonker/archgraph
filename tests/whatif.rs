@@ -1,7 +1,7 @@
 //! Canonical Rust results consumed by the dependency-free map preview tests.
 use std::collections::{BTreeMap, BTreeSet};
 
-use archgraph::model::{Config, Document, Edge, EdgeKind, ImportRecord, Language, Move, Source};
+use boundrail::model::{Config, Document, Edge, EdgeKind, ImportRecord, Language, Move, Source};
 use serde_json::{Value, json};
 
 fn edge(from: &str, to: &str, kind: EdgeKind) -> Edge {
@@ -32,7 +32,7 @@ fn projection(doc: &Document) -> Value {
     let production: BTreeSet<_> = doc
         .files
         .iter()
-        .filter(|f| f.class != Some(archgraph::model::ModuleClass::Tests))
+        .filter(|f| f.class != Some(boundrail::model::ModuleClass::Tests))
         .map(|f| f.path.as_str())
         .collect();
     let directed: BTreeSet<_> = doc
@@ -103,7 +103,7 @@ fn projection(doc: &Document) -> Value {
         json!({"claims":claims,"progress":progress})
     });
     json!({"cycles":cycles,"two_way_pairs":pairs,"target":target,
-        "largest_cycle":doc.cycles.iter().filter(|c| c.level == archgraph::model::CycleLevel::Module).map(|c| c.members.len()).max().unwrap_or(0),
+        "largest_cycle":doc.cycles.iter().filter(|c| c.level == boundrail::model::CycleLevel::Module).map(|c| c.members.len()).max().unwrap_or(0),
         "modules":doc.summary.modules,"forbidden":doc.summary.forbidden,"unplanned":doc.summary.unplanned,"verdicts":verdicts})
 }
 
@@ -137,13 +137,13 @@ fn case(
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect();
-    let doc = archgraph::analyze(source, config, files, edges, vec![], None).unwrap();
+    let doc = boundrail::analyze(source, config, files, edges, vec![], None).unwrap();
     finish(name, doc, &[(file, to)])
 }
 
 /// One move is stored as an object, several as the ordered list the preview applies together.
 fn finish(name: &str, doc: Document, moves: &[(&str, &str)]) -> Value {
-    let rules = archgraph::rules::compile(&doc.config).unwrap();
+    let rules = boundrail::rules::compile(&doc.config).unwrap();
     let moves: Vec<Move> = moves
         .iter()
         .map(|(file, to)| Move {
@@ -151,10 +151,10 @@ fn finish(name: &str, doc: Document, moves: &[(&str, &str)]) -> Value {
             to: (*to).into(),
         })
         .collect();
-    let mut after = archgraph::simulate::apply(&doc, rules.as_ref(), &moves).unwrap();
+    let mut after = boundrail::simulate::apply(&doc, rules.as_ref(), &moves).unwrap();
     after.target = rules
         .as_ref()
-        .and_then(|rules| archgraph::target::analyze(&after, rules));
+        .and_then(|rules| boundrail::target::analyze(&after, rules));
     let moved = match moves.as_slice() {
         [one] => json!(one),
         many => json!(many),
@@ -484,7 +484,7 @@ fn fixtures() -> Value {
         ),
         ..config
     };
-    let doc = archgraph::analyze(
+    let doc = boundrail::analyze(
         source,
         config,
         pairs
@@ -504,7 +504,7 @@ fn fixtures() -> Value {
         &[("src/b/service.ts", "src/b/svc/service.ts")],
     );
     package["warnings"] = json!([
-        "Internal-only preview: external dependency policy verdicts and exposure are not recomputed. Run archgraph simulate for authoritative results."
+        "Internal-only preview: external dependency policy verdicts and exposure are not recomputed. Run boundrail simulate for authoritative results."
     ]);
     cases.push(package);
     cases.push(case(
@@ -531,7 +531,7 @@ fn fixtures() -> Value {
         Some(json!({"version":1,"entrypoints":{"billing/**":"billing/index.ts"}})),
         Ts,
     );
-    let mut input: archgraph::model::ScanInput =
+    let mut input: boundrail::model::ScanInput =
         serde_json::from_value(written["document"].clone()).unwrap();
     input
         .edges
@@ -541,7 +541,7 @@ fn fixtures() -> Value {
         .original_to = Some("billing/index.ts".into());
     written = finish(
         "written-barrel-rule-target",
-        archgraph::restore_scan(input).unwrap(),
+        boundrail::restore_scan(input).unwrap(),
         &[("billing/index.ts", "billing/public.ts")],
     );
     cases.push(written);
@@ -564,7 +564,7 @@ fn fixtures() -> Value {
     );
     cases.push(finish(
         "chained-moves-with-rules",
-        archgraph::restore_scan(serde_json::from_value(chained["document"].clone()).unwrap())
+        boundrail::restore_scan(serde_json::from_value(chained["document"].clone()).unwrap())
             .unwrap(),
         &[
             ("app/helper.ts", "domain/helper.ts"),

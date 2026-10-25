@@ -239,7 +239,7 @@ pub fn compile(config: &Config) -> Result<Option<Compiled>> {
 
 /// Reads, validates and hashes a rules file. Unknown keys are an error here, so a typo cannot
 /// silently allow everything; rules embedded in a scan document are read without that check, so
-/// a document from a newer archgraph stays readable.
+/// a document from a newer boundrail stays readable.
 pub fn load(path: &Path) -> Result<RulesRef> {
     let bytes = fs::read(path).with_context(|| format!("reading {}", path.display()))?;
     let parse = || -> Result<Rules> {

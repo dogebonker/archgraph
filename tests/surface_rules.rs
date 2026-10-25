@@ -1,5 +1,5 @@
-use archgraph::model::{Edge, EdgeKind, Verdict};
-use archgraph::rules::{self, Compiled, Rules};
+use boundrail::model::{Edge, EdgeKind, Verdict};
+use boundrail::rules::{self, Compiled, Rules};
 use std::collections::BTreeMap;
 
 fn compile(yaml: &str) -> Compiled {
@@ -14,7 +14,7 @@ fn decision(rules: &Compiled, from: &str, to: &str) -> (Verdict, String) {
         verdict: None,
         rule: None,
         reach: None,
-        ..archgraph::model::Edge::default()
+        ..boundrail::model::Edge::default()
     }];
     // Explicit module glob boundaries must survive coarse file grouping.
     rules.decide(

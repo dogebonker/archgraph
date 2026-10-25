@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use archgraph::model::{Config, Edge, GlobalUse, ImportRecord, Source};
+use boundrail::model::{Config, Edge, GlobalUse, ImportRecord, Source};
 use serde_json::{Value, json};
 
 static NEXT: AtomicUsize = AtomicUsize::new(0);
@@ -32,7 +32,7 @@ impl Fixture {
         self.write(path, &value.to_string())
     }
     fn run(&self, args: &[&str]) -> Output {
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .current_dir(&self.0)
             .args(args)
             .output()
@@ -118,7 +118,7 @@ fn analyzed(config: Config, edges: Vec<Edge>) -> Value {
     }))
     .unwrap();
     serde_json::to_value(
-        archgraph::analyze(
+        boundrail::analyze(
             source,
             config,
             vec![
@@ -138,13 +138,13 @@ fn analyzed(config: Config, edges: Vec<Edge>) -> Value {
 
 fn projected(before: &Value, after: &Value) -> Value {
     let (old, old_provenance) =
-        archgraph::comparison::read(&before.to_string(), "before.json").unwrap();
+        boundrail::comparison::read(&before.to_string(), "before.json").unwrap();
     let (new, new_provenance) =
-        archgraph::comparison::read(&after.to_string(), "after.json").unwrap();
-    let old = archgraph::restore_scan(old).unwrap();
-    let new = archgraph::restore_scan(new).unwrap();
+        boundrail::comparison::read(&after.to_string(), "after.json").unwrap();
+    let old = boundrail::restore_scan(old).unwrap();
+    let new = boundrail::restore_scan(new).unwrap();
     serde_json::to_value(
-        archgraph::comparison::project(&old, &old_provenance, &new, &new_provenance).unwrap(),
+        boundrail::comparison::project(&old, &old_provenance, &new, &new_provenance).unwrap(),
     )
     .unwrap()
 }
@@ -625,7 +625,7 @@ fn html_output_never_replaces_an_input_and_rejects_unsupported_modes() {
     ]);
     assert_eq!(legacy.status.code(), Some(2));
     assert!(!f.0.join("changes.html").exists());
-    let service = archgraph::services::analyze(
+    let service = boundrail::services::analyze(
         serde_json::from_value(json!({"version":1,"services":[],"edges":[]})).unwrap(),
         "fixture",
     )

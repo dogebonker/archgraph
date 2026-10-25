@@ -59,7 +59,7 @@ def check(case, document):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", type=Path, default=HERE.parent / "target/release/archgraph")
+    parser.add_argument("--binary", type=Path, default=HERE.parent / "target/release/boundrail")
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--runs", type=int, default=3)

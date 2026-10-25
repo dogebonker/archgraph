@@ -22,7 +22,7 @@ impl Fixture {
         Self(root)
     }
     fn command(&self, args: &[&str], input: Option<Value>) -> Output {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_archgraph"));
+        let mut command = Command::new(env!("CARGO_BIN_EXE_boundrail"));
         command
             .args(["--no-daemon"])
             .args(args)

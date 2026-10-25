@@ -170,7 +170,7 @@ fn body(doc: &Document, services: &crate::services::Report, metadata: &Metadata)
     if configured {
         text.push_str("Read `layout.yaml` for current module, layer, public-entry, allow, and forbid constraints and their reasons. Use connected MCP `rules` for the paths you will edit. The fingerprints in this draft identify the policy used at generation, not source freshness.\n\n");
     } else {
-        text.push_str("Import policy is unavailable. Review the proposed layout beside this draft against architectural intent. Create a reviewed root `layout.yaml`, then run `archgraph skill draft .` again before adoption. No observed dependency direction is automatically a constraint.\n\n");
+        text.push_str("Import policy is unavailable. Review the proposed layout beside this draft against architectural intent. Create a reviewed root `layout.yaml`, then run `boundrail skill draft .` again before adoption. No observed dependency direction is automatically a constraint.\n\n");
     }
     text.push_str("## Before an edit\n\nCollect fresh native evidence from the repository root using a POSIX shell. Existing findings form a baseline. Save the before report before changing source.\n\n```sh\n");
     let rules_arg = if configured {
@@ -178,35 +178,35 @@ fn body(doc: &Document, services: &crate::services::Report, metadata: &Metadata)
     } else {
         ""
     };
-    text.push_str(&format!("archgraph scan . --engine native --symbols{rules_arg} -o .archgraph/architecture-before.json\n"));
+    text.push_str(&format!("boundrail scan . --engine native --symbols{rules_arg} -o .archgraph/architecture-before.json\n"));
     let manifest_arg = metadata
         .manifest
         .as_ref()
         .map(|policy| format!(" --manifest={}", shell_word(&policy.path)))
         .unwrap_or_default();
-    text.push_str(&format!("archgraph services .{manifest_arg} --format json -o .archgraph/services-before.json\n```\n\n"));
+    text.push_str(&format!("boundrail services .{manifest_arg} --format json -o .archgraph/services-before.json\n```\n\n"));
     if metadata.manifest.is_some() {
         text.push_str("Read the service manifest identified in the metadata for authored service and explicit package-target rules. It remains separate from import rules.\n\n");
     } else {
         text.push_str("No service manifest was selected. Service evidence is advisory and does not establish an approved service policy.\n\n");
     }
     text.push_str("## After an edit\n\nCollect again and compare the full reports. Run the project's own tests for behavior that imports cannot establish.\n\n```sh\n");
-    text.push_str(&format!("archgraph scan . --engine native --symbols{rules_arg} -o .archgraph/architecture-after.json\n"));
+    text.push_str(&format!("boundrail scan . --engine native --symbols{rules_arg} -o .archgraph/architecture-after.json\n"));
     let import_gate = if configured {
         " --fail-on new-forbidden"
     } else {
         ""
     };
-    text.push_str(&format!("archgraph diff .archgraph/architecture-before.json .archgraph/architecture-after.json{import_gate} --format markdown\n"));
+    text.push_str(&format!("boundrail diff .archgraph/architecture-before.json .archgraph/architecture-after.json{import_gate} --format markdown\n"));
     text.push_str(&format!(
-        "archgraph services .{manifest_arg} --format json -o .archgraph/services-after.json\n"
+        "boundrail services .{manifest_arg} --format json -o .archgraph/services-after.json\n"
     ));
     let service_gate = if services.forbid.is_empty() {
         ""
     } else {
         " --fail-on new-forbidden"
     };
-    text.push_str(&format!("archgraph diff .archgraph/services-before.json .archgraph/services-after.json{service_gate} --format markdown\n```\n\n"));
+    text.push_str(&format!("boundrail diff .archgraph/services-before.json .archgraph/services-after.json{service_gate} --format markdown\n```\n\n"));
     if services.forbid.is_empty() {
         text.push_str("No authored service forbid rules are available, so the service comparison is advisory. A missing service or call is not proof of absence.\n\n");
     }

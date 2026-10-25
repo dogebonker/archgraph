@@ -76,8 +76,8 @@ jobs:
       - run: cargo build --locked
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: archgraph-binary
-          path: target/debug/archgraph
+          name: boundrail-binary
+          path: target/debug/boundrail
           if-no-files-found: error
 
   install:
@@ -89,10 +89,10 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: archgraph-binary
+          name: boundrail-binary
           path: ${{ runner.temp }}/bin
-      - run: chmod +x "$RUNNER_TEMP/bin/archgraph"
-      - run: shellcheck install.sh ci/action.sh skills/archgraph-guard/scripts/guard.sh ci/test-install.sh ci/test-elixir-action.sh ci/test-native-action.sh ci/bench-daemon.sh
+      - run: chmod +x "$RUNNER_TEMP/bin/boundrail"
+      - run: shellcheck install.sh ci/action.sh skills/boundrail-guard/scripts/guard.sh ci/test-install.sh ci/test-elixir-action.sh ci/test-native-action.sh ci/bench-daemon.sh
       - run: bash ci/test-elixir-action.sh
       - run: bash ci/test-native-action.sh
       - name: npm/package.json version is Cargo.toml's
@@ -108,11 +108,11 @@ jobs:
       - run: node --test
         working-directory: npm
         env:
-          ARCHGRAPH_TEST_BINARY: ${{ runner.temp }}/bin/archgraph
+          ARCHGRAPH_TEST_BINARY: ${{ runner.temp }}/bin/boundrail
       - name: install.sh against a fake release on a local server
         run: |
           mkdir "$RUNNER_TEMP/install-test"
-          sh ci/test-install.sh "$RUNNER_TEMP/bin/archgraph" "$RUNNER_TEMP/install-test"
+          sh ci/test-install.sh "$RUNNER_TEMP/bin/boundrail" "$RUNNER_TEMP/install-test"
 
   action-push:
     needs: binary
@@ -123,30 +123,30 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: archgraph-binary
+          name: boundrail-binary
           path: ${{ runner.temp }}/bin
-      - run: chmod +x "$RUNNER_TEMP/bin/archgraph" && cp -R tests/fixtures/ts-fda "$RUNNER_TEMP/fda"
+      - run: chmod +x "$RUNNER_TEMP/bin/boundrail" && cp -R tests/fixtures/ts-fda "$RUNNER_TEMP/fda"
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-      - id: archgraph
+      - id: boundrail
         uses: ./
         continue-on-error: true
         with:
           path: ${{ runner.temp }}/fda
-          binary: ${{ runner.temp }}/bin/archgraph
+          binary: ${{ runner.temp }}/bin/boundrail
       - name: The step failed on the fixture's forbidden imports
         run: |
           echo "outcome=$OUTCOME forbidden=$FORBIDDEN"
           [ "$OUTCOME" = failure ] && [ "$FORBIDDEN" -gt 0 ] && [ -f "$JSON" ]
         env:
-          OUTCOME: ${{ steps.archgraph.outcome }}
-          FORBIDDEN: ${{ steps.archgraph.outputs.forbidden }}
-          JSON: ${{ steps.archgraph.outputs.json }}
+          OUTCOME: ${{ steps.boundrail.outcome }}
+          FORBIDDEN: ${{ steps.boundrail.outputs.forbidden }}
+          JSON: ${{ steps.boundrail.outputs.json }}
       - name: The step wrote SARIF with the fixture's four broken claims and one forbidden import
         run: jq -e '.runs[0].results | length == 5' "$SARIF"
         env:
-          SARIF: ${{ steps.archgraph.outputs.sarif }}
+          SARIF: ${{ steps.boundrail.outputs.sarif }}
 
   action-pr:
     needs: binary
@@ -157,9 +157,9 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: archgraph-binary
+          name: boundrail-binary
           path: ${{ runner.temp }}/bin
-      - run: chmod +x "$RUNNER_TEMP/bin/archgraph"
+      - run: chmod +x "$RUNNER_TEMP/bin/boundrail"
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
@@ -176,20 +176,20 @@ jobs:
           printf 'import { TAX } from "../domains/checkout/types";\nexport const rate = TAX;\n' > src/shared/label.ts
           git add -A
           git -c user.name=ci -c user.email=ci@example.invalid commit -qm head
-      - id: archgraph
+      - id: boundrail
         uses: ./
         continue-on-error: true
         with:
           path: ${{ runner.temp }}/pr
-          binary: ${{ runner.temp }}/bin/archgraph
+          binary: ${{ runner.temp }}/bin/boundrail
           base-ref: ${{ steps.repo.outputs.base }}
       - name: The step failed on the new forbidden import
         run: |
           echo "outcome=$OUTCOME new-forbidden=$NEW_FORBIDDEN"
           [ "$OUTCOME" = failure ] && [ "$NEW_FORBIDDEN" -gt 0 ]
         env:
-          OUTCOME: ${{ steps.archgraph.outcome }}
-          NEW_FORBIDDEN: ${{ steps.archgraph.outputs.new-forbidden }}
+          OUTCOME: ${{ steps.boundrail.outcome }}
+          NEW_FORBIDDEN: ${{ steps.boundrail.outputs.new-forbidden }}
 
   action-go:
     needs: binary
@@ -200,20 +200,20 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: archgraph-binary
+          name: boundrail-binary
           path: ${{ runner.temp }}/bin
-      - run: chmod +x "$RUNNER_TEMP/bin/archgraph" && cp -R tests/fixtures/go-layers "$RUNNER_TEMP/layers"
+      - run: chmod +x "$RUNNER_TEMP/bin/boundrail" && cp -R tests/fixtures/go-layers "$RUNNER_TEMP/layers"
       # No setup-go: the action installs its pinned Go because the path has a go.mod.
-      - id: archgraph
+      - id: boundrail
         uses: ./
         continue-on-error: true
         with:
           path: ${{ runner.temp }}/layers
-          binary: ${{ runner.temp }}/bin/archgraph
+          binary: ${{ runner.temp }}/bin/boundrail
       - name: The step failed on the fixture's forbidden import
         run: |
           echo "outcome=$OUTCOME forbidden=$FORBIDDEN"
           [ "$OUTCOME" = failure ] && [ "$FORBIDDEN" = 1 ]
         env:
-          OUTCOME: ${{ steps.archgraph.outcome }}
-          FORBIDDEN: ${{ steps.archgraph.outputs.forbidden }}
+          OUTCOME: ${{ steps.boundrail.outcome }}
+          FORBIDDEN: ${{ steps.boundrail.outputs.forbidden }}

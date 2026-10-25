@@ -1,5 +1,5 @@
 use super::*;
-use archgraph::surface::{self, SurfaceReport};
+use boundrail::surface::{self, SurfaceReport};
 
 #[derive(Args)]
 pub(super) struct SurfaceArgs {

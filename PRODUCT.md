@@ -13,7 +13,7 @@ architecture rules still hold. These users need source evidence and repeatable c
 
 ## Product Purpose
 
-archgraph reads source relationships and checks architecture rules. Its service model infers
+Boundrail reads source relationships and checks architecture rules. Its service model infers
 application boundaries, infrastructure client usage, and supported HTTP and queue relationships.
 An offline service catalog and graph make that model explorable.
 
@@ -53,9 +53,13 @@ Generated skills must preserve that distinction and reference the policy files.
 
 ## Brand Commitments
 
-Keep the current name, archgraph. Alternative names are suggestions awaiting the user's choice.
-Keep the established report identity while adding the service surface. Use direct technical copy
-and distinguish inferred evidence from declared evidence and measured outcomes.
+The product is Boundrail and its executable is `boundrail`. The user selected the name on
+2026-10-25. Keep the established report palette and use direct technical copy. Distinguish inferred
+evidence from declared evidence and measured outcomes. Historical captures retain their original name.
+
+Existing report schemas, project state, owned markers, finding IDs, and environment overrides
+retain their compatibility identities. Repository and package publication are separate operations.
+The README explains current capabilities with an illustrative overview and actual report captures.
 
 ## Evidence on Hand
 

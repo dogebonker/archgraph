@@ -1,4 +1,4 @@
-use archgraph::presets::{self, Preset, Scope};
+use boundrail::presets::{self, Preset, Scope};
 
 #[test]
 fn all_twenty_preset_scope_policies_match_reviewed_goldens() {
@@ -17,7 +17,7 @@ fn all_twenty_preset_scope_policies_match_reviewed_goldens() {
             (Scope::Regulated, "regulated"),
         ] {
             let rules = presets::rules(preset, scope, "src");
-            archgraph::rules::Compiled::new(&rules).unwrap();
+            boundrail::rules::Compiled::new(&rules).unwrap();
             let text = presets::render(preset, scope, &rules, &[]).unwrap();
             let path = directory.join(format!("{name}-{label}.yaml"));
             if std::env::var_os("UPDATE_ARCHGRAPH_PRESET_GOLDENS").is_some() {

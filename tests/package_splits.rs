@@ -1,6 +1,6 @@
 mod common;
 
-use archgraph::{
+use boundrail::{
     model::{Config, Document, Edge, ImportRecord, Source},
     package_splits::{self, Options, WorkspaceInventory},
 };
@@ -25,7 +25,7 @@ impl Scratch {
         Self(root)
     }
     fn run(&self, args: &[&str]) -> Output {
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .current_dir(&self.0)
             .args(args)
             .output()
@@ -93,7 +93,7 @@ impl Scratch {
             ..Default::default()
         })
         .collect();
-        let mut doc = archgraph::analyze(
+        let mut doc = boundrail::analyze(
             source,
             config,
             vec![
@@ -207,7 +207,7 @@ fn legacy_scans_work_but_unbound_or_dirty_workspace_never_proves_readiness() {
     let (root, commit) = s.checkout();
     let graph = s.graph(Some(&commit), false);
     let mut old: Value = serde_json::from_slice(&fs::read(&graph).unwrap()).unwrap();
-    archgraph::compat::v1(&mut old).unwrap();
+    boundrail::compat::v1(&mut old).unwrap();
     fs::write(&graph, serde_json::to_vec(&old).unwrap()).unwrap();
     let report = parsed(s.run(&[
         "package-splits",
@@ -295,14 +295,14 @@ fn simulated_file_move_recalculates_saved_package_candidates() {
     let s = Scratch::new();
     let graph = s.graph(None, false);
     let input = serde_json::from_slice(&fs::read(graph).unwrap()).unwrap();
-    let mut doc: Document = archgraph::restore_scan(input).unwrap();
+    let mut doc: Document = boundrail::restore_scan(input).unwrap();
     doc.package_splits = Some(
         package_splits::analyze(&doc, Options::default(), WorkspaceInventory::default()).unwrap(),
     );
-    let moved = archgraph::simulate::apply(
+    let moved = boundrail::simulate::apply(
         &doc,
         None,
-        &[archgraph::model::Move {
+        &[boundrail::model::Move {
             file: "lib/core/b.ts".into(),
             to: "outside/b.ts".into(),
         }],

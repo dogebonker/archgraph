@@ -1,12 +1,12 @@
 mod common;
 
-use archgraph::{
+use boundrail::{
     model::{Config, Source},
     symbols::golang,
 };
 use std::{fs, path::Path};
 
-fn fixture(name: &str, consumer: &str) -> (String, archgraph::model::Document) {
+fn fixture(name: &str, consumer: &str) -> (String, boundrail::model::Document) {
     let (root, _input) = common::synthetic(name, 2, &[("app/app.go".into(), "api/api.go".into())]);
     let root_path = Path::new(&root);
     fs::create_dir_all(root_path.join("api")).unwrap();
@@ -28,7 +28,7 @@ fn fixture(name: &str, consumer: &str) -> (String, archgraph::model::Document) {
         "excludes": [], "include_tests": false, "rules": null
     }))
     .unwrap();
-    let doc = archgraph::analyze(
+    let doc = boundrail::analyze(
         source,
         config,
         vec!["api/api.go".into(), "app/app.go".into()],
@@ -199,7 +199,7 @@ fn public_interface_factories_preserve_concrete_implementation_methods() {
                     .iter()
                     .any(|symbol| symbol.name == format!("{receiver}.Unused"))
             );
-            archgraph::surface::attach(&mut doc, symbols, 50).unwrap();
+            boundrail::surface::attach(&mut doc, symbols, 50).unwrap();
             let api = doc
                 .surface
                 .as_ref()

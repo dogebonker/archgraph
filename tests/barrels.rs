@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 
-use archgraph::collect::RawGraph;
-use archgraph::collect::barrels::{BarrelModule, ExportRoute, ImportRoute, resolve, typescript};
-use archgraph::collect::imports::{Sources, analyze};
-use archgraph::model::{Confidence, Edge, EdgeKind};
+use boundrail::collect::RawGraph;
+use boundrail::collect::barrels::{BarrelModule, ExportRoute, ImportRoute, resolve, typescript};
+use boundrail::collect::imports::{Sources, analyze};
+use boundrail::model::{Confidence, Edge, EdgeKind};
 
 fn module(
     file: &str,
@@ -455,7 +455,7 @@ fn executable_reexport_modules_retain_runtime_cycles() {
         .iter()
         .map(|file| (file.clone(), file.clone()))
         .collect();
-    let cycles = archgraph::graph::cycles(
+    let cycles = boundrail::graph::cycles(
         &module_of,
         &graph.edges,
         &BTreeSet::new(),
@@ -575,7 +575,7 @@ fn later_exported_declarators_resolve_star_imports_and_preserve_a_runtime_cycle(
         .iter()
         .map(|file| (file.clone(), file.clone()))
         .collect();
-    let cycles = archgraph::graph::cycles(
+    let cycles = boundrail::graph::cycles(
         &module_of,
         &graph.edges,
         &BTreeSet::new(),

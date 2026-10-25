@@ -1,6 +1,6 @@
 //! Evidence-only explanations shared by standalone and daemon command execution.
 use anyhow::{Result, bail};
-use archgraph::model::Document;
+use boundrail::model::Document;
 use serde_json::{Value, json};
 
 /// A bounded evidence summary for the entire pending edit, including not-yet-scanned files.
@@ -12,13 +12,13 @@ pub(super) fn for_agent(doc: &Document, subjects: &[String]) -> Result<Value> {
         bail!("supply at least one repository-relative file path");
     }
     for path in &paths {
-        if !archgraph::collect::is_relative_path(path, false)
+        if !boundrail::collect::is_relative_path(path, false)
             || path.contains(['*', '?', '[', ']', '{', '}', '<', '>'])
         {
             bail!("invalid edit path {path:?}: supply an exact repository-relative file path");
         }
     }
-    let compiled = archgraph::rules::compile(&doc.config)?;
+    let compiled = boundrail::rules::compile(&doc.config)?;
     let mut modules = BTreeSet::new();
     let mut layers = BTreeSet::new();
     let mut unscanned = 0;
@@ -142,8 +142,8 @@ pub(super) fn explain(doc: &Document, subject: &str) -> Result<Value> {
         "schema": "archgraph/explain/v1", "kind": "explain", "subject": subject,
         "file": file, "module": module, "imports": imports, "imported_by": imported_by,
         "cycles": cycles, "findings": findings,
-        "grouping": archgraph::modules::grouping(&doc.config),
-        "source_semantics": archgraph::modules::dependency_semantics(doc.source.language),
+        "grouping": boundrail::modules::grouping(&doc.config),
+        "source_semantics": boundrail::modules::dependency_semantics(doc.source.language),
         "limitations": doc.source.collector.limitations,
         "hint": "Static imports establish at least these relationships; dynamic dispatch may add others."
     }))

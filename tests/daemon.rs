@@ -41,7 +41,7 @@ impl Fixture {
         Self { root, child: None }
     }
     fn command(&self, args: &[&str]) -> Output {
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .args(args)
             .current_dir(&self.root)
             .output()
@@ -61,7 +61,7 @@ impl Fixture {
         let previous_endpoint = fs::read(self.root.join(".archgraph/daemon.json")).ok();
         let log = fs::File::create(self.root.join(".archgraph/server.log")).unwrap();
         self.child = Some(
-            Command::new(env!("CARGO_BIN_EXE_archgraph"))
+            Command::new(env!("CARGO_BIN_EXE_boundrail"))
                 .args([
                     "serve",
                     ".",
@@ -295,7 +295,7 @@ fn delayed_partial_socket_frames_are_read_before_authentication() {
 fn changed_caller_environment_requires_restart_or_standalone() {
     let mut f = Fixture::new();
     f.start(&["--port"]);
-    let changed = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let changed = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .arg("status")
         .current_dir(&f.root)
         .env("ARCHGRAPH_DAEMON_TEST_ENV", "caller-only-change")
@@ -305,7 +305,7 @@ fn changed_caller_environment_requires_restart_or_standalone() {
     let error = String::from_utf8_lossy(&changed.stderr);
     assert!(error.contains("environment differs"), "{error}");
     assert!(error.contains("--no-daemon"), "{error}");
-    let standalone = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let standalone = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args(["--no-daemon", "status"])
         .current_dir(&f.root)
         .env("ARCHGRAPH_DAEMON_TEST_ENV", "caller-only-change")

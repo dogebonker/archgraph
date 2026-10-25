@@ -79,7 +79,7 @@ impl Fixture {
         );
     }
     fn command(&self) -> Command {
-        let mut c = Command::new(env!("CARGO_BIN_EXE_archgraph"));
+        let mut c = Command::new(env!("CARGO_BIN_EXE_boundrail"));
         c.current_dir(&self.root);
         c
     }
@@ -236,7 +236,7 @@ impl Client {
             protocol
         };
         assert_eq!(init["protocolVersion"], negotiated);
-        assert_eq!(init["serverInfo"]["name"], "archgraph");
+        assert_eq!(init["serverInfo"]["name"], "boundrail");
         c.send(json!({"jsonrpc":"2.0","method":"notifications/initialized"}));
         let list = c.request("tools/list", json!({}));
         let tools = list["tools"].as_array().expect("tools/list array");

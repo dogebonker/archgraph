@@ -213,7 +213,7 @@ def main():
     parser.add_argument('--manifest', type=Path, default=Path(__file__).with_name('repos.json'))
     parser.add_argument('--graphs', type=Path, default=Path('/private/tmp/archgraph-edge-quality/corrected'))
     parser.add_argument('--repos', type=Path, default=Path('/private/tmp/archgraph-edge-quality/repos'))
-    parser.add_argument('--archgraph', type=Path, default=Path('target/debug/archgraph'))
+    parser.add_argument('--boundrail', '--archgraph', dest='archgraph', metavar='BINARY', type=Path, default=Path('target/debug/boundrail'))
     parser.add_argument('--inventory', type=Path, default=Path('target/debug/examples/recipe_inventory'))
     parser.add_argument('--output', type=Path, default=Path(__file__).with_name('recipes-results.json'))
     parser.add_argument('--markdown', type=Path, default=Path(__file__).with_name('recipes.md'))

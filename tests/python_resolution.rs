@@ -1,4 +1,4 @@
-use archgraph::{collect::grimp, model::ImportReason};
+use boundrail::{collect::grimp, model::ImportReason};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -10,7 +10,7 @@ fn collect(
     sources: &[(&str, &str)],
     paths: &[&str],
     src: &str,
-) -> (PathBuf, archgraph::collect::RawGraph) {
+) -> (PathBuf, boundrail::collect::RawGraph) {
     collect_with_probe(name, sources, paths, src, "")
 }
 
@@ -20,7 +20,7 @@ fn collect_with_probe(
     paths: &[&str],
     src: &str,
     probe: &str,
-) -> (PathBuf, archgraph::collect::RawGraph) {
+) -> (PathBuf, boundrail::collect::RawGraph) {
     let directory = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("python-resolution-{name}-{}", std::process::id()));
     let root = directory.join("repo");
@@ -273,7 +273,7 @@ fn namespace_package_roots_and_relative_imports_need_no_initializer() {
         ".",
     );
     assert_eq!(
-        grimp::package(&root, ".", None, &archgraph::collect::globset(&[]).unwrap()).unwrap(),
+        grimp::package(&root, ".", None, &boundrail::collect::globset(&[]).unwrap()).unwrap(),
         "pkg"
     );
     assert!(
@@ -338,17 +338,17 @@ fn literal_and_aliased_dynamic_imports_keep_resolution_evidence() {
     ));
     assert!(graph.edges.iter().any(|edge| edge.from == "pkg/app.py"
         && edge.to == "pkg/sibling.py"
-        && edge.kind == archgraph::model::EdgeKind::Static));
+        && edge.kind == boundrail::model::EdgeKind::Static));
     assert!(graph.edges.iter().any(|edge| edge.from == "pkg/app.py"
         && edge.to == "pkg/deferred.py"
-        && edge.kind == archgraph::model::EdgeKind::Dynamic));
+        && edge.kind == boundrail::model::EdgeKind::Dynamic));
     assert_eq!(
         imports
             .iter()
             .find(|i| i.specifier == "pkg.sibling")
             .unwrap()
             .kind,
-        archgraph::model::EdgeKind::Static
+        boundrail::model::EdgeKind::Static
     );
     assert_eq!(
         imports
@@ -356,7 +356,7 @@ fn literal_and_aliased_dynamic_imports_keep_resolution_evidence() {
             .find(|i| i.specifier == "pkg.deferred")
             .unwrap()
             .kind,
-        archgraph::model::EdgeKind::Dynamic
+        boundrail::model::EdgeKind::Dynamic
     );
 }
 
@@ -460,9 +460,9 @@ fn proven_importlib_and_builtin_bindings_work_at_module_and_function_scope() {
         ".",
     );
     for (target, kind) in [
-        ("pkg/top.py", archgraph::model::EdgeKind::Static),
-        ("pkg/later.py", archgraph::model::EdgeKind::Dynamic),
-        ("pkg/builtin.py", archgraph::model::EdgeKind::Dynamic),
+        ("pkg/top.py", boundrail::model::EdgeKind::Static),
+        ("pkg/later.py", boundrail::model::EdgeKind::Dynamic),
+        ("pkg/builtin.py", boundrail::model::EdgeKind::Dynamic),
     ] {
         assert!(
             graph

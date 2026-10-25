@@ -208,7 +208,7 @@ fn live_elixir_matches_recorded_and_history_never_evaluates_the_project() {
         "File.write!(\"ELIXIR_ENV_EXECUTED\", \"must never execute\")\n",
     )
     .unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let output = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args([
             "scan",
             root.to_str().unwrap(),

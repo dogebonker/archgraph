@@ -154,7 +154,7 @@ fn fail_on_stale_known_exits_1_when_a_listed_import_is_fixed() {
     ]);
     assert_eq!(code, Some(1), "{stderr}");
     assert!(
-        stdout.starts_with("**archgraph diff: fail** (stale-known): "),
+        stdout.starts_with("**boundrail diff: fail** (stale-known): "),
         "{stdout}"
     );
     assert!(
@@ -172,7 +172,7 @@ fn fail_on_stale_known_exits_1_when_a_listed_import_is_fixed() {
     // Not listed in --fail-on: the row shows, the exit stays 0. Old -> old has nothing stale.
     let (stdout, _, code) = diff(&[&old, &new, "--format", "markdown"]);
     assert_eq!(code, Some(0));
-    assert!(stdout.starts_with("**archgraph diff: pass**"), "{stdout}");
+    assert!(stdout.starts_with("**boundrail diff: pass**"), "{stdout}");
     let (_, _, code) = diff(&[&new, &old, "--fail-on", "stale-known"]);
     assert_eq!(code, Some(0));
 }
@@ -333,7 +333,7 @@ fn markdown_summary_lists_cycles_and_moved_metrics() {
         "new-cycles",
     ]);
     assert_eq!(code, Some(0));
-    assert!(md.starts_with("**archgraph diff: pass**"), "{md}");
+    assert!(md.starts_with("**boundrail diff: pass**"), "{md}");
     for part in [
         "### Resolved dependency components (1)",
         "- module: a, b, c",
@@ -358,7 +358,7 @@ fn markdown_summary_lists_cycles_and_moved_metrics() {
     ]);
     assert_eq!(code, Some(1));
     assert!(
-        md.starts_with("**archgraph diff: fail** (new-cycles)"),
+        md.starts_with("**boundrail diff: fail** (new-cycles)"),
         "{md}"
     );
     assert!(
@@ -590,7 +590,7 @@ fn fail_on_new_vacuous_exits_1_when_a_change_empties_a_claim() {
     ]);
     assert_eq!(code, Some(1), "{stderr}");
     assert!(
-        markdown.starts_with("**archgraph diff: fail** (new-vacuous): "),
+        markdown.starts_with("**boundrail diff: fail** (new-vacuous): "),
         "{markdown}"
     );
     assert!(

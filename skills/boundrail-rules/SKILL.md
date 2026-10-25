@@ -1,0 +1,88 @@
+---
+name: boundrail-rules
+description: Writes and calibrates a Boundrail layout.yaml from an architecture the user approves (layered, hexagonal or clean, modular monolith, frontend domains, feature folders) and wires the CI gate. Use when asked to define, write, tighten or enforce architecture rules, layers or module boundaries for a repository.
+license: MIT OR Apache-2.0
+metadata:
+  compatibility: Needs git and the boundrail binary (setup in the boundrail skill).
+---
+
+# boundrail-rules
+
+## Input-quality interpretation
+
+Check the saved source root, grouping depth and collector limitations before comparing SCC counts. Native Rust excludes definite test-only references and keeps containment structural; unknown cfg, macro expansion and type resolution remain incomplete. Its cycles measure source coupling, not initialization failure. A shared state container is a hub; do not attribute an entire component to it without a counterfactual. Rust/Java/Elixir semantic cuts stay non-mechanical. For Python, empty initializers do not establish a facade, and unresolved installed dependencies need actual package metadata. Explicit layout policies remain authoritative. Restart a running daemon and rescan after a collector upgrade.
+
+## MCP tools
+
+Prefer MCP `rules({paths})` and `explain({path})`/`explain({module})` when available to inspect existing constraints and dependency evidence. Use `check_diff` for newly introduced violations under the current policy; it does not prove a rule existed historically or represents the intended architecture. Inspect truncation markers and use CLI scans/checks for complete evidence. MCP `target` returns the claim verdicts. Drafting, calibrating planted violations and changing `layout.yaml` still follow the workflow below; MCP does not write policy. Fall back to the CLI when MCP is unavailable.
+
+A rules file is done when it is **calibrated**: every rule has caught a planted violation, every intended import still passes, and the user has approved the layout it encodes. An uncalibrated rule may silently allow everything.
+
+## Steps
+
+For ADR-backed policy, run `boundrail adr import docs/adr` and review its YAML proposals, source paths, lifecycle and informational gaps before explicit `--apply`. `--json` returns the complete inventory; `--brief` is bounded. The importer proposes clear Decision import constraints and preserves source digests for revalidation; regexes, arbitrary companion checks and call semantics are not generic import bans. Keep each rule's `reason` and `source`, then run `boundrail adr check` and `sync-rules`. Unknown lifecycle is not acceptance; stale/missing sources need review. The [interop report](https://github.com/dogebonker/archgraph/blob/main/docs/interop.md) records the narrow Archgate adapter and unmet 50% upstream coverage target.
+
+After a reviewed layout change, run `boundrail sync-rules <root>` to update owned blocks in CLAUDE.md, AGENTS.md, .cursorrules and .github/copilot-instructions.md. Init does this automatically. Foreign bytes outside fences are preserved; hand edits inside a fence refuse all writes and print a diff. Restore the generated block and move custom instructions outside it. `--full` renders all rule lines; default blocks target 600 estimated tokens with explicit omissions. `sync-rules --check` exits 1 for missing/stale blocks and writes nothing; add it to CI. Live check warns on stale blocks. Do not suppress policy failures or overwrite a hand-edited fence just to make synchronization green.
+
+For day-zero setup in the authorized workspace, use `boundrail init --preset layered --scope internal` (presets: layered, hexagonal, feature-sliced, modular-monolith, minimal; scopes: demo, internal, production, regulated). Interactive init asks one scope question; scripts must supply it. Init uses native evidence, merges inference and marks `# CONFLICT` comments, prints up to three findings, and refuses an existing layout unless explicitly forced. Review the draft and its `## How to change this` comments. Minimal preserves real module grouping and adds no inferred import bans. Run `boundrail check <root>` for fresh graph/source checks; saved graphs with size limits return INCOMPLETE/exit 2. Deterministic size/fan-in/reach/ownership limits block; one observed explicit TypeScript implementation remains advisory. Keep each threshold's `reason`, every explicit import rule's `reason`, and `layer-reason` for ordered boundaries. The [scope table](https://github.com/dogebonker/archgraph/blob/main/docs/guide.md#day-zero-presets-and-init) defines the measured quantities and limits. Calibrate project-specific entrypoints and boundaries after choosing a preset.
+
+To start from observed dependencies, run `boundrail infer-layout <tmp>/graph.json` after scanning. It prints a draft with SCC-aware layers, unresolved cycle groups and sparse-boundary proposals with existing violations. Layer evidence is top-down; executable YAML remains foundation-first. All import kinds participate, matching `check`. Use this as evidence for step 1, then review intent and calibrate the approved rules; absence of imports is not proof of an intended boundary. `--apply <new-path>` creates a draft without overwriting an existing file. Its `infer-claim-*` rules are a starting target when there is no deck: each is a direction observed across sibling slices, with the slices it breaks in listed in comments, not a decision. Keep the ones the user confirms, merge claims about one decision under one `id`, and add the intended rules no slice shows yet (such as `handler ↛ repository`) by hand, as in the target step below.
+
+**Draft a target from a proposal.** boundrail never parses a document or calls a model; you read the proposal (deck, markdown, ADR) and draft `layout.yaml`, and boundrail checks it. Write each dependency claim as `forbid` rules sharing one `id`, with a `reason` quoting the slide or section and a `source` naming the document when it is a repo file. Write each side over both the current and the planned location with brace alternation, spelling the role out, e.g. `from: "{internal/<name>/handler*.go,internal/app/<name>/handler/*.go}"`, one capture name per rule. Add `moves` (`from` glob, `to` folder) for planned relocations, and keep the target root free of files. Run `boundrail check` (or MCP `target`) until no claim is `vacuous` and no rule-side note remains. Read the full verdicts and move cost from `boundrail check -o <file>` (`target.claims[].slices`, `target.moves`): MCP `target` and `check --brief` are capped and trim slices and `moves` first. Report claims boundrail cannot check (code patterns such as validation tags, raw SQL in tests, duplicated helpers) to the user as outside what boundrail checks, never as passing.
+
+1. **Agree on the architecture.** Scan without rules (Setup in [the boundrail skill](../boundrail/SKILL.md)) and read the folders, modules and module imports as they are. Propose the pattern the code is closest to, and one alternative, from [patterns.md](patterns.md); keep an existing convention over a new one. Done when the user has chosen a pattern and confirmed which folders are its layers, modules and public entries.
+2. **Write `layout.yaml`** with the pattern's template, adapted to the real folder names (syntax below). Give every `forbid` an `id` and a `reason` in the team's words. Done when `boundrail scan <root> --rules layout.yaml -o <tmp>/graph.json` runs.
+3. **Read the verdicts.** Run `boundrail check <tmp>/graph.json`. Walk the user through every forbidden and unplanned import, grouped by rule (your `id`s, or a built-in one: `layers`, `public`, `same-module`, `none` for unplanned, `default`): either the rule misstates the layout (fix the rule) or the import is a real violation (keep it on the list). Done when each group is classified and the rules are corrected.
+4. **Calibrate.** In a temporary worktree (`git -c core.hooksPath=/dev/null worktree add --detach <tmp>/plant HEAD`), copy `layout.yaml` in, link the repository's `node_modules` into it when it has one (or pass `--depcruise <path>`), and add one small planted file per rule that breaks exactly that rule and no other (a `forbid` between two files of the same layer, a layer pointing upward, an internal file imported from outside its module, a reachable chain for `reachable: true`), plus one planted import that each rule must allow (the public entry, a downward layer import). Scan the worktree with the rules and run `boundrail diff <step-3 graph> <plant graph> --fail-on new-forbidden,new-unplanned --format markdown`. Done when the diff lists exactly the violating plants, each forbidden by its own rule id, and nothing else (the allowed plants are absent from it), and `git worktree remove --force <tmp>/plant` has removed the worktree.
+5. **Baseline and gate.** Real violations from step 3 either get fixed (one per change, with the boundrail-fix skill, after the user has committed the approved `layout.yaml`, since that skill starts from a clean tree) or stay as a recorded baseline: the CI gate fails only on new ones, so existing violations do not block work. Add the workflow below as `.github/workflows/architecture.yml`. On pull requests the action compares HEAD with the base commit under HEAD's `layout.yaml` and fails only on new forbidden imports, new cycles, known entries the change fixed without shrinking `layout.known.yaml`, and claims the change leaves matching nothing. On a push it fails on a forbidden import `layout.known.yaml` does not list, so record the baseline with `boundrail check --update-known accept` before adding `push` to the triggers. It installs boundrail and the collector itself (dependency-cruiser and typescript, grimp, or Go when the path has `go.mod`), so the repository needs neither. Set `path` when the project is in a subfolder, `language: python` when the Python root has no `pyproject.toml`, `setup.py` or `setup.cfg`, and `fail-on: new-forbidden,new-cycles,new-unplanned` to fail on unplanned imports too. Use `default: forbidden` only when the user wants every import the rules do not name to fail. Done when the user has approved `layout.yaml` and the CI change, and you have listed the baseline violations.
+
+   ```yaml
+   name: architecture
+   on: [pull_request]   # add push once there are no baseline violations; never pull_request_target
+   permissions:
+     contents: read
+   jobs:
+     boundrail:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+           with:
+             fetch-depth: 0
+             persist-credentials: false
+         # TypeScript/JavaScript only: dependency-cruiser 18.4.0 needs Node 22
+         - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+           with:
+             node-version: 22
+         # Python only: CPython 3.10 to 3.14, e.g. actions/setup-python
+         - uses: dogebonker/archgraph@v0.1.0
+   ```
+
+## Syntax
+
+```yaml
+version: 1
+modules:                      # only when folders do not match the intended modules
+  - { id: "domains/<name>", path: "src/domains/<name>/**" }
+layers:                       # lowest first; a file may import its own or a lower layer
+  - "src/shared/**"
+  - "src/domains/*/model.server.ts"
+  - "src/domains/*/ui/**"
+public:                       # module pattern and its public entries
+  - { module: "src/domains/<name>/**", entries: ["src/domains/<name>/index.ts"] }
+forbid:
+  - { id: shared-no-domain, from: "src/shared/**", to: "src/domains/**", reason: "shared imports no domain" }
+  - { id: browser-no-server, from: "src/domains/*/client.ts", to: "**/*.server.ts", reachable: true }
+allow:
+  - { from: "app/**", to: "**", reason: "composition" }
+default: forbidden            # optional: every import no rule names is forbidden
+```
+
+- `*` matches one path segment, `**` any depth, `{a,b}` alternatives. Paths are relative to the scanned root.
+- Imports within one layer, and within one module, are allowed unless a `forbid` names them: siblings in one layer (driving and driven adapters) need their own `forbid` rules.
+- `<name>` matches one segment and binds it within a rule: in `modules` path to id, in `public` module to entries, and in `forbid`/`allow` importer to target, so `{ from: "src/modules/<name>/**", to: "src/modules/<name>/**" }` means "within one module". `layers` take no capture: write `*`.
+- `reachable: true` on a `forbid` also matches when any file matching `to` is reachable from the imported file.
+- Verdict order, first match wins: forbid, allow, public (an internal file imported from outside its module), layers, same module, public entry, otherwise unplanned (rule `none`), or forbidden (rule `default`) with `default: forbidden`.
+- Strings are single plain lines; unknown keys are an error. An older boundrail ignores `default`, so pin the version wherever it gates CI.
+- Type-only imports count in verdicts. With a `src/` directory only `src/` is scanned, so rules about root folders such as `app/**` see only the files `src/` imports.
+
+For a forbidden-edge or deep-import finding, obtain the current recipe with MCP `propose` (CLI `boundrail propose <finding_id>` otherwise) before editing. Interface locations and reexports are suggestions under the current rules, not permission to rewrite policy. Preserve the structured verification baseline, treat null deltas as unknown and use [boundrail-fix](../boundrail-fix/SKILL.md) for dry-run/apply/verify. Findings lacking a concrete edit remain advisory diagnostics; changing ranking with `--rank legacy` does not change rule enforcement.

@@ -13,7 +13,7 @@ assets for the import report, not references for a replacement identity.
 ## Brand
 
 A precise developer tool. Trust comes from source locations, explicit confidence, and truthful
-limits. Keep the current name. Avoid claims that static candidates prove runtime calls.
+limits. Use the Boundrail product name. Avoid claims that static candidates prove runtime calls.
 
 ## Product goals
 
@@ -51,6 +51,9 @@ monospace source paths, blue focus and selection, and existing purple, teal, ora
 Red denotes forbidden evidence or explicit cycle signals. Use subdued separators and restrained
 glass treatment for controls and the inspector. No remote fonts, imagery, or new visual identity.
 Spacing follows the existing 8/12/16/24px scale. Motion is limited to direct selection feedback.
+The README's local Boundrail overview SVG explains source evidence, declared policy, and change
+review. It is explicitly illustrative. Actual screenshots remain source-backed captures and older
+recordings keep their historical branding.
 
 ## Components
 

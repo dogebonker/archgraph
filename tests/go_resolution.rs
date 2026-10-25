@@ -1,4 +1,4 @@
-use archgraph::collect::go;
+use boundrail::collect::go;
 use std::{fs, path::Path};
 #[test]
 fn old_go_recordings_do_not_fabricate_import_coverage() {

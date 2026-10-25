@@ -1,20 +1,20 @@
-use archgraph::{
+use boundrail::{
     early_smells::{self, Thresholds},
     model::{Config, Source},
     rules::Rules,
 };
 use serde_json::json;
 
-fn graph(files: &[&str], pairs: &[(&str, &str)], limits: Thresholds) -> archgraph::model::Document {
+fn graph(files: &[&str], pairs: &[(&str, &str)], limits: Thresholds) -> boundrail::model::Document {
     let config: Config = serde_json::from_value(json!({"depth":1,"source_root":".","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"fixture","doc":{"version":1,"layers":["src/**"],"early-smells":limits}}})).unwrap();
     let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","cruised":0},"generated_at":"test"})).unwrap();
-    archgraph::analyze(
+    boundrail::analyze(
         source,
         config,
         files.iter().map(|p| (*p).into()).collect(),
         pairs
             .iter()
-            .map(|(a, b)| archgraph::model::Edge {
+            .map(|(a, b)| boundrail::model::Edge {
                 from: (*a).into(),
                 to: (*b).into(),
                 ..Default::default()
@@ -82,23 +82,23 @@ fn rejects_invalid_caps_reasons_and_unknown_nested_keys() {
                 .is_err()
         );
     }
-    let dir = archgraph::collect::TempDir::new("early-rules").unwrap();
+    let dir = boundrail::collect::TempDir::new("early-rules").unwrap();
     let path = dir.path().join("layout.yaml");
     std::fs::write(&path, "version: 1\nearly-smells:\n  typo: true\n").unwrap();
     assert!(
-        archgraph::rules::load(&path)
+        boundrail::rules::load(&path)
             .unwrap_err()
             .to_string()
             .contains("parsing")
     );
     let rules: Rules =
         serde_json::from_value(json!({"version":1,"early-smells":Thresholds::default()})).unwrap();
-    let compiled = archgraph::rules::Compiled::new(&rules).unwrap();
+    let compiled = boundrail::rules::Compiled::new(&rules).unwrap();
     assert!(compiled.relevant(&rules, &["src/a.ts".into()]).unwrap()["early-smells"].is_object());
 }
 #[test]
 fn live_file_size_and_path_escape() {
-    let dir = archgraph::collect::TempDir::new("early-size").unwrap();
+    let dir = boundrail::collect::TempDir::new("early-size").unwrap();
     std::fs::create_dir(dir.path().join("src")).unwrap();
     std::fs::write(dir.path().join("src/a.ts"), "a\nb\n").unwrap();
     let mut limits = Thresholds::default();
@@ -113,7 +113,7 @@ fn live_file_size_and_path_escape() {
 }
 #[test]
 fn explicit_interface_alias_through_barrel_counts_real_classes() {
-    let dir = archgraph::collect::TempDir::new("early-implements").unwrap();
+    let dir = boundrail::collect::TempDir::new("early-implements").unwrap();
     for (path, body) in [
         (
             "port.ts",
@@ -138,13 +138,13 @@ fn explicit_interface_alias_through_barrel_counts_real_classes() {
             )
             .unwrap();
         }
-        let policy = archgraph::collect::excludes::Policy::new(
+        let policy = boundrail::collect::excludes::Policy::new(
             dir.path(),
-            archgraph::model::Language::Typescript,
+            boundrail::model::Language::Typescript,
             Default::default(),
         )
         .unwrap();
-        let out = archgraph::collect::native::typescript::collect(dir.path(), ".", &policy, true)
+        let out = boundrail::collect::native::typescript::collect(dir.path(), ".", &policy, true)
             .unwrap();
         let paths: Vec<_> = out.raw.files.iter().map(String::as_str).collect();
         let mut doc = graph(&paths, &[], Thresholds::default());

@@ -1,4 +1,4 @@
-use archgraph::model::{Config, ImportReason, ImportRecord, Source};
+use boundrail::model::{Config, ImportReason, ImportRecord, Source};
 use serde_json::json;
 #[test]
 fn ledger_counts_imports_not_edges_and_external_nodes_do_not_change_metrics() {
@@ -27,7 +27,7 @@ fn ledger_counts_imports_not_edges_and_external_nodes_do_not_change_metrics() {
             ..Default::default()
         },
     ]);
-    let doc = archgraph::analyze(
+    let doc = boundrail::analyze(
         source,
         config,
         vec!["app/a.ts".into()],
@@ -55,10 +55,10 @@ fn ledger_counts_imports_not_edges_and_external_nodes_do_not_change_metrics() {
     assert!(doc.external_nodes[0].id.ends_with("@lib/Thing"));
     assert_eq!(doc.external_edges.len(), 1);
     assert_eq!(doc.external_edges[0].weight, Some(1.0));
-    let moved = archgraph::simulate::apply(
+    let moved = boundrail::simulate::apply(
         &doc,
         None,
-        &[archgraph::model::Move {
+        &[boundrail::model::Move {
             file: "app/a.ts".into(),
             to: "app/b.ts".into(),
         }],
@@ -67,12 +67,12 @@ fn ledger_counts_imports_not_edges_and_external_nodes_do_not_change_metrics() {
     assert_eq!(moved.external_edges[0].from, "app/b.ts");
     assert_eq!(moved.unresolved[0].from, "app/b.ts");
     let saved = serde_json::to_value(&doc).unwrap();
-    let restored = archgraph::restore_scan(serde_json::from_value(saved.clone()).unwrap()).unwrap();
+    let restored = boundrail::restore_scan(serde_json::from_value(saved.clone()).unwrap()).unwrap();
     assert_eq!(restored.import_resolution.unwrap().resolved, 2);
     let path = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("import-accounting.json");
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     std::fs::write(&path, serde_json::to_vec(&saved).unwrap()).unwrap();
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args(["unresolved", path.to_str().unwrap(), "--json"])
         .output()
         .unwrap();
@@ -84,7 +84,7 @@ fn ledger_counts_imports_not_edges_and_external_nodes_do_not_change_metrics() {
     let rows: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(rows[0]["reason"], "alias");
     assert_eq!(rows[0]["specifier"], "alias/missing");
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args(["unresolved", path.to_str().unwrap()])
         .output()
         .unwrap();
@@ -96,5 +96,5 @@ fn ledger_counts_imports_not_edges_and_external_nodes_do_not_change_metrics() {
     );
     let mut invalid = saved;
     invalid["imports"][0]["targets"] = json!(["../outside.ts"]);
-    assert!(archgraph::restore_scan(serde_json::from_value(invalid).unwrap()).is_err());
+    assert!(boundrail::restore_scan(serde_json::from_value(invalid).unwrap()).is_err());
 }

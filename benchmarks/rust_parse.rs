@@ -6,15 +6,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = std::env::args_os()
         .nth(1)
         .ok_or("pass the Cargo repository root")?;
-    let input = archgraph::collect::rust::run(
+    let input = boundrail::collect::rust::run(
         Path::new(&root),
-        &archgraph::collect::rust::Options {
+        &boundrail::collect::rust::Options {
             rust_analyzer: None,
-            features: archgraph::collect::rust::Features::Default,
+            features: boundrail::collect::rust::Features::Default,
             build_scripts: false,
         },
     )?;
-    let graph = archgraph::collect::rust::parse(&input)?;
+    let graph = boundrail::collect::rust::parse(&input)?;
     let counts = (graph.files.len(), graph.edges.len());
     assert!(
         counts.0 > 0,
@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let start = Instant::now();
     for _ in 0..20 {
-        let graph = archgraph::collect::rust::parse(black_box(&input))?;
+        let graph = boundrail::collect::rust::parse(black_box(&input))?;
         assert_eq!((graph.files.len(), graph.edges.len()), counts);
         black_box(graph);
     }

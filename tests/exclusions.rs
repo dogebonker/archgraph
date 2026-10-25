@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use archgraph::collect::excludes::{Options, Policy, defaults, is_test};
-use archgraph::model::Language;
+use boundrail::collect::excludes::{Options, Policy, defaults, is_test};
+use boundrail::model::Language;
 
 fn root(name: &str) -> PathBuf {
     let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("exclusion-{name}"));
@@ -128,8 +128,8 @@ fn elixir_tests_and_build_outputs_share_selection_overrides() {
     ]);
     let policy = Policy::new(&root, Language::Elixir, Options::default()).unwrap();
     assert_eq!(policy.select(&candidates).unwrap(), paths(&["lib/app.ex"]));
-    assert!(archgraph::collect::excludes::is_test("lib/app_test.exs"));
-    assert!(archgraph::collect::excludes::is_test("test_helper.exs"));
+    assert!(boundrail::collect::excludes::is_test("lib/app_test.exs"));
+    assert!(boundrail::collect::excludes::is_test("test_helper.exs"));
     let policy = Policy::new(
         &root,
         Language::Elixir,
@@ -313,16 +313,16 @@ fn layout_accepts_selection_patterns_and_rejects_invalid_globs() {
         "layout.yaml",
         "version: 1\nexclude: ['src/generated/**']\ninclude: ['src/generated/kept.ts']\n",
     );
-    let rules = archgraph::rules::load(&root.join("layout.yaml")).unwrap();
+    let rules = boundrail::rules::load(&root.join("layout.yaml")).unwrap();
     assert_eq!(rules.doc.exclude, ["src/generated/**"]);
     assert_eq!(rules.doc.include, ["src/generated/kept.ts"]);
     write(&root, "layout.yaml", "version: 1\ninclude: ['[']\n");
-    assert!(archgraph::rules::load(&root.join("layout.yaml")).is_err());
+    assert!(boundrail::rules::load(&root.join("layout.yaml")).is_err());
 }
 
 #[test]
 fn language_discovery_uses_the_same_restored_selection_policy() {
-    use archgraph::collect::{detect_language, detect_language_with_options};
+    use boundrail::collect::{detect_language, detect_language_with_options};
     let root = root("detection");
     write(&root, "src/build/only.ts", "export const Built = 1;");
     assert!(detect_language(&root, "src").is_err());
@@ -401,7 +401,7 @@ fn a_scan_outside_any_repository_works_in_a_translated_locale() {
         r#"{"modules":[{"source":"src/a.ts","dependencies":[]}],"summary":{"totalCruised":1}}"#,
     )
     .unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let output = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .arg("scan")
         .arg(&root)
         .args(["--language", "typescript", "--collector-input"])

@@ -1,4 +1,4 @@
-# archgraph preset: Layered; scope: Regulated
+# boundrail preset: Layered; scope: Regulated
 # Enforcement comes from imports; this draft needs an ownership review.
 # reason: Layer order keeps foundational code independent of outer concerns.
 # reason: Grab-bag thresholds surface weakly related, widely imported modules.
@@ -6,7 +6,7 @@
 # ## How to change this
 # Rename paths to match your source tree; layers are foundation-first.
 # Review CONFLICT comments before adopting inferred boundaries.
-# Keep a reason on every explicit rule and rerun archgraph check after changes.
+# Keep a reason on every explicit rule and rerun boundrail check after changes.
 # Single observed implementations are medium-confidence review candidates.
 version: 1
 grabbag:

@@ -650,7 +650,7 @@ fn go_modules_group_packages_by_depth() {
 
 #[test]
 fn go_module_discovery_skips_broken_and_excluded_go_mods() {
-    use archgraph::collect::{globset, go};
+    use boundrail::collect::{globset, go};
     let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("go-discovery");
     let _ = std::fs::remove_dir_all(&root);
     for (file, text) in [
@@ -870,7 +870,7 @@ fn saved_bound_pairs_must_name_scanned_files_and_plain_names() {
     let rejects = |edit: &dyn Fn(&mut serde_json::Value), message: &str| {
         let mut saved = doc.clone();
         edit(&mut saved["source"]["collector"]["bound"][0]);
-        let error = archgraph::validate_scan(&serde_json::from_value(saved).unwrap()).unwrap_err();
+        let error = boundrail::validate_scan(&serde_json::from_value(saved).unwrap()).unwrap_err();
         assert!(error.to_string().contains(message), "{error}");
     };
     rejects(

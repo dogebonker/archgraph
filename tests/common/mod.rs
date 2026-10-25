@@ -13,7 +13,7 @@ pub fn fixture(name: &str) -> PathBuf {
 }
 
 pub fn archgraph(args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args(args)
         .output()
         .unwrap()

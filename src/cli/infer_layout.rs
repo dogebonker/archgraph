@@ -1,5 +1,5 @@
 use super::*;
-use archgraph::infer_layout::{self, Options};
+use boundrail::infer_layout::{self, Options};
 use std::io::Write;
 
 #[derive(Args)]

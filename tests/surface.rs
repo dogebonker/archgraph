@@ -1,6 +1,6 @@
 mod common;
 
-use archgraph::{
+use boundrail::{
     model::{Config, Document, Edge, EdgeKind, Source},
     surface::{self, SymbolExport, SymbolImport, SymbolTarget, Symbols},
 };
@@ -15,7 +15,7 @@ fn document(files: &[&str], edges: &[(&str, &str)]) -> Document {
         "depth": 1, "source_root": "src", "excludes": [], "include_tests": false, "rules": null
     }))
     .unwrap();
-    archgraph::analyze(
+    boundrail::analyze(
         source,
         config,
         files.iter().map(|s| (*s).into()).collect(),
@@ -28,7 +28,7 @@ fn document(files: &[&str], edges: &[(&str, &str)]) -> Document {
                 verdict: None,
                 rule: None,
                 reach: None,
-                ..archgraph::model::Edge::default()
+                ..boundrail::model::Edge::default()
             })
             .collect(),
         Vec::new(),
@@ -104,7 +104,7 @@ fn inferred_entries_respect_extension_specific_module_rules() {
             "path":"layout.yaml", "sha256":"0".repeat(64),
             "doc":{"version":1,"modules":[{"id":"payments","path":format!("src/billing/**/*.{extension}")}]}
         })).unwrap());
-        let mut doc = archgraph::analyze(
+        let mut doc = boundrail::analyze(
             doc.source,
             config,
             doc.files.into_iter().map(|f| f.path).collect(),
@@ -199,7 +199,7 @@ fn deep_imports_list_importers_and_required_symbols_and_surface_threshold_is_str
         verdict: None,
         rule: None,
         reach: None,
-        ..archgraph::model::Edge::default()
+        ..boundrail::model::Edge::default()
     });
     surface::attach(
         &mut doc,
@@ -424,7 +424,7 @@ fn restoring_a_scan_retains_symbol_evidence_and_surface_threshold() {
     let mut doc = api();
     surface::attach(&mut doc, symbols(api_exports(), Vec::new()), 3).unwrap();
     let saved = serde_json::to_value(&doc).unwrap();
-    let restored = archgraph::restore_scan(serde_json::from_value(saved).unwrap()).unwrap();
+    let restored = boundrail::restore_scan(serde_json::from_value(saved).unwrap()).unwrap();
     let surface = restored.surface.as_ref().unwrap();
     assert_eq!(surface.max_symbols, 3);
     assert!(surface.complete);
@@ -436,7 +436,7 @@ fn restoring_a_scan_retains_symbol_evidence_and_surface_threshold() {
 fn restoring_surface_without_symbols_retains_the_report_and_threshold() {
     let mut doc = api();
     doc.surface = Some(surface::analyze(&doc, 7).unwrap());
-    let restored = archgraph::restore_scan(
+    let restored = boundrail::restore_scan(
         serde_json::from_value(serde_json::to_value(&doc).unwrap()).unwrap(),
     )
     .unwrap();
@@ -600,7 +600,7 @@ fn python_infers_facades_from_exports_not_package_markers() {
     let caller = "src/app/main.py";
     for has_exports in [false, true] {
         let mut doc = document(&[init, implementation, caller], &[(caller, implementation)]);
-        doc.source.language = archgraph::model::Language::Python;
+        doc.source.language = boundrail::model::Language::Python;
         let exports = if has_exports {
             vec![export(init, "Public", implementation, "Public")]
         } else {
@@ -627,7 +627,7 @@ fn python_explicit_empty_facades_still_enforce_policy() {
             ],
             &[("src/app/main.py", "src/billing/internal.py")],
         );
-        doc.source.language = archgraph::model::Language::Python;
+        doc.source.language = boundrail::model::Language::Python;
         let mut rules = boundary;
         rules["version"] = json!(1);
         doc.config.rules = Some(

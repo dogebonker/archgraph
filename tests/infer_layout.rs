@@ -18,7 +18,7 @@ impl Scratch {
     }
 
     fn run(&self, args: &[&str]) -> Output {
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .current_dir(&self.0)
             .args(args)
             .output()
@@ -90,7 +90,7 @@ fn printed_draft_is_valid_and_checks_both_schemas_without_writing() {
         assert!(yaml.to_lowercase().contains("draft"));
         let draft = scratch.0.join("draft.yaml");
         fs::write(&draft, yaml).unwrap();
-        let rules = archgraph::rules::load(&draft).unwrap();
+        let rules = boundrail::rules::load(&draft).unwrap();
         assert!(!rules.doc.layers.is_empty());
         let checked_path = scratch.0.join("checked.json");
         let checked = scratch.run(&[
@@ -111,7 +111,7 @@ fn printed_draft_is_valid_and_checks_both_schemas_without_writing() {
                 .all(|edge| edge["verdict"] != "forbidden")
         );
         assert_eq!(doc["files"].as_array().unwrap().len(), 4);
-        let compiled = archgraph::rules::compile(&serde_json::from_value(json!({
+        let compiled = boundrail::rules::compile(&serde_json::from_value(json!({
             "depth": 1, "source_root": ".", "excludes": [], "include_tests": false, "rules": rules
         })).unwrap()).unwrap().unwrap();
         for path in paths {
@@ -124,7 +124,7 @@ fn printed_draft_is_valid_and_checks_both_schemas_without_writing() {
             "file",
         ]);
         success(&file_mode);
-        let _: archgraph::rules::Rules = serde_yaml_ng::from_slice(&file_mode.stdout).unwrap();
+        let _: boundrail::rules::Rules = serde_yaml_ng::from_slice(&file_mode.stdout).unwrap();
     }
 }
 
@@ -138,7 +138,7 @@ fn apply_creates_default_or_explicit_path_and_never_overwrites() {
     assert!(output.stdout.is_empty());
     let path = scratch.0.join("layout.yaml");
     let original = fs::read(&path).unwrap();
-    archgraph::rules::load(&path).unwrap();
+    boundrail::rules::load(&path).unwrap();
     let output = scratch.run(&["infer-layout", graph, "--apply"]);
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(fs::read(&path).unwrap(), original);
@@ -146,7 +146,7 @@ fn apply_creates_default_or_explicit_path_and_never_overwrites() {
     let output = scratch.run(&["infer-layout", graph, "--apply", explicit.to_str().unwrap()]);
     success(&output);
     assert!(output.stdout.is_empty());
-    archgraph::rules::load(&explicit).unwrap();
+    boundrail::rules::load(&explicit).unwrap();
     #[cfg(unix)]
     {
         let link = scratch.0.join("linked.yaml");
@@ -209,7 +209,7 @@ fn sparse_proposal_reports_and_checks_written_import_violations() {
     }
     let draft = scratch.0.join("draft.yaml");
     fs::write(&draft, yaml).unwrap();
-    let rules = archgraph::rules::load(&draft).unwrap();
+    let rules = boundrail::rules::load(&draft).unwrap();
     assert!(!rules.doc.forbid.is_empty());
     let checked_path = scratch.0.join("checked.json");
     let checked = scratch.run(&[
@@ -291,7 +291,7 @@ fn type_back_edge_makes_cycle_unresolved_even_without_all_kinds_flag() {
     success(&output);
     let yaml = String::from_utf8(output.stdout).unwrap();
     assert!(yaml.contains("# unresolved:"), "{yaml}");
-    let rules: archgraph::rules::Rules = serde_yaml_ng::from_str(&yaml).unwrap();
+    let rules: boundrail::rules::Rules = serde_yaml_ng::from_str(&yaml).unwrap();
     assert!(rules.layers.is_empty());
     assert!(rules.forbid.is_empty());
     assert_eq!(rules.modules.len(), 2);

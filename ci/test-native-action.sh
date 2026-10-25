@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-with tempfile.TemporaryDirectory(prefix="archgraph-native-action-") as temp:
+with tempfile.TemporaryDirectory(prefix="boundrail-native-action-") as temp:
     root = Path(temp)
     project = root / "project"
     project.mkdir()
@@ -20,10 +20,10 @@ with tempfile.TemporaryDirectory(prefix="archgraph-native-action-") as temp:
         path = forbidden / tool
         path.write_text('#!/bin/sh\nprintf "%s\\n" "$0" >> "$CALLED"\nexit 99\n')
         path.chmod(0o755)
-    binary = root / "archgraph"
+    binary = root / "boundrail"
     binary.write_text('''#!/bin/bash
 set -eu
-if [[ $1 == --version ]]; then echo 'archgraph test'; exit; fi
+if [[ $1 == --version ]]; then echo 'boundrail test'; exit; fi
 for arg in "$@"; do
   if [[ ${REJECT_ENGINE:-} == 1 && $arg == --engine ]]; then exit 88; fi
 done
@@ -80,7 +80,7 @@ echo 'native report'
     env.update(INPUT_ENGINE="reference", INPUT_LANGUAGE="python",
                PATH=str(failing) + os.pathsep + os.environ["PATH"])
     result = subprocess.run(["bash", "ci/action.sh"], env=env, capture_output=True, text=True)
-    assert result.returncode == 2 and "::error::archgraph:" in result.stdout, result.stdout
+    assert result.returncode == 2 and "::error::boundrail:" in result.stdout, result.stdout
 
 print("Native Action forwards its engine, skips external setup, rejects unknown engines and fails setup errors")
 PY

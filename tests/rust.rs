@@ -2,7 +2,7 @@ mod common;
 
 use std::path::Path;
 
-use archgraph::collect::rust::{
+use boundrail::collect::rust::{
     Features, cargo_config_refusal, config, config_error, degraded_load, toolchain_channel,
 };
 use common::{scan, write_tmp};
@@ -274,7 +274,7 @@ fn rust_edges_resolve_workspace_references_and_trait_implementations() {
             { "path": "src/other.rs", "occurrences": [occurrence("local 0", 1)], "symbols": [] }
         ]
     });
-    let graph = archgraph::collect::rust::parse(&serde_json::to_vec(&input).unwrap()).unwrap();
+    let graph = boundrail::collect::rust::parse(&serde_json::to_vec(&input).unwrap()).unwrap();
     let edges: Vec<_> = graph
         .edges
         .iter()
@@ -286,22 +286,22 @@ fn rust_edges_resolve_workspace_references_and_trait_implementations() {
             (
                 "src/lib.rs",
                 "src/model.rs",
-                archgraph::model::EdgeKind::Static
+                boundrail::model::EdgeKind::Static
             ),
             (
                 "src/model.rs",
                 "src/api.rs",
-                archgraph::model::EdgeKind::Static
+                boundrail::model::EdgeKind::Static
             ),
             (
                 "src/model.rs",
                 "src/lib.rs",
-                archgraph::model::EdgeKind::Static
+                boundrail::model::EdgeKind::Static
             ),
             (
                 "src/model.rs",
                 "src/sibling.rs",
-                archgraph::model::EdgeKind::Static
+                boundrail::model::EdgeKind::Static
             ),
         ]
     );

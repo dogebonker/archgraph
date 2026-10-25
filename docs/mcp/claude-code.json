@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "archgraph": {
+    "boundrail": {
       "type": "stdio",
-      "command": "archgraph",
+      "command": "boundrail",
       "args": [
         "mcp",
         "/absolute/path/to/repo",

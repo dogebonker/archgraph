@@ -29,7 +29,7 @@ impl Scratch {
 
     fn tour(&self, doc: &Value, args: &[&str]) -> String {
         let path = self.save(doc);
-        let output = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        let output = Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .current_dir(&self.0)
             .arg("tour")
             .arg(path)
@@ -258,7 +258,7 @@ fn default_input_and_legacy_schema_work_without_writes_and_invalid_input_fails()
     let default_graph = default_dir.join("archgraph.json");
     fs::copy(s.0.join("graph.json"), &default_graph).unwrap();
     let original = fs::read(&default_graph).unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let output = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .current_dir(&s.0)
         .arg("tour")
         .output()
@@ -273,7 +273,7 @@ fn default_input_and_legacy_schema_work_without_writes_and_invalid_input_fails()
     assert_eq!(fs::read_dir(&default_dir).unwrap().count(), 1);
     assert_eq!(fs::read(&default_graph).unwrap(), original);
     fs::write(&default_graph, r#"{"schema":"archgraph/v999"}"#).unwrap();
-    let failed = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let failed = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .current_dir(&s.0)
         .arg("tour")
         .output()

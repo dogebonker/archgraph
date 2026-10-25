@@ -45,7 +45,7 @@ fn fresh_scans_are_byte_identical_and_timestamp_is_reproducible() {
     // Recorded collection isolates reproducibility from collector installation/version.
     let fixture = common::fixture("ts-cycles");
     let scan = || {
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .args([
                 "scan",
                 fixture.to_str().unwrap(),
@@ -72,7 +72,7 @@ fn fresh_scans_are_byte_identical_and_timestamp_is_reproducible() {
     assert_eq!(first.stdout, second.stdout);
     let value: Value = serde_json::from_slice(&first.stdout).unwrap();
     assert_eq!(value["source"]["generated_at"], "2000-01-01T00:00:00Z");
-    let invalid = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let invalid = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args([
             "scan",
             fixture.to_str().unwrap(),
@@ -92,7 +92,7 @@ mod explain;
 #[test]
 fn explain_uses_graph_evidence_and_unknown_subject_says_what_to_do() {
     let (value, _, _) = common::scan_recorded("ts-cycles", &[]);
-    let doc = archgraph::restore_scan(serde_json::from_value(value).unwrap()).unwrap();
+    let doc = boundrail::restore_scan(serde_json::from_value(value).unwrap()).unwrap();
     let edge = doc.edges.first().unwrap();
     let result = explain::explain(&doc, &edge.from).unwrap();
     assert!(
@@ -128,7 +128,7 @@ fn explain_uses_graph_evidence_and_unknown_subject_says_what_to_do() {
 fn timestamp_defaults_to_head_and_to_epoch_outside_git() {
     let fixture = common::fixture("ts-cycles");
     let run = |epoch: Option<&str>, outside_git: bool| {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_archgraph"));
+        let mut command = Command::new(env!("CARGO_BIN_EXE_boundrail"));
         command.args([
             "scan",
             fixture.to_str().unwrap(),

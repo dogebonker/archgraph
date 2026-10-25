@@ -1,4 +1,4 @@
-use archgraph::{
+use boundrail::{
     model::{Config, Edge, EdgeKind, Evidence, FindingKind, ImportRecord, Language, Source},
     recipes::{self, Confidence, Predicate, Rank, Recipe, StepKind, Verification},
 };
@@ -8,7 +8,7 @@ fn document(
     language: Language,
     files: &[&str],
     links: &[(&str, &str)],
-) -> archgraph::model::Document {
+) -> boundrail::model::Document {
     let mut config: Config = serde_json::from_value(json!({
         "depth":1,"source_root":"","excludes":[],"include_tests":false,"rules":null
     }))
@@ -39,7 +39,7 @@ fn document(
         })
         .collect();
     let source: Source=serde_json::from_value(json!({"language":language,"collector":{"name":"fixture","cruised":files.len()},"git":null,"generated_at":"1970-01-01T00:00:00Z"})).unwrap();
-    archgraph::analyze(
+    boundrail::analyze(
         source,
         config,
         files.iter().map(|s| (*s).into()).collect(),
@@ -111,7 +111,7 @@ fn stable_identity_preserves_task_two_mcp_ids() {
     for finding in &doc.findings {
         assert_eq!(
             recipes::stable_id(finding),
-            archgraph::mcp_tools::finding_id(finding)
+            boundrail::mcp_tools::finding_id(finding)
         );
     }
 }
@@ -145,7 +145,7 @@ fn forbidden_edges_get_recipes_and_external_ledger_is_removed_consistently() {
         &["a/a.ts", "b/b.ts"],
         &[("a/a.ts", "b/b.ts")],
     );
-    doc.edges[0].verdict = Some(archgraph::model::Verdict::Forbidden);
+    doc.edges[0].verdict = Some(boundrail::model::Verdict::Forbidden);
     recipes::attach(&mut doc).unwrap();
     let f = doc
         .findings
@@ -208,7 +208,7 @@ fn named_forbidden_dependency_gets_consumer_owned_interface_instructions() {
         let from = format!("domain/model.{ext}");
         let to = format!("adapter/db.{ext}");
         let mut doc = document(language, &[&from, &to], &[(&from, &to)]);
-        doc.edges[0].verdict = Some(archgraph::model::Verdict::Forbidden);
+        doc.edges[0].verdict = Some(boundrail::model::Verdict::Forbidden);
         doc.edges[0].names = vec!["Database".into()];
         recipes::attach(&mut doc).unwrap();
         let recipe = doc
@@ -229,7 +229,7 @@ fn named_forbidden_dependency_gets_consumer_owned_interface_instructions() {
 
 #[test]
 fn deep_import_recipe_reexports_then_retargets_written_boundary() {
-    use archgraph::surface::{DeepImport, ModuleSurface, SurfaceReport};
+    use boundrail::surface::{DeepImport, ModuleSurface, SurfaceReport};
     let mut doc = document(
         Language::Typescript,
         &["app/main.ts", "domain/index.ts", "domain/thing.ts"],
@@ -246,7 +246,7 @@ fn deep_import_recipe_reexports_then_retargets_written_boundary() {
         .or_default()
         .barrel = true;
     doc.surface = Some(SurfaceReport {
-        schema: archgraph::model::SCHEMA.into(),
+        schema: boundrail::model::SCHEMA.into(),
         kind: "surface".into(),
         max_symbols: 50,
         complete: true,
@@ -302,7 +302,7 @@ fn deep_import_recipe_reexports_then_retargets_written_boundary() {
 
 #[test]
 fn split_recipe_uses_actual_cochange_groups_without_inventing_churn() {
-    use archgraph::model::{Cochange, CochangePair};
+    use boundrail::model::{Cochange, CochangePair};
     let mut doc = document(
         Language::Typescript,
         &["utils/a.ts", "utils/b.ts", "utils/c.ts", "app/main.ts"],
@@ -311,9 +311,9 @@ fn split_recipe_uses_actual_cochange_groups_without_inventing_churn() {
     let mut finding = doc.diagnostics[0].finding.clone();
     finding.kind = FindingKind::CycleViaGrabbag;
     finding.subject = "utils".into();
-    finding.evidence = Evidence::Grabbag(archgraph::grabbag::Evidence {
+    finding.evidence = Evidence::Grabbag(boundrail::grabbag::Evidence {
         members: vec!["utils".into(), "app".into()],
-        candidates: vec![archgraph::grabbag::Candidate {
+        candidates: vec![boundrail::grabbag::Candidate {
             module: "utils".into(),
             cohesion: 0.0,
             fan_in: 5.0,
@@ -358,7 +358,7 @@ fn split_recipe_uses_actual_cochange_groups_without_inventing_churn() {
 
 #[test]
 fn file_cycle_rename_does_not_count_as_a_new_cycle_and_numeric_mismatch_fails() {
-    use archgraph::{
+    use boundrail::{
         model::Move,
         recipes::{Expected, Step},
     };
@@ -426,7 +426,7 @@ fn external_cut_removes_package_edges_and_accounting_record() {
         external: Some("some-orm".into()),
         ..ImportRecord::default()
     }]);
-    doc = archgraph::analyze(
+    doc = boundrail::analyze(
         doc.source,
         doc.config,
         vec!["domain/model.ts".into()],
@@ -435,7 +435,7 @@ fn external_cut_removes_package_edges_and_accounting_record() {
         None,
     )
     .unwrap();
-    doc.external_edges[0].verdict = Some(archgraph::model::Verdict::Forbidden);
+    doc.external_edges[0].verdict = Some(boundrail::model::Verdict::Forbidden);
     recipes::attach(&mut doc).unwrap();
     let recipe = doc
         .findings
@@ -456,12 +456,12 @@ fn external_cut_removes_package_edges_and_accounting_record() {
     config.rules = serde_json::from_value(json!({"path":"layout.yaml","sha256":"test",
         "doc":{"version":1,"forbid":[{"from":"domain/**","to":"global:process"}]}}))
     .unwrap();
-    config.globals = Some(vec![archgraph::model::GlobalUse {
+    config.globals = Some(vec![boundrail::model::GlobalUse {
         from: "domain/model.ts".into(),
         name: "process".into(),
         line: 4,
     }]);
-    let doc = archgraph::analyze(
+    let doc = boundrail::analyze(
         doc.source,
         config,
         vec!["domain/model.ts".into()],
@@ -593,7 +593,7 @@ fn diagnostic_provenance_survives_saved_scan_restore_and_render() {
         }))
         .unwrap(),
     );
-    diagnostic.provenance = Some(archgraph::model::Provenance {
+    diagnostic.provenance = Some(boundrail::model::Provenance {
         status: "verified-transition".into(),
         method: "scan-bisect".into(),
         from: Some("before".into()),
@@ -604,19 +604,19 @@ fn diagnostic_provenance_survives_saved_scan_restore_and_render() {
         scans: 2,
     });
     let saved = serde_json::to_value(&doc).unwrap();
-    let restored = archgraph::restore_scan(serde_json::from_value(saved.clone()).unwrap()).unwrap();
+    let restored = boundrail::restore_scan(serde_json::from_value(saved.clone()).unwrap()).unwrap();
     assert_eq!(
         serde_json::to_value(&restored).unwrap()["diagnostics"],
         saved["diagnostics"]
     );
-    let html = archgraph::render::render(&restored).unwrap();
+    let html = boundrail::render::render(&restored).unwrap();
     assert!(html.contains("0123456789012345678901234567890123456789"));
     // Older schemas stored this same evidence in findings; classification changes retain dates.
     let mut legacy = saved;
     legacy["schema"] = json!("archgraph/v1.1");
     legacy["findings"] = json!([legacy["diagnostics"][0]["finding"].clone()]);
     legacy.as_object_mut().unwrap().remove("diagnostics");
-    let restored = archgraph::restore_scan(serde_json::from_value(legacy).unwrap()).unwrap();
+    let restored = boundrail::restore_scan(serde_json::from_value(legacy).unwrap()).unwrap();
     let finding = &restored.diagnostics[0].finding;
     assert_eq!(finding.age_days, Some(19));
     assert_eq!(
@@ -667,7 +667,7 @@ fn cycle_recipes_do_not_cut_structural_reexports_or_test_edges() {
     );
 
     for file in &mut doc.files {
-        file.class = Some(archgraph::model::ModuleClass::Tests);
+        file.class = Some(boundrail::model::ModuleClass::Tests);
     }
     for edge in &mut doc.edges {
         edge.kind = EdgeKind::Static;
@@ -727,14 +727,14 @@ fn fastapi_folder_coupling_is_observation_without_a_cut_recipe() {
 
 #[test]
 fn inferred_facades_are_observations_until_a_public_boundary_is_declared() {
-    use archgraph::surface::{DeepImport, ModuleSurface, SurfaceReport};
+    use boundrail::surface::{DeepImport, ModuleSurface, SurfaceReport};
     let mut doc = document(
         Language::Python,
         &["app/main.py", "domain/__init__.py", "domain/model.py"],
         &[("app/main.py", "domain/model.py")],
     );
     doc.surface = Some(SurfaceReport {
-        schema: archgraph::model::SCHEMA.into(),
+        schema: boundrail::model::SCHEMA.into(),
         kind: "surface".into(),
         max_symbols: 50,
         complete: true,
@@ -791,7 +791,7 @@ fn a_real_cycle_does_not_turn_neighboring_router_wiring_into_a_repair() {
             ("routes_a/loop.py", "app/loop.py"),
         ],
     );
-    let cyclic = archgraph::graph::cycle_import_pairs(&doc);
+    let cyclic = boundrail::graph::cycle_import_pairs(&doc);
     let fixes: Vec<_> = doc
         .findings
         .iter()
@@ -817,7 +817,7 @@ fn all_kinds_does_not_make_type_only_imports_runtime_cycle_evidence() {
     for edge in &mut doc.edges {
         edge.kind = EdgeKind::Type;
     }
-    assert!(archgraph::graph::cycle_import_pairs(&doc).is_empty());
+    assert!(boundrail::graph::cycle_import_pairs(&doc).is_empty());
     recipes::attach(&mut doc).unwrap();
     assert!(!doc.findings.iter().any(|f| f.kind == FindingKind::Cycle));
 }

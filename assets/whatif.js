@@ -111,7 +111,7 @@
     const nodes = new Map(files.map(f=>[rename(f.path),{...f,path:rename(f.path)}]));
     if ((doc.external_nodes || []).length || (doc.external_edges || []).length || doc.external_exposure ||
       [...(rules?.forbid || []), ...(rules?.allow || [])].some(r => /^(?:pkg|category|global):/.test(r.to || ""))) {
-      warnings.push('Internal-only preview: external dependency policy verdicts and exposure are not recomputed. Run archgraph simulate for authoritative results.');
+      warnings.push('Internal-only preview: external dependency policy verdicts and exposure are not recomputed. Run boundrail simulate for authoritative results.');
     }
     let moduleRules = [], compiled = null;
     try {
@@ -142,7 +142,7 @@
     };
     const modulesOf = new Map(), policyOf = new Map(), testFiles = new Set(), barrels = new Set();
     const legacy = doc.schema === 'archgraph/v1' || config.legacy_module_classes;
-    if (legacy) warnings.push('Legacy module boundaries may differ; verify with archgraph simulate.');
+    if (legacy) warnings.push('Legacy module boundaries may differ; verify with boundrail simulate.');
     for (const [path,f] of nodes) {
       const isTest = f.class === 'tests' || tests(path);
       if (isTest) testFiles.add(path);
@@ -231,7 +231,7 @@
     const twoWay = [...runtimePairs].map(JSON.parse).filter(([a,b])=>cmp(a,b)<0&&runtimePairs.has(key([b,a]))).sort((a,b)=>cmp(key(a),key(b)));
     const weights = {runtime:1,lazy:.3,type:.1,reexport:0,...rules?.edge_weights};
     if (Object.values(weights).some(w=>!Number.isFinite(w)||w<0)) throw Error('Edge weights must be finite and non-negative.');
-    if (edges.some(e=>!['runtime','lazy','type','reexport'].includes(kind(e)))) warnings.push('Unknown edge kind; verify cycle and metric results with archgraph simulate.');
+    if (edges.some(e=>!['runtime','lazy','type','reexport'].includes(kind(e)))) warnings.push('Unknown edge kind; verify cycle and metric results with boundrail simulate.');
     const targets = new Map();
     for (const e of edges) if (barrels.has(e.from)) { if (!targets.has(e.from)) targets.set(e.from,[]); targets.get(e.from).push(e.to); }
     const pairs = new Map();
@@ -256,7 +256,7 @@
     return {moduleOf:modulesOf,projection:{cycles,two_way_pairs:twoWay,target,largest_cycle:Math.max(0,...cycles.filter(c=>c.level==='module').map(c=>c.members.length)),modules,forbidden:verdicts.filter(v=>v.verdict==='forbidden').length,unplanned:verdicts.filter(v=>v.verdict==='unplanned').length,verdicts},warnings};
   }
   function analyze(doc) { const result=compute(doc);return {...result.projection,warnings:sorted(new Set(result.warnings)),partial:result.warnings.length>0}; }
-  /* One move, or a list applied together like `archgraph simulate --move A B --move C D`. */
+  /* One move, or a list applied together like `boundrail simulate --move A B --move C D`. */
   function simulate(doc, moves) {
     const valid=p=>typeof p==='string' && p.length>0 && !/[\\:\p{Cc}]/u.test(p) && !p.startsWith('/') && p.split('/').every(s=>s!==''&&s!=='.'&&s!=='..');
     moves=Array.isArray(moves)?moves:[moves];

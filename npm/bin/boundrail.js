@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Runs the archgraph release binary for this platform, downloading and verifying it on first use.
+// Runs the boundrail release binary for this platform, downloading and verifying it on first use.
 'use strict';
 
 const { spawnSync } = require('node:child_process');
@@ -23,7 +23,7 @@ function target(platform, arch) {
   const t = TARGETS[`${platform} ${arch}`];
   if (!t) {
     throw new Error(
-      `no prebuilt archgraph for ${platform} ${arch}; build it with: cargo install --git ${REPO} --locked`,
+      `no prebuilt boundrail for ${platform} ${arch}; build it with: cargo install --git ${REPO} --locked`,
     );
   }
   return t;
@@ -34,7 +34,7 @@ function cacheDir(env, platform) {
     platform === 'win32'
       ? env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local')
       : env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache');
-  return path.join(base, 'archgraph-cli', version);
+  return path.join(base, 'boundrail-cli', version);
 }
 
 /** The hash SHA256SUMS lists for `file`. */
@@ -71,24 +71,26 @@ async function download(url, strict) {
 
 /** The cached binary's path, downloading, verifying and extracting the release on first use. */
 async function ensureBinary(env = process.env, platform = process.platform, arch = process.arch) {
-  const exe = platform === 'win32' ? 'archgraph.exe' : 'archgraph';
+  const exe = platform === 'win32' ? 'boundrail.exe' : 'boundrail';
   const dir = cacheDir(env, platform);
   const bin = path.join(dir, exe);
   if (fs.existsSync(bin)) return bin;
 
   const t = target(platform, arch);
   const tag = `v${version}`;
-  const stem = `archgraph-${tag}-${t}`;
-  const archive = `${stem}${platform === 'win32' ? '.zip' : '.tar.gz'}`;
   const strict = !env.ARCHGRAPH_DOWNLOAD_BASE;
   const base = (env.ARCHGRAPH_DOWNLOAD_BASE || `${REPO}/releases/download`).replace(/\/+$/, '');
-  process.stderr.write(`archgraph-cli: downloading ${archive}\n`);
   // The published package carries the release's SHA256SUMS; a checkout of the repository does not.
-  const [data, sums] = await Promise.all([
-    download(`${base}/${tag}/${archive}`, strict),
-    fs.existsSync(SUMS) ? fs.readFileSync(SUMS) : download(`${base}/${tag}/SHA256SUMS`, strict),
-  ]);
-  const expected = expectedSum(sums.toString('utf8'), archive);
+  const sums = (fs.existsSync(SUMS) ? fs.readFileSync(SUMS) : await download(`${base}/${tag}/SHA256SUMS`, strict)).toString('utf8');
+  const extension = platform === 'win32' ? '.zip' : '.tar.gz';
+  const preferred = `boundrail-${tag}-${t}${extension}`;
+  const names = sums.split('\n').map((line) => line.trim().split(/\s+/)[1]);
+  const product = names.some((name) => name === preferred || name === `*${preferred}`) ? 'boundrail' : 'archgraph';
+  const stem = `${product}-${tag}-${t}`;
+  const archive = `${stem}${extension}`;
+  const expected = expectedSum(sums, archive);
+  process.stderr.write(`boundrail-cli: downloading ${archive}\n`);
+  const data = await download(`${base}/${tag}/${archive}`, strict);
   const actual = createHash('sha256').update(data).digest('hex');
   if (actual !== expected) {
     throw new Error(
@@ -107,7 +109,7 @@ async function ensureBinary(env = process.env, platform = process.platform, arch
     if (r.error || r.status !== 0) {
       throw new Error(`could not extract ${archive}: ${r.error ? r.error.message : r.stderr}`);
     }
-    const extracted = path.join(tmp, stem, exe);
+    const extracted = path.join(tmp, stem, platform === 'win32' ? `${product}.exe` : product);
     fs.chmodSync(extracted, 0o755);
     // A concurrent first run may have won; rename replaces its identical file.
     fs.renameSync(extracted, bin);
@@ -127,7 +129,7 @@ async function main() {
 
 if (require.main === module) {
   main().catch((e) => {
-    process.stderr.write(`archgraph-cli: ${e.message}\n`);
+    process.stderr.write(`boundrail-cli: ${e.message}\n`);
     process.exit(2);
   });
 }

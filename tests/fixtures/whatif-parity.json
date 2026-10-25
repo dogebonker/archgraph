@@ -9358,7 +9358,7 @@
       ]
     },
     "warnings": [
-      "Internal-only preview: external dependency policy verdicts and exposure are not recomputed. Run archgraph simulate for authoritative results."
+      "Internal-only preview: external dependency policy verdicts and exposure are not recomputed. Run boundrail simulate for authoritative results."
     ]
   },
   {

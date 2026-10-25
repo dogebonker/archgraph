@@ -1,4 +1,4 @@
-use archgraph::{
+use boundrail::{
     apply,
     model::Document,
     recipes::{Confidence, Expected, Predicate, Recipe, Step, StepKind, Verification},
@@ -54,7 +54,7 @@ impl Repo {
         self.scan_as("typescript", &[])
     }
     fn scan_as(&self, language: &str, extra: &[&str]) -> Document {
-        let output = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        let output = Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .args([
                 "--no-daemon",
                 "scan",
@@ -74,7 +74,7 @@ impl Repo {
             "{}",
             String::from_utf8_lossy(&output.stderr)
         );
-        archgraph::restore_scan(serde_json::from_slice(&output.stdout).unwrap()).unwrap()
+        boundrail::restore_scan(serde_json::from_slice(&output.stdout).unwrap()).unwrap()
     }
     fn cycle() -> Self {
         let r = Self::new();

@@ -1,5 +1,5 @@
 use super::*;
-use archgraph::presets::{self, Preset, Scope};
+use boundrail::presets::{self, Preset, Scope};
 use std::io::{IsTerminal, Write};
 
 #[derive(Args)]
@@ -100,9 +100,9 @@ pub(super) fn run(args: Init) -> Result<()> {
     let mut comments = Vec::new();
     if let Some(doc) = &before {
         let input = serde_json::from_value(serde_json::to_value(doc)?)?;
-        let inferred = archgraph::infer_layout::infer(
+        let inferred = boundrail::infer_layout::infer(
             &input,
-            archgraph::infer_layout::Options {
+            boundrail::infer_layout::Options {
                 max_rules: if matches!(args.preset, Preset::Minimal) {
                     0
                 } else {
@@ -153,7 +153,7 @@ pub(super) fn run(args: Init) -> Result<()> {
         file.write_all(rendered.as_bytes())?;
         file.sync_all()?;
     }
-    let synced = archgraph::sync_rules::run(&root, false, false)?;
+    let synced = boundrail::sync_rules::run(&root, false, false)?;
     if !synced.conflicts.is_empty() {
         for conflict in &synced.conflicts {
             eprintln!("{}", conflict.diff);
@@ -166,10 +166,10 @@ pub(super) fn run(args: Init) -> Result<()> {
     let mut limitations = Vec::new();
     if before.is_some() {
         let doc = scan_cli::live(&root, Some(&path))?;
-        let smells = archgraph::early_smells::check(&doc, Some(&root))?;
+        let smells = boundrail::early_smells::check(&doc, Some(&root))?;
         for finding in &doc.findings {
             let reasons =
-                if let archgraph::model::Evidence::ForbiddenEdge { edge } = &finding.evidence {
+                if let boundrail::model::Evidence::ForbiddenEdge { edge } = &finding.evidence {
                     draft.reasons(edge.rule.as_deref().unwrap_or_default())
                 } else {
                     vec![]
