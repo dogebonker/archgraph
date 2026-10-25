@@ -489,7 +489,7 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
         value["hint"] = json!(if name == "propose" {
             "Full recipe: archgraph propose <finding_id>; MCP cap still applies."
         } else if name == "services" {
-            "Select an exact service ID for its calls and clients; cap still applies."
+            "Full policy and evidence: archgraph services . --manifest <file> --format json. Omit --manifest if absent."
         } else {
             "Use brief:false or narrower inputs; cap still applies."
         });
@@ -528,7 +528,7 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
             json!(if name == "propose" {
                 "Full recipe: archgraph propose <finding_id>; MCP cap still applies."
             } else if name == "services" {
-                "Select an exact service ID for its calls and clients; cap still applies."
+                "Full policy and evidence: archgraph services . --manifest <file> --format json. Omit --manifest if absent."
             } else {
                 "Use brief:false or narrower inputs; cap still applies."
             })

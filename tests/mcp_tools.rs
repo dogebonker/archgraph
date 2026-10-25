@@ -326,6 +326,8 @@ fn services_tool_returns_live_scoped_evidence_with_report_wide_summary() {
     assert_eq!(all["services"].as_array().unwrap().len(), 4);
     assert_eq!(all["calls"].as_array().unwrap().len(), 3);
     assert_eq!(all["resources"][0]["package"], "pg");
+    assert_eq!(all["forbid"], json!([]));
+    assert_eq!(all["policy_source"], Value::Null);
     assert!(all.get("schema").is_none());
     assert!(all.get("forbidden_calls").is_none());
 
@@ -379,8 +381,9 @@ version: 1
 services: [api, worker, idle]
 edges: []
 forbid:
-  - {id: no-postgres, from: api, to: 'pkg:pg'}
+  - {id: no-postgres, from: api, to: 'pkg:pg', reason: 'use the API instead'}
   - {id: no-api, from: worker, to: api}
+  - {id: unmatched, from: idle, to: worker, reason: 'idle stays independent'}
 "#,
     );
     let args = json!({"manifest":"policy/services.yaml","service":"api"});
@@ -391,6 +394,19 @@ forbid:
     assert_eq!(first["global_summary"]["forbidden_resources"], 1);
     assert_eq!(first["resources"][0]["rule"], "no-postgres");
     assert_eq!(first["resources"][0]["verdict"], "forbidden");
+    assert_eq!(first["forbid"].as_array().unwrap().len(), 3);
+    assert_eq!(first["forbid"][0]["reason"], "use the API instead");
+    assert_eq!(first["forbid"][2]["id"], "unmatched");
+    assert_eq!(first["policy_source"]["path"], "policy/services.yaml");
+    use sha2::{Digest, Sha256};
+    let bytes = std::fs::read(fixture.0.join("policy/services.yaml")).unwrap();
+    assert_eq!(
+        first["policy_source"]["sha256"],
+        Sha256::digest(&bytes)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<String>()
+    );
     assert!(
         first["calls"]
             .as_array()
@@ -399,6 +415,21 @@ forbid:
             .any(|edge| edge["rule"] == "no-api")
     );
     assert_eq!(first, services(&fixture.0, args.clone()).unwrap());
+    fixture.write(
+        "policy/services.yaml",
+        &(String::from_utf8(bytes).unwrap() + "# a policy revision\n"),
+    );
+    let revised = services(&fixture.0, args.clone()).unwrap();
+    validate("services", &revised);
+    assert_eq!(first["forbid"], revised["forbid"]);
+    assert_ne!(first["policy_source"], revised["policy_source"]);
+    assert_eq!(
+        revised["policy_source"]["sha256"],
+        Sha256::digest(std::fs::read(fixture.0.join("policy/services.yaml")).unwrap())
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<String>()
+    );
 
     fixture.write(
         "worker/main.ts",
@@ -494,10 +525,9 @@ fn services_manifest_symlinks_cannot_escape_the_repository() {
         "version: 1\nservices: [api, worker, idle]\nedges: []\n",
     );
     symlink(fixture.0.join("inside.yaml"), fixture.0.join("alias.yaml")).unwrap();
-    validate(
-        "services",
-        &services(&fixture.0, json!({"manifest":"alias.yaml"})).unwrap(),
-    );
+    let aliased = services(&fixture.0, json!({"manifest":"alias.yaml"})).unwrap();
+    validate("services", &aliased);
+    assert_eq!(aliased["policy_source"]["path"], "inside.yaml");
 }
 
 #[test]

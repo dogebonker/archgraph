@@ -5,6 +5,7 @@ use std::path::Path;
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 
 use crate::model::{Cycle, Document, Finding, Move};
 
@@ -305,6 +306,7 @@ pub fn services(root: &Path, arguments: Value) -> Result<Value> {
     if !root.is_dir() {
         bail!("services repository root must be a directory");
     }
+    let mut policy_source = Value::Null;
     let manifest = args
         .manifest
         .as_ref()
@@ -318,6 +320,12 @@ pub fn services(root: &Path, arguments: Value) -> Result<Value> {
             }
             let text = std::fs::read_to_string(&path)
                 .with_context(|| format!("reading service manifest {relative:?}"))?;
+            policy_source = json!({
+                "path": path.strip_prefix(&root)?.to_str()
+                    .context("service manifest path must be UTF-8")?
+                    .replace(std::path::MAIN_SEPARATOR, "/"),
+                "sha256": Sha256::digest(text.as_bytes()).iter().map(|b| format!("{b:02x}")).collect::<String>(),
+            });
             crate::services::parse(&text)
         })
         .transpose()?;
@@ -350,6 +358,8 @@ pub fn services(root: &Path, arguments: Value) -> Result<Value> {
         "services": services,
         "calls": calls,
         "resources": resources,
+        "forbid": &report.forbid,
+        "policy_source": policy_source,
         "caveats": &report.caveats,
     }))
 }
@@ -817,7 +827,7 @@ pub fn schemas() -> Vec<ToolSchema> {
         ),
         schema(
             "services",
-            "Infer live services, client usages and supported calls without an import scan. Optional service selects one exact ID with incoming and outgoing calls; global_summary remains report-wide. An optional manifest must stay inside the repository. Static evidence is incomplete, not runtime traffic.",
+            "Infer live services, client usages and supported calls without an import scan. Optional service selects one exact ID with incoming and outgoing calls; global_summary and ordered forbid rules remain report-wide. policy_source identifies the exact manifest bytes, or null without a manifest. An optional manifest must stay inside the repository. Static evidence is incomplete, not runtime traffic.",
             json!({
                 "manifest": {"anyOf":[{"type":"null"},service_report["edges"]["items"]["properties"]["source"]["properties"]["file"].clone()]},
                 "service": {"anyOf":[{"type":"null"},service_report["services"]["items"].clone()]},
@@ -831,6 +841,11 @@ pub fn schemas() -> Vec<ToolSchema> {
                     "services": inline_schema(&service_report["modules"], &graph_schema["$defs"]),
                     "calls": inline_schema(&service_report["edges"], &graph_schema["$defs"]),
                     "resources": inline_schema(&service_report["resources"], &graph_schema["$defs"]),
+                    "forbid": inline_schema(&service_report["forbid"], &graph_schema["$defs"]),
+                    "policy_source": {"anyOf":[{"type":"null"},object(json!({
+                        "path":{"type":"string","minLength":1},
+                        "sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}
+                    }), &["path", "sha256"])]},
                     "caveats": inline_schema(&service_report["caveats"], &graph_schema["$defs"]),
                 }),
                 &[
@@ -840,6 +855,8 @@ pub fn schemas() -> Vec<ToolSchema> {
                     "services",
                     "calls",
                     "resources",
+                    "forbid",
+                    "policy_source",
                     "caveats",
                 ],
             ),

@@ -78,6 +78,154 @@ fn module<'a>(report: &'a Value, name: &str) -> &'a Value {
 }
 
 #[test]
+fn forbidden_gate_preserves_reports_and_saved_json_before_exiting_one() {
+    let scratch = Scratch::new();
+    let mut manifest = fixture();
+    manifest["forbid"] = json!([{"id":"no-billing","from":"api","to":"billing"}]);
+    scratch.save("services.json", &manifest);
+    for format in ["json", "markdown"] {
+        let normal = scratch.run(&["services", "services.json", "--format", format]);
+        let checked = scratch.run(&[
+            "services",
+            "services.json",
+            "--format",
+            format,
+            "--fail-on-forbidden",
+        ]);
+        assert_eq!(normal.status.code(), Some(0));
+        assert_eq!(checked.status.code(), Some(1));
+        assert_eq!(checked.stdout, normal.stdout);
+        assert!(checked.stderr.is_empty());
+    }
+    for index in 0..40 {
+        let mut allowed = edge("worker", "database", "grpc");
+        allowed["operation"] = json!(format!("method-{index}"));
+        manifest["edges"].as_array_mut().unwrap().push(allowed);
+    }
+    scratch.save("services.json", &manifest);
+    let checked = scratch.run(&[
+        "--brief",
+        "services",
+        "services.json",
+        "--format",
+        "json",
+        "--fail-on-forbidden",
+        "--output",
+        "report.json",
+    ]);
+    assert_eq!(checked.status.code(), Some(1));
+    let brief: Value = serde_json::from_slice(&checked.stdout).unwrap();
+    assert_eq!(brief["schema"], "archgraph/brief/v1");
+    assert!(!brief["omitted"].as_object().unwrap().is_empty());
+    let saved: Value =
+        serde_json::from_slice(&fs::read(scratch.0.join("report.json")).unwrap()).unwrap();
+    validate(&saved);
+    assert_eq!(saved["summary"]["forbidden_calls"], 1);
+    assert_eq!(saved["forbid"][0]["id"], "no-billing");
+    let failed_write = scratch.run(&[
+        "services",
+        "services.json",
+        "--fail-on-forbidden",
+        "--output",
+        ".",
+    ]);
+    assert_eq!(failed_write.status.code(), Some(2));
+    assert!(failed_write.stdout.is_empty());
+}
+
+#[test]
+fn forbidden_gate_checks_calls_and_infrastructure_independently() {
+    let scratch = Scratch::new();
+    source(&scratch, "api/Dockerfile", "FROM node");
+    source(&scratch, "worker/Dockerfile", "FROM node");
+    source(
+        &scratch,
+        "package.json",
+        r#"{"dependencies":{"express":"*","pg":"*"}}"#,
+    );
+    source(
+        &scratch,
+        "api/main.ts",
+        "import express from 'express'; const app = express(); app.get('/x', () => {});\n",
+    );
+    for (call, resource) in [(false, false), (true, false), (false, true), (true, true)] {
+        source(
+            &scratch,
+            "worker/main.ts",
+            &format!(
+                "import {{Pool}} from 'pg';\n{}{}",
+                if call { "fetch('http://api/x');\n" } else { "" },
+                if resource { "new Pool();\n" } else { "" },
+            ),
+        );
+        scratch.save(
+            "policy.json",
+            &json!({"version":1,"services":["api","worker"],"edges":[],"forbid":[
+                {"id":"no-api","from":"worker","to":"api"},
+                {"id":"no-pg","from":"worker","to":"pkg:pg"}
+            ]}),
+        );
+        let checked = scratch.run(&[
+            "services",
+            ".",
+            "--manifest",
+            "policy.json",
+            "--format",
+            "json",
+            "--fail-on-forbidden",
+        ]);
+        assert_eq!(
+            checked.status.code(),
+            Some(i32::from(call || resource)),
+            "{}",
+            String::from_utf8_lossy(&checked.stderr)
+        );
+        let report: Value = serde_json::from_slice(&checked.stdout).unwrap();
+        validate(&report);
+        assert_eq!(report["summary"]["forbidden_calls"], usize::from(call));
+        assert_eq!(
+            report["summary"]
+                .get("forbidden_resources")
+                .and_then(Value::as_u64)
+                .unwrap_or(0),
+            u64::from(resource)
+        );
+        let default = scratch.run(&[
+            "services",
+            ".",
+            "--manifest",
+            "policy.json",
+            "--format",
+            "json",
+        ]);
+        assert_eq!(default.status.code(), Some(0));
+        assert_eq!(default.stdout, checked.stdout);
+    }
+}
+
+#[test]
+fn forbidden_gate_rejects_unconfigured_policy_and_invalid_input() {
+    let scratch = Scratch::new();
+    source(&scratch, "api/Dockerfile", "FROM node");
+    source(&scratch, "api/main.ts", "export const api = true;\n");
+    for input in [".", "services.json"] {
+        scratch.save("services.json", &fixture());
+        let default = scratch.run(&["services", input, "--format", "json"]);
+        assert_eq!(default.status.code(), Some(0));
+        let checked = scratch.run(&["services", input, "--fail-on-forbidden"]);
+        assert_eq!(checked.status.code(), Some(2));
+        assert!(checked.stdout.is_empty());
+        assert!(
+            String::from_utf8_lossy(&checked.stderr).contains("requires authored forbid rules")
+        );
+    }
+    source(&scratch, "invalid.yaml", "invalid: [");
+    let invalid = scratch.run(&["services", "invalid.yaml", "--fail-on-forbidden"]);
+    assert_eq!(invalid.status.code(), Some(2));
+    assert!(invalid.stdout.is_empty());
+}
+
+#[test]
 fn mixed_transports_preserve_evidence_and_group_the_service_cycle() {
     let scratch = Scratch::new();
     let report = scratch.report(&fixture());

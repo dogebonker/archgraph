@@ -15,7 +15,7 @@ architecture rules still hold. These users need source evidence and repeatable c
 
 archgraph reads source relationships and checks architecture rules. Its service model infers
 application boundaries, infrastructure client usage, and supported HTTP and queue relationships.
-The next report surface makes that model explorable through an offline service catalog and graph.
+An offline service catalog and graph make that model explorable.
 
 ## Positioning
 
@@ -37,6 +37,16 @@ Existing import collectors have their own tooling and safety constraints documen
 - Service inference and report viewing do not provision, deploy, or contact infrastructure.
 - Configuration, indirect wrappers, and unsupported transports can hide real relationships.
 - The HTML artifact works offline and does not fetch source code or third-party assets.
+
+## Planned architecture workflow
+
+The [architecture workflow plan](docs/plans/architecture-workflow.md) records three requested outcomes:
+formal project constraints that agents can follow and check, source-backed project skill drafts,
+and visual change review integrated with the edit process. Visual diffs start with modules,
+imports, and code-rule violations. Service and infrastructure diffs follow later.
+
+Existing code structure is evidence for a draft. Authored policy defines the intended architecture.
+Generated skills must preserve that distinction and reference the policy files.
 
 ## Brand Commitments
 

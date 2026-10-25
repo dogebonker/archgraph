@@ -413,6 +413,8 @@ fn services_stdio_applies_contained_manifest_rules_and_rejects_escapes() {
     assert_eq!(report["global_summary"]["forbidden_resources"], 1);
     assert_eq!(report["calls"][0]["rule"], "no-worker-api");
     assert_eq!(report["resources"][0]["rule"], "no-db");
+    assert_eq!(report["forbid"], manifest["forbid"]);
+    assert_eq!(report["policy_source"]["path"], "services.yaml");
     for arguments in [
         json!({"manifest":"services.yaml/../services.yaml"}),
         json!({"manifest":f.root.join("services.yaml").to_str().unwrap()}),
@@ -435,6 +437,44 @@ fn services_stdio_applies_contained_manifest_rules_and_rejects_escapes() {
         assert!(!escaped.to_string().contains(secret));
     }
     assert_eq!(c.ok("services", json!({}))["global_summary"]["calls"], 1);
+}
+
+#[test]
+fn services_stdio_discloses_omitted_report_wide_policy_even_without_matches() {
+    let f = Fixture::new();
+    f.services();
+    let rules: Vec<_> = (0..80)
+        .map(|i| json!({"id":format!("unmatched-{i}"),"from":"api","to":"worker","reason":"Keep this authored policy even without observed calls"}))
+        .collect();
+    fs::write(
+        f.root.join("services.yaml"),
+        json!({
+            "version":1,"services":["api","worker"],"edges":[],"forbid":rules,
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let mut c = Client::start(&f, true);
+    for brief in [true, false] {
+        let result = c.tool(
+            "services",
+            json!({"manifest":"services.yaml","service":"api","brief":brief}),
+        );
+        assert!(serde_json::to_vec(&result).unwrap().len() <= 4000);
+        assert_ne!(result["isError"], true, "{result}");
+        let envelope = &result["structuredContent"];
+        assert_eq!(envelope["counts"]["forbid"], 80);
+        assert_eq!(envelope["truncated"], true);
+        assert!(envelope["omitted"].as_u64().unwrap() > 0);
+        assert!(envelope["data"]["forbid"].as_array().unwrap().len() < 80);
+        assert_eq!(envelope["data"]["policy_source"]["path"], "services.yaml");
+        assert!(
+            envelope["hint"]
+                .as_str()
+                .unwrap()
+                .contains("--manifest <file> --format json")
+        );
+    }
 }
 
 #[test]

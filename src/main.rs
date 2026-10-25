@@ -499,7 +499,7 @@ fn execute_inner(cli: Cli) -> ExitCode {
         Cmd::PackageSplits(args) => package_splits_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Context(args) => context_cli::run(args).map(|()| ExitCode::SUCCESS),
         Cmd::Tour(args) => tour_cli::run(args).map(|()| ExitCode::SUCCESS),
-        Cmd::Services(args) => services_cli::run(args).map(|()| ExitCode::SUCCESS),
+        Cmd::Services(args) => services_cli::run(args),
         Cmd::ShowExcludes => show_excludes().map(|()| ExitCode::SUCCESS),
         Cmd::Unresolved(args) => unresolved(args).map(|()| ExitCode::SUCCESS),
     };

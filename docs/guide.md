@@ -152,14 +152,20 @@ Use the [Claude Code config](mcp/claude-code.json) as a project `.mcp.json`, the
 | `rules` | `paths` | Relevant configured layout rules and surface constraints. |
 | `review` | Optional `base` | What the working tree changed in the target since `base`, as `data.markdown` (also the text content) for an AI reviewer to quote: newly broken slices, other new forbidden imports with their rules' reasons, newly fixed slices, each import at `file:line`, a `Base` line, and a note on the rows `layout.known.yaml` lists (`known: true` in JSON) and on listed entries that no longer occur. The JSON arrays hold every row; `brief` drops them. `archgraph review [root] [--base <ref>] [--format markdown\|json]` prints the same markdown. |
 | `target` | none | The scan's `target` (claim verdicts, slice progress, pending move cost), or `null` when the rules state no claim or move. |
-| `services` | Optional `manifest`, exact `service` | Live service metrics, incoming and outgoing call evidence, owned client usages, and caveats. `global_summary` covers the whole model; `scope.service` identifies an optional focus. |
+| `services` | Optional `manifest`, exact `service` | Live service metrics, call evidence, owned client usages, authored `forbid` rules, `policy_source`, and caveats. `global_summary` and policy cover the whole model. `scope.service` identifies an optional evidence focus. |
 
 The `services` tool uses native service inference directly and does not run the reference import
 collector. Its optional manifest must be a file inside the MCP repository root, including after
 symlink resolution. Service IDs are exact, not globs. With no manifest it infers the root, like
 `archgraph services .`. Calls include either direction for a selected service; client usages
 belong to that service. It returns a compact view, not a complete CLI report with graph indices.
-Use `archgraph services . --format json` when the MCP response is truncated.
+`forbid` preserves all authored rules in precedence order, including rules with no observed match.
+`policy_source` contains the resolved repository-relative manifest path and the SHA-256 of the
+bytes used for this report. Without an explicit manifest, `policy_source` is `null` and `forbid`
+is empty. That means no service policy was supplied, rather than approved architecture.
+The service tool namespace and each rule's `id` identify the policy. Import rules remain in
+`layout.yaml` and the `rules` tool. Use `archgraph services . --manifest services.yaml --format json`
+for complete evidence when the MCP response is truncated. Omit `--manifest` if none was supplied.
 
 Tool input and output JSON Schemas are advertised by MCP `tools/list`; use discovery as the contract rather than parsing display text. Every tool accepts `brief: bool`, default `true`. MCP `propose` returns the typed recipe once in `structuredContent.data`, with a short text pointer, so duplicated JSON does not consume its output cap. A truncated recipe is incomplete; use `archgraph propose <finding_id>` for the full contract. Lists use deterministic ordering. Finding IDs derive from semantic identity rather than array positions, scores or timestamps; use an ID from the current findings when calling `propose`. A fixed commit and collection inputs retain the same IDs. A changed finding can have a new identity. Proposed steps are import-graph evidence, not proof that code compiles; run the project's tests after editing. Tools inspect or simulate code, and do not apply code changes.
 
@@ -491,9 +497,22 @@ version: 1
 services: [api, worker]
 edges: []
 forbid:
-  - {id: worker-no-postgres, from: worker, to: 'pkg:pg'}
-  - {id: worker-no-api, from: worker, to: api}
+  - {id: worker-no-postgres, from: worker, to: 'pkg:pg', reason: 'Database access belongs to the API.'}
+  - {id: worker-no-api, from: worker, to: api, reason: 'Workers consume jobs without calling the API.'}
 ```
+
+To check the authored rules in a script or CI job:
+
+```sh
+archgraph services . --manifest services.yaml --fail-on-forbidden --format json -o services-report.json
+```
+
+`--fail-on-forbidden` emits the normal report and exits 1 when the full report contains a forbidden
+call or infrastructure usage. Exit 0 means no violation was observed in the collected evidence.
+It does not establish complete architectural compliance. This check includes existing violations.
+It does not compare a baseline. Invalid input, a failed output write, or a check with no authored
+forbid rules exits 2. Without the flag, a valid report exits 0 even when it contains violations.
+`--brief` changes presentation, while `-o` saves the full JSON report. Neither changes the check.
 
 Inference follows local bindings conservatively. CommonJS destructuring, clients hidden by
 framework providers, cross-file receiver wiring, configured URLs or topics, and router plugin

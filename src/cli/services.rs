@@ -12,9 +12,12 @@ pub(super) struct ServicesArgs {
     /// Save the JSON report as well as printing the selected format
     #[arg(short, long)]
     output: Option<PathBuf>,
+    /// Exit 1 for observed forbidden calls or clients. Requires authored forbid rules
+    #[arg(long)]
+    fail_on_forbidden: bool,
 }
 
-pub(super) fn run(args: ServicesArgs) -> Result<()> {
+pub(super) fn run(args: ServicesArgs) -> Result<ExitCode> {
     if globals().legacy_v1 && (matches!(args.format, Format::Json) || args.output.is_some()) {
         bail!("services JSON requires the current schema; omit --legacy-v1");
     }
@@ -58,14 +61,19 @@ pub(super) fn run(args: ServicesArgs) -> Result<()> {
             .context("service manifest must have a UTF-8 filename")?;
         archgraph::services::analyze(manifest.context("missing service manifest")?, name)?
     };
+    if args.fail_on_forbidden && report.forbid.is_empty() {
+        bail!("--fail-on-forbidden requires authored forbid rules in a service manifest");
+    }
+    let failed = args.fail_on_forbidden
+        && (!report.forbidden_calls.is_empty() || !report.forbidden_resources.is_empty());
     if let Some(path) = args.output.as_deref() {
         write(Some(path), &report)?;
     }
     match args.format {
-        Format::Json => write(None, &report),
+        Format::Json => write(None, &report)?,
         Format::Markdown => {
             print!("{}", archgraph::services::markdown(&report));
-            Ok(())
         }
     }
+    Ok(ExitCode::from(u8::from(failed)))
 }

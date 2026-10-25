@@ -2419,6 +2419,89 @@
                     },
                     "type": "array"
                   },
+                  "forbid": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "from": {
+                          "allOf": [
+                            {
+                              "not": {
+                                "pattern": "[<>]"
+                              }
+                            },
+                            {
+                              "pattern": "\\S"
+                            }
+                          ],
+                          "minLength": 1,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                          "type": "string"
+                        },
+                        "id": {
+                          "allOf": [
+                            {
+                              "pattern": "\\S"
+                            }
+                          ],
+                          "minLength": 1,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                          "type": "string"
+                        },
+                        "kinds": {
+                          "anyOf": [
+                            {
+                              "items": {
+                                "enum": [
+                                  "http",
+                                  "grpc",
+                                  "queue"
+                                ]
+                              },
+                              "minItems": 1,
+                              "type": "array"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "reason": {
+                          "anyOf": [
+                            {
+                              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "to": {
+                          "allOf": [
+                            {
+                              "not": {
+                                "pattern": "[<>]"
+                              }
+                            },
+                            {
+                              "pattern": "\\S"
+                            }
+                          ],
+                          "minLength": 1,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "from",
+                        "to"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "global_summary": {
                     "additionalProperties": false,
                     "properties": {
@@ -2469,6 +2552,31 @@
                       "low_confidence_calls"
                     ],
                     "type": "object"
+                  },
+                  "policy_source": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "path": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "sha256": {
+                            "pattern": "^[0-9a-f]{64}$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "sha256"
+                        ],
+                        "type": "object"
+                      }
+                    ]
                   },
                   "resources": {
                     "items": {
@@ -2661,6 +2769,8 @@
                   "services",
                   "calls",
                   "resources",
+                  "forbid",
+                  "policy_source",
                   "caveats"
                 ],
                 "type": "object"

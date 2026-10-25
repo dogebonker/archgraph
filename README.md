@@ -185,9 +185,13 @@ archgraph render services-report.json -o services.html
 
 A [service manifest](examples/services.yaml) can override boundaries or declare calls, including
 gRPC. The read-only MCP `services` tool exposes the same live model to agents. Every relationship
-has confidence and source evidence. Inference remains incomplete; the [labelled flow benchmark](benchmarks/SERVICE_FLOWS.md)
+has confidence and source evidence. Use `archgraph services . --manifest services.yaml --fail-on-forbidden`
+to exit 1 for detected forbidden calls or infrastructure usage. Inference remains incomplete. The [labelled flow benchmark](benchmarks/SERVICE_FLOWS.md)
 records missed application HTTP flows separately from successful reference-program cases.
 See the [service guide](docs/guide.md#service-architecture) for rules, limits and report behaviour.
+
+The [architecture workflow plan](docs/plans/architecture-workflow.md) maps formal constraints,
+project-specific skill drafts, and visual diffs. Visual diffs start with modules, imports, and code-rule violations.
 
 Generate an onboarding guide with `archgraph tour graph.json > TOUR.md`: dependencies first, high fan-in stops first within each layer, and cycles grouped into stops with a suggested starting module. Use `--reverse` to start from entrypoints or `--agent` to include saved exports. See [reading order](docs/guide.md#reading-order).
 
