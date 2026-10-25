@@ -183,7 +183,9 @@ fn go_misplaced_file_moves_to_its_only_users() {
     assert_eq!(
         doc["source"]["collector"]["bound"],
         json!([
-            { "from": "internal/report/notify_other.go", "to": "internal/report/notify_linux.go",
+            { "from": "internal/report/notify_linux.go", "to": "internal/report/notify_other.go",
+              "together": true },
+            { "from": "internal/report/notify_linux.go", "to": "internal/report/notify_windows.go",
               "together": true },
             { "from": "internal/report/notify_other.go", "to": "internal/report/notify_windows.go",
               "together": true },
@@ -208,6 +210,48 @@ fn go_misplaced_file_moves_to_its_only_users() {
         f["suggestion"],
         json!({ "move": { "file": "internal/report/format.go", "to": "invoice/format.go" } })
     );
+}
+
+#[test]
+fn excluding_a_platform_variant_keeps_the_remaining_variants_bound() {
+    for (excluded, from, to) in [
+        ("**/*_linux.go", "notify_other.go", "notify_windows.go"),
+        (
+            "internal/report/notify_linux.go",
+            "notify_other.go",
+            "notify_windows.go",
+        ),
+        (
+            "internal/report/notify_other.go",
+            "notify_linux.go",
+            "notify_windows.go",
+        ),
+        (
+            "internal/report/notify_windows.go",
+            "notify_linux.go",
+            "notify_other.go",
+        ),
+    ] {
+        let (doc, _, _) = scan_recorded("go-misplaced", &["--exclude", excluded]);
+        let (from, to) = (
+            format!("internal/report/{from}"),
+            format!("internal/report/{to}"),
+        );
+        assert!(
+            doc["source"]["collector"]["bound"]
+                .as_array()
+                .unwrap()
+                .contains(&json!({"from": from, "to": to, "together": true})),
+            "remaining variants lost their binding after excluding {excluded}"
+        );
+        assert!(
+            doc["findings"].as_array().unwrap().iter().all(|finding| {
+                finding["kind"] != "misplaced-file"
+                    || (finding["subject"] != from && finding["subject"] != to)
+            }),
+            "a remaining variant was offered an individual move after excluding {excluded}"
+        );
+    }
 }
 
 #[test]
@@ -290,7 +334,7 @@ fn go_excludes_tests_generated_code_and_vendor_and_joins_replaced_modules() {
     // both excluded here: so it is not bound, and a limitation says so.
     let bound = [
         json!({ "from": "app/chain/a_linux.go", "to": "app/chain/b_windows.go", "together": true }),
-        json!({ "from": "app/chain/c_darwin.go", "to": "app/chain/b_windows.go", "together": true }),
+        json!({ "from": "app/chain/b_windows.go", "to": "app/chain/c_darwin.go", "together": true }),
         json!({ "from": "app/flag.go", "to": "app/probe_other.go", "names": ["probe"] }),
         json!({ "from": "app/flag.go", "to": "app/probe_windows.go", "names": ["probe"] }),
         json!({ "from": "app/probe_other.go", "to": "app/probe_windows.go", "together": true }),

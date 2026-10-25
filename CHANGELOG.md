@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Go move-together constraints use a stable file order and preserve platform-variant groups when
+  a file is excluded. Live scans agree with recorded fixtures across operating systems.
+
 - `services` accepts repository directories and infers TypeScript, JavaScript, Go, and Python services,
   infrastructure clients, HTTP calls and queue topics. Nested runtime applications split root
   images automatically. `--manifest` overrides boundaries and supplies declarations and rules.

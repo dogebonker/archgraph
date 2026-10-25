@@ -555,12 +555,16 @@ func index(p *pkg) {
 		}
 	}
 	for key, declFiles := range p.decls {
+		sort.Strings(declFiles)
 		// One name declared in several files of a package: platform variants under exclusive
 		// build constraints (notify_linux.go, notify_windows.go), which move together or not at
-		// all. Every file may declare init.
+		// all. Bind every pair so excluding a variant preserves the remaining constraints.
+		// Every file may declare init.
 		if key != "init" && key != "_" {
-			for _, other := range declFiles[1:] {
-				bind(declFiles[0], other).Together = true
+			for i, file := range declFiles {
+				for _, other := range declFiles[i+1:] {
+					bind(file, other).Together = true
+				}
 			}
 		}
 		methodFiles := declFiles

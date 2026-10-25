@@ -252,8 +252,14 @@ edges. The additional resource is `requests` in
 confidence. No server-to-machine-learning edge was inferred. Dynamic URLs and conservative
 same-name shadow suppression still hide some Python evidence.
 
-Final validation: `cargo test --quiet` passes 880 tests with 38 existing ignored tests and no
+P5 validation: `cargo test --quiet` passes 880 tests with 38 existing ignored tests and no
 failures. The suite needs ordinary Unix-socket access outside the execution sandbox.
 `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`, and all 111 UI tests pass.
 The final independent code review approves the implementation. Fixed JSON and Markdown fixtures
 prove that manifest-file output is unchanged. No dependencies were added.
+
+Publication follow-up: GitHub's live Go parity test exposed a preexisting dependency on the
+host platform's file order. Declaration variants now have deterministic pairwise move-together
+constraints. Excluding one variant retains the link between every surviving pair, preventing
+individual mechanical moves of mutually exclusive declarations. The two affected collector
+recordings were regenerated, and parity checks cover Darwin, Linux, and Windows file selection.
