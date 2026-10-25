@@ -23,7 +23,7 @@ pub(super) struct Call {
     #[command(flatten)]
     setup: Mcp,
     #[arg(long)]
-    tool: String,
+    pub(super) tool: String,
     #[arg(long)]
     arguments: String,
 }
@@ -42,6 +42,9 @@ pub(super) fn call(mut args: Call) -> Result<Value> {
     )?;
     if !root.is_dir() {
         bail!("repository root is not a directory: start archgraph mcp <repo>");
+    }
+    if args.tool == "services" {
+        return mcp_tools::services(&root, arguments);
     }
     if args.tool == "check_diff"
         && let Some(snapshot) = arguments.get("snapshot").and_then(Value::as_str)
@@ -237,7 +240,7 @@ impl Server {
             "--arguments".into(),
             serde_json::to_string(&arguments)?,
         ]);
-        let out = if !self.standalone {
+        let out = if !self.standalone && name != "services" {
             daemon_cli::forward_args(&self.root, args.clone(), false)?
         } else {
             None
@@ -455,7 +458,7 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
     let explain = name == "explain";
     let cap = match name {
         "explain" => 300,
-        "review" => 4000,
+        "review" | "services" => 4000,
         _ => 2000,
     };
     let (mut data, error) = match value {
@@ -485,6 +488,8 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
     if projected > 0 {
         value["hint"] = json!(if name == "propose" {
             "Full recipe: archgraph propose <finding_id>; MCP cap still applies."
+        } else if name == "services" {
+            "Select an exact service ID for its calls and clients; cap still applies."
         } else {
             "Use brief:false or narrower inputs; cap still applies."
         });
@@ -522,6 +527,8 @@ fn bounded(name: &str, value: Result<Value>, brief: bool) -> CallToolResult {
         } else {
             json!(if name == "propose" {
                 "Full recipe: archgraph propose <finding_id>; MCP cap still applies."
+            } else if name == "services" {
+                "Select an exact service ID for its calls and clients; cap still applies."
             } else {
                 "Use brief:false or narrower inputs; cap still applies."
             })

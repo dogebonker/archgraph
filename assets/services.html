@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>archgraph service architecture</title>
+<style>
+:root { color-scheme: dark; --base: #000; --surface: #1c1c1e; --surface2: #262628; --line: #424246; --text: #f5f5f7; --muted: #aaaab1; --blue: #0a84ff; --purple: #bf5af2; --teal: #64d2ff; --orange: #ff9f0a; --red: #ff453a; --sans: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+* { box-sizing: border-box; scrollbar-color: #55555a var(--base); scrollbar-width: thin; }
+body { margin: 0; background: var(--base); color: var(--text); font: 400 14px/1.5 var(--sans); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+::selection { background: #184d87; color: white; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+button { border: 1px solid var(--line); border-radius: 8px; background: transparent; padding: 8px 12px; text-align: left; }
+button:hover { background: #ffffff0d; }
+button[aria-pressed="true"] { background: #0a84ff25; border-color: var(--blue); }
+button:disabled { cursor: default; color: var(--muted); opacity: .6; }
+header { display: flex; align-items: start; justify-content: space-between; gap: 24px; padding: 24px 28px 20px; border-bottom: 1px solid var(--line); }
+h1 { margin: 0; font-size: 22px; line-height: 1.25; font-weight: 650; letter-spacing: -.02em; }
+h1 span { color: var(--muted); font-weight: 400; }
+h2 { margin: 0; font-size: 15px; line-height: 1.4; font-weight: 600; }
+h3 { margin: 24px 0 8px; font-size: 13px; font-weight: 600; }
+p { margin: 8px 0 0; }
+.muted, .meta { color: var(--muted); }
+.meta { font-size: 12px; }
+.path, code { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+#totals { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; max-width: 440px; justify-content: flex-end; }
+#totals div { display: flex; gap: 6px; align-items: baseline; }
+#totals dt { color: var(--muted); }
+#totals dd { margin: 0; font-weight: 600; }
+.notice { padding: 12px 28px; border-bottom: 1px solid var(--line); color: var(--muted); background: #141416; font-size: 13px; }
+.notice strong { color: var(--text); font-weight: 500; }
+.layout { display: grid; grid-template-columns: 248px minmax(320px, 1fr) 340px; min-height: calc(100vh - 155px); }
+.catalog { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow: auto; border-right: 1px solid var(--line); padding: 20px 16px; }
+.catalog-head { display: flex; justify-content: space-between; align-items: baseline; margin: 0 4px 16px; gap: 12px; }
+label { display: block; font-size: 12px; color: var(--muted); margin: 0 4px 6px; }
+.search { display: flex; gap: 8px; margin-bottom: 12px; }
+input { width: 100%; min-width: 0; border: 1px solid var(--line); background: #141416; border-radius: 8px; padding: 9px 10px; caret-color: var(--blue); }
+input::placeholder { color: var(--muted); opacity: 1; }
+#clear { flex: none; padding: 8px; font-size: 12px; }
+#catalog-list { display: flex; flex-direction: column; gap: 4px; }
+.service-row { width: 100%; border-color: transparent; padding: 10px; }
+.service-name { display: block; font-weight: 500; overflow-wrap: anywhere; }
+.service-meta { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; }
+.main { min-width: 0; padding: 20px 24px 32px; }
+.section-head { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; }
+#graph-wrap { overflow: auto; margin: 12px -8px 0; border-radius: 12px; background: #101012; }
+#flow-graph { display: block; width: 100%; }
+.graph-edge { fill: none; stroke: #a7a7b2; stroke-width: 2; }
+.graph-edge.medium { stroke-dasharray: 6 4; }
+.graph-edge.low { stroke-dasharray: 2 5; }
+.graph-edge.forbidden { stroke: var(--red); }
+.graph-edge.selected { stroke: var(--blue); stroke-width: 3; }
+.graph-hit { fill: none; stroke: transparent; stroke-width: 16; cursor: pointer; }
+.graph-hit:focus-visible { stroke: #0a84ff55; outline: none; }
+.graph-node { cursor: pointer; }
+.graph-node rect { fill: #1c1c1e; stroke: #66666d; stroke-width: 1; }
+.graph-node.selected rect, .graph-node:focus-visible rect { stroke: var(--blue); stroke-width: 2; }
+.graph-node text { fill: var(--text); font-family: var(--sans); font-size: 13px; }
+.graph-node .node-meta { fill: var(--muted); font-size: 11px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+#call-list { margin-top: 12px; }
+.evidence-row { display: block; width: 100%; margin-top: 8px; padding: 11px 12px; }
+.evidence-row strong { display: block; font-weight: 500; overflow-wrap: anywhere; }
+.evidence-row .meta { display: block; margin-top: 4px; overflow-wrap: anywhere; }
+.bad { color: var(--red); }
+#inspector { border-left: 1px solid var(--line); padding: 20px; background: #141416; min-width: 0; }
+#inspector-content { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow: auto; }
+#back-to-services { display: none; margin-top: 20px; }
+#inspector-title { overflow-wrap: anywhere; margin-top: 8px; font-size: 19px; line-height: 1.35; letter-spacing: -.015em; }
+#inspector-kind { color: var(--muted); font-size: 12px; }
+.details { margin: 20px 0 0; }
+.details div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #333336; }
+.details dt { color: var(--muted); }
+.details dd { margin: 0; overflow-wrap: anywhere; }
+.source-button { display: block; width: 100%; margin-top: 10px; color: var(--teal); }
+#source-text { white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+#source-copy { margin-top: 10px; }
+#caveats { margin: 24px 0 0; padding-top: 20px; border-top: 1px solid var(--line); }
+#caveats summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+#caveats ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); font-size: 12px; }
+#caveats li + li { margin-top: 8px; }
+.empty { color: var(--muted); max-width: 65ch; padding: 18px 4px; }
+.sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 1180px) { .layout { grid-template-columns: 220px minmax(300px, 1fr); } #inspector { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); } #inspector-content { position: static; max-width: 760px; max-height: none; overflow: visible; } #back-to-services { display: inline-block; } }
+@media (max-width: 680px) { header { padding: 20px 16px; display: block; } h1 { font-size: 20px; } #totals { margin-top: 14px; justify-content: flex-start; gap: 6px 16px; font-size: 13px; } .notice { padding: 12px 16px; } .layout { display: block; } .catalog { position: static; max-height: none; overflow: visible; padding: 16px; border-right: 0; border-bottom: 1px solid var(--line); } #catalog-list { max-height: 220px; overflow: auto; } .main { padding: 20px 16px; } #inspector { padding: 20px 16px; } .section-head { align-items: start; } }
+@media (prefers-contrast: more) { :root { --muted: #d5d5dc; --line: #7d7d85; } .graph-node rect { stroke: #b0b0ba; } }
+@media (prefers-reduced-motion: no-preference) { button, .graph-node rect, .graph-edge { transition: background-color .14s ease-out, border-color .14s ease-out, stroke .14s ease-out; } }
+</style>
+</head>
+<body>
+<header><div><h1>archgraph <span>Service architecture</span></h1><p id="report-mode" class="meta"></p></div><dl id="totals" aria-label="Report totals"></dl></header>
+<div class="notice"><strong>Static evidence. Incomplete coverage.</strong> Missing calls are not proof of independence. Client usages do not establish shared physical infrastructure.</div>
+<main class="layout">
+<section class="catalog" aria-labelledby="catalog-title"><div class="catalog-head"><h2 id="catalog-title">Services</h2><span id="catalog-count" class="meta"></span></div><label for="search">Find a service or client</label><div class="search"><input type="search" id="search" placeholder="Name, package, or operation" autocomplete="off"><button type="button" id="clear" aria-label="Clear search">Clear</button></div><div id="catalog-list"></div></section>
+<section class="main" aria-labelledby="flow-title"><div class="section-head"><h2 id="flow-title">Service flow</h2><span id="flow-count" class="meta"></span></div><div id="graph-wrap"><svg id="flow-graph" role="group" aria-label="Service call diagram"></svg></div><p id="graph-empty" class="empty"></p><div class="legend"><span>Arrows follow the caller to the receiver.</span><span>Dashed: medium confidence. Dotted: low.</span></div><h3 id="calls-title">Call evidence</h3><div id="call-list"></div><details id="caveats"><summary>Coverage and interpretation</summary><ul id="caveat-list"></ul></details></section>
+<aside id="inspector" aria-labelledby="inspector-title"><div id="inspector-content"><div id="inspector-kind">Evidence inspector</div><h2 id="inspector-title" tabindex="-1">Select a service or call</h2><div id="inspector-body"></div><button type="button" id="back-to-services">Back to services</button></div></aside>
+</main>
+<p id="announcement" class="sr" aria-live="polite" role="status"></p>
+<script type="application/json" id="services">{{SERVICES}}</script>
+<script>
+'use strict';
+const report = JSON.parse(document.getElementById('services').textContent);
+const serviceIds = [...report.services];
+const calls = report.edges || [];
+const resources = (report.resources || []).map((value, index) => ({ ...value, index }));
+const modules = new Map((report.modules || []).map(value => [value.id, value]));
+const inferred = report.source.collector !== 'declarative';
+const mixed = report.source.collector === 'inferred+declarative';
+const serviceMode = mixed ? 'reported' : inferred ? 'inferred' : 'declared';
+const $ = id => document.getElementById(id);
+const ns = $('flow-graph').namespaceURI;
+let selection = null;
+function el(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (className) node.setAttribute('class', className);
+  return node;
+}
+function svg(tag, attributes, text) {
+  const node = document.createElementNS(ns, tag);
+  for (const [name, value] of Object.entries(attributes || {})) node.setAttribute(name, String(value));
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function count(n, label) { return `${n} ${label}${n === 1 ? '' : 's'}`; }
+function announce(text) { $('announcement').textContent = text; }
+function button(label, action, className) {
+  const node = el('button', label, className);
+  node.setAttribute('type', 'button');
+  node.addEventListener('click', action);
+  return node;
+}
+function activate(node, action) {
+  node.addEventListener('click', action);
+  node.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); action(); }
+  });
+}
+function owned(id) { return resources.filter(value => value.service === id); }
+function connected(id) { return calls.map((value, index) => ({ value, index })).filter(({ value }) => value.from === id || value.to === id); }
+function sourceLabel(source) { return `${source.file}:${source.line}`; }
+function matchingServices() {
+  const query = $('search').value.trim().toLocaleLowerCase();
+  return serviceIds.filter(id => !query || id.toLocaleLowerCase().includes(query)
+    || owned(id).some(value => [value.package, value.kind, value.operation || ''].join(' ').toLocaleLowerCase().includes(query))
+    || connected(id).some(({ value }) => [value.operation || '', value.kind, value.rule || ''].join(' ').toLocaleLowerCase().includes(query)));
+}
+function renderCatalog(visible) {
+  $('catalog-count').textContent = `${visible.length} of ${serviceIds.length}`;
+  const list = $('catalog-list'); list.replaceChildren();
+  for (const id of visible) {
+    const metric = modules.get(id) || { fan_in: 0, fan_out: 0 };
+    const row = button('', () => select('service', id, `catalog:${id}`), 'service-row');
+    row.setAttribute('data-focus', `catalog:${id}`);
+    row.setAttribute('aria-pressed', String(selection?.type === 'service' && selection.id === id));
+    row.append(el('span', id, 'service-name'), el('span', `${metric.fan_in} in · ${metric.fan_out} out · ${count(owned(id).length, 'client')}`, 'service-meta'));
+    list.append(row);
+  }
+  if (!visible.length) list.append(el('p', serviceIds.length ? 'No matching services. Clear the search to see the full catalog.' : 'No services in this report.', 'empty'));
+  $('clear').disabled = !$('search').value;
+}
+function renderGraph(visible, visibleCalls) {
+  const graph = $('flow-graph'); graph.replaceChildren();
+  const positions = new Map();
+  const columns = visible.length < 3 ? 1 : 2;
+  const width = columns === 1 ? 500 : 680;
+  const rows = Math.ceil(visible.length / columns);
+  const height = Math.max(180, rows * 130 + 60);
+  graph.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  graph.style.minWidth = `${width}px`;
+  graph.setAttribute('height', String(height));
+  const defs = svg('defs');
+  for (const [id, color] of [['arrow', '#a7a7b2'], ['arrow-selected', '#0a84ff'], ['arrow-forbidden', '#ff453a']]) {
+    const marker = svg('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' });
+    marker.append(svg('path', { d: 'M 0 0 L 10 5 L 0 10 z', fill: color })); defs.append(marker);
+  }
+  graph.append(defs);
+  visible.forEach((id, index) => positions.set(id, { x: columns === 1 ? 130 : 35 + index % columns * 350, y: 35 + Math.floor(index / columns) * 130 }));
+  const pairKey = value => JSON.stringify([value.from, value.to].sort());
+  const pairCounts = new Map(), pairPositions = new Map();
+  for (const { value } of visibleCalls) pairCounts.set(pairKey(value), (pairCounts.get(pairKey(value)) || 0) + 1);
+  for (const { value, index } of visibleCalls) {
+    const key = pairKey(value), lane = pairPositions.get(key) || 0, lanes = pairCounts.get(key);
+    pairPositions.set(key, lane + 1);
+    const offset = lanes > 1 ? (lane / (lanes - 1) - .5) * 48 : 0;
+    const from = positions.get(value.from), to = positions.get(value.to);
+    const selected = selection?.type === 'call' && selection.id === index;
+    const forbidden = value.verdict === 'forbidden';
+    let d;
+    if (value.from === value.to) d = `M ${from.x + 250} ${from.y + 18 + offset / 4} C ${from.x + 290} ${from.y - 5 + offset / 4}, ${from.x + 290} ${from.y + 90 + offset / 4}, ${from.x + 250} ${from.y + 56 + offset / 4}`;
+    else if (from.x !== to.x) {
+      const rightward = from.x < to.x;
+      const x1 = from.x + (rightward ? 250 : 0), x2 = to.x + (rightward ? 0 : 250);
+      d = `M ${x1} ${from.y + 36 + offset} C ${(x1 + x2) / 2} ${from.y + 36 + offset}, ${(x1 + x2) / 2} ${to.y + 36 + offset}, ${x2} ${to.y + 36 + offset}`;
+    } else {
+      const down = from.y < to.y;
+      const y1 = from.y + (down ? 74 : 0), y2 = to.y + (down ? 0 : 74);
+      d = `M ${from.x + 125 + offset} ${y1} C ${from.x + 90 + offset} ${(y1 + y2) / 2}, ${to.x + 90 + offset} ${(y1 + y2) / 2}, ${to.x + 125 + offset} ${y2}`;
+    }
+    const cls = ['graph-edge', value.confidence, forbidden ? 'forbidden' : '', selected ? 'selected' : ''].filter(Boolean).join(' ');
+    graph.append(svg('path', { d, class: cls, 'marker-end': `url(#${selected ? 'arrow-selected' : forbidden ? 'arrow-forbidden' : 'arrow'})` }));
+    const hit = svg('path', { d, class: 'graph-hit', tabindex: 0, role: 'button', 'aria-label': `Inspect ${value.kind} call from ${value.from} to ${value.to}, ${value.operation || 'operation unknown'}, ${value.confidence} confidence, ${value.verdict}` });
+    hit.setAttribute('data-focus', `graph-call:${index}`);
+    activate(hit, () => select('call', index, `graph-call:${index}`)); graph.append(hit);
+  }
+  for (const id of visible) {
+    const position = positions.get(id), usages = owned(id);
+    const group = svg('g', { class: `graph-node${selection?.type === 'service' && selection.id === id ? ' selected' : ''}`, transform: `translate(${position.x} ${position.y})`, tabindex: 0, role: 'button', 'aria-label': `Inspect service ${id}` });
+    group.append(svg('title', {}, id), svg('rect', { width: 250, height: 74, rx: 12 }));
+    const short = id.length > 29 ? `${id.slice(0, 26)}…` : id;
+    group.append(svg('text', { x: 15, y: 29 }, short), svg('text', { x: 15, y: 52, class: 'node-meta' }, `${count(usages.length, 'client')} · ${count(connected(id).length, 'call')}`));
+    group.setAttribute('data-focus', `graph-service:${id}`);
+    activate(group, () => select('service', id, `graph-service:${id}`)); graph.append(group);
+  }
+  $('graph-wrap').hidden = !visible.length;
+  $('graph-empty').hidden = visible.length > 0 && visibleCalls.length > 0;
+  $('graph-empty').textContent = !visible.length ? (serviceIds.length ? 'No services match this search.' : 'There are no service boundaries to draw.')
+    : !calls.length ? `No calls ${serviceMode}. ${inferred ? 'Configuration and unsupported syntax may hide real connections.' : 'Only supplied declarations are included.'}`
+      : 'No calls connect the services in this filtered view.';
+}
+function renderCalls(visibleCalls) {
+  const list = $('call-list'); list.replaceChildren();
+  $('flow-count').textContent = `${visibleCalls.length} of ${calls.length} ${serviceMode} calls`;
+  for (const { value, index } of visibleCalls) {
+    const row = button('', () => select('call', index, `call:${index}`), 'evidence-row');
+    row.setAttribute('data-focus', `call:${index}`);
+    row.setAttribute('aria-pressed', String(selection?.type === 'call' && selection.id === index));
+    row.append(el('strong', `${value.from} → ${value.to}`), el('span', `${value.kind} · ${value.operation || 'Operation unknown'} · ${value.confidence} confidence · ${value.verdict}`, `meta${value.verdict === 'forbidden' ? ' bad' : ''}`));
+    list.append(row);
+  }
+  if (!visibleCalls.length) list.append(el('p', `No call evidence ${serviceMode} in this view.`, 'empty'));
+}
+function detailRows(entries) {
+  const dl = el('dl', undefined, 'details');
+  for (const [label, value] of entries) { const row = el('div'); row.append(el('dt', label), el('dd', value)); dl.append(row); }
+  return dl;
+}
+function sourceButton(source) {
+  return button(sourceLabel(source), () => showSource(source), 'source-button path');
+}
+function showSource(source) {
+  let section = $('source-evidence');
+  if (!section) { section = el('section'); section.setAttribute('id', 'source-evidence'); $('inspector-body').append(section); }
+  const sourceText = el('p', sourceLabel(source), 'path'); sourceText.setAttribute('id', 'source-text');
+  section.replaceChildren(el('h3', 'Source location'), sourceText);
+  const copy = button('Copy source location', async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(sourceLabel(source)); announce('Source location copied.');
+    } catch { announce('Copy unavailable. Select and copy the source location shown in the inspector.'); }
+  });
+  copy.setAttribute('id', 'source-copy'); section.append(copy);
+  announce(`Source ${sourceLabel(source)}. Location evidence only; source code is not embedded.`);
+}
+function renderInspector() {
+  const body = $('inspector-body'); body.replaceChildren();
+  if (!selection) {
+    $('inspector-kind').textContent = 'Evidence inspector'; $('inspector-title').textContent = 'Select a service or call';
+    body.append(el('p', 'Choose a service to inspect its client usages, or a call to inspect its source and rule verdict.', 'muted'));
+    return;
+  }
+  if (selection.type === 'service') {
+    const id = selection.id, metric = modules.get(id) || { fan_in: 0, fan_out: 0, instability: null }, usages = owned(id);
+    $('inspector-kind').textContent = 'Service'; $('inspector-title').textContent = id;
+    body.append(detailRows([['Callers', String(metric.fan_in)], ['Receivers', String(metric.fan_out)], ['Instability', metric.instability == null ? 'Not defined' : String(metric.instability)], ['Client usages', String(usages.length)]]));
+    body.append(el('h3', 'Infrastructure clients'), el('p', 'Each row belongs to this service. Matching packages do not prove a shared physical resource.', 'meta'));
+    for (const resource of usages) {
+      const row = button('', () => select('resource', resource.index), 'evidence-row');
+      row.setAttribute('data-resource-id', `${id}:${resource.index}`);
+      row.append(el('strong', `${resource.kind} · ${resource.package}`), el('span', `${resource.operation || 'Operation unknown'} · ${resource.confidence} confidence · ${resource.verdict}`, 'meta'), el('span', sourceLabel(resource.source), 'meta path')); body.append(row);
+    }
+    if (!usages.length) body.append(el('p', 'No infrastructure client usage recorded for this service.', 'empty'));
+    body.append(el('h3', 'Connected calls'));
+    for (const { value, index } of connected(id)) body.append(button(`${value.from} → ${value.to} · ${value.kind}`, () => select('call', index), 'evidence-row'));
+    if (!connected(id).length) body.append(el('p', `No connected calls ${serviceMode}.`, 'empty'));
+    return;
+  }
+  const value = selection.type === 'call' ? calls[selection.id] : resources[selection.id];
+  $('inspector-kind').textContent = selection.type === 'call' ? (report.source.collector === 'inferred+declarative' ? 'Call evidence' : `${inferred ? 'Inferred' : 'Declared'} call`) : 'Client usage';
+  $('inspector-title').textContent = selection.type === 'call' ? `${value.from} → ${value.to}` : `${value.service}: ${value.package}`;
+  const rows = [['Kind', value.kind], ['Operation', value.operation || 'Unknown'], ['Confidence', value.confidence], ['Verdict', value.verdict]];
+  if (value.service) rows.unshift(['Service', value.service]);
+  if (value.rule) { rows.push(['Rule', value.rule]); const rule = report.forbid.find(rule => rule.id === value.rule); if (rule?.reason) rows.push(['Reason', rule.reason]); }
+  body.append(detailRows(rows), el('h3', 'Source evidence'), sourceButton(value.source));
+  body.append(el('p', 'Source locations identify static evidence. They do not prove runtime execution.', 'meta'));
+}
+function select(type, id, focusKey) {
+  selection = { type, id }; render();
+  const target = [...document.querySelectorAll('[data-focus]')].find(node => node.getAttribute('data-focus') === focusKey);
+  const stacked = typeof matchMedia === 'function' && matchMedia('(max-width: 1180px)').matches;
+  (stacked ? $('inspector-title') : target || $('inspector-title')).focus({ preventScroll: !stacked });
+  announce(type === 'service' ? `Selected service ${id}.` : `Selected ${type}. ${sourceLabel((type === 'call' ? calls : resources)[id].source)}.`);
+}
+function render() {
+  const visible = matchingServices(), set = new Set(visible);
+  if (selection) {
+    const owner = selection.type === 'service' ? [selection.id] : selection.type === 'call' ? [calls[selection.id].from, calls[selection.id].to] : [resources[selection.id].service];
+    if (!owner.every(id => set.has(id))) selection = null;
+  }
+  const visibleCalls = calls.map((value, index) => ({ value, index })).filter(({ value }) => set.has(value.from) && set.has(value.to));
+  renderCatalog(visible); renderGraph(visible, visibleCalls); renderCalls(visibleCalls); renderInspector();
+}
+$('report-mode').textContent = `${mixed ? 'Inferred and declared' : inferred ? 'Inferred' : 'Declared'} model · ${report.source.path} · ${report.source.collector}`;
+for (const [label, value] of [['Services', serviceIds.length], ['Calls', calls.length], ['Client usages', resources.length], ['Forbidden', (report.summary.forbidden_calls || 0) + (report.summary.forbidden_resources || 0)]]) { const row = el('div'); row.append(el('dt', label), el('dd', String(value))); $('totals').append(row); }
+for (const caveat of report.caveats || []) $('caveat-list').append(el('li', caveat));
+$('caveats').hidden = !(report.caveats || []).length;
+$('search').addEventListener('input', () => { render(); announce(`${matchingServices().length} of ${serviceIds.length} services shown.`); });
+$('back-to-services').addEventListener('click', () => { $('search').focus(); });
+$('clear').addEventListener('click', () => { $('search').value = ''; render(); $('search').focus(); announce('Search cleared. All services shown.'); });
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,846 @@
+{
+  "version": 1,
+  "scope": "Independently labelled source callsites under bundled/default configuration. These are not observed runtime calls or an exhaustive repository inventory. Public reference programs are separate cohorts from applications.",
+  "repositories": [
+    {
+      "name": "immich",
+      "repository": "immich-app/immich",
+      "commit": "3ae71117413cc0a79e4a0555df015e3ffde11786",
+      "archive_sha256": "f2955f53f9b2a791267238dea91e3db2dd4ea828ddb9327031279c5e70cdf822",
+      "kind": "application",
+      "files": {
+        "docker/docker-compose.dev.yml": "84785dce60214550d97b9a6c87d48d63a579df81ab72324ccab18556eddef46e",
+        "machine-learning/immich_ml/main.py": "34b5aca7f42e499085edb94e482820fa7c8cec34a96f90348b6b98434beb4ee4",
+        "server/src/dtos/config.dto.ts": "a4bb119999a23ba8e484e613749c05a2e5a02f3dcbb32c0e5189f32b951035cd",
+        "server/src/repositories/machine-learning.repository.ts": "72995dfe303a62d08beaec2eec2a9a462168f7d54162da83f7abfe1eed13f5dc"
+      }
+    },
+    {
+      "name": "activepieces",
+      "repository": "activepieces/activepieces",
+      "commit": "55134042a88da01be2229e06302a78c80f209ea0",
+      "archive_sha256": "0cbdd757491c2485b4e9d04cc41683d2e2c3b90338af604872add3f501492f98",
+      "kind": "application",
+      "files": {
+        "packages/server/api/src/app/ee/authentication/federated-authn/google-authn-provider.ts": "016eb41e78c02bb49b67032c18e9d4b5d9e9ead1654ddb82e88c51d72ee390ef",
+        "packages/server/api/src/app/flows/flow.module.ts": "6738542fea8c4941b26f2ff6aaf470cbe3af7a14eaa9b2bc7d444e89531bc4b6",
+        "packages/server/api/src/app/flows/flow/flow.controller.ts": "50a38c8a888fecc743429f8863538c503b41d08bfb2708587a1b797674f03170",
+        "packages/server/api/src/app/health/health.module.ts": "26ab82c97d06488bcb47373026f49733a6f3ae5b97517b06d8c2893cd3372a5e",
+        "packages/server/api/src/app/helper/system-jobs/system-job.ts": "800e434b9eb7c8d2fd3ee8f345023a9746f2dc560e73d09226483c25c27cb0e6",
+        "packages/server/api/src/app/platform/platform-configuration.controller.ts": "a7192d2964b24146a2037963cf1fa3628a3df8b84659f3315ab621a88cbc4375",
+        "packages/server/api/src/app/platform/platform-configuration.module.ts": "16cebe7804caf4cbd43c0c565935aa79b91c3acd9e3a37702f0ad6c5abfc6231",
+        "packages/server/api/src/app/server.ts": "15693cd5b8d7ff399495f25dfd60ad6626494b68ab04b3c3385b332591d1abc7",
+        "packages/server/api/src/app/workers/job-queue/job-broker.ts": "6c493942493fb269ccb9f6c8bced790fdcdf38f3de52fdfada46152340ab53f7",
+        "packages/server/api/src/app/workers/job-queue/job-queue.ts": "130e2913a308f04017e7dd915a08fc1141fa499d356f92715e8830d5e2811505",
+        "packages/server/worker/src/lib/config/configs.ts": "d2f9310abcdd9349c9ce6819f4aacc7f24cee6a39a53730e2514e645ce05ef66",
+        "packages/server/worker/src/lib/worker.ts": "a6e6a7b4371c32ee3d4beb3e045b8a47eb0fb7f2559057b03a08008d8def7cd1",
+        "packages/web/src/api/health-api.ts": "b724298e1af01cf83613137055ba6353f90d689175c74f0156020c2e4fe2a3a4",
+        "packages/web/src/api/platform-configuration-api.ts": "e5432e8732efe724de8fe59f625f762ea4f88b2f6b107d5310e0da2335109471",
+        "packages/web/src/features/flows/api/flows-api.tsx": "7299b7c820e62be91f4870d8c04cb9c5881691c1f5640251e533db290211ae24",
+        "packages/web/src/lib/api.ts": "091789044a2dd7c7d87ae79e5d5601df967612e303fc6c5e7b0ddbd0b2043934"
+      }
+    },
+    {
+      "name": "outline",
+      "repository": "outline/outline",
+      "commit": "095b096c2197f35e57057e6cc6ae9d7ef562330a",
+      "archive_sha256": "0701c545185aa1e23f60ffeeb711a6d969613e0747017fcf36576db077be9df0",
+      "kind": "application",
+      "files": {
+        "server/queues/queue.ts": "845ab4fc1241bc3a26cfeaacb50c03ab801e130065b37dd7cf3593983f2173ec",
+        "server/services/worker.ts": "635e7f05549fbf87341437dd79f78e15fdf17ca08c215b0bfa55f8de7d62faad"
+      }
+    },
+    {
+      "name": "nats-reference",
+      "path": "new-corpus/nats.go",
+      "source_subdir": "examples/docs",
+      "repository": "nats-io/nats.go",
+      "commit": "6068694d76fcf1f12bdf1e7383876aa5a3928421",
+      "kind": "official-reference",
+      "boundary_manifest": {
+        "version": 1,
+        "services": [
+          "basics-publish",
+          "basics-subscribe",
+          "getting-started-publish",
+          "getting-started-subscribe"
+        ],
+        "edges": []
+      },
+      "files": {
+        "basics-publish/main.go": "02e50ec42acf52c9f242664dcf31bc3d55b01884f3017954678fe2f5433790de",
+        "basics-subscribe/main.go": "d8f50d7ada5f7fdfc097397563406d9a3e965c39f860f4f47eebf8e98850824b",
+        "getting-started-publish/main.go": "9c1ed84d8120b39245cce49c24426147846598b4e9a3ab672b56f81891d04429",
+        "getting-started-subscribe/main.go": "9647c7f3f0cf2c728c9c810d5b6a0bc4ba3f00b89420548a60f54c1f2f10f459"
+      },
+      "archive_sha256": "e1887cb3a6d5b183be3b5cc13e2ef506c036c0f9038c6f94340dd655950e1fea"
+    },
+    {
+      "name": "nats-pubsub",
+      "path": "new-corpus/nats-pubsub",
+      "repository": "rafian-git/Nats-PubSub",
+      "commit": "e642c0c36ffcce1274e8fc56fa8213eac2ee4760",
+      "kind": "community-reference",
+      "archive_sha256": "1d62204d423142e97654712382fa659798a820dbbfe73eb31cece73337b62d53",
+      "files": {
+        "README.md": "723023c5c5c2730b762db09526597a9eff66c8493dd105a18b87c7ace0085268",
+        "pub/main.go": "aaba54c858714302e5fac3875fd2bb2c30bea9ae2ea9a63a0fdc310f832d004e",
+        "sub/main.go": "bdcffbcbcca48355859d720ec0dde5b4832545c1cdac238cb727f4f566063f9c"
+      }
+    }
+  ],
+  "flows": [
+    {
+      "id": "I1",
+      "repository": "immich",
+      "configuration": "bundled/default deployment, not observed runtime traffic",
+      "source": {
+        "file": "server/src/repositories/machine-learning.repository.ts",
+        "line": 133
+      },
+      "target": {
+        "file": "machine-learning/immich_ml/main.py",
+        "line": 160
+      },
+      "expected": {
+        "from": "server",
+        "to": "machine-learning",
+        "kind": "http",
+        "operation": "GET /ping"
+      },
+      "reason": "Relative URL construction has an unknown configured base; /ping cannot be resolved from the call alone.",
+      "evidence": [
+        {
+          "file": "server/src/repositories/machine-learning.repository.ts",
+          "line": 133,
+          "text": "const response = await fetch(new URL('ping', url), {"
+        },
+        {
+          "file": "machine-learning/immich_ml/main.py",
+          "line": 160,
+          "text": "@app.get(\"/ping\")"
+        },
+        {
+          "file": "server/src/dtos/config.dto.ts",
+          "line": 621,
+          "text": "urls: [process.env.IMMICH_MACHINE_LEARNING_URL || 'http://immich-machine-learning:3003'],"
+        },
+        {
+          "file": "docker/docker-compose.dev.yml",
+          "line": 131,
+          "text": "immich-machine-learning:"
+        },
+        {
+          "file": "docker/docker-compose.dev.yml",
+          "line": 138,
+          "text": "context: ../machine-learning"
+        }
+      ]
+    },
+    {
+      "id": "I2",
+      "repository": "immich",
+      "configuration": "bundled/default deployment, not observed runtime traffic",
+      "source": {
+        "file": "server/src/repositories/machine-learning.repository.ts",
+        "line": 171
+      },
+      "target": {
+        "file": "machine-learning/immich_ml/main.py",
+        "line": 165
+      },
+      "expected": {
+        "from": "server",
+        "to": "machine-learning",
+        "kind": "http",
+        "operation": "POST /predict"
+      },
+      "reason": "Relative URL construction has an unknown configured base; /predict cannot be resolved from the call alone.",
+      "evidence": [
+        {
+          "file": "server/src/repositories/machine-learning.repository.ts",
+          "line": 171,
+          "text": "const response = await fetch(new URL('predict', url), { method: 'POST', body: formData });"
+        },
+        {
+          "file": "machine-learning/immich_ml/main.py",
+          "line": 165,
+          "text": "@app.post(\"/predict\", dependencies=[Depends(update_state)])"
+        },
+        {
+          "file": "server/src/dtos/config.dto.ts",
+          "line": 621,
+          "text": "urls: [process.env.IMMICH_MACHINE_LEARNING_URL || 'http://immich-machine-learning:3003'],"
+        },
+        {
+          "file": "docker/docker-compose.dev.yml",
+          "line": 131,
+          "text": "immich-machine-learning:"
+        },
+        {
+          "file": "docker/docker-compose.dev.yml",
+          "line": 138,
+          "text": "context: ../machine-learning"
+        }
+      ]
+    },
+    {
+      "id": "A1",
+      "repository": "activepieces",
+      "configuration": "bundled/default deployment, not observed runtime traffic",
+      "source": {
+        "file": "packages/web/src/api/health-api.ts",
+        "line": 7
+      },
+      "target": {
+        "file": "packages/server/api/src/app/health/health.module.ts",
+        "line": 29
+      },
+      "expected": {
+        "from": "packages/web",
+        "to": "packages/server/api",
+        "kind": "http",
+        "operation": "GET /api/v1/health/system"
+      },
+      "reason": "Imported local HTTP wrapper, axios object invocation, and nested Fastify registration prefixes are not resolved.",
+      "evidence": [
+        {
+          "file": "packages/web/src/api/health-api.ts",
+          "line": 7,
+          "text": "return api.get<GetSystemHealthChecksResponse>('/v1/health/system');"
+        },
+        {
+          "file": "packages/server/api/src/app/health/health.module.ts",
+          "line": 29,
+          "text": "app.get('/system', GetSystemHealthChecks, async (request, reply) => {"
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 22,
+          "text": "export const API_URL = `${API_BASE_URL}/api`;"
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 61,
+          "text": "function request<TResponse>("
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 72,
+          "text": "return axios({"
+        },
+        {
+          "file": "packages/server/api/src/app/server.ts",
+          "line": 50,
+          "text": "}, { prefix: '/api' })"
+        },
+        {
+          "file": "packages/server/api/src/app/health/health.module.ts",
+          "line": 9,
+          "text": "await app.register(healthController, { prefix: '/v1/health' })"
+        }
+      ]
+    },
+    {
+      "id": "A2",
+      "repository": "activepieces",
+      "configuration": "bundled/default deployment, not observed runtime traffic",
+      "source": {
+        "file": "packages/web/src/api/platform-configuration-api.ts",
+        "line": 10
+      },
+      "target": {
+        "file": "packages/server/api/src/app/platform/platform-configuration.controller.ts",
+        "line": 8
+      },
+      "expected": {
+        "from": "packages/web",
+        "to": "packages/server/api",
+        "kind": "http",
+        "operation": "GET /api/v1/platform-configurations"
+      },
+      "reason": "Imported local HTTP wrapper, axios object invocation, and nested Fastify registration prefixes are not resolved.",
+      "evidence": [
+        {
+          "file": "packages/web/src/api/platform-configuration-api.ts",
+          "line": 10,
+          "text": "return api.get<PlatformConfiguration>('/v1/platform-configurations');"
+        },
+        {
+          "file": "packages/server/api/src/app/platform/platform-configuration.controller.ts",
+          "line": 8,
+          "text": "app.get('/', GetPlatformConfigurationEndpoint, async (request) => {"
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 22,
+          "text": "export const API_URL = `${API_BASE_URL}/api`;"
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 61,
+          "text": "function request<TResponse>("
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 72,
+          "text": "return axios({"
+        },
+        {
+          "file": "packages/server/api/src/app/server.ts",
+          "line": 50,
+          "text": "}, { prefix: '/api' })"
+        },
+        {
+          "file": "packages/server/api/src/app/platform/platform-configuration.module.ts",
+          "line": 5,
+          "text": "await app.register(platformConfigurationController, { prefix: '/v1/platform-configurations' })"
+        }
+      ]
+    },
+    {
+      "id": "A3",
+      "repository": "activepieces",
+      "configuration": "bundled/default deployment, not observed runtime traffic",
+      "source": {
+        "file": "packages/web/src/api/platform-configuration-api.ts",
+        "line": 13
+      },
+      "target": {
+        "file": "packages/server/api/src/app/platform/platform-configuration.controller.ts",
+        "line": 14
+      },
+      "expected": {
+        "from": "packages/web",
+        "to": "packages/server/api",
+        "kind": "http",
+        "operation": "POST /api/v1/platform-configurations"
+      },
+      "reason": "Imported local HTTP wrapper, axios object invocation, and nested Fastify registration prefixes are not resolved.",
+      "evidence": [
+        {
+          "file": "packages/web/src/api/platform-configuration-api.ts",
+          "line": 13,
+          "text": "return api.post<PlatformConfiguration>("
+        },
+        {
+          "file": "packages/server/api/src/app/platform/platform-configuration.controller.ts",
+          "line": 14,
+          "text": "app.post('/', UpdatePlatformConfigurationEndpoint, async (request) => {"
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 22,
+          "text": "export const API_URL = `${API_BASE_URL}/api`;"
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 61,
+          "text": "function request<TResponse>("
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 72,
+          "text": "return axios({"
+        },
+        {
+          "file": "packages/server/api/src/app/server.ts",
+          "line": 50,
+          "text": "}, { prefix: '/api' })"
+        },
+        {
+          "file": "packages/server/api/src/app/platform/platform-configuration.module.ts",
+          "line": 5,
+          "text": "await app.register(platformConfigurationController, { prefix: '/v1/platform-configurations' })"
+        },
+        {
+          "file": "packages/web/src/api/platform-configuration-api.ts",
+          "line": 14,
+          "text": "'/v1/platform-configurations',"
+        }
+      ]
+    },
+    {
+      "id": "A4",
+      "repository": "activepieces",
+      "configuration": "bundled/default deployment, not observed runtime traffic",
+      "source": {
+        "file": "packages/web/src/features/flows/api/flows-api.tsx",
+        "line": 23
+      },
+      "target": {
+        "file": "packages/server/api/src/app/flows/flow/flow.controller.ts",
+        "line": 101
+      },
+      "expected": {
+        "from": "packages/web",
+        "to": "packages/server/api",
+        "kind": "http",
+        "operation": "GET /api/v1/flows"
+      },
+      "reason": "Imported local HTTP wrapper, axios object invocation, and nested Fastify registration prefixes are not resolved.",
+      "evidence": [
+        {
+          "file": "packages/web/src/features/flows/api/flows-api.tsx",
+          "line": 23,
+          "text": "return api.get<SeekPage<PopulatedFlow>>('/v1/flows', request);"
+        },
+        {
+          "file": "packages/server/api/src/app/flows/flow/flow.controller.ts",
+          "line": 101,
+          "text": "app.get('/', ListFlowsRequestOptions, async (request) => {"
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 22,
+          "text": "export const API_URL = `${API_BASE_URL}/api`;"
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 61,
+          "text": "function request<TResponse>("
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 72,
+          "text": "return axios({"
+        },
+        {
+          "file": "packages/server/api/src/app/server.ts",
+          "line": 50,
+          "text": "}, { prefix: '/api' })"
+        },
+        {
+          "file": "packages/server/api/src/app/flows/flow.module.ts",
+          "line": 11,
+          "text": "await app.register(flowController, { prefix: '/v1/flows' })"
+        }
+      ]
+    },
+    {
+      "id": "A5",
+      "repository": "activepieces",
+      "configuration": "bundled/default deployment, not observed runtime traffic",
+      "source": {
+        "file": "packages/web/src/features/flows/api/flows-api.tsx",
+        "line": 85
+      },
+      "target": {
+        "file": "packages/server/api/src/app/flows/flow/flow.controller.ts",
+        "line": 119
+      },
+      "expected": {
+        "from": "packages/web",
+        "to": "packages/server/api",
+        "kind": "http",
+        "operation": "GET /api/v1/flows/count"
+      },
+      "reason": "Imported local HTTP wrapper, axios object invocation, and nested Fastify registration prefixes are not resolved.",
+      "evidence": [
+        {
+          "file": "packages/web/src/features/flows/api/flows-api.tsx",
+          "line": 85,
+          "text": "return api.get<number>('/v1/flows/count', query);"
+        },
+        {
+          "file": "packages/server/api/src/app/flows/flow/flow.controller.ts",
+          "line": 119,
+          "text": "app.get('/count', CountFlowsRequestOptions, async (request) => {"
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 22,
+          "text": "export const API_URL = `${API_BASE_URL}/api`;"
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 61,
+          "text": "function request<TResponse>("
+        },
+        {
+          "file": "packages/web/src/lib/api.ts",
+          "line": 72,
+          "text": "return axios({"
+        },
+        {
+          "file": "packages/server/api/src/app/server.ts",
+          "line": 50,
+          "text": "}, { prefix: '/api' })"
+        },
+        {
+          "file": "packages/server/api/src/app/flows/flow.module.ts",
+          "line": 11,
+          "text": "await app.register(flowController, { prefix: '/v1/flows' })"
+        }
+      ]
+    },
+    {
+      "id": "A6",
+      "repository": "activepieces",
+      "configuration": "bundled/default deployment, not observed runtime traffic",
+      "source": {
+        "file": "packages/server/worker/src/lib/worker.ts",
+        "line": 499
+      },
+      "target": {
+        "file": "packages/server/api/src/app/health/health.module.ts",
+        "line": 13
+      },
+      "expected": {
+        "from": "packages/server/worker",
+        "to": "packages/server/api",
+        "kind": "http",
+        "operation": "GET /api/v1/health"
+      },
+      "reason": "The computed getApiUrl base contributes /api/ and its origin; the template tail alone does not establish the full path.",
+      "evidence": [
+        {
+          "file": "packages/server/worker/src/lib/worker.ts",
+          "line": 499,
+          "text": "const probe = tryCatch(() => fetch(`${getApiUrl()}v1/health`, { signal: AbortSignal.timeout(SERVER_PING_TIMEOUT_MS) }))"
+        },
+        {
+          "file": "packages/server/api/src/app/health/health.module.ts",
+          "line": 13,
+          "text": "app.get("
+        },
+        {
+          "file": "packages/server/api/src/app/server.ts",
+          "line": 50,
+          "text": "}, { prefix: '/api' })"
+        },
+        {
+          "file": "packages/server/api/src/app/health/health.module.ts",
+          "line": 9,
+          "text": "await app.register(healthController, { prefix: '/v1/health' })"
+        },
+        {
+          "file": "packages/server/worker/src/lib/config/configs.ts",
+          "line": 11,
+          "text": "return `http://127.0.0.1:${port}/api/`"
+        },
+        {
+          "file": "packages/server/worker/src/lib/config/configs.ts",
+          "line": 14,
+          "text": "return frontendUrl + '/api/'"
+        }
+      ]
+    },
+    {
+      "id": "N1",
+      "repository": "nats-reference",
+      "configuration": "official reference programs, same documented NATS server; not a production application",
+      "source": {
+        "file": "getting-started-publish/main.go",
+        "line": 18
+      },
+      "target": {
+        "file": "getting-started-subscribe/main.go",
+        "line": 18
+      },
+      "expected": {
+        "from": "getting-started-publish",
+        "to": "getting-started-subscribe",
+        "kind": "queue",
+        "operation": "hello"
+      },
+      "reason": "Direct literal subject on proven NATS publish/subscribe receivers.",
+      "evidence": [
+        {
+          "file": "getting-started-publish/main.go",
+          "line": 18,
+          "text": "err = nc.Publish(\"hello\", []byte(\"Hello NATS!\"))"
+        },
+        {
+          "file": "getting-started-subscribe/main.go",
+          "line": 18,
+          "text": "_, err = nc.Subscribe(\"hello\", func(msg *nats.Msg) {"
+        },
+        {
+          "file": "getting-started-publish/main.go",
+          "line": 11,
+          "text": "nc, err := nats.Connect(\"demo.nats.io\")"
+        },
+        {
+          "file": "getting-started-subscribe/main.go",
+          "line": 11,
+          "text": "nc, err := nats.Connect(\"demo.nats.io\")"
+        }
+      ]
+    },
+    {
+      "id": "N2",
+      "repository": "nats-reference",
+      "configuration": "official reference programs, same documented NATS server; not a production application",
+      "source": {
+        "file": "basics-publish/main.go",
+        "line": 14
+      },
+      "target": {
+        "file": "basics-subscribe/main.go",
+        "line": 18
+      },
+      "expected": {
+        "from": "basics-publish",
+        "to": "basics-subscribe",
+        "kind": "queue",
+        "operation": "weather.updates"
+      },
+      "reason": "Direct literal subject on proven NATS publish/subscribe receivers.",
+      "evidence": [
+        {
+          "file": "basics-publish/main.go",
+          "line": 14,
+          "text": "nc.Publish(\"weather.updates\", []byte(\"Temperature: 72\u00b0F\"))"
+        },
+        {
+          "file": "basics-subscribe/main.go",
+          "line": 18,
+          "text": "sub, _ := nc.Subscribe(\"weather.updates\", func(msg *nats.Msg) {"
+        },
+        {
+          "file": "basics-publish/main.go",
+          "line": 6,
+          "text": "nc, err := nats.Connect(nats.DefaultURL)"
+        },
+        {
+          "file": "basics-subscribe/main.go",
+          "line": 10,
+          "text": "nc, err := nats.Connect(nats.DefaultURL)"
+        }
+      ]
+    },
+    {
+      "id": "N3",
+      "repository": "nats-pubsub",
+      "configuration": "community reference programs, same NATS default server; not a production application",
+      "source": {
+        "file": "pub/main.go",
+        "line": 23
+      },
+      "target": {
+        "file": "sub/main.go",
+        "line": 17
+      },
+      "expected": {
+        "from": "pub",
+        "to": "sub",
+        "kind": "queue",
+        "operation": "test"
+      },
+      "reason": "Same-function immutable subject string aliases are not resolved.",
+      "evidence": [
+        {
+          "file": "pub/main.go",
+          "line": 23,
+          "text": "if err := nc.Publish(subject, []byte(string(i+1))); err != nil {"
+        },
+        {
+          "file": "sub/main.go",
+          "line": 17,
+          "text": "_, err = nc.Subscribe(subject, func(m *nats.Msg) {"
+        },
+        {
+          "file": "pub/main.go",
+          "line": 12,
+          "text": "subject := \"test\""
+        },
+        {
+          "file": "sub/main.go",
+          "line": 11,
+          "text": "subject := \"test\""
+        },
+        {
+          "file": "pub/main.go",
+          "line": 14,
+          "text": "nc, err := nats.Connect(nats.DefaultURL)"
+        },
+        {
+          "file": "sub/main.go",
+          "line": 12,
+          "text": "nc, err := nats.Connect(nats.DefaultURL)"
+        },
+        {
+          "file": "README.md",
+          "line": 8,
+          "text": "run Subscriber"
+        },
+        {
+          "file": "README.md",
+          "line": 12,
+          "text": "`go run pub/main.go`"
+        }
+      ]
+    }
+  ],
+  "controls": [
+    {
+      "id": "C1",
+      "repository": "activepieces",
+      "source": {
+        "file": "packages/server/api/src/app/ee/authentication/federated-authn/google-authn-provider.ts",
+        "line": 52
+      },
+      "forbid": {
+        "from": "packages/server/api",
+        "kind": "http"
+      },
+      "reason": "Literal Google OAuth origin is external; a matching local path cannot turn it into an internal service call.",
+      "transport_context": "external HTTP",
+      "evidence": [
+        {
+          "file": "packages/server/api/src/app/ee/authentication/federated-authn/google-authn-provider.ts",
+          "line": 52,
+          "text": "const response = await fetch('https://oauth2.googleapis.com/token', {"
+        }
+      ]
+    },
+    {
+      "id": "C2a",
+      "repository": "activepieces",
+      "source": {
+        "file": "packages/server/api/src/app/helper/system-jobs/system-job.ts",
+        "line": 39
+      },
+      "forbid": {
+        "from": "packages/server/api",
+        "kind": "queue"
+      },
+      "reason": "Producer and consumer of system-job-queue both belong to the API service.",
+      "transport_context": "queue",
+      "evidence": [
+        {
+          "file": "packages/server/api/src/app/helper/system-jobs/system-job.ts",
+          "line": 39,
+          "text": "systemJobsQueue = new Queue(SYSTEM_JOB_QUEUE, queueConfig)"
+        },
+        {
+          "file": "packages/server/api/src/app/helper/system-jobs/system-job.ts",
+          "line": 14,
+          "text": "const SYSTEM_JOB_QUEUE = 'system-job-queue'"
+        },
+        {
+          "file": "packages/server/api/src/app/helper/system-jobs/system-job.ts",
+          "line": 49,
+          "text": "systemJobWorker = new Worker("
+        }
+      ]
+    },
+    {
+      "id": "C2b",
+      "repository": "activepieces",
+      "source": {
+        "file": "packages/server/api/src/app/helper/system-jobs/system-job.ts",
+        "line": 49
+      },
+      "forbid": {
+        "from": "packages/server/api",
+        "kind": "queue"
+      },
+      "reason": "The BullMQ worker is inside the same API service, not the separate worker process.",
+      "transport_context": "queue",
+      "evidence": [
+        {
+          "file": "packages/server/api/src/app/helper/system-jobs/system-job.ts",
+          "line": 49,
+          "text": "systemJobWorker = new Worker("
+        },
+        {
+          "file": "packages/server/api/src/app/helper/system-jobs/system-job.ts",
+          "line": 39,
+          "text": "systemJobsQueue = new Queue(SYSTEM_JOB_QUEUE, queueConfig)"
+        }
+      ]
+    },
+    {
+      "id": "C3",
+      "repository": "activepieces",
+      "source": {
+        "file": "packages/server/api/src/app/workers/job-queue/job-queue.ts",
+        "line": 51
+      },
+      "forbid": {
+        "from": "packages/server/api",
+        "to": "packages/server/worker",
+        "kind": "queue"
+      },
+      "reason": "API owns BullMQ enqueue and dequeue. The separate worker receives jobs via Socket.IO RPC, an unsupported transport rather than a queue miss.",
+      "transport_context": "unsupported Socket.IO RPC",
+      "evidence": [
+        {
+          "file": "packages/server/api/src/app/workers/job-queue/job-queue.ts",
+          "line": 51,
+          "text": "return queue.add(params.id, data, {"
+        },
+        {
+          "file": "packages/server/api/src/app/workers/job-queue/job-broker.ts",
+          "line": 35,
+          "text": "const worker = new BullMQWorker("
+        },
+        {
+          "file": "packages/server/api/src/app/workers/job-queue/job-broker.ts",
+          "line": 86,
+          "text": "const job = await worker.getNextJob(token)"
+        },
+        {
+          "file": "packages/server/worker/src/lib/worker.ts",
+          "line": 240,
+          "text": "const { data: job, error: pollError } = await tryCatch(() => apiClient.poll(machineInfo))"
+        }
+      ]
+    },
+    {
+      "id": "C4a",
+      "repository": "outline",
+      "source": {
+        "file": "server/queues/queue.ts",
+        "line": 19
+      },
+      "forbid": {
+        "from": "server",
+        "kind": "queue"
+      },
+      "reason": "Queue construction and consuming worker role share the server directory boundary.",
+      "transport_context": "queue",
+      "evidence": [
+        {
+          "file": "server/queues/queue.ts",
+          "line": 19,
+          "text": "const queue = new Queue(name, {"
+        },
+        {
+          "file": "server/services/worker.ts",
+          "line": 23,
+          "text": ".process("
+        }
+      ]
+    },
+    {
+      "id": "C4b",
+      "repository": "outline",
+      "source": {
+        "file": "server/services/worker.ts",
+        "line": 23
+      },
+      "forbid": {
+        "from": "server",
+        "kind": "queue"
+      },
+      "reason": "The worker is a runtime role within server, not a distinct directory service.",
+      "transport_context": "queue",
+      "evidence": [
+        {
+          "file": "server/services/worker.ts",
+          "line": 23,
+          "text": ".process("
+        },
+        {
+          "file": "server/queues/queue.ts",
+          "line": 19,
+          "text": "const queue = new Queue(name, {"
+        }
+      ]
+    }
+  ]
+}

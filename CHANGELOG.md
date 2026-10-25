@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+- MCP gains a read-only `services` tool with exact service focus and a repository-contained
+  manifest override. It bypasses reference import collection and retains a 4,000-byte response
+  cap with explicit counts and omissions.
+
+- `render` accepts exported service reports and produces an offline service catalog, directed
+  call diagram, infrastructure client list, and source-evidence inspector. It validates report
+  evidence and recomputes metrics and rule verdicts. Existing import reports and manifest output
+  keep their behaviour.
+- Service inference resolves immutable local Go string aliases for NATS topics. A source-labelled
+  benchmark records application misses separately from positive reference-program coverage.
+
 - Go move-together constraints use a stable file order and preserve platform-variant groups when
   a file is excluded. Live scans agree with recorded fixtures across operating systems.
 

@@ -124,6 +124,36 @@ struct TargetArgs {
     brief: bool,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ServicesArgs {
+    #[serde(default)]
+    manifest: Option<String>,
+    #[serde(default)]
+    service: Option<String>,
+    #[serde(default = "yes")]
+    brief: bool,
+}
+
+fn parse_services(arguments: Value) -> Result<ServicesArgs> {
+    let args: ServicesArgs = parse(arguments)?;
+    if args
+        .manifest
+        .as_ref()
+        .is_some_and(|path| !crate::collect::is_relative_path(path, false))
+    {
+        bail!("manifest must be a repository-relative file without parent traversal");
+    }
+    if args.service.as_ref().is_some_and(|id| {
+        !crate::collect::is_relative_path(id, false)
+            || id.chars().any(char::is_whitespace)
+            || id.contains(['*', '?', '[', ']', '{', '}', '<', '>'])
+    }) {
+        bail!("service must be an exact service ID without whitespace or glob characters");
+    }
+    Ok(args)
+}
+
 fn parse<T: serde::de::DeserializeOwned>(value: Value) -> Result<T> {
     serde_json::from_value(value)
         .context("invalid tool arguments: use tools/list for the accepted fields and types")
@@ -184,6 +214,9 @@ pub fn validate(name: &str, arguments: &Value) -> Result<()> {
         }
         "target" => {
             let _: TargetArgs = parse(arguments.clone())?;
+        }
+        "services" => {
+            let _ = parse_services(arguments.clone())?;
         }
         _ => bail!("unknown tool {name:?}: use tools/list for available tools"),
     }
@@ -262,6 +295,65 @@ fn relevant(doc: &Document, paths: &[String]) -> Result<Value> {
     }
 }
 
+/// Collect live service evidence without first building an unrelated import-scan document.
+pub fn services(root: &Path, arguments: Value) -> Result<Value> {
+    let args = parse_services(arguments)?;
+    let _ = args.brief;
+    let root = root
+        .canonicalize()
+        .context("resolving services repository root")?;
+    if !root.is_dir() {
+        bail!("services repository root must be a directory");
+    }
+    let manifest = args
+        .manifest
+        .as_ref()
+        .map(|relative| {
+            let path = root
+                .join(relative)
+                .canonicalize()
+                .with_context(|| format!("resolving service manifest {relative:?}"))?;
+            if !path.starts_with(&root) || !path.is_file() {
+                bail!("service manifest must be a file inside the repository root");
+            }
+            let text = std::fs::read_to_string(&path)
+                .with_context(|| format!("reading service manifest {relative:?}"))?;
+            crate::services::parse(&text)
+        })
+        .transpose()?;
+    let report = crate::infer_services::infer(&root, manifest)?;
+    if let Some(id) = &args.service
+        && !report.services.contains(id)
+    {
+        bail!("unknown service {id:?}; omit service to list the inferred service IDs");
+    }
+    let selected = |id: &str| args.service.as_deref().is_none_or(|wanted| wanted == id);
+    let services: Vec<_> = report
+        .modules
+        .iter()
+        .filter(|module| selected(&module.id))
+        .collect();
+    let calls: Vec<_> = report
+        .edges
+        .iter()
+        .filter(|edge| selected(&edge.call.from) || selected(&edge.call.to))
+        .collect();
+    let resources: Vec<_> = report
+        .resources
+        .iter()
+        .filter(|resource| selected(&resource.service))
+        .collect();
+    Ok(json!({
+        "source": &report.source,
+        "scope": {"service": &args.service},
+        "global_summary": &report.summary,
+        "services": services,
+        "calls": calls,
+        "resources": resources,
+        "caveats": &report.caveats,
+    }))
+}
+
 pub fn call(
     doc: &Document,
     root: &Path,
@@ -271,6 +363,7 @@ pub fn call(
 ) -> Result<Value> {
     validate(name, &arguments)?;
     match name {
+        "services" => services(root, arguments),
         "context" => {
             let a: ContextArgs = parse(arguments)?;
             let _ = a.brief;
@@ -624,6 +717,7 @@ pub fn schemas() -> Vec<ToolSchema> {
         json!({"cycles":number(),"forbidden":number(),"two_way_pairs":number()}),
         &["cycles", "forbidden", "two_way_pairs"],
     );
+    let service_report = &graph_schema["$defs"]["services"]["properties"];
     let mut tools = vec![
         schema(
             "context",
@@ -720,6 +814,35 @@ pub fn schemas() -> Vec<ToolSchema> {
             json!({}),
             &[],
             json!({"anyOf":[{"type":"null"},inline_schema(&graph_schema["$defs"]["target"],&graph_schema["$defs"])]}),
+        ),
+        schema(
+            "services",
+            "Infer live services, client usages and supported calls without an import scan. Optional service selects one exact ID with incoming and outgoing calls; global_summary remains report-wide. An optional manifest must stay inside the repository. Static evidence is incomplete, not runtime traffic.",
+            json!({
+                "manifest": {"anyOf":[{"type":"null"},service_report["edges"]["items"]["properties"]["source"]["properties"]["file"].clone()]},
+                "service": {"anyOf":[{"type":"null"},service_report["services"]["items"].clone()]},
+            }),
+            &[],
+            object(
+                json!({
+                    "source": inline_schema(&service_report["source"], &graph_schema["$defs"]),
+                    "scope": object(json!({"service":{"type":["string","null"]}}), &["service"]),
+                    "global_summary": inline_schema(&service_report["summary"], &graph_schema["$defs"]),
+                    "services": inline_schema(&service_report["modules"], &graph_schema["$defs"]),
+                    "calls": inline_schema(&service_report["edges"], &graph_schema["$defs"]),
+                    "resources": inline_schema(&service_report["resources"], &graph_schema["$defs"]),
+                    "caveats": inline_schema(&service_report["caveats"], &graph_schema["$defs"]),
+                }),
+                &[
+                    "source",
+                    "scope",
+                    "global_summary",
+                    "services",
+                    "calls",
+                    "resources",
+                    "caveats",
+                ],
+            ),
         ),
     ];
     tools

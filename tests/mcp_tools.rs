@@ -1,9 +1,9 @@
 mod common;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use archgraph::{
-    mcp_tools::{call, finding_id, schemas},
+    mcp_tools::{call, finding_id, schemas, services},
     model::{Cochange, CochangePair, Config, Document, Edge, Source},
 };
 use serde_json::{Value, json};
@@ -255,6 +255,10 @@ fn input_schemas_reject_unknown_fields_and_match_examples() {
         ("explain", json!({"path":"src/a.ts"})),
         ("rules", json!({"paths":["src/a.ts"]})),
         ("review", json!({"base":"HEAD"})),
+        (
+            "services",
+            json!({"manifest":"services.yaml","service":"api"}),
+        ),
     ];
     for (name, mut args) in examples {
         let schema = schemas().into_iter().find(|s| s.name == name).unwrap();
@@ -263,6 +267,237 @@ fn input_schemas_reject_unknown_fields_and_match_examples() {
         args["unexpected"] = json!(true);
         assert!(!validator.is_valid(&args), "{name}");
     }
+}
+
+struct ServicesFixture(PathBuf);
+
+impl ServicesFixture {
+    fn new() -> Self {
+        static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let root = std::env::temp_dir().join(format!(
+            "archgraph-services-tool-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        let fixture = Self(root);
+        fixture.write(
+            "package.json",
+            r#"{"dependencies":{"express":"*","pg":"*"}}"#,
+        );
+        for id in ["api", "worker", "idle", "other"] {
+            fixture.write(&format!("{id}/Dockerfile"), "FROM node\n");
+        }
+        fixture.write("api/main.ts", "import express from 'express'; import {Pool} from 'pg'; const app = express(); app.get('/jobs', () => {}); new Pool(); fetch('http://worker/status');\n");
+        fixture.write("worker/main.ts", "import express from 'express'; const app = express(); app.get('/status', () => {}); fetch('http://api/jobs');\n");
+        fixture.write("idle/main.ts", "export const idle = true;\n");
+        fixture.write(
+            "other/main.ts",
+            "import {Pool} from 'pg'; new Pool(); fetch('http://worker/status');\n",
+        );
+        fixture
+    }
+
+    fn write(&self, path: &str, text: &str) {
+        let file = self.0.join(path);
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(file, text).unwrap();
+    }
+}
+
+impl Drop for ServicesFixture {
+    fn drop(&mut self) {
+        std::fs::remove_dir_all(&self.0).unwrap();
+    }
+}
+
+#[test]
+fn services_tool_returns_live_scoped_evidence_with_report_wide_summary() {
+    let fixture = ServicesFixture::new();
+    fixture.write("layout.yaml", "not: valid: layout: yaml\n");
+    let all = services(&fixture.0, json!({})).unwrap();
+    validate("services", &all);
+    assert_eq!(all["source"]["collector"], "inferred");
+    assert_eq!(all["source"]["complete"], false);
+    assert_eq!(all["scope"], json!({"service":null}));
+    assert_eq!(all["global_summary"]["services"], 4);
+    assert_eq!(all["global_summary"]["calls"], 3);
+    assert_eq!(all["global_summary"]["resources"], 2);
+    assert_eq!(all["services"].as_array().unwrap().len(), 4);
+    assert_eq!(all["calls"].as_array().unwrap().len(), 3);
+    assert_eq!(all["resources"][0]["package"], "pg");
+    assert!(all.get("schema").is_none());
+    assert!(all.get("forbidden_calls").is_none());
+
+    // The unrelated Document does not supply service facts or determine the selected scope.
+    let api = call(
+        &document(&[]),
+        &fixture.0,
+        "services",
+        json!({"service":"api"}),
+        None,
+    )
+    .unwrap();
+    validate("services", &api);
+    assert_eq!(api["scope"]["service"], "api");
+    assert_eq!(api["global_summary"], all["global_summary"]);
+    assert_eq!(api["services"].as_array().unwrap().len(), 1);
+    assert_eq!(api["services"][0]["id"], "api");
+    assert_eq!(api["services"][0]["fan_in"], 1);
+    assert_eq!(api["services"][0]["fan_out"], 1);
+    assert_eq!(api["calls"].as_array().unwrap().len(), 2);
+    assert!(
+        api["calls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|edge| edge["from"] == "api" || edge["to"] == "api")
+    );
+    assert!(
+        api["resources"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|resource| resource["service"] == "api")
+    );
+    assert_eq!(api["resources"].as_array().unwrap().len(), 1);
+
+    let idle = services(&fixture.0, json!({"service":"idle","brief":false})).unwrap();
+    validate("services", &idle);
+    assert_eq!(idle["global_summary"]["calls"], 3);
+    assert_eq!(idle["calls"], json!([]));
+    assert_eq!(idle["resources"], json!([]));
+}
+
+#[test]
+fn services_tool_applies_manifest_rules_and_refreshes_after_source_edits() {
+    let fixture = ServicesFixture::new();
+    fixture.write(
+        "policy/services.yaml",
+        r#"
+version: 1
+services: [api, worker, idle]
+edges: []
+forbid:
+  - {id: no-postgres, from: api, to: 'pkg:pg'}
+  - {id: no-api, from: worker, to: api}
+"#,
+    );
+    let args = json!({"manifest":"policy/services.yaml","service":"api"});
+    let first = services(&fixture.0, args.clone()).unwrap();
+    validate("services", &first);
+    assert_eq!(first["source"]["collector"], "inferred+declarative");
+    assert_eq!(first["global_summary"]["forbidden_calls"], 1);
+    assert_eq!(first["global_summary"]["forbidden_resources"], 1);
+    assert_eq!(first["resources"][0]["rule"], "no-postgres");
+    assert_eq!(first["resources"][0]["verdict"], "forbidden");
+    assert!(
+        first["calls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|edge| edge["rule"] == "no-api")
+    );
+    assert_eq!(first, services(&fixture.0, args.clone()).unwrap());
+
+    fixture.write(
+        "worker/main.ts",
+        "import express from 'express'; const app = express(); app.get('/status', () => {});\n",
+    );
+    let fresh = services(&fixture.0, args).unwrap();
+    validate("services", &fresh);
+    assert_eq!(fresh["global_summary"]["calls"], 1);
+    assert_eq!(fresh["global_summary"]["forbidden_calls"], 0);
+    assert_eq!(fresh["calls"][0]["from"], "api");
+}
+
+#[test]
+fn services_arguments_fail_before_collection_and_unknown_services_are_errors() {
+    for args in [
+        json!({"unknown":true}),
+        json!({"brief":"yes"}),
+        json!({"service":""}),
+        json!({"service":"*"}),
+        json!({"service":"../api"}),
+        json!({"service":"api worker"}),
+        json!({"service":"api\n"}),
+        json!({"manifest":""}),
+        json!({"manifest":"../outside.yaml"}),
+        json!({"manifest":"/outside.yaml"}),
+        json!({"manifest":"a/../services.yaml"}),
+        json!({"manifest":true}),
+    ] {
+        assert!(
+            archgraph::mcp_tools::validate("services", &args).is_err(),
+            "{args}"
+        );
+        let error = services(Path::new("/missing-mcp-services-root"), args).unwrap_err();
+        assert!(
+            !error
+                .to_string()
+                .contains("resolving services repository root")
+        );
+    }
+    let fixture = ServicesFixture::new();
+    assert!(
+        services(&fixture.0, json!({"service":"missing"}))
+            .unwrap_err()
+            .to_string()
+            .contains("unknown service")
+    );
+    assert!(
+        services(&fixture.0, json!({"manifest":"api"}))
+            .unwrap_err()
+            .to_string()
+            .contains("file inside")
+    );
+    assert!(
+        services(&fixture.0.join("api/main.ts"), json!({}))
+            .unwrap_err()
+            .to_string()
+            .contains("must be a directory")
+    );
+    let nullable = services(&fixture.0, json!({"manifest":null,"service":null})).unwrap();
+    validate("services", &nullable);
+    let schema = schemas()
+        .into_iter()
+        .find(|schema| schema.name == "services")
+        .unwrap();
+    let validator = jsonschema::validator_for(&schema.input).unwrap();
+    assert!(validator.is_valid(&json!({"manifest":null,"service":null})));
+}
+
+#[cfg(unix)]
+#[test]
+fn services_manifest_symlinks_cannot_escape_the_repository() {
+    use std::os::unix::fs::symlink;
+    let fixture = ServicesFixture::new();
+    let outside = ServicesFixture::new();
+    outside.write("external.yaml", "version: 1\nservices: []\nedges: []\n");
+    symlink(
+        outside.0.join("external.yaml"),
+        fixture.0.join("escape.yaml"),
+    )
+    .unwrap();
+    assert!(
+        services(&fixture.0, json!({"manifest":"escape.yaml"}))
+            .unwrap_err()
+            .to_string()
+            .contains("file inside")
+    );
+    assert_eq!(
+        std::fs::read_to_string(outside.0.join("external.yaml")).unwrap(),
+        "version: 1\nservices: []\nedges: []\n"
+    );
+    fixture.write(
+        "inside.yaml",
+        "version: 1\nservices: [api, worker, idle]\nedges: []\n",
+    );
+    symlink(fixture.0.join("inside.yaml"), fixture.0.join("alias.yaml")).unwrap();
+    validate(
+        "services",
+        &services(&fixture.0, json!({"manifest":"alias.yaml"})).unwrap(),
+    );
 }
 
 #[test]

@@ -18,15 +18,45 @@ enum Receiver {
     Request(Option<String>, Option<String>),
 }
 
-struct Binding {
-    receiver: Receiver,
+struct Binding<T> {
+    value: T,
     start: usize,
     end: usize,
 }
 
-impl Binding {
-    fn at(&self, node: Node<'_>) -> Option<&Receiver> {
-        (self.start <= node.start_byte() && node.end_byte() <= self.end).then_some(&self.receiver)
+impl<T> Binding<T> {
+    fn new(value: T, node: Node<'_>) -> Self {
+        let mut scope = node;
+        while let Some(parent) = scope.parent() {
+            scope = parent;
+            if matches!(
+                scope.kind(),
+                "block"
+                    | "if_statement"
+                    | "for_statement"
+                    | "expression_switch_statement"
+                    | "type_switch_statement"
+                    | "expression_case"
+                    | "type_case"
+                    | "communication_case"
+                    | "default_case"
+            ) {
+                break;
+            }
+        }
+        Self {
+            value,
+            start: if scope.kind() == "source_file" {
+                scope.start_byte()
+            } else {
+                node.end_byte()
+            },
+            end: scope.end_byte(),
+        }
+    }
+
+    fn at(&self, node: Node<'_>) -> Option<&T> {
+        (self.start <= node.start_byte() && node.end_byte() <= self.end).then_some(&self.value)
     }
 }
 
@@ -59,6 +89,16 @@ pub(crate) fn app_facts(_file: &str, source: &str) -> Result<AppFacts> {
     for node in &nodes {
         for name in bindings(*node, source) {
             *counts.entry(name).or_default() += 1;
+        }
+        if node.kind() == "unary_expression"
+            && node
+                .child_by_field_name("operator")
+                .is_some_and(|operator| text(operator, source) == "&")
+            && let Some(name) = node
+                .child_by_field_name("operand")
+                .and_then(|operand| assignment_name(operand, source))
+        {
+            assigned.insert(name);
         }
         if matches!(
             node.kind(),
@@ -94,46 +134,35 @@ pub(crate) fn app_facts(_file: &str, source: &str) -> Result<AppFacts> {
         .collect();
 
     let mut receivers = BTreeMap::new();
+    let mut strings = BTreeMap::new();
     for node in &nodes {
-        if !matches!(node.kind(), "short_var_declaration" | "var_spec") {
+        if !matches!(
+            node.kind(),
+            "short_var_declaration" | "var_spec" | "const_spec"
+        ) {
             continue;
         }
-        let Some(name) = bindings(*node, source).into_iter().next() else {
+        let names = bindings(*node, source);
+        let Some(name) = names.first() else {
             continue;
         };
-        if counts.get(&name) != Some(&1) || assigned.contains(&name) {
+        if counts.get(name) != Some(&1) || assigned.contains(name) {
             continue;
         }
         let Some(value) = binding_value(*node) else {
             continue;
         };
-        if let Some(receiver) = receiver_value(value, source, &packages) {
-            let mut scope = *node;
-            while let Some(parent) = scope.parent() {
-                scope = parent;
-                if matches!(
-                    scope.kind(),
-                    "block"
-                        | "if_statement"
-                        | "for_statement"
-                        | "expression_switch_statement"
-                        | "type_switch_statement"
-                ) {
-                    break;
-                }
+        if names.len() == 1
+            && let Some(value) = literal(value, source)
+        {
+            let binding = Binding::new(value, *node);
+            // Package variables can be changed by another source file.
+            if binding.start != tree.root_node().start_byte() || node.kind() == "const_spec" {
+                strings.insert(name.clone(), binding);
             }
-            receivers.insert(
-                name,
-                Binding {
-                    receiver,
-                    start: if scope.kind() == "source_file" {
-                        scope.start_byte()
-                    } else {
-                        node.end_byte()
-                    },
-                    end: scope.end_byte(),
-                },
-            );
+        }
+        if let Some(receiver) = receiver_value(value, source, &packages) {
+            receivers.insert(name.clone(), Binding::new(receiver, *node));
         }
     }
 
@@ -236,7 +265,8 @@ pub(crate) fn app_facts(_file: &str, source: &str) -> Result<AppFacts> {
                     *node,
                     kind,
                     NATS,
-                    args.first().and_then(|n| literal(*n, source)),
+                    args.first()
+                        .and_then(|n| known_string(*n, source, &strings)),
                     None,
                 );
             }
@@ -266,10 +296,14 @@ fn package_alias(package: &str) -> Option<&'static str> {
 
 fn bindings(node: Node<'_>, source: &str) -> Vec<String> {
     let target = match node.kind() {
-        "short_var_declaration" | "range_clause" => node.child_by_field_name("left"),
+        "short_var_declaration" | "range_clause" | "receive_statement" => {
+            node.child_by_field_name("left")
+        }
+        "type_switch_statement" => node.child_by_field_name("alias"),
         "var_spec"
         | "const_spec"
         | "parameter_declaration"
+        | "type_parameter_declaration"
         | "variadic_parameter_declaration"
         | "type_spec"
         | "type_alias"
@@ -309,6 +343,11 @@ fn binding_value(node: Node<'_>) -> Option<Node<'_>> {
 fn assignment_name(node: Node<'_>, source: &str) -> Option<String> {
     if node.kind() == "identifier" {
         return Some(text(node, source).to_owned());
+    }
+    if node.kind() == "parenthesized_expression" {
+        return named_children(node)
+            .first()
+            .and_then(|child| assignment_name(*child, source));
     }
     node.child_by_field_name("operand")
         .and_then(|operand| assignment_name(operand, source))
@@ -395,6 +434,17 @@ fn literal(node: Node<'_>, source: &str) -> Option<String> {
         "raw_string_literal" => Some(text(node, source).trim_matches('`').replace('\r', "")),
         _ => None,
     }
+}
+
+fn known_string(
+    node: Node<'_>,
+    source: &str,
+    strings: &BTreeMap<String, Binding<String>>,
+) -> Option<String> {
+    literal(node, source).or_else(|| {
+        (node.kind() == "identifier").then_some(())?;
+        strings.get(text(node, source))?.at(node).cloned()
+    })
 }
 
 fn http_method(
@@ -628,5 +678,159 @@ func work() {
             result.facts[0].operation.as_deref(),
             Some("http://api/inside")
         );
+    }
+
+    #[test]
+    fn nats_operations_resolve_immutable_literal_declarations() {
+        let result = facts(
+            r#"package main
+import "github.com/nats-io/nats.go"
+func main() {
+ nc, err := nats.Connect(nats.DefaultURL)
+ subject := "test"
+ const subscription = "test"
+ var publication string = "created"
+ nc.Publish(subject, nil)
+ nc.Subscribe(subscription, handler)
+ nc.Publish(publication, nil)
+}
+"#,
+        );
+        assert_eq!(
+            result
+                .facts
+                .iter()
+                .filter(|fact| matches!(fact.kind, FactKind::Publish | FactKind::Subscribe))
+                .map(|fact| fact.operation.as_deref())
+                .collect::<Vec<_>>(),
+            vec![Some("test"), Some("test"), Some("created")]
+        );
+    }
+
+    #[test]
+    fn nats_literal_aliases_require_safe_scope_order_and_no_mutation() {
+        for body in [
+            "subject := \"test\"; subject = next; nc.Publish(subject, nil)",
+            "subject := \"test\"; mutate(&subject); nc.Publish(subject, nil)",
+            "subject := \"test\"; mutate(&(subject)); nc.Publish(subject, nil)",
+            "subject := \"test\"; pointer := &subject; *pointer = next; nc.Publish(subject, nil)",
+            "{ subject := \"test\" }; nc.Publish(subject, nil)",
+            "if subject := \"test\"; ready {}; nc.Publish(subject, nil)",
+            "switch value { case 1: subject := \"test\"; case 2: nc.Publish(subject, nil) }",
+            "select { case <-ready: subject := \"test\"; case <-done: nc.Publish(subject, nil) }",
+            "subject := \"label\"; _ = subject; var data any = \"different\"; switch subject := data.(type) { case string: nc.Publish(subject, nil) }",
+            "subject := \"label\"; var ch chan string; select { case subject := <-ch: nc.Publish(subject, nil) }",
+            "subject := \"label\"; var ch chan string; select { case subject = <-ch: nc.Publish(subject, nil) }",
+            "subject := \"label\"; var ch chan string; select { case subject = <-ch: default: nc.Publish(subject, nil) }",
+            "switch value { default: subject := \"label\"; case 1: nc.Publish(subject, nil) }",
+        ] {
+            let result = facts(&format!(
+                "package main\nimport \"github.com/nats-io/nats.go\"\nfunc main() {{ nc, err := nats.Connect(nats.DefaultURL); {body} }}"
+            ));
+            assert_eq!(
+                result
+                    .facts
+                    .iter()
+                    .filter(|fact| fact.kind == FactKind::Publish)
+                    .map(|fact| fact.operation.as_deref())
+                    .collect::<Vec<_>>(),
+                vec![None],
+                "{body}: {:?}",
+                result.facts
+            );
+        }
+        let result = facts(
+            r#"package main
+import "github.com/nats-io/nats.go"
+func publish(subject string) {
+ nc, err := nats.Connect(nats.DefaultURL)
+ { subject := "shadow"; nc.Publish(subject, nil) }
+ nc.Publish(subject, nil)
+}
+"#,
+        );
+        assert_eq!(
+            result
+                .facts
+                .iter()
+                .filter(|fact| fact.kind == FactKind::Publish)
+                .map(|fact| fact.operation.as_deref())
+                .collect::<Vec<_>>(),
+            vec![None, None]
+        );
+        let result = facts(
+            r#"package main
+import "github.com/nats-io/nats.go"
+func main() {
+ nc, err := nats.Connect(nats.DefaultURL)
+ nc.Publish(subject, nil)
+ subject := "test"
+ nc.Publish(subject, nil)
+}
+"#,
+        );
+        assert_eq!(
+            result
+                .facts
+                .iter()
+                .filter(|fact| fact.kind == FactKind::Publish)
+                .map(|fact| fact.operation.as_deref())
+                .collect::<Vec<_>>(),
+            vec![None, Some("test")]
+        );
+        let result = facts(
+            r#"package main
+import "github.com/nats-io/nats.go"
+var subject = "mutable-in-another-file"
+func main() {
+ nc, err := nats.Connect(nats.DefaultURL)
+ nc.Publish(subject, nil)
+}
+"#,
+        );
+        assert_eq!(
+            result
+                .facts
+                .iter()
+                .filter(|fact| fact.kind == FactKind::Publish)
+                .map(|fact| fact.operation.as_deref())
+                .collect::<Vec<_>>(),
+            vec![None]
+        );
+    }
+
+    #[test]
+    fn a_type_switch_shadow_cannot_create_a_service_flow() {
+        let root = crate::collect::TempDir::new("go-shadowed-topic").unwrap();
+        let publisher = r#"package main
+import "github.com/nats-io/nats.go"
+func main() {
+ nc, err := nats.Connect(nats.DefaultURL)
+ subject := "label"
+ _ = subject
+ var data any = "different"
+ switch subject := data.(type) { case string: nc.Publish(subject, nil) }
+}
+"#;
+        let subscriber = r#"package main
+import "github.com/nats-io/nats.go"
+func main() {
+ nc, err := nats.Connect(nats.DefaultURL)
+ nc.Subscribe("label", handler)
+}
+"#;
+        for (service, source) in [("pub", publisher), ("sub", subscriber)] {
+            let dir = root.path().join(service);
+            std::fs::create_dir(&dir).unwrap();
+            std::fs::write(dir.join("main.go"), source).unwrap();
+        }
+        std::fs::write(
+            root.path().join("go.mod"),
+            "module example.com/shadow\n\ngo 1.21\n",
+        )
+        .unwrap();
+        let report = crate::infer_services::infer(root.path(), None).unwrap();
+        assert_eq!(report.services, ["pub", "sub"]);
+        assert!(report.edges.is_empty(), "{:?}", report.edges);
     }
 }
