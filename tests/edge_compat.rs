@@ -1,5 +1,5 @@
 mod common;
-use common::{archgraph, scan, synthetic_typed, validate};
+use common::{boundrail, scan, synthetic_typed, validate};
 use serde_json::Value;
 
 #[test]
@@ -40,7 +40,7 @@ fn erased_reexports_still_define_the_public_boundary() {
 #[test]
 fn explicit_legacy_export_validates_against_the_frozen_v1_schema() {
     let root = common::fixture("ts-basic");
-    let out = archgraph(&[
+    let out = boundrail(&[
         "scan",
         root.to_str().unwrap(),
         "--collector-input",
@@ -53,7 +53,7 @@ fn explicit_legacy_export_validates_against_the_frozen_v1_schema() {
         String::from_utf8_lossy(&out.stderr)
     );
     let doc: Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(doc["schema"], "archgraph/v1");
+    assert_eq!(doc["schema"], "boundrail/v1");
     validate(&doc);
     assert!(
         doc["edges"]

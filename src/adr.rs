@@ -351,7 +351,7 @@ pub fn import(root: &Path, dir: &Path) -> Result<Report> {
     markdown_files(&dir, &mut files)?;
     files.sort();
     let mut report = Report {
-        schema: "archgraph/adr-import/v1",
+        schema: "boundrail/adr-import/v1",
         documents: files.len(),
         proposals: Vec::new(),
         informational: Vec::new(),
@@ -663,7 +663,7 @@ pub fn check(root: &Path, require_source: bool) -> Result<CheckReport> {
     crate::rules::load(&root.join("layout.yaml"))?;
     let raw: Value = serde_yaml_ng::from_str(&fs::read_to_string(root.join("layout.yaml"))?)?;
     let mut report = CheckReport {
-        schema: "archgraph/adr-check/v1",
+        schema: "boundrail/adr-check/v1",
         stale: Vec::new(),
         missing: Vec::new(),
         unknown: Vec::new(),

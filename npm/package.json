@@ -5,10 +5,10 @@
   "license": "MIT OR Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dogebonker/archgraph.git",
+    "url": "git+https://github.com/dogebonker/boundrail.git",
     "directory": "npm"
   },
-  "homepage": "https://github.com/dogebonker/archgraph#readme",
+  "homepage": "https://github.com/dogebonker/boundrail#readme",
   "bin": {
     "boundrail": "bin/boundrail.js"
   },

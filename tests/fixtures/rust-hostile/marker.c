@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-__attribute__((constructor)) static void archgraph_marker(void) {
+__attribute__((constructor)) static void boundrail_marker(void) {
     char path[4096];
     snprintf(path, sizeof path, "%s/dylib-%d", MARKER_DIR, (int)getpid());
     FILE *f = fopen(path, "w");

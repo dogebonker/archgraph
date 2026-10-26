@@ -30,9 +30,9 @@ revalidated unannotated files. The runner avoids Git status and its configurable
 cargo build --release
 python3 -B -m unittest discover -s benchmarks -p test_service_flows.py
 python3 -B benchmarks/service_flows.py \
-  --archgraph target/release/archgraph \
-  --repos /private/tmp/archgraph-app-model-validation \
-  --output /private/tmp/archgraph-app-model-validation/flow-candidate.json
+  --boundrail target/release/boundrail \
+  --repos /private/tmp/boundrail-app-model-validation \
+  --output /private/tmp/boundrail-app-model-validation/flow-candidate.json
 ```
 
 The runner freezes a copy of the binary before scanning. The output records the binary and truth

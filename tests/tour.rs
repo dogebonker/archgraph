@@ -53,7 +53,7 @@ impl Drop for Scratch {
 
 fn graph(paths: &[&str], edges: &[(&str, &str, &str)]) -> Value {
     json!({
-        "schema": "archgraph/v1.1", "kind": "scan",
+        "schema": "boundrail/v1.1", "kind": "scan",
         "source": {"language":"typescript", "collector":{"name":"fixture","cruised":paths.len()}, "git":null, "generated_at":"2026-01-01T00:00:00Z"},
         "config": {"depth":1,"source_root":".","excludes":[],"include_tests":false,"rules":null},
         "files": paths.iter().map(|path| json!({"path":path,"module":path.split('/').next().unwrap(),"barrel":false})).collect::<Vec<_>>(),
@@ -232,7 +232,7 @@ fn agent_uses_saved_export_names_without_opening_sources_and_marks_missing_evide
     );
     doc.as_object_mut().unwrap().remove("symbols");
     doc["surface"] = json!({
-        "schema":"archgraph/v1.1","kind":"surface","max_symbols":50,"complete":true,"limitations":[],
+        "schema":"boundrail/v1.1","kind":"surface","max_symbols":50,"complete":true,"limitations":[],
         "modules":[{
             "module":"domain","entrypoints":["domain/model.ts"],
             "exported":[{"file":"domain/model.ts","name":"FromSurface","target":{"file":"domain/model.ts","name":"FromSurface"}}],
@@ -250,12 +250,12 @@ fn agent_uses_saved_export_names_without_opening_sources_and_marks_missing_evide
 fn default_input_and_legacy_schema_work_without_writes_and_invalid_input_fails() {
     let s = Scratch::new();
     let mut doc = graph(&["domain/model.ts"], &[]);
-    doc["schema"] = json!("archgraph/v1");
+    doc["schema"] = json!("boundrail/v1");
     let explicit = s.tour(&doc, &[]);
     assert_order(&explicit, &["domain"]);
-    let default_dir = s.0.join(".archgraph");
+    let default_dir = s.0.join(".boundrail");
     fs::create_dir(&default_dir).unwrap();
-    let default_graph = default_dir.join("archgraph.json");
+    let default_graph = default_dir.join("boundrail.json");
     fs::copy(s.0.join("graph.json"), &default_graph).unwrap();
     let original = fs::read(&default_graph).unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_boundrail"))
@@ -272,7 +272,7 @@ fn default_input_and_legacy_schema_work_without_writes_and_invalid_input_fails()
     assert_eq!(fs::read_dir(&s.0).unwrap().count(), 2);
     assert_eq!(fs::read_dir(&default_dir).unwrap().count(), 1);
     assert_eq!(fs::read(&default_graph).unwrap(), original);
-    fs::write(&default_graph, r#"{"schema":"archgraph/v999"}"#).unwrap();
+    fs::write(&default_graph, r#"{"schema":"boundrail/v999"}"#).unwrap();
     let failed = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .current_dir(&s.0)
         .arg("tour")

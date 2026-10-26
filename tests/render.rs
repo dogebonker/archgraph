@@ -2,14 +2,14 @@ mod common;
 
 use std::fs;
 
-use common::{archgraph, layout, scan, scan_file, synthetic, validate, write_tmp};
+use common::{boundrail, layout, scan, scan_file, synthetic, validate, write_tmp};
 use serde_json::Value;
 
 const OPEN: &str = r#"<script type="application/json" id="graph">"#;
 
 fn render(args: &[&str], name: &str) -> String {
     let out_path = write_tmp(name, "");
-    let out = archgraph(&[&["render"], args, &["-o", &out_path]].concat());
+    let out = boundrail(&[&["render"], args, &["-o", &out_path]].concat());
     assert!(
         out.status.success(),
         "{}",
@@ -94,8 +94,8 @@ fn script_end_tag_in_a_path_stays_escaped() {
 #[test]
 fn asset_placeholders_in_repository_paths_remain_literal_data() {
     let paths = [
-        "src/x/*__ARCHGRAPH_PREVIEW__*/{{GRAPH}}.ts".to_owned(),
-        "src/y/*__ARCHGRAPH_PREVIEW_UI__*/dep.ts".to_owned(),
+        "src/x/*__BOUNDRAIL_PREVIEW__*/{{GRAPH}}.ts".to_owned(),
+        "src/y/*__BOUNDRAIL_PREVIEW_UI__*/dep.ts".to_owned(),
     ];
     let (dir, input) = synthetic("render-markers", 2, &[(paths[0].clone(), paths[1].clone())]);
     let (_, stdout, _) = scan(&[
@@ -117,7 +117,7 @@ fn asset_placeholders_in_repository_paths_remain_literal_data() {
                 .any(|file| file["path"] == path)
         );
     }
-    assert_eq!(html.matches("root.ArchgraphPreview = api").count(), 1);
+    assert_eq!(html.matches("root.BoundrailPreview = api").count(), 1);
 }
 
 #[test]
@@ -182,7 +182,7 @@ fn embedded_services(html: &str) -> Value {
     let len = html[start..].find("</script>").unwrap();
     let report: Value = serde_json::from_str(&html[start..start + len]).unwrap();
     let schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../schema/boundrail.v1.2.schema.json")).unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
     let errors: Vec<_> = validator
         .iter_errors(&report)
@@ -231,7 +231,7 @@ fn services_render_includes_inferred_resources_and_recomputes_package_verdicts()
         "import {Pool} from 'pg'; new Pool();",
     );
     let root = std::path::Path::new(&package).parent().unwrap();
-    let output = archgraph(&["services", root.to_str().unwrap(), "--format", "json"]);
+    let output = boundrail(&["services", root.to_str().unwrap(), "--format", "json"]);
     assert!(
         output.status.success(),
         "{}",
@@ -272,7 +272,7 @@ fn malformed_service_reports_fail_without_overwriting_the_output() {
     let base = service_report();
     let mut cases = Vec::new();
     for (pointer, value) in [
-        ("/schema", serde_json::json!("archgraph/v1.1")),
+        ("/schema", serde_json::json!("boundrail/v1.1")),
         ("/source/collector", serde_json::json!("unknown")),
         ("/source/complete", serde_json::json!(true)),
         ("/source/path", serde_json::json!("")),
@@ -301,12 +301,12 @@ fn malformed_service_reports_fail_without_overwriting_the_output() {
             &format!("render-services/invalid-{index}.json"),
             &report.to_string(),
         );
-        let result = archgraph(&["render", &input, "-o", &output]);
+        let result = boundrail(&["render", &input, "-o", &output]);
         assert_eq!(result.status.code(), Some(2));
         assert_eq!(fs::read_to_string(&output).unwrap(), "keep existing report");
     }
     let input = write_tmp("render-services/rules-report.json", &base.to_string());
-    let result = archgraph(&[
+    let result = boundrail(&[
         "render",
         &input,
         "--rules",

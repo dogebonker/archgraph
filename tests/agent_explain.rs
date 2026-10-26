@@ -82,7 +82,7 @@ fn invalid_paths_do_not_become_policy_evidence() {
 #[test]
 fn cli_flag_emits_compact_json_for_a_new_file() {
     let graph = std::env::temp_dir().join(format!(
-        "archgraph-agent-explain-{}.json",
+        "boundrail-agent-explain-{}.json",
         std::process::id()
     ));
     std::fs::write(&graph, serde_json::to_vec(&document()).unwrap()).unwrap();
@@ -105,6 +105,6 @@ fn cli_flag_emits_compact_json_for_a_new_file() {
     );
     assert!(output.stdout.len() <= 401); // Compact payload plus the CLI newline.
     let value: Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(value["schema"], "archgraph/explain-agent/v1");
+    assert_eq!(value["schema"], "boundrail/explain-agent/v1");
     assert!(value["summary"].as_str().unwrap().contains("unscanned:1"));
 }

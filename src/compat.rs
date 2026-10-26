@@ -20,9 +20,9 @@ pub fn v1(value: &mut serde_json::Value) -> anyhow::Result<()> {
         serde_json::Value::Object(object) => {
             if matches!(
                 object.get("schema").and_then(|v| v.as_str()),
-                Some("archgraph/v1.1" | "archgraph/v1.2")
+                Some("boundrail/v1.1" | "boundrail/v1.2")
             ) {
-                object.insert("schema".into(), "archgraph/v1".into());
+                object.insert("schema".into(), "boundrail/v1".into());
             }
             if let Some(serde_json::Value::Array(diagnostics)) = object.remove("diagnostics")
                 && let Some(findings) = object.get_mut("findings").and_then(|v| v.as_array_mut())

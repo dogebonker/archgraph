@@ -260,10 +260,10 @@ fn remove(root: &Path, relative: &str) -> Result<()> {
     }
 }
 fn locked(root: &Path) -> Result<File> {
-    directory(root, ".archgraph/hooks/snapshots")?;
-    directory(root, ".archgraph/hooks/sessions")?;
-    directory(root, ".archgraph/hooks/configs")?;
-    let path = checked(root, ".archgraph/hooks/lock")?;
+    directory(root, ".boundrail/hooks/snapshots")?;
+    directory(root, ".boundrail/hooks/sessions")?;
+    directory(root, ".boundrail/hooks/configs")?;
+    let path = checked(root, ".boundrail/hooks/lock")?;
     let mut options = OpenOptions::new();
     options.read(true).write(true).create(true).truncate(false);
     #[cfg(unix)]
@@ -351,7 +351,7 @@ fn omitted(path: &Path) -> bool {
     path.components().any(|p| {
         matches!(
             p.as_os_str().to_str(),
-            Some(".git" | ".archgraph" | "node_modules" | ".venv" | "venv" | "__pycache__")
+            Some(".git" | ".boundrail" | "node_modules" | ".venv" | "venv" | "__pycache__")
         )
     })
 }
@@ -390,7 +390,7 @@ fn manifest(root: &Path, outputs: &globset::GlobSet) -> Result<BTreeMap<String, 
             let rel = path.strip_prefix(root)?;
             if omitted(rel)
                 || outputs.is_match(rel)
-                || outputs.is_match(rel.join("__archgraph_build_output__"))
+                || outputs.is_match(rel.join("__boundrail_build_output__"))
             {
                 continue;
             }
@@ -482,7 +482,7 @@ fn scan(setup: &Setup) -> Result<(Document, BTreeMap<String, String>)> {
     for _ in 0..2 {
         let before = manifest(&setup.root, &outputs)?;
         let graph_relative = format!(
-            ".archgraph/hooks/snapshots/{}.scan.json",
+            ".boundrail/hooks/snapshots/{}.scan.json",
             daemon_cli::token()?
         );
         let graph_path = checked(&setup.root, &graph_relative)?;
@@ -510,7 +510,7 @@ fn scan(setup: &Setup) -> Result<(Document, BTreeMap<String, String>)> {
         // Request-local captured output keeps native hook stdout valid JSON.
         let capture = boundrail::output::Capture::begin();
         // A reasoned bypass changes the caller environment; collect independently of daemon trust.
-        let response = if globals().no_daemon || std::env::var_os("ARCHGRAPH_BYPASS").is_some() {
+        let response = if globals().no_daemon || std::env::var_os("BOUNDRAIL_BYPASS").is_some() {
             None
         } else {
             daemon_cli::forward_args(&setup.root, args.clone(), false)
@@ -540,16 +540,16 @@ fn scan(setup: &Setup) -> Result<(Document, BTreeMap<String, String>)> {
 }
 fn snapshot(root: &Path, id: &str) -> Result<(Snapshot, Document)> {
     token(id)?;
-    let state: Snapshot = load(root, &format!(".archgraph/hooks/snapshots/{id}.json"))?;
+    let state: Snapshot = load(root, &format!(".boundrail/hooks/snapshots/{id}.json"))?;
     ensure!(
-        state.schema == "archgraph/edit-snapshot/v1" && state.root == root,
+        state.schema == "boundrail/edit-snapshot/v1" && state.root == root,
         "snapshot belongs to a different repository or schema"
     );
     ensure!(
         state.setup.root == root && state.policy == policy(&state.setup)?,
         "architecture policy changed since the pre-edit snapshot; restore it or explicitly reset with a reason"
     );
-    let path = checked(root, &format!(".archgraph/hooks/snapshots/{id}.graph.json"))?;
+    let path = checked(root, &format!(".boundrail/hooks/snapshots/{id}.graph.json"))?;
     ensure!(
         hash(&fs::read(&path)?) == state.graph_hash,
         "snapshot graph changed"
@@ -566,7 +566,7 @@ fn capture(setup: &Setup, agent: Agent, session: &str) -> Result<(String, Docume
     let bytes = serde_json::to_vec(&doc)?;
     let id = daemon_cli::token()?;
     let state = Snapshot {
-        schema: "archgraph/edit-snapshot/v1".into(),
+        schema: "boundrail/edit-snapshot/v1".into(),
         root: setup.root.clone(),
         agent,
         session: session.into(),
@@ -578,12 +578,12 @@ fn capture(setup: &Setup, agent: Agent, session: &str) -> Result<(String, Docume
     // The private parent and atomic JSON writer keep baseline artifacts out of source control.
     save(
         &setup.root,
-        &format!(".archgraph/hooks/snapshots/{id}.graph.json"),
+        &format!(".boundrail/hooks/snapshots/{id}.graph.json"),
         &doc,
     )?;
     save(
         &setup.root,
-        &format!(".archgraph/hooks/snapshots/{id}.json"),
+        &format!(".boundrail/hooks/snapshots/{id}.json"),
         &state,
     )?;
     Ok((id, doc))
@@ -641,12 +641,12 @@ fn enforce(
     reason: Option<&str>,
 ) -> Result<(edit_gate::Report, Document)> {
     let (state, mut report, doc) = compare(root, id)?;
-    let env = std::env::var("ARCHGRAPH_BYPASS").ok();
+    let env = std::env::var("BOUNDRAIL_BYPASS").ok();
     let mut accepted = BTreeSet::new();
     if let Some(reason) = env.as_deref() {
         ensure!(
             !reason.trim().is_empty(),
-            "ARCHGRAPH_BYPASS requires a reason"
+            "BOUNDRAIL_BYPASS requires a reason"
         );
         accepted.extend(report.violations.iter().map(|v| v.finding_id.clone()));
         edit_audit::override_event(
@@ -661,7 +661,7 @@ fn enforce(
         let reason = reason
             .filter(|s| !s.trim().is_empty())
             .context("--allow-once requires --reason")?;
-        let used_path = format!(".archgraph/hooks/snapshots/{id}.allowed.json");
+        let used_path = format!(".boundrail/hooks/snapshots/{id}.allowed.json");
         let mut used: BTreeSet<String> = optional(root, &used_path)?.unwrap_or_default();
         for finding in allow {
             ensure!(
@@ -681,7 +681,7 @@ fn enforce(
         accepted.extend(
             optional::<BTreeSet<String>>(
                 root,
-                &format!(".archgraph/hooks/snapshots/{id}.allowed.json"),
+                &format!(".boundrail/hooks/snapshots/{id}.allowed.json"),
             )?
             .unwrap_or_default(),
         );
@@ -716,7 +716,7 @@ fn message(report: &edit_gate::Report) -> Result<String> {
     ))
 }
 fn state_path(key: &str) -> String {
-    format!(".archgraph/hooks/sessions/{key}.json")
+    format!(".boundrail/hooks/sessions/{key}.json")
 }
 fn readonly(tool: &str) -> bool {
     matches!(
@@ -734,7 +734,7 @@ fn readonly(tool: &str) -> bool {
             | "web_fetch"
     )
 }
-const LEASE: &str = ".archgraph/hooks/active-edit.json";
+const LEASE: &str = ".boundrail/hooks/active-edit.json";
 fn checkpoint(root: &Path, key: &str, baseline: &str) -> Result<()> {
     save(
         root,
@@ -830,7 +830,7 @@ fn native(args: Native) -> Result<ExitCode> {
         let _lock = locked(&root)?;
         let config: Installed = load(
             &root,
-            &format!(".archgraph/hooks/configs/{}.json", agent_name(args.agent)),
+            &format!(".boundrail/hooks/configs/{}.json", agent_name(args.agent)),
         )?;
         ensure!(
             config.feedback_only == args.feedback_only,
@@ -940,14 +940,14 @@ pub(super) fn run(args: Hook) -> Result<ExitCode> {
             )?;
             save(
                 &setup.root,
-                &format!(".archgraph/hooks/configs/{}.json", agent_name(args.agent)),
+                &format!(".boundrail/hooks/configs/{}.json", agent_name(args.agent)),
                 &Installed {
                     setup: setup.clone(),
                     feedback_only: args.feedback_only,
                 },
             )?;
             value["configuration"] = json!(setup.root.join(format!(
-                ".archgraph/hooks/configs/{}.json",
+                ".boundrail/hooks/configs/{}.json",
                 agent_name(args.agent)
             )));
             write(None, &value)?;
@@ -1009,7 +1009,7 @@ pub(super) fn run(args: Hook) -> Result<ExitCode> {
                 Err(error) if globals().brief => {
                     println!(
                         "UNAVAILABLE\n{}",
-                        json!({"schema":"archgraph/edit-check/v1","verdict":"UNAVAILABLE","violations":[],"error":format!("{error:#}")})
+                        json!({"schema":"boundrail/edit-check/v1","verdict":"UNAVAILABLE","violations":[],"error":format!("{error:#}")})
                     );
                     Ok(ExitCode::from(2))
                 }
@@ -1023,7 +1023,7 @@ pub(super) fn run(args: Hook) -> Result<ExitCode> {
             ensure!(!args.reason.trim().is_empty(), "reset requires a reason");
             let state: Snapshot = load(
                 &root,
-                &format!(".archgraph/hooks/snapshots/{}.json", args.baseline),
+                &format!(".boundrail/hooks/snapshots/{}.json", args.baseline),
             )?;
             ensure!(state.root == root, "snapshot belongs to another repository");
             let key = session_key(state.agent, &state.session);
@@ -1068,7 +1068,7 @@ mod tests {
     impl Fixture {
         fn new() -> Self {
             let root = std::env::temp_dir().join(format!(
-                "archgraph-edit-runtime-{}",
+                "boundrail-edit-runtime-{}",
                 daemon_cli::token().unwrap()
             ));
             fs::create_dir_all(root.join("src/domain")).unwrap();
@@ -1215,7 +1215,7 @@ mod tests {
         .unwrap();
         assert_eq!(allowed.verdict, "PASS");
         assert!(enforce(&fixture.0, &id, &[finding], Some("repeat")).is_err());
-        let records = fs::read_to_string(fixture.0.join(".archgraph/overrides.log")).unwrap();
+        let records = fs::read_to_string(fixture.0.join(".boundrail/overrides.log")).unwrap();
         assert!(records.contains("approved scope exception"));
     }
 
@@ -1223,7 +1223,7 @@ mod tests {
     #[test]
     fn symlinked_state_directory_is_refused() {
         let fixture = Fixture::new();
-        std::os::unix::fs::symlink(std::env::temp_dir(), fixture.0.join(".archgraph")).unwrap();
+        std::os::unix::fs::symlink(std::env::temp_dir(), fixture.0.join(".boundrail")).unwrap();
         assert!(locked(&fixture.0).is_err());
     }
 
@@ -1363,7 +1363,7 @@ mod tests {
     #[test]
     fn directory_alias_non_regular_link_target_is_refused() {
         let root = PathBuf::from("/tmp").join(format!(
-            "ag-hook-socket-{}",
+            "br-hook-socket-{}",
             &daemon_cli::token().unwrap()[..16]
         ));
         fs::create_dir(&root).unwrap();

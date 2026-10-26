@@ -48,7 +48,7 @@
                           "type": "object"
                         },
                         "finding_id": {
-                          "pattern": "^ag-[0-9a-f]{64}$",
+                          "pattern": "^br-[0-9a-f]{64}$",
                           "type": "string"
                         },
                         "kind": {
@@ -511,7 +511,7 @@
           "type": "boolean"
         },
         "finding_id": {
-          "pattern": "^ag-[0-9a-f]{64}$",
+          "pattern": "^br-[0-9a-f]{64}$",
           "type": "string"
         }
       },
@@ -592,7 +592,7 @@
                     "type": "object"
                   },
                   "finding_id": {
-                    "pattern": "^ag-[0-9a-f]{64}$",
+                    "pattern": "^br-[0-9a-f]{64}$",
                     "type": "string"
                   },
                   "risk_notes": {
@@ -687,7 +687,7 @@
                             "type": "array"
                           },
                           "baseline_id": {
-                            "pattern": "^ag-[0-9a-f]{64}$",
+                            "pattern": "^br-[0-9a-f]{64}$",
                             "type": "string"
                           },
                           "cycles_in": {
@@ -1986,7 +1986,7 @@
               "type": "array"
             },
             "baseline_id": {
-              "pattern": "^ag-[0-9a-f]{64}$",
+              "pattern": "^br-[0-9a-f]{64}$",
               "type": "string"
             },
             "cycles_in": {
@@ -2140,7 +2140,7 @@
                           "type": "object"
                         },
                         "finding_id": {
-                          "pattern": "^ag-[0-9a-f]{64}$",
+                          "pattern": "^br-[0-9a-f]{64}$",
                           "type": "string"
                         },
                         "kind": {
@@ -2815,7 +2815,7 @@
       "type": "object"
     }
   },
-  "$id": "https://github.com/dogebonker/archgraph/schema/mcp.v1.schema.json",
+  "$id": "https://github.com/dogebonker/boundrail/schema/mcp.v1.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "archgraph MCP tool contracts v1"
+  "title": "boundrail MCP tool contracts v1"
 }

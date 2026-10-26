@@ -14,7 +14,7 @@ impl Source {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let unique = NEXT.fetch_add(1, Ordering::Relaxed);
         let path =
-            std::env::temp_dir().join(format!("archgraph-lazy-{}-{unique}", std::process::id()));
+            std::env::temp_dir().join(format!("boundrail-lazy-{}-{unique}", std::process::id()));
         fs::create_dir_all(&path).unwrap();
         fs::write(path.join("entry.ts"), source).unwrap();
         Self(path)

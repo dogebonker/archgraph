@@ -17,7 +17,7 @@ from bench_daemon_2k import generate
 
 def invoke(binary, root, args, timeout, expected=0, cold=False):
     command = [str(binary), *(["--no-daemon"] if cold else []), *map(str, args)]
-    env = {key: value for key, value in os.environ.items() if key != "ARCHGRAPH_BYPASS"}
+    env = {key: value for key, value in os.environ.items() if key != "BOUNDRAIL_BYPASS"}
     started = time.perf_counter()
     result = subprocess.run(command, cwd=root, capture_output=True, timeout=timeout, env=env)
     elapsed = (time.perf_counter() - started) * 1000
@@ -62,7 +62,7 @@ def fixture(binary, work, timeout):
     root = work / "fixture-loop"
     (root / "src/domain").mkdir(parents=True)
     (root / "src/adapters").mkdir()
-    (root / "package.json").write_text('{"name":"archgraph-edit-loop","type":"module"}\n')
+    (root / "package.json").write_text('{"name":"boundrail-edit-loop","type":"module"}\n')
     source = root / "src/domain/a.ts"
     original = 'export const value = 0;\n'
     violation = original + 'import "../adapters/b";\n'
@@ -145,10 +145,10 @@ def benchmark(binary, work, repeats, timeout):
     with log_path.open("wb") as log:
         process = subprocess.Popen([str(binary), "serve", ".", "--port=0", "--engine", "native",
                                     "--symbols", "--rules", str(rules)], cwd=root, stdout=log, stderr=log,
-                                   env={key: value for key, value in os.environ.items() if key != "ARCHGRAPH_BYPASS"})
+                                   env={key: value for key, value in os.environ.items() if key != "BOUNDRAIL_BYPASS"})
         try:
             deadline = time.perf_counter() + timeout
-            while not (root / ".archgraph/daemon.json").is_file():
+            while not (root / ".boundrail/daemon.json").is_file():
                 if process.poll() is not None or time.perf_counter() >= deadline:
                     raise RuntimeError(f"daemon startup failed; inspect {log_path}")
                 time.sleep(.005)
@@ -176,7 +176,7 @@ def benchmark(binary, work, repeats, timeout):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--boundrail", "--archgraph", dest="archgraph", metavar="BINARY", type=Path, default=Path(__file__).resolve().parents[1] / "target/release/boundrail")
+    parser.add_argument("--boundrail", dest="boundrail", metavar="BINARY", type=Path, default=Path(__file__).resolve().parents[1] / "target/release/boundrail")
     parser.add_argument("--work", type=Path, help="new artifact directory; fixtures must not exist")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--repeats", type=int, default=5)
@@ -185,10 +185,10 @@ def main():
     args = parser.parse_args()
     if args.repeats < 1 or args.timeout <= 0:
         parser.error("--repeats and --timeout must be positive")
-    binary = args.archgraph.resolve(strict=True)
-    work = args.work.resolve() if args.work else Path(tempfile.mkdtemp(prefix="archgraph-edit-loop-"))
+    binary = args.boundrail.resolve(strict=True)
+    work = args.work.resolve() if args.work else Path(tempfile.mkdtemp(prefix="boundrail-edit-loop-"))
     work.mkdir(parents=True, exist_ok=True)
-    result = {"schema": "archgraph/edit-loop-benchmark/v1", "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+    result = {"schema": "boundrail/edit-loop-benchmark/v1", "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
               "host": {"platform": platform.platform(), "machine": platform.machine(), "cpus": os.cpu_count()},
               "fixture": fixture(binary, work, args.timeout)}
     if not args.fixture_only:

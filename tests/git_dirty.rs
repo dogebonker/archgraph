@@ -16,7 +16,7 @@ impl Drop for Fixture {
 #[test]
 fn tracked_dirty_proof_compares_content_without_refreshing_the_index() {
     let fixture = Fixture(std::env::temp_dir().join(format!(
-        "archgraph-git-dirty-{}-{}", std::process::id(),
+        "boundrail-git-dirty-{}-{}", std::process::id(),
         SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
     )));
     let root = &fixture.0;

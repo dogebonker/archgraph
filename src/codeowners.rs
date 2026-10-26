@@ -412,7 +412,7 @@ mod tests {
     #[test]
     fn nongit_loader_refuses_invalid_selected_file_without_falling_back() {
         let root = std::env::temp_dir().join(format!(
-            "archgraph-codeowners-nongit-{}",
+            "boundrail-codeowners-nongit-{}",
             std::process::id()
         ));
         fs::create_dir_all(root.join(".github")).unwrap();
@@ -436,7 +436,7 @@ mod tests {
     #[test]
     fn loader_honors_precedence_and_git_root_for_nested_scans() {
         let root =
-            std::env::temp_dir().join(format!("archgraph-codeowners-{}", std::process::id()));
+            std::env::temp_dir().join(format!("boundrail-codeowners-{}", std::process::id()));
         fs::create_dir_all(root.join(".github")).unwrap();
         fs::create_dir_all(root.join("docs")).unwrap();
         fs::create_dir_all(root.join("project/src")).unwrap();

@@ -58,7 +58,7 @@ def prepare(source_dir, destination, python, node):
                           oracle='isolated feature check; not upstream test suite')
         (fixture / 'provenance.json').write_text(json.dumps(provenance, indent=2) + '\n')
         git(target, 'add', 'layout.yaml', '.benchmark')
-        git(target, '-c', 'commit.gpgsign=false', '-c', 'user.name=Archgraph benchmark', '-c', 'user.email=benchmark@example.invalid', 'commit', '--quiet', '-m', 'Prepare declared synthetic benchmark policy and oracle')
+        git(target, '-c', 'commit.gpgsign=false', '-c', 'user.name=Boundrail benchmark', '-c', 'user.email=benchmark@example.invalid', 'commit', '--quiet', '-m', 'Prepare declared synthetic benchmark policy and oracle')
         tests = [str(python), '-B', str(HERE / 'check.py'), name]
         if name == 'trpc':
             tests.append(str(node))

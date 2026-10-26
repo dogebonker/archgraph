@@ -15,11 +15,11 @@ struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {
         let root = std::env::temp_dir().join(format!(
-            "archgraph-comparison-{}-{}",
+            "boundrail-comparison-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
-        fs::create_dir_all(root.join(".archgraph")).unwrap();
+        fs::create_dir_all(root.join(".boundrail")).unwrap();
         Self(root)
     }
     fn write(&self, path: &str, text: &str) -> PathBuf {
@@ -178,30 +178,30 @@ fn native_code_edit_keeps_removed_evidence_and_preserves_the_existing_gate_outpu
             String::from_utf8_lossy(&out.stderr)
         );
     };
-    collect(".archgraph/before.json");
+    collect(".boundrail/before.json");
     fs::remove_file(f.0.join("src/shared/one.ts")).unwrap();
     f.write(
         "src/domain/a.ts",
         "import {db} from '../adapters/db'; export const order = db;\n",
     );
     f.write("src/extra/new.ts", "export const extra = 3;\n");
-    collect(".archgraph/after.json");
+    collect(".boundrail/after.json");
     let args = [
         "diff",
-        ".archgraph/before.json",
-        ".archgraph/after.json",
+        ".boundrail/before.json",
+        ".boundrail/after.json",
         "--fail-on",
         "new-forbidden",
     ];
     let normal = f.run(&args);
-    let html = f.run(&[args.as_slice(), &["--html", ".archgraph/changes.html"]].concat());
+    let html = f.run(&[args.as_slice(), &["--html", ".boundrail/changes.html"]].concat());
     assert_eq!(normal.status.code(), Some(1));
     assert_eq!(html.status.code(), Some(1));
     assert_eq!(
         normal.stdout, html.stdout,
         "HTML must not change the existing JSON diff"
     );
-    let view = embedded(&fs::read_to_string(f.0.join(".archgraph/changes.html")).unwrap());
+    let view = embedded(&fs::read_to_string(f.0.join(".boundrail/changes.html")).unwrap());
     let imports = view["imports"].as_array().unwrap();
     let added = imports.iter().find(|row| row["status"] == "added").unwrap();
     assert_eq!(added["to"], "src/adapters/db.ts");
@@ -584,7 +584,7 @@ fn html_preserves_full_evidence_before_brief_gate_and_recomputes_forged_verdicts
         String::from_utf8_lossy(&out.stderr)
     );
     let brief: Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(brief["schema"], "archgraph/brief/v1");
+    assert_eq!(brief["schema"], "boundrail/brief/v1");
     let view = embedded(&fs::read_to_string(f.0.join("changes.html")).unwrap());
     assert_eq!(view["imports"].as_array().unwrap().len(), 1);
     assert_eq!(
@@ -609,7 +609,7 @@ fn html_output_never_replaces_an_input_and_rejects_unsupported_modes() {
     let new_path = f.save("after.json", &new);
     let old_bytes = fs::read(&old_path).unwrap();
     let new_bytes = fs::read(&new_path).unwrap();
-    for output in ["before.json", "./after.json", ".archgraph/../before.json"] {
+    for output in ["before.json", "./after.json", ".boundrail/../before.json"] {
         let out = f.run(&["diff", "before.json", "after.json", "--html", output]);
         assert_eq!(out.status.code(), Some(2));
         assert_eq!(fs::read(&old_path).unwrap(), old_bytes);

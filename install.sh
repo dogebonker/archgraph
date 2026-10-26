@@ -1,15 +1,15 @@
 #!/bin/sh
 # Installs a prebuilt Boundrail release binary after checking its SHA-256.
 #
-#   curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/dogebonker/archgraph/main/install.sh | sh
+#   curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/dogebonker/boundrail/main/install.sh | sh
 #
-#   ARCHGRAPH_VERSION        release to install, `0.1.0` or `v0.1.0` (default: the latest release)
-#   ARCHGRAPH_INSTALL_DIR    where to put the binary (default: $HOME/.local/bin)
-#   ARCHGRAPH_DOWNLOAD_BASE  release URL base; files are read from <base>/<tag>/<file>
-#                            (default: https://github.com/dogebonker/archgraph/releases/download)
+#   BOUNDRAIL_VERSION        release to install, `0.1.0` or `v0.1.0` (default: the latest release)
+#   BOUNDRAIL_INSTALL_DIR    where to put the binary (default: $HOME/.local/bin)
+#   BOUNDRAIL_DOWNLOAD_BASE  release URL base; files are read from <base>/<tag>/<file>
+#                            (default: https://github.com/dogebonker/boundrail/releases/download)
 set -eu
 
-repo=https://github.com/dogebonker/archgraph
+repo=https://github.com/dogebonker/boundrail
 
 die() {
   echo "boundrail install: $*" >&2
@@ -19,7 +19,7 @@ die() {
 command -v curl >/dev/null 2>&1 || die "curl is required"
 # HTTPS only, also across redirects, unless a custom download base (a mirror, a test server) is set.
 fetch() {
-  if [ -n "${ARCHGRAPH_DOWNLOAD_BASE:-}" ]; then
+  if [ -n "${BOUNDRAIL_DOWNLOAD_BASE:-}" ]; then
     curl -fsSL "$@"
   else
     curl --proto '=https' --tlsv1.2 -fsSL "$@"
@@ -40,18 +40,18 @@ case $(uname -m) in
 esac
 target=$arch-$os
 
-base=${ARCHGRAPH_DOWNLOAD_BASE:-$repo/releases/download}
+base=${BOUNDRAIL_DOWNLOAD_BASE:-$repo/releases/download}
 base=${base%/}
-version=${ARCHGRAPH_VERSION:-}
+version=${BOUNDRAIL_VERSION:-}
 if [ -z "$version" ]; then
-  [ -z "${ARCHGRAPH_DOWNLOAD_BASE:-}" ] || die "set ARCHGRAPH_VERSION when ARCHGRAPH_DOWNLOAD_BASE is set"
+  [ -z "${BOUNDRAIL_DOWNLOAD_BASE:-}" ] || die "set BOUNDRAIL_VERSION when BOUNDRAIL_DOWNLOAD_BASE is set"
   # The latest-release page redirects to .../releases/tag/<tag>.
   latest=$(fetch -I -o /dev/null -w '%{url_effective}' "$repo/releases/latest") ||
     die "could not resolve the latest release from $repo/releases/latest"
   version=${latest##*/}
   case $version in
     v[0-9]*) ;;
-    *) die "could not resolve the latest release (got $latest); set ARCHGRAPH_VERSION" ;;
+    *) die "could not resolve the latest release (got $latest); set BOUNDRAIL_VERSION" ;;
   esac
 fi
 tag=v${version#v}
@@ -69,17 +69,10 @@ trap 'rm -rf "$tmp"' EXIT
 
 fetch -o "$tmp/SHA256SUMS" "$base/$tag/SHA256SUMS" || die "could not download $base/$tag/SHA256SUMS"
 
-product=boundrail
-stem=$product-$tag-$target
+stem=boundrail-$tag-$target
 archive=$stem.tar.gz
 expected=$(awk -v f="$archive" '$2 == f || $2 == "*" f { print $1 }' "$tmp/SHA256SUMS")
-if [ -z "$expected" ]; then
-  product=archgraph
-  stem=$product-$tag-$target
-  archive=$stem.tar.gz
-  expected=$(awk -v f="$archive" '$2 == f || $2 == "*" f { print $1 }' "$tmp/SHA256SUMS")
-fi
-[ -n "$expected" ] || die "SHA256SUMS has no matching Boundrail or legacy Archgraph archive; not installing"
+[ -n "$expected" ] || die "SHA256SUMS has no entry for $archive; not installing"
 echo "boundrail install: downloading $archive"
 fetch -o "$tmp/$archive" "$base/$tag/$archive" || die "could not download $base/$tag/$archive"
 actual=$(sha256 "$tmp/$archive")
@@ -87,11 +80,11 @@ actual=$(sha256 "$tmp/$archive")
   die "checksum mismatch for $archive: expected $expected, got $actual; not installing"
 
 tar -xzf "$tmp/$archive" -C "$tmp"
-[ -f "$tmp/$stem/$product" ] || die "$archive holds no $stem/$product"
+[ -f "$tmp/$stem/boundrail" ] || die "$archive holds no $stem/boundrail"
 
-dir=${ARCHGRAPH_INSTALL_DIR:-$HOME/.local/bin}
+dir=${BOUNDRAIL_INSTALL_DIR:-$HOME/.local/bin}
 mkdir -p "$dir"
-cp "$tmp/$stem/$product" "$dir/.boundrail.tmp"
+cp "$tmp/$stem/boundrail" "$dir/.boundrail.tmp"
 chmod 755 "$dir/.boundrail.tmp"
 mv -f "$dir/.boundrail.tmp" "$dir/boundrail"
 

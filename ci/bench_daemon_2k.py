@@ -15,7 +15,7 @@ from bench_daemon import quantiles, rss_kib, run, wait_graph
 
 def generate(root):
     root.mkdir(parents=True, exist_ok=False)
-    (root / "package.json").write_text('{"name":"archgraph-2k-fixture","type":"module"}\n')
+    (root / "package.json").write_text('{"name":"boundrail-2k-fixture","type":"module"}\n')
     for module in range(100):
         directory = root / "src" / f"m{module:03d}"
         directory.mkdir(parents=True)
@@ -28,7 +28,7 @@ def generate(root):
                 statement = ""
             (directory / f"f{file:02d}.ts").write_text(statement + "export const value = 0;\n")
     git = ["git", "-C", str(root), "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false",
-           "-c", "commit.gpgsign=false", "-c", "user.name=Archgraph Benchmark",
+           "-c", "commit.gpgsign=false", "-c", "user.name=Boundrail Benchmark",
            "-c", "user.email=benchmark@example.invalid"]
     run([*git, "init", "--quiet"])
     run([*git, "add", "package.json", "src"])
@@ -54,7 +54,7 @@ def benchmark(binary, work, repeats, timeout):
                                    stdout=log, stderr=log)
         try:
             deadline = time.perf_counter() + timeout
-            while not (root / ".archgraph/daemon.json").is_file():
+            while not (root / ".boundrail/daemon.json").is_file():
                 if process.poll() is not None or time.perf_counter() >= deadline:
                     raise RuntimeError(f"daemon startup failed; inspect {work / 'daemon.log'}")
                 time.sleep(.005)
@@ -110,7 +110,7 @@ def benchmark(binary, work, repeats, timeout):
             process.wait(timeout=10)
     body_times = [s["edit_to_status_ms"] for s in body]
     import_times = [s["edit_to_brief_scan_ms"] for s in imported]
-    return {"schema": "archgraph/daemon-fixture-benchmark/v1", "git_backed": True, "commit": commit,
+    return {"schema": "boundrail/daemon-fixture-benchmark/v1", "git_backed": True, "commit": commit,
             "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
             "host": {"platform": platform.platform(), "machine": platform.machine(), "cpus": os.cpu_count()},
             "files": 2000, "modules": 100, "initial_edges": 1999, "repeats": repeats,
@@ -125,7 +125,7 @@ def benchmark(binary, work, repeats, timeout):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--boundrail", "--archgraph", dest="archgraph", metavar="BINARY", type=Path, default=Path(__file__).resolve().parents[1] / "target/release/boundrail")
+    parser.add_argument("--boundrail", dest="boundrail", metavar="BINARY", type=Path, default=Path(__file__).resolve().parents[1] / "target/release/boundrail")
     parser.add_argument("--work", type=Path, help="new artifact directory; the fixture subdirectory must not exist")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--repeats", type=int, default=3)
@@ -133,8 +133,8 @@ def main():
     args = parser.parse_args()
     if args.repeats < 1 or args.timeout <= 0:
         parser.error("--repeats and --timeout must be positive")
-    binary = args.archgraph.resolve(strict=True)
-    work = args.work.resolve() if args.work else Path(tempfile.mkdtemp(prefix="archgraph-daemon-2k-"))
+    binary = args.boundrail.resolve(strict=True)
+    work = args.work.resolve() if args.work else Path(tempfile.mkdtemp(prefix="boundrail-daemon-2k-"))
     work.mkdir(parents=True, exist_ok=True)
     result = benchmark(binary, work, args.repeats, args.timeout)
     encoded = json.dumps(result, indent=2, sort_keys=True) + "\n"

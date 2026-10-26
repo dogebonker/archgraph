@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::Command;
 
 fn native(args: &[&str]) -> Value {
-    let out = common::archgraph(args);
+    let out = common::boundrail(args);
     assert!(
         out.status.success(),
         "{}",
@@ -61,7 +61,7 @@ fn native_scan_and_symbols_need_no_external_collectors() {
         "native-cli-ts/graph.json",
         &serde_json::to_string(&doc).unwrap(),
     );
-    let checked = common::archgraph(&["render", &graph, "-o", "/dev/null"]);
+    let checked = common::boundrail(&["render", &graph, "-o", "/dev/null"]);
     assert!(
         checked.status.success(),
         "{}",
@@ -116,7 +116,7 @@ fn native_history_keeps_engine_and_skips_interpreter_version_probes() {
             .arg(root)
             .args([
                 "-c",
-                "user.name=archgraph",
+                "user.name=boundrail",
                 "-c",
                 "user.email=test@example.invalid",
                 "-c",
@@ -134,7 +134,7 @@ fn native_history_keeps_engine_and_skips_interpreter_version_probes() {
         );
     }
     let output = root.join("history-output");
-    let out = common::archgraph(&[
+    let out = common::boundrail(&[
         "history",
         root.to_str().unwrap(),
         "--engine",

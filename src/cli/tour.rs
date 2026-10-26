@@ -3,7 +3,7 @@ use super::*;
 #[derive(Args)]
 pub(super) struct TourArgs {
     /// Saved scan document (v1 or v1.1)
-    #[arg(default_value = ".archgraph/archgraph.json")]
+    #[arg(default_value = ".boundrail/boundrail.json")]
     graph: PathBuf,
     /// Start with entrypoints by reversing dependency layers
     #[arg(long)]

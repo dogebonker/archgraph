@@ -13,7 +13,7 @@ pub(super) struct Report {
     hotspots: HotspotOpts,
     #[command(flatten)]
     collector: CollectorOpts,
-    /// Directory for archgraph.json and archgraph.html [default: <root>/.archgraph]
+    /// Directory for boundrail.json and boundrail.html [default: <root>/.boundrail]
     #[arg(long)]
     out_dir: Option<PathBuf>,
     /// Skip bounded Git provenance probes
@@ -27,7 +27,7 @@ pub(super) fn run(args: Report) -> Result<ExitCode> {
         let found = root.join("layout.yaml");
         found.is_file().then_some(found)
     });
-    let out_dir = args.out_dir.unwrap_or_else(|| root.join(".archgraph"));
+    let out_dir = args.out_dir.unwrap_or_else(|| root.join(".boundrail"));
     let mut doc = scan_cli::scan_doc(
         root,
         &args.opts,
@@ -40,8 +40,8 @@ pub(super) fn run(args: Report) -> Result<ExitCode> {
         provenance_cli::enrich(root, &args.collector, &mut doc)?;
     }
     let (json, html) = (
-        out_dir.join("archgraph.json"),
-        out_dir.join("archgraph.html"),
+        out_dir.join("boundrail.json"),
+        out_dir.join("boundrail.html"),
     );
     // The default folder lives in the scanned repository, which may ship it (or the files in it)
     // as links that would make this write land outside it.

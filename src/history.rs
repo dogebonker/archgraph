@@ -178,7 +178,7 @@ impl Checkout {
         static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let sequence = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let path = std::env::temp_dir().join(format!(
-            "archgraph-history-{}-{nanos}-{sequence}",
+            "boundrail-history-{}-{nanos}-{sequence}",
             std::process::id()
         ));
         fs::create_dir(&path).context("creating history temporary directory")?;
@@ -213,7 +213,7 @@ impl Checkout {
 }
 
 /// Removes clones that interrupted runs left behind (a signal skips `Temp`'s drop): this
-/// user's `archgraph-history-<pid>-<nanos>-<sequence>` directories whose process is gone.
+/// user's `boundrail-history-<pid>-<nanos>-<sequence>` directories whose process is gone.
 #[cfg(unix)]
 fn remove_stale(ours: &Path) {
     use std::os::unix::fs::MetadataExt;
@@ -227,7 +227,7 @@ fn remove_stale(ours: &Path) {
         let name = entry.file_name();
         let Some(parts) = name
             .to_str()
-            .and_then(|name| name.strip_prefix("archgraph-history-"))
+            .and_then(|name| name.strip_prefix("boundrail-history-"))
             .map(|rest| rest.split('-').collect::<Vec<_>>())
         else {
             continue;

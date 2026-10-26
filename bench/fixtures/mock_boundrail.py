@@ -18,11 +18,11 @@ if args[:2] == ['hook', 'install']:
     path.write_text('{"hooks":{"mock":true}}\n')
     print(json.dumps({'written': [str(path)]}))
 elif args == ['sync-rules']:
-    (root / 'AGENTS.md').write_text('<!-- archgraph:start -->mock<!-- archgraph:end -->\n')
+    (root / 'AGENTS.md').write_text('<!-- boundrail:start -->mock<!-- boundrail:end -->\n')
     print('{}')
 elif len(args) > 1 and args[1] == 'verify':
     finding = args[2]
-    receipt = json.loads((root / '.archgraph/applied' / (finding + '.json')).read_text())
+    receipt = json.loads((root / '.boundrail/applied' / (finding + '.json')).read_text())
     if set(receipt) != {'schema', 'finding_id', 'before', 'recipe', 'fingerprints'}:
         raise SystemExit(2)
     print(json.dumps({'kind': 'verification', 'finding_id': finding, 'verify': {'pass': True}}))

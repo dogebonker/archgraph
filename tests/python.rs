@@ -159,7 +159,7 @@ fn python_package_detection_finds_namespace_packages_and_skips_tests() {
     assert_eq!(doc["config"]["source_root"], "app");
 
     // With tests kept, two packages: ambiguous.
-    let out = common::archgraph(&[&["scan"], &args[..], &["--include-tests"]].concat());
+    let out = common::boundrail(&[&["scan"], &args[..], &["--include-tests"]].concat());
     let err = String::from_utf8_lossy(&out.stderr);
     assert!(!out.status.success() && err.contains("app, tests"), "{err}");
 }

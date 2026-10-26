@@ -102,7 +102,7 @@ pub fn globset(globs: &[String]) -> Result<GlobSet> {
 pub struct TempDir(PathBuf);
 
 impl TempDir {
-    /// `archgraph-<prefix>-<pid>-<nanos>-<sequence>`: the sequence keeps two directories created
+    /// `boundrail-<prefix>-<pid>-<nanos>-<sequence>`: the sequence keeps two directories created
     /// in one clock tick apart.
     pub fn new(prefix: &str) -> Result<Self> {
         static NEXT: AtomicU64 = AtomicU64::new(0);
@@ -110,7 +110,7 @@ impl TempDir {
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| d.as_nanos());
         let path = std::env::temp_dir().join(format!(
-            "archgraph-{prefix}-{}-{nanos}-{}",
+            "boundrail-{prefix}-{}-{nanos}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));

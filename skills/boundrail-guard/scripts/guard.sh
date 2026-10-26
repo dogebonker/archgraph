@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # Compare the working tree with its base commit; exit 1 when the change adds a forbidden import or
-# an import cycle (new unplanned imports are listed; ARCHGRAPH_FAIL_ON can make them fail too).
+# an import cycle (new unplanned imports are listed; BOUNDRAIL_FAIL_ON can make them fail too).
 # Prints a header line and the diff as markdown. Exit 0 pass, 1 new violations, 2 could not run.
 #
 #   guard.sh [--hook]
 #
 # Environment:
-#   ARCHGRAPH_BASE       base commit or ref (default: merge-base with origin/HEAD, else main, else master)
-#   ARCHGRAPH_PATH       project folder inside the repository (default: the repository root)
-#   ARCHGRAPH_RULES      rules file (default: <project>/layout.yaml when it exists)
-#   ARCHGRAPH_SCAN_ARGS  extra scan flags, e.g. "--language python --python .venv/bin/python --depth 1"
-#   ARCHGRAPH_FAIL_ON    diff conditions that fail (default: new-forbidden,new-cycles)
-#   ARCHGRAPH            boundrail executable (default: boundrail on PATH)
+#   BOUNDRAIL_BASE       base commit or ref (default: merge-base with origin/HEAD, else main, else master)
+#   BOUNDRAIL_PATH       project folder inside the repository (default: the repository root)
+#   BOUNDRAIL_RULES      rules file (default: <project>/layout.yaml when it exists)
+#   BOUNDRAIL_SCAN_ARGS  extra scan flags, e.g. "--language python --python .venv/bin/python --depth 1"
+#   BOUNDRAIL_FAIL_ON    diff conditions that fail (default: new-forbidden,new-cycles)
+#   BOUNDRAIL            boundrail executable (default: boundrail on PATH)
 #
 # --hook: Claude Code Stop hook mode. Reads the hook JSON on stdin and lets the agent stop when the
 # hook already blocked this stop once. New violations go to stderr with exit 2, which keeps the
@@ -31,29 +31,29 @@ if [[ ${1:-} == --hook ]]; then
   if grep -q '"stop_hook_active"[[:space:]]*:[[:space:]]*true' 2>/dev/null; then exit 0; fi
 fi
 
-boundrail=${ARCHGRAPH:-boundrail}
+boundrail=${BOUNDRAIL:-boundrail}
 command -v "$boundrail" >/dev/null || fail "boundrail is not installed"
 repo=$(git rev-parse --show-toplevel 2>/dev/null) || fail "not inside a git repository"
-project=${ARCHGRAPH_PATH:-.}
+project=${BOUNDRAIL_PATH:-.}
 project=${project#./}
 [[ $project == . ]] && project=
 prefix=${project:+$project/}
 dir=$repo${project:+/$project}
 [[ -d $dir ]] || fail "$project is not a folder in $repo"
 
-base=${ARCHGRAPH_BASE:-}
+base=${BOUNDRAIL_BASE:-}
 if [[ -z $base ]]; then
   for ref in origin/HEAD main master; do
     if base=$(git -C "$repo" merge-base HEAD "$ref" 2>/dev/null); then break; fi
   done
 fi
-[[ -n $base ]] || fail "no base commit; set ARCHGRAPH_BASE"
-base=$(git -C "$repo" rev-parse --verify --quiet "$base^{commit}") || fail "base ${ARCHGRAPH_BASE:-} is not a commit"
+[[ -n $base ]] || fail "no base commit; set BOUNDRAIL_BASE"
+base=$(git -C "$repo" rev-parse --verify --quiet "$base^{commit}") || fail "base ${BOUNDRAIL_BASE:-} is not a commit"
 short=$(git -C "$repo" rev-parse --short "$base")
 
 notes=()
 if [[ $base == "$(git -C "$repo" rev-parse HEAD)" ]]; then
-  notes+=("Note: the base is HEAD itself, so only uncommitted changes are checked; set ARCHGRAPH_BASE to include committed work.")
+  notes+=("Note: the base is HEAD itself, so only uncommitted changes are checked; set BOUNDRAIL_BASE to include committed work.")
 fi
 
 # Nothing to compare: no tracked change and no new file in the project since the base.
@@ -64,7 +64,7 @@ if git -C "$repo" diff --quiet "$base" -- "${project:-.}" \
 fi
 
 # Rules: the explicit file, else the project's layout.yaml as it is now, compared with the base's.
-rules=${ARCHGRAPH_RULES:-$dir/layout.yaml}
+rules=${BOUNDRAIL_RULES:-$dir/layout.yaml}
 [[ $rules == /* ]] || rules=$(pwd -P)/$rules
 rel=${rules#"$repo/"}
 in_base=
@@ -77,14 +77,14 @@ if [[ -f $rules ]]; then
   fi
 else
   [[ -z $in_base ]] || notes+=("Note: this change deletes the rules file $rel, so nothing checks the rules any more.")
-  [[ -z ${ARCHGRAPH_RULES:-} ]] || fail "rules file $rules does not exist"
+  [[ -z ${BOUNDRAIL_RULES:-} ]] || fail "rules file $rules does not exist"
   rules=
 fi
 
 # Word-split the extra flags without glob expansion (they may hold --exclude patterns).
 set -f
 # shellcheck disable=SC2206 # word splitting is intended; globbing is off
-extra=(${ARCHGRAPH_SCAN_ARGS:-})
+extra=(${BOUNDRAIL_SCAN_ARGS:-})
 set +f
 args=(${extra[@]+"${extra[@]}"})
 [[ -z $rules ]] || args+=(--rules "$rules")
@@ -114,7 +114,7 @@ fi
 
 status=0
 "$boundrail" diff "$tmp/base.json" "$tmp/head.json" \
-  --fail-on "${ARCHGRAPH_FAIL_ON:-new-forbidden,new-cycles}" --format markdown \
+  --fail-on "${BOUNDRAIL_FAIL_ON:-new-forbidden,new-cycles}" --format markdown \
   >"$tmp/diff.md" 2>"$tmp/diff.err" || status=$?
 ((status <= 1)) || fail "diff failed: $(cat "$tmp/diff.err")"
 

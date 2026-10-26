@@ -25,19 +25,19 @@ impl Fixture {
             std::env::temp_dir()
         };
         let root = temp.join(format!(
-            "archgraph-mcp-stdio-{}-{}",
+            "boundrail-mcp-stdio-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir_all(root.join("src/a")).unwrap();
         fs::create_dir_all(root.join("src/b")).unwrap();
-        fs::create_dir_all(root.join(".archgraph")).unwrap();
+        fs::create_dir_all(root.join(".boundrail")).unwrap();
         fs::write(
             root.join("package.json"),
             "{\"name\":\"mcp-fixture\",\"type\":\"module\"}\n",
         )
         .unwrap();
-        fs::write(root.join(".gitignore"), ".archgraph/\n").unwrap();
+        fs::write(root.join(".gitignore"), ".boundrail/\n").unwrap();
         fs::write(root.join("layout.yaml"),"version: 1\nforbid:\n  - { from: 'src/b/**', to: 'src/a/**', reason: 'keep b independent of a' }\n").unwrap();
         fs::write(
             root.join("src/a/a.ts"),
@@ -139,16 +139,16 @@ impl Fixture {
                 .arg("serve")
                 .args(options)
                 .stdout(Stdio::null())
-                .stderr(fs::File::create(self.root.join(".archgraph/serve.log")).unwrap())
+                .stderr(fs::File::create(self.root.join(".boundrail/serve.log")).unwrap())
                 .spawn()
                 .unwrap(),
         );
         let start = Instant::now();
-        while !self.root.join(".archgraph/daemon.json").is_file() {
+        while !self.root.join(".boundrail/daemon.json").is_file() {
             assert!(
                 self.daemon.as_mut().unwrap().try_wait().unwrap().is_none(),
                 "daemon failed: {}",
-                fs::read_to_string(self.root.join(".archgraph/serve.log")).unwrap()
+                fs::read_to_string(self.root.join(".boundrail/serve.log")).unwrap()
             );
             assert!(
                 start.elapsed() < Duration::from_secs(30),
@@ -199,7 +199,7 @@ impl Client {
             .stdout(Stdio::piped())
             .stderr(
                 fs::File::create(f.root.join(format!(
-                    ".archgraph/mcp-{}.log",
+                    ".boundrail/mcp-{}.log",
                     NEXT.fetch_add(1, Ordering::Relaxed)
                 )))
                 .unwrap(),
@@ -228,7 +228,7 @@ impl Client {
             id: 0,
             schemas: BTreeMap::new(),
         };
-        let init=c.request("initialize",json!({"protocolVersion":protocol,"capabilities":{},"clientInfo":{"name":"archgraph-conformance","version":"1"}}));
+        let init=c.request("initialize",json!({"protocolVersion":protocol,"capabilities":{},"clientInfo":{"name":"boundrail-conformance","version":"1"}}));
         // The SDK advertises 2025-11-25; newer clients negotiate that supported version.
         let negotiated = if protocol == "2026-07-28" {
             "2025-11-25"
@@ -727,7 +727,7 @@ fn warm_snapshot_query_does_not_wait_for_a_native_transaction_lock() {
     let lock = fs::OpenOptions::new()
         .read(true)
         .write(true)
-        .open(f.root.join(".archgraph/hooks/lock"))
+        .open(f.root.join(".boundrail/hooks/lock"))
         .unwrap();
     lock.lock().unwrap();
     let response = client.tool(
@@ -744,6 +744,28 @@ fn warm_snapshot_query_does_not_wait_for_a_native_transaction_lock() {
     );
     assert_eq!(result["base_selection"], "pre-edit snapshot");
     drop(lock);
+    let old_override = f
+        .command()
+        .args([
+            "--no-daemon",
+            "hook",
+            "check",
+            "--baseline",
+            captured["snapshot"].as_str().unwrap(),
+            "--brief",
+        ])
+        .env_remove("BOUNDRAIL_BYPASS")
+        .env("ARCHGRAPH_BYPASS", "unrecognized product namespace")
+        .output()
+        .unwrap();
+    assert_eq!(
+        old_override.status.code(),
+        Some(1),
+        "stdout={} stderr={}",
+        String::from_utf8_lossy(&old_override.stdout),
+        String::from_utf8_lossy(&old_override.stderr)
+    );
+    assert!(old_override.stdout.starts_with(b"BLOCK\n"));
     // The reason changes the environment: a bypass must not require weakening daemon trust.
     let bypass = f
         .command()
@@ -754,7 +776,7 @@ fn warm_snapshot_query_does_not_wait_for_a_native_transaction_lock() {
             captured["snapshot"].as_str().unwrap(),
             "--brief",
         ])
-        .env("ARCHGRAPH_BYPASS", "accept fixture boundary once")
+        .env("BOUNDRAIL_BYPASS", "accept fixture boundary once")
         .output()
         .unwrap();
     assert!(
@@ -763,7 +785,7 @@ fn warm_snapshot_query_does_not_wait_for_a_native_transaction_lock() {
         String::from_utf8_lossy(&bypass.stderr)
     );
     assert!(bypass.stdout.starts_with(b"PASS\n"));
-    let overrides = fs::read_to_string(f.root.join(".archgraph/overrides.log")).unwrap();
+    let overrides = fs::read_to_string(f.root.join(".boundrail/overrides.log")).unwrap();
     let record: Value = serde_json::from_str(overrides.lines().next().unwrap()).unwrap();
     assert_eq!(record["reason"], "accept fixture boundary once");
     assert!(!record["finding_ids"].as_array().unwrap().is_empty());
@@ -775,13 +797,13 @@ fn mcp_reuses_reference_daemon_cache_when_collector_cannot_run_again() {
     use std::os::unix::fs::PermissionsExt;
     let mut f = Fixture::new();
     fs::write(f.root.join("src/a/a.ts"), "export const a = 1;\n").unwrap();
-    let collector = f.root.join(".archgraph/depcruise");
+    let collector = f.root.join(".boundrail/depcruise");
     fs::write(&collector,r##"#!/bin/sh
 if [ "$1" = "--version" ]; then
   printf '18.4.0\n'
   exit 0
 fi
-printf 'collect\n' >> .archgraph/collector-calls
+printf 'collect\n' >> .boundrail/collector-calls
 printf '%s\n' '{"modules":[{"source":"src/a/a.ts","dependencies":[]},{"source":"src/b/b.ts","dependencies":[]}],"summary":{"totalCruised":2,"environment":{"version":"18.4.0"}}}'
 "##).unwrap();
     fs::set_permissions(&collector, fs::Permissions::from_mode(0o700)).unwrap();
@@ -797,7 +819,7 @@ printf '%s\n' '{"modules":[{"source":"src/a/a.ts","dependencies":[]},{"source":"
         f.root.join("layout.yaml").to_string_lossy().into_owned(),
     ];
     f.start_daemon_options(options.clone());
-    let calls = fs::read(f.root.join(".archgraph/collector-calls")).unwrap();
+    let calls = fs::read(f.root.join(".boundrail/collector-calls")).unwrap();
     assert!(!calls.is_empty(), "warmup must run the collector");
     fs::set_permissions(&collector, fs::Permissions::from_mode(0o000)).unwrap();
     let mut client = Client::start_options(&f, false, options, "2025-11-25");
@@ -807,7 +829,7 @@ printf '%s\n' '{"modules":[{"source":"src/a/a.ts","dependencies":[]},{"source":"
     );
     assert_eq!(result["pass"], true);
     assert_eq!(
-        fs::read(f.root.join(".archgraph/collector-calls")).unwrap(),
+        fs::read(f.root.join(".boundrail/collector-calls")).unwrap(),
         calls,
         "MCP must reuse the matching warm graph without collecting again"
     );
@@ -826,7 +848,7 @@ fn current_mcp_client_negotiates_supported_protocol_and_preserves_output_caps() 
 #[test]
 fn missing_git_baseline_is_actionable_and_other_tools_remain_available() {
     let f = Fixture::new();
-    fs::rename(f.root.join(".git"), f.root.join(".archgraph/fixture-git")).unwrap();
+    fs::rename(f.root.join(".git"), f.root.join(".boundrail/fixture-git")).unwrap();
     let mut c = Client::start(&f, true);
     let error = c.tool("check_diff", json!({}));
     assert_eq!(error["isError"], true);

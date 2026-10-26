@@ -101,7 +101,7 @@ pub(crate) struct Commit {
 }
 
 /// The `git log --numstat -z` header that `parse_log` reads.
-pub(crate) const LOG_FORMAT: &str = "--format=%x00ARCHGRAPH%x00%H%x00%aE%x00%B%x00";
+pub(crate) const LOG_FORMAT: &str = "--format=%x00BOUNDRAIL%x00%H%x00%aE%x00%B%x00";
 
 /// Seconds at 00:00 UTC of a strict `YYYY-MM-DD` calendar date. Computed here rather than by
 /// Git, whose lenient parser accepts invalid dates and misreads years before 1970 or after 2099.
@@ -180,7 +180,7 @@ pub(crate) fn parse_log(text: &str) -> Result<Vec<Commit>> {
     let mut commits = Vec::new();
     let mut at = 0;
     while at < fields.len() {
-        if fields[at] == "ARCHGRAPH" {
+        if fields[at] == "BOUNDRAIL" {
             if at + 3 >= fields.len() {
                 bail!("truncated Git hotspot commit header");
             }

@@ -126,7 +126,7 @@ mod tests {
     #[test]
     fn inventory_tolerates_a_disappeared_directory() {
         let missing =
-            std::env::temp_dir().join(format!("archgraph-native-vanished-{}", std::process::id()));
+            std::env::temp_dir().join(format!("boundrail-native-vanished-{}", std::process::id()));
         assert!(!missing.exists());
         assert!(super::source_files(&missing, &["ts"]).unwrap().is_empty());
     }

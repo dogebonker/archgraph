@@ -20,7 +20,7 @@ fn checked_path(root: &Path, name: &str, create: bool) -> Result<PathBuf> {
         "audit root is not a directory: {}",
         root.display()
     );
-    let directory = root.join(".archgraph");
+    let directory = root.join(".boundrail");
     if create {
         let mut builder = fs::DirBuilder::new();
         #[cfg(unix)]
@@ -260,7 +260,7 @@ mod tests {
         fn new() -> Self {
             static NEXT: AtomicU64 = AtomicU64::new(0);
             let root = std::env::temp_dir().join(format!(
-                "archgraph-edit-audit-{}-{}",
+                "boundrail-edit-audit-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
             ));
@@ -300,7 +300,7 @@ mod tests {
             json!({"total":4,"rules":[{"rule":"z","count":2},{"rule":"a","count":1},{"rule":"b","count":1}]})
         );
         let first: Value = serde_json::from_str(
-            fs::read_to_string(fixture.0.join(".archgraph/fires.log"))
+            fs::read_to_string(fixture.0.join(".boundrail/fires.log"))
                 .unwrap()
                 .lines()
                 .next()
@@ -324,7 +324,7 @@ mod tests {
             &["id".into()],
         )
         .unwrap();
-        let body = fs::read_to_string(fixture.0.join(".archgraph/overrides.log")).unwrap();
+        let body = fs::read_to_string(fixture.0.join(".boundrail/overrides.log")).unwrap();
         assert_eq!(body.lines().count(), 1);
         let record: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(record["reason"], "temporary\nexception");
@@ -332,7 +332,7 @@ mod tests {
         {
             use std::os::unix::fs::PermissionsExt;
             assert_eq!(
-                fs::metadata(fixture.0.join(".archgraph/overrides.log"))
+                fs::metadata(fixture.0.join(".boundrail/overrides.log"))
                     .unwrap()
                     .permissions()
                     .mode()
@@ -346,7 +346,7 @@ mod tests {
     fn refuses_corruption_without_appending() {
         let fixture = Fixture::new();
         fires(&fixture.0, "codex", "s", &[violation("a")]).unwrap();
-        let path = fixture.0.join(".archgraph/fires.log");
+        let path = fixture.0.join(".boundrail/fires.log");
         for malformed in ["not json\n", "{}\n", "\n", "[]\n"] {
             fs::write(&path, malformed).unwrap();
             assert!(top(&fixture.0).is_err());
@@ -359,7 +359,7 @@ mod tests {
     fn appends_after_valid_record_without_final_newline() {
         let fixture = Fixture::new();
         fires(&fixture.0, "codex", "s", &[violation("a")]).unwrap();
-        let path = fixture.0.join(".archgraph/fires.log");
+        let path = fixture.0.join(".boundrail/fires.log");
         let body = fs::read_to_string(&path).unwrap();
         fs::write(&path, body.trim_end()).unwrap();
         fires(&fixture.0, "codex", "s", &[violation("b")]).unwrap();
@@ -388,15 +388,15 @@ mod tests {
         use std::os::unix::fs::symlink;
         let fixture = Fixture::new();
         let outside = Fixture::new();
-        symlink(&outside.0, fixture.0.join(".archgraph")).unwrap();
+        symlink(&outside.0, fixture.0.join(".boundrail")).unwrap();
         assert!(fires(&fixture.0, "codex", "s", &[violation("a")]).is_err());
         assert!(top(&fixture.0).is_err());
-        fs::remove_file(fixture.0.join(".archgraph")).unwrap();
-        fs::create_dir(fixture.0.join(".archgraph")).unwrap();
+        fs::remove_file(fixture.0.join(".boundrail")).unwrap();
+        fs::create_dir(fixture.0.join(".boundrail")).unwrap();
         fs::write(outside.0.join("secret"), "untouched").unwrap();
         symlink(
             outside.0.join("secret"),
-            fixture.0.join(".archgraph/fires.log"),
+            fixture.0.join(".boundrail/fires.log"),
         )
         .unwrap();
         assert!(fires(&fixture.0, "codex", "s", &[violation("a")]).is_err());
@@ -410,7 +410,7 @@ mod tests {
     #[test]
     fn rejects_directory_log() {
         let fixture = Fixture::new();
-        fs::create_dir_all(fixture.0.join(".archgraph/fires.log")).unwrap();
+        fs::create_dir_all(fixture.0.join(".boundrail/fires.log")).unwrap();
         assert!(fires(&fixture.0, "codex", "s", &[violation("a")]).is_err());
         assert!(top(&fixture.0).is_err());
     }

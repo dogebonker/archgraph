@@ -97,7 +97,7 @@ def scan(entry, args, binary_hash):
                 graph = run_dir / "graph.json"
                 collector = (["--depcruise", str(args.depcruise)] if entry["language"] == "typescript"
                              else ["--python", str(args.python)]) if engine == "reference" else []
-                command = [str(args.archgraph), "scan", str(root / entry["path"]), "--language", entry["language"],
+                command = [str(args.boundrail), "scan", str(root / entry["path"]), "--language", entry["language"],
                            "--engine", engine, *collector, *entry["flags"], "-o", str(graph)]
                 run = {"command": command}
                 saved["runs"].setdefault(engine, []).append(run)
@@ -115,7 +115,7 @@ def scan(entry, args, binary_hash):
                     raise RuntimeError("scan reports modified tracked source")
                 run.update(graph_sha256=digest(graph), collector=document["source"]["collector"])
                 documents[engine] = document
-        if digest(args.archgraph) != binary_hash:
+        if digest(args.boundrail) != binary_hash:
             raise RuntimeError("binary changed during comparison; rerun with a frozen binary")
         saved.update(status="ok", comparison=compare(documents["reference"], documents["native"]))
         saved["median_seconds"] = {engine: statistics.median(r["seconds"] for r in runs)
@@ -181,11 +181,11 @@ def markdown(result):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--archgraph", type=Path, required=True)
-    parser.add_argument("--work", type=Path, default=Path("/private/tmp/archgraph-native-comparison"))
-    parser.add_argument("--cache", type=Path, default=Path("/private/tmp/archgraph-edge-quality/repos"))
-    parser.add_argument("--depcruise", type=Path, default=Path("/private/tmp/archgraph-impact-collectors/node_modules/.bin/depcruise"))
-    parser.add_argument("--python", type=Path, default=Path("/private/tmp/archgraph-impact-python/bin/python"))
+    parser.add_argument("--boundrail", type=Path, required=True)
+    parser.add_argument("--work", type=Path, default=Path("/private/tmp/boundrail-native-comparison"))
+    parser.add_argument("--cache", type=Path, default=Path("/private/tmp/boundrail-edge-quality/repos"))
+    parser.add_argument("--depcruise", type=Path, default=Path("/private/tmp/boundrail-impact-collectors/node_modules/.bin/depcruise"))
+    parser.add_argument("--python", type=Path, default=Path("/private/tmp/boundrail-impact-python/bin/python"))
     parser.add_argument("--only", action="append", default=[])
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--repeat", type=int, default=1)
@@ -195,19 +195,19 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if min(args.jobs, args.repeat, args.timeout) < 1:
         parser.error("jobs, repeat and timeout must be positive")
-    args.archgraph, args.work, args.cache = args.archgraph.resolve(), args.work.resolve(), args.cache.resolve()
+    args.boundrail, args.work, args.cache = args.boundrail.resolve(), args.work.resolve(), args.cache.resolve()
     manifest = ROOT / "showcase/repos.json"
     entries = json.loads(manifest.read_text())[:20]
     unknown = set(args.only) - {e["name"] for e in entries}
     if unknown:
         parser.error(f"unknown first-20 repository names: {sorted(unknown)}")
     entries = [e for e in entries if not args.only or e["name"] in args.only]
-    binary_hash = digest(args.archgraph)
+    binary_hash = digest(args.boundrail)
     result = {"binary_sha256": binary_hash, "lock_sha256": digest(ROOT / "Cargo.lock"),
               "manifest_sha256": digest(manifest), "repeat": args.repeat, "order": args.order,
               "artifact_root": str(args.work), "repositories": []}
     import shlex
-    command = ["python3", "-B", "benchmarks/native_engine.py", "--archgraph", str(args.archgraph),
+    command = ["python3", "-B", "benchmarks/native_engine.py", "--boundrail", str(args.boundrail),
                "--work", str(args.work), "--cache", str(args.cache), "--depcruise", str(args.depcruise),
                "--python", str(args.python), "--jobs", str(args.jobs), "--repeat", str(args.repeat), "--order", args.order]
     for name in args.only:

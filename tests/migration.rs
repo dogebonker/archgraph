@@ -1,6 +1,6 @@
 mod common;
 
-use common::{archgraph, run_json, scan_recorded, validate, write_tmp};
+use common::{boundrail, run_json, scan_recorded, validate, write_tmp};
 use serde_json::Value;
 
 fn legacy(value: &mut Value) {
@@ -34,13 +34,13 @@ fn v1_and_v1_1_documents_produce_the_same_reader_results() {
     let (modern, _, _) = scan_recorded("ts-cycles", &[]);
     let mut old = modern.clone();
     legacy(&mut old);
-    old["schema"] = "archgraph/v1".into();
+    old["schema"] = "boundrail/v1".into();
     validate(&old);
     let modern_path = write_tmp("migration/current.json", &modern.to_string());
     let legacy_path = write_tmp("migration/legacy.json", &old.to_string());
 
-    let current_check = archgraph(&["check", &modern_path]);
-    let legacy_check = archgraph(&["check", &legacy_path]);
+    let current_check = boundrail(&["check", &modern_path]);
+    let legacy_check = boundrail(&["check", &legacy_path]);
     assert_eq!(legacy_check.status.code(), current_check.status.code());
     assert_eq!(legacy_check.stdout, current_check.stdout);
 
@@ -77,7 +77,7 @@ fn v1_and_v1_1_documents_produce_the_same_reader_results() {
         (&legacy_path, "migration/legacy.html"),
     ] {
         let output = write_tmp(output, "");
-        let result = archgraph(&["render", graph, "-o", &output]);
+        let result = boundrail(&["render", graph, "-o", &output]);
         assert!(
             result.status.success(),
             "{}",

@@ -20,7 +20,7 @@ fn all_twenty_preset_scope_policies_match_reviewed_goldens() {
             boundrail::rules::Compiled::new(&rules).unwrap();
             let text = presets::render(preset, scope, &rules, &[]).unwrap();
             let path = directory.join(format!("{name}-{label}.yaml"));
-            if std::env::var_os("UPDATE_ARCHGRAPH_PRESET_GOLDENS").is_some() {
+            if std::env::var_os("UPDATE_BOUNDRAIL_PRESET_GOLDENS").is_some() {
                 std::fs::create_dir_all(&directory).unwrap();
                 std::fs::write(&path, &text).unwrap();
             }

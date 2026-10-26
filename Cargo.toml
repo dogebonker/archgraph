@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "Source-based architecture evidence: dependency rules, service models, agent workflows and visual diffs"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/dogebonker/archgraph"
+repository = "https://github.com/dogebonker/boundrail"
 readme = "README.md"
 
 [dependencies]

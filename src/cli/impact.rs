@@ -306,7 +306,7 @@ pub(super) fn run(mut args: ImpactArgs) -> Result<ExitCode> {
         let post = (|| -> Result<()> {
             let number = number.context("no PR number; pass --pr or set GITHUB_EVENT_PATH")?;
             let body = std::env::temp_dir().join(format!(
-                "archgraph-impact-{}-{}.md",
+                "boundrail-impact-{}-{}.md",
                 std::process::id(),
                 SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
             ));

@@ -38,7 +38,7 @@ fn document(edges: &[(&str, &str)]) -> Document {
 fn tool(doc: &Document, name: &str, args: Value) -> Value {
     static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let root = std::env::temp_dir().join(format!(
-        "archgraph-mcp-unit-{}-{}",
+        "boundrail-mcp-unit-{}-{}",
         std::process::id(),
         NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     ));
@@ -245,7 +245,7 @@ fn input_schemas_reject_unknown_fields_and_match_examples() {
         ("check_diff", json!({})),
         (
             "propose",
-            json!({"finding_id":format!("ag-{}","a".repeat(64))}),
+            json!({"finding_id":format!("br-{}","a".repeat(64))}),
         ),
         (
             "simulate",
@@ -275,7 +275,7 @@ impl ServicesFixture {
     fn new() -> Self {
         static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let root = std::env::temp_dir().join(format!(
-            "archgraph-services-tool-{}-{}",
+            "boundrail-services-tool-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
@@ -532,7 +532,7 @@ fn services_manifest_symlinks_cannot_escape_the_repository() {
 
 #[test]
 fn context_uses_existing_budgeted_selection_without_exposing_source_bodies() {
-    let root = std::env::temp_dir().join(format!("archgraph-mcp-context-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("boundrail-mcp-context-{}", std::process::id()));
     for name in ["a", "b", "c"] {
         let dir = root.join("src").join(name);
         std::fs::create_dir_all(&dir).unwrap();

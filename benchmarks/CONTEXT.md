@@ -24,11 +24,11 @@ Report raw numerators and denominators, failed cases separately, and token use. 
 
 ## Reproduce
 
-Requires `gh` read access to public GitHub repositories, Git, the standard collectors, and an archgraph binary. The runner only writes its own `/private/tmp/archgraph-context-validation` clones, worktrees and API cache. When available, existing cached repository clones provide read-only Git object alternates; they are never reset or checked out. Otherwise the runner makes its own blob-filtered clone. Missing blobs are fetched in batches into its own object store. Preparation failures and retries occur before freezing the sample and are recorded separately.
+Requires `gh` read access to public GitHub repositories, Git, the standard collectors, and a Boundrail binary. The runner only writes its own `/private/tmp/boundrail-context-validation` clones, worktrees and API cache. When available, existing cached repository clones provide read-only Git object alternates; they are never reset or checked out. Otherwise the runner makes its own blob-filtered clone. Missing blobs are fetched in batches into its own object store. Preparation failures and retries occur before freezing the sample and are recorded separately.
 
 ```sh
-python3 -B benchmarks/context_pruning.py select --binary "$PWD/target/release/archgraph"
-python3 -B benchmarks/context_pruning.py score --binary "$PWD/target/release/archgraph"
+python3 -B benchmarks/context_pruning.py select --binary "$PWD/target/release/boundrail"
+python3 -B benchmarks/context_pruning.py score --binary "$PWD/target/release/boundrail"
 python3 -B -m unittest discover -s benchmarks -p test_context_pruning.py
 ```
 

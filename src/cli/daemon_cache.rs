@@ -48,7 +48,7 @@ impl Warm {
                 let path = args.root.join("layout.yaml");
                 path.is_file().then_some(path)
             });
-        let graph = args.root.join(".archgraph/daemon-graph.json");
+        let graph = args.root.join(".boundrail/daemon-graph.json");
         let scan_started = Instant::now();
         let mut doc = scan_cli::scan_doc(
             &args.root,
@@ -56,7 +56,7 @@ impl Warm {
             &args.hotspots,
             &args.collector,
             args.opts.rules.as_deref(),
-            &[&args.root.join(".archgraph")],
+            &[&args.root.join(".boundrail")],
         )?;
         timings.full_scan_ms = scan_started.elapsed().as_secs_f64() * 1000.0;
         let mut raw_fingerprint = None;
@@ -98,7 +98,7 @@ impl Warm {
             let config = native_config(&doc.config, &args.opts, &mut output, excluded);
             let mut source = doc.source.clone();
             source.collector = output.raw.collector;
-            source.git = git(&args.root, &[&args.root.join(".archgraph")]);
+            source.git = git(&args.root, &[&args.root.join(".boundrail")]);
             source.generated_at = scan_cli::source_time(&args.root)?;
             let entries = if source.language == Language::Typescript {
                 collect::depcruise::package_entries(&args.root, &output.raw.files)
@@ -319,7 +319,7 @@ impl Warm {
             provenance.dirty = true;
             self.dirty_proof = true;
         } else {
-            source.git = git(&self.args.root, &[&self.args.root.join(".archgraph")]);
+            source.git = git(&self.args.root, &[&self.args.root.join(".boundrail")]);
             self.dirty_proof = false;
         }
         self.timings.provenance_ms = provenance_started.elapsed().as_secs_f64() * 1000.0;
@@ -621,11 +621,11 @@ mod tests {
         fn new() -> Self {
             static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
             let mut value = Self(std::env::temp_dir().join(format!(
-                "archgraph-warm-cache-{}-{}",
+                "boundrail-warm-cache-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
             )));
-            value.write(".archgraph/placeholder", "");
+            value.write(".boundrail/placeholder", "");
             value.write(
                 "a/a.ts",
                 "import { value } from '../b/b'; export const result = value;\n",
@@ -670,7 +670,7 @@ mod tests {
                 &warm.args.hotspots,
                 &warm.args.collector,
                 warm.args.opts.rules.as_deref(),
-                &[&self.0.join(".archgraph")],
+                &[&self.0.join(".boundrail")],
             )
             .unwrap()
         }
@@ -784,7 +784,7 @@ mod tests {
         let fixture = Fixture::new();
         fixture.write("unused/hidden.ts", "export const hidden = 1;\n");
         fixture.write("unused/included.ts", "export const included = 1;\n");
-        fixture.write(".archgraphignore", "unused/*\n!unused/included.ts\n");
+        fixture.write(".boundrailignore", "unused/*\n!unused/included.ts\n");
         let mut warm = fixture.warm();
         let inventory = warm.selection.as_ref().unwrap().inventory.clone();
         fixture.write("b/b.ts", "export const value = 2;\n");
@@ -803,8 +803,8 @@ mod tests {
                 .all(|file| file.path != "unused/hidden.ts")
         );
         assert_fresh(&fixture, &warm);
-        fixture.write(".archgraphignore", "unused/*\n");
-        warm.refresh(&[fixture.0.join(".archgraphignore")]).unwrap();
+        fixture.write(".boundrailignore", "unused/*\n");
+        warm.refresh(&[fixture.0.join(".boundrailignore")]).unwrap();
         assert!(
             warm.doc
                 .files
@@ -826,9 +826,9 @@ mod tests {
                     "-c",
                     "commit.gpgsign=false",
                     "-c",
-                    "user.name=Archgraph Test",
+                    "user.name=Boundrail Test",
                     "-c",
-                    "user.email=archgraph@example.invalid",
+                    "user.email=boundrail@example.invalid",
                 ])
                 .args(args)
                 .output()

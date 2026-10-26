@@ -59,7 +59,7 @@ fn violation(
         .map(|(id, _)| id.clone())
         .unwrap_or_else(|| {
             format!(
-                "ag-{}",
+                "br-{}",
                 Sha256::digest(identity.to_string().as_bytes())
                     .iter()
                     .map(|byte| format!("{byte:02x}"))
@@ -177,7 +177,7 @@ pub fn check(before: &Document, after: &Document, options: &Options) -> Result<R
     });
     violations.dedup_by(|a, b| a.finding_id == b.finding_id);
     Ok(Report {
-        schema: "archgraph/edit-check/v1".into(),
+        schema: "boundrail/edit-check/v1".into(),
         verdict: if violations.is_empty() {
             "PASS"
         } else {
@@ -263,7 +263,7 @@ mod tests {
                     "surface-bypass"
                 }
             );
-            assert!(v.finding_id.starts_with("ag-"));
+            assert!(v.finding_id.starts_with("br-"));
             assert_eq!(v.recipe["mechanical"], false);
             after.edges[0].line = Some(99);
             assert_eq!(
@@ -306,7 +306,7 @@ mod tests {
         after.edges.clear();
         // Inferred surface evidence alone does not declare an enforcement policy.
         after.surface = Some(crate::surface::SurfaceReport {
-            schema: "archgraph/surface/v1".into(),
+            schema: "boundrail/surface/v1".into(),
             kind: "surface".into(),
             max_symbols: 100,
             complete: true,

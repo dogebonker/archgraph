@@ -147,7 +147,7 @@ pub fn stable_id(finding: &Finding) -> String {
     let bytes = serde_json::to_vec(&json!([finding.kind.as_str(), finding.subject, identity]))
         .expect("JSON values serialize");
     format!(
-        "ag-{}",
+        "br-{}",
         Sha256::digest(bytes)
             .iter()
             .map(|b| format!("{b:02x}"))

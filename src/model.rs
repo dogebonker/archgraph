@@ -1,4 +1,4 @@
-//! Schema `archgraph/v1.2`; v1/v1.1 remain readable. See schema/archgraph.v1.2.schema.json.
+//! Schema `boundrail/v1.2`; v1/v1.1 remain readable. See schema/boundrail.v1.2.schema.json.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::rules::Rules;
 
-pub const SCHEMA: &str = "archgraph/v1.2";
+pub const SCHEMA: &str = "boundrail/v1.2";
 pub fn supported_schema(schema: &str) -> bool {
-    matches!(schema, "archgraph/v1" | "archgraph/v1.1" | SCHEMA)
+    matches!(schema, "boundrail/v1" | "boundrail/v1.1" | SCHEMA)
 }
 
 #[derive(Debug, Clone, Serialize)]

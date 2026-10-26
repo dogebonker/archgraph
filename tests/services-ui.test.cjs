@@ -23,7 +23,7 @@ function element(tag) {
 }
 function fixture() {
   return {
-    schema: 'archgraph/v1.2', kind: 'services', source: { collector: 'inferred', path: 'example', complete: false },
+    schema: 'boundrail/v1.2', kind: 'services', source: { collector: 'inferred', path: 'example', complete: false },
     services: ['api', 'worker'],
     modules: [{ id: 'api', fan_in: 1, fan_out: 0, instability: 0 }, { id: 'worker', fan_in: 0, fan_out: 1, instability: 1 }],
     edges: [{ from: 'worker', to: 'api', kind: 'http', confidence: 'medium', operation: 'GET /users/:id', source: { file: 'worker/main.ts', line: 7 }, verdict: 'forbidden', rule: 'no-api' }],

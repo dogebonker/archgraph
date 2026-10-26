@@ -10,7 +10,7 @@ impl Fixture {
     fn new(files: &[(&str, &str)]) -> Self {
         static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let fixture = Self(std::env::temp_dir().join(format!(
-            "archgraph-native-go-{}-{}",
+            "boundrail-native-go-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         )));

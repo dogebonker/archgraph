@@ -4,7 +4,7 @@ The edit gate compares current code with the graph captured immediately before a
 
 Install with `boundrail hook install --agent claude --root . --scope 'src/**'` (or `--agent codex`) and start `boundrail serve . --engine native --symbols` with matching scan options/environment. Installer output names the files it wrote and the supported capabilities. Existing settings and foreign hooks are retained; repeated installation produces identical contents. For shell tools without known paths, pre-edit context states the transaction contract; actual workspace changes determine the post verdict. Known read-only tools skip transactions.
 
-Installation selects an existing layout. A first layout introduced later is adopted at the next clean Pre event; introducing it mid-edit makes the pending transaction unavailable. Changing an explicit rule path still requires reinstall. Generated/dependency directories are outside inventory. Explicit edits there are refused, while opaque shell writes there are not scope-enforced. Snapshot artifacts currently accumulate under `.archgraph/hooks/`; there is no automatic retention policy.
+Installation selects an existing layout. A first layout introduced later is adopted at the next clean Pre event; introducing it mid-edit makes the pending transaction unavailable. Changing an explicit rule path still requires reinstall. Generated/dependency directories are outside inventory. Explicit edits there are refused, while opaque shell writes there are not scope-enforced. Snapshot artifacts currently accumulate under `.boundrail/hooks/`; there is no automatic retention policy.
 
 Contained directory symlinks are recorded as link identities; snapshots do not traverse alias trees, and changes to the physical target files are inventoried at their ordinary repository paths. Retargeting the link is also a change. Explicit edit paths through directory aliases are refused: edit the physical path so scope and generated-output checks apply to it. External, broken, unresolved cyclic and non-regular symlink targets remain unavailable; links back to an ancestor directory are refused. Dependency/build-output exclusions still apply to physical paths. The original Pydantic benchmark failures from directory symlinks remain in the report; this subsequent compatibility fix does not rescore them.
 
@@ -13,7 +13,7 @@ Contained directory symlinks are recorded as link identities; snapshots do not t
 | Claude Code | `.claude/settings.json` | Pre context/deny, successful and failed post checks, Stop continuation gate. Failure blocking requires v2.1.295+; Stop crash/timeout handling and continuation limits remain host constraints. |
 | Codex | `.codex/hooks.json` | Pre context/deny, Post/Stop block responses. Review and explicitly trust the installed hooks through `/hooks`; the installer never changes trust. |
 | Cursor | `.cursor/hooks.json` | Requires `--feedback-only`: pre denial, post feedback and a bounded stop follow-up; allowed pre-tool context injection is not established. |
-| OpenCode | `.opencode/plugins/archgraph.ts` | Requires `--feedback-only`: before-tool denial, after-tool feedback and idle logging; no verified completion veto or pre-tool context API. |
+| OpenCode | `.opencode/plugins/boundrail.ts` | Requires `--feedback-only`: before-tool denial, after-tool feedback and idle logging; no verified completion veto or pre-tool context API. |
 
 These contracts follow the official [Claude hook reference](https://code.claude.com/docs/en/hooks), [Codex hook reference](https://learn.chatgpt.com/docs/hooks), [Cursor hook reference](https://cursor.com/docs/hooks) and [OpenCode plugin reference](https://opencode.ai/docs/plugins/). Protocol regressions use subprocess payloads. One live Codex session is validated below; live Claude Code, Cursor and OpenCode sessions have not been run. Context returned at PreToolUse is consumed on the next model request and does not replan an already-generated tool call. Blocking after a write does not roll it back. Concurrent edits are refused; Stop can validate and retire a same-session transaction left by cancellation or a denied permission. Exact `hook reset --baseline ID --reason reason` is audited recovery when the host does not reach Stop.
 
@@ -26,8 +26,8 @@ After the folder-observation correction (2026-10-20), a release-binary repeat on
 With the current-main binary installed as shown in the README, clone the repository outside your project to obtain the demo script. From an existing source checkout, skip the clone and `cd` steps:
 
 ```sh
-git clone https://github.com/dogebonker/archgraph
-cd archgraph
+git clone https://github.com/dogebonker/boundrail
+cd boundrail
 python3 ci/bench_edit_loop.py --boundrail "$(command -v boundrail)" --fixture-only
 ```
 
@@ -76,7 +76,7 @@ After removing the import, the same baseline returned:
 
 ```text
 PASS
-{"schema":"archgraph/edit-check/v1","verdict":"PASS","violations":[]}
+{"schema":"boundrail/edit-check/v1","verdict":"PASS","violations":[]}
 ```
 
 `fires --top` returned `{"rules":[{"count":2,"rule":"domain-no-adapters"}],"total":2}`. The second fire came from deliberately checking an unchanged repair attempt. The separate pre-existing-violation check passed.

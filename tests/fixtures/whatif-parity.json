@@ -2,10 +2,10 @@
   {
     "name": "cut-module-cycle",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -178,7 +178,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-441baf17b9cd033b2f55e70387ae6aebf08245ab5b5cfea7de05c23da5e8444a",
+            "finding_id": "br-441baf17b9cd033b2f55e70387ae6aebf08245ab5b5cfea7de05c23da5e8444a",
             "kind": "cycle",
             "subject": "a, b",
             "evidence": {
@@ -216,7 +216,7 @@
         },
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -334,10 +334,10 @@
   {
     "name": "merge-modules-retains-file-cycle",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -503,7 +503,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-441baf17b9cd033b2f55e70387ae6aebf08245ab5b5cfea7de05c23da5e8444a",
+          "finding_id": "br-441baf17b9cd033b2f55e70387ae6aebf08245ab5b5cfea7de05c23da5e8444a",
           "recipe": {
             "steps": [
               {
@@ -585,7 +585,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -703,10 +703,10 @@
   {
     "name": "relocate-creates-cycle",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -872,7 +872,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -998,10 +998,10 @@
   {
     "name": "weighted-type-and-lazy",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -1164,7 +1164,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -1291,10 +1291,10 @@
   {
     "name": "all-kinds-cycle",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -1481,7 +1481,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-441baf17b9cd033b2f55e70387ae6aebf08245ab5b5cfea7de05c23da5e8444a",
+            "finding_id": "br-441baf17b9cd033b2f55e70387ae6aebf08245ab5b5cfea7de05c23da5e8444a",
             "kind": "cycle",
             "subject": "a, b",
             "evidence": {
@@ -1519,7 +1519,7 @@
         },
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -1637,10 +1637,10 @@
   {
     "name": "custom-weights",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -1797,7 +1797,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -1924,10 +1924,10 @@
   {
     "name": "capture-modules",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -2062,7 +2062,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -2145,10 +2145,10 @@
   {
     "name": "source-root-outside",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -2267,7 +2267,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -2350,10 +2350,10 @@
   {
     "name": "go-package-directories",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -2520,7 +2520,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -2633,10 +2633,10 @@
   {
     "name": "test-back-edge-is-not-cycle",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -2811,7 +2811,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -2924,10 +2924,10 @@
   {
     "name": "file-granularity",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -3094,7 +3094,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-50da971d0515ab3c52b765006ef738aa3c5a31534227f96c38c1ae9b37fa62c0",
+          "finding_id": "br-50da971d0515ab3c52b765006ef738aa3c5a31534227f96c38c1ae9b37fa62c0",
           "recipe": {
             "steps": [
               {
@@ -3176,7 +3176,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -3307,10 +3307,10 @@
   {
     "name": "layers-and-default",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -3541,7 +3541,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-d0fb07d3a8258fbc39dc660d4b783194bc234e11a62cab32535ac9f4b00e2938",
+          "finding_id": "br-d0fb07d3a8258fbc39dc660d4b783194bc234e11a62cab32535ac9f4b00e2938",
           "recipe": {
             "steps": [
               {
@@ -3595,7 +3595,7 @@
           }
         },
         {
-          "finding_id": "ag-661c08ea3ca140eef5c14d0049e51b35a27adb5022d9cdd6768c4c47dbeaa48c",
+          "finding_id": "br-661c08ea3ca140eef5c14d0049e51b35a27adb5022d9cdd6768c4c47dbeaa48c",
           "recipe": {
             "steps": [
               {
@@ -3649,7 +3649,7 @@
           }
         },
         {
-          "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+          "finding_id": "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
           "recipe": {
             "steps": [
               {
@@ -3690,7 +3690,7 @@
               "predicate": "recipe_deltas_match && all(structured)",
               "structured": {
                 "findings_absent": [
-                  "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
                 ]
               }
             },
@@ -3734,7 +3734,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-4ba52e29cb1b31ecbbab67fcbafca8f6bb8b81843d93e9ca1c04d619973ed2ce",
+            "finding_id": "br-4ba52e29cb1b31ecbbab67fcbafca8f6bb8b81843d93e9ca1c04d619973ed2ce",
             "kind": "cycle",
             "subject": "domain, ui",
             "evidence": {
@@ -3772,7 +3772,7 @@
         },
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -3920,10 +3920,10 @@
   {
     "name": "forbid-before-allow-kind-filter",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -4082,7 +4082,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-33f64cc0abd261a00cfd889e740fb4dc855bf2a7e54c43b495b6ff0d08e6fe38",
+          "finding_id": "br-33f64cc0abd261a00cfd889e740fb4dc855bf2a7e54c43b495b6ff0d08e6fe38",
           "recipe": {
             "steps": [
               {
@@ -4139,7 +4139,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -4236,10 +4236,10 @@
   {
     "name": "entrypoint-bypass",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -4383,7 +4383,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-67616a84af560a5128cb298f0bd872d191b2d4c6e162f2aaecd67593ee8d1b74",
+          "finding_id": "br-67616a84af560a5128cb298f0bd872d191b2d4c6e162f2aaecd67593ee8d1b74",
           "recipe": {
             "steps": [
               {
@@ -4440,7 +4440,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-4ee54a89470b5c6753772b4357a93ec06615ea2cbbf1b23574ce01a61335933f",
+            "finding_id": "br-4ee54a89470b5c6753772b4357a93ec06615ea2cbbf1b23574ce01a61335933f",
             "kind": "internals-reach",
             "subject": "billing/**",
             "evidence": {
@@ -4463,7 +4463,7 @@
         },
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -4568,10 +4568,10 @@
   {
     "name": "public-capture-boundary",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -4684,7 +4684,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-8a8a115322b2de0d7c41fa9d1ca55214bd5804d12068d0aca704162e0f0ca699",
+          "finding_id": "br-8a8a115322b2de0d7c41fa9d1ca55214bd5804d12068d0aca704162e0f0ca699",
           "recipe": {
             "steps": [
               {
@@ -4741,7 +4741,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-6feab48aa2d25caf5b19ca002f7bcc807ac0aba920b99786704eb12fa7627edc",
+            "finding_id": "br-6feab48aa2d25caf5b19ca002f7bcc807ac0aba920b99786704eb12fa7627edc",
             "kind": "internals-reach",
             "subject": "domains/b/**",
             "evidence": {
@@ -4764,7 +4764,7 @@
         },
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -4853,10 +4853,10 @@
   {
     "name": "reachable-forbid",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -5039,7 +5039,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-aa77352ba99b72fdf67ef192290164f999348a26b4b26cc45585b74e8db7684b",
+          "finding_id": "br-aa77352ba99b72fdf67ef192290164f999348a26b4b26cc45585b74e8db7684b",
           "recipe": {
             "steps": [
               {
@@ -5096,7 +5096,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -5209,10 +5209,10 @@
   {
     "name": "elixir-test-back-edge-is-not-cycle",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -5387,7 +5387,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -5500,10 +5500,10 @@
   {
     "name": "glob-braces-and-question-mark",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -5670,7 +5670,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-ba9d5a5f5c8e45dbb041336ed7c457cc28cf7bcf78b79a48b7197370f19ae06f",
+          "finding_id": "br-ba9d5a5f5c8e45dbb041336ed7c457cc28cf7bcf78b79a48b7197370f19ae06f",
           "recipe": {
             "steps": [
               {
@@ -5724,7 +5724,7 @@
           }
         },
         {
-          "finding_id": "ag-3adc82c547bc64731e1c611acd91dd211b2981dbf60f59ee7098c4741e4b6fb8",
+          "finding_id": "br-3adc82c547bc64731e1c611acd91dd211b2981dbf60f59ee7098c4741e4b6fb8",
           "recipe": {
             "steps": [
               {
@@ -5778,7 +5778,7 @@
           }
         },
         {
-          "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+          "finding_id": "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
           "recipe": {
             "steps": [
               {
@@ -5820,7 +5820,7 @@
               "predicate": "recipe_deltas_match && all(structured)",
               "structured": {
                 "findings_absent": [
-                  "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
                 ]
               }
             },
@@ -5865,7 +5865,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -5984,10 +5984,10 @@
   {
     "name": "glob-negated-character-classes",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -6149,7 +6149,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-60eff76d6fb804a3599b1401614a1148eb59c77357a094f08167815b97d3a4af",
+          "finding_id": "br-60eff76d6fb804a3599b1401614a1148eb59c77357a094f08167815b97d3a4af",
           "recipe": {
             "steps": [
               {
@@ -6203,7 +6203,7 @@
           }
         },
         {
-          "finding_id": "ag-850740fd1b7a9cb05599b999ab96ece622053f13c1eb483b65e194fb93defcd2",
+          "finding_id": "br-850740fd1b7a9cb05599b999ab96ece622053f13c1eb483b65e194fb93defcd2",
           "recipe": {
             "steps": [
               {
@@ -6279,7 +6279,7 @@
           }
         },
         {
-          "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+          "finding_id": "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
           "recipe": {
             "steps": [
               {
@@ -6320,7 +6320,7 @@
               "predicate": "recipe_deltas_match && all(structured)",
               "structured": {
                 "findings_absent": [
-                  "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
                 ]
               }
             },
@@ -6364,7 +6364,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -6483,10 +6483,10 @@
   {
     "name": "glob-negated-class-matches-separator",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -6622,7 +6622,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-60eff76d6fb804a3599b1401614a1148eb59c77357a094f08167815b97d3a4af",
+          "finding_id": "br-60eff76d6fb804a3599b1401614a1148eb59c77357a094f08167815b97d3a4af",
           "recipe": {
             "steps": [
               {
@@ -6679,7 +6679,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -6770,10 +6770,10 @@
   {
     "name": "target-layout",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -6970,7 +6970,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-74e89198beddc5797184afe814d22111421e9715caf5426ff4900417afc9918b",
+          "finding_id": "br-74e89198beddc5797184afe814d22111421e9715caf5426ff4900417afc9918b",
           "recipe": {
             "steps": [
               {
@@ -7026,7 +7026,7 @@
           }
         },
         {
-          "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+          "finding_id": "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
           "recipe": {
             "steps": [
               {
@@ -7075,7 +7075,7 @@
               "predicate": "recipe_deltas_match && all(structured)",
               "structured": {
                 "findings_absent": [
-                  "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
                 ]
               }
             },
@@ -7128,7 +7128,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -7410,10 +7410,10 @@
   {
     "name": "target-claim-binding",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -7558,7 +7558,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-cfc9779ed5dc39f11cc7cce79dcc65986a538733e102dcbe63e8db557727d22a",
+          "finding_id": "br-cfc9779ed5dc39f11cc7cce79dcc65986a538733e102dcbe63e8db557727d22a",
           "recipe": {
             "steps": [
               {
@@ -7613,7 +7613,7 @@
           }
         },
         {
-          "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+          "finding_id": "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
           "recipe": {
             "steps": [
               {
@@ -7656,7 +7656,7 @@
               "predicate": "recipe_deltas_match && all(structured)",
               "structured": {
                 "findings_absent": [
-                  "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
                 ]
               }
             },
@@ -7700,7 +7700,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -7904,10 +7904,10 @@
   {
     "name": "target-first-match",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -8059,7 +8059,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-cfc9779ed5dc39f11cc7cce79dcc65986a538733e102dcbe63e8db557727d22a",
+          "finding_id": "br-cfc9779ed5dc39f11cc7cce79dcc65986a538733e102dcbe63e8db557727d22a",
           "recipe": {
             "steps": [
               {
@@ -8113,7 +8113,7 @@
           }
         },
         {
-          "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+          "finding_id": "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
           "recipe": {
             "steps": [
               {
@@ -8156,7 +8156,7 @@
               "predicate": "recipe_deltas_match && all(structured)",
               "structured": {
                 "findings_absent": [
-                  "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
                 ]
               }
             },
@@ -8200,7 +8200,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -8397,10 +8397,10 @@
   {
     "name": "target-reachable-claim",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -8583,7 +8583,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-aa77352ba99b72fdf67ef192290164f999348a26b4b26cc45585b74e8db7684b",
+          "finding_id": "br-aa77352ba99b72fdf67ef192290164f999348a26b4b26cc45585b74e8db7684b",
           "recipe": {
             "steps": [
               {
@@ -8641,7 +8641,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -8824,10 +8824,10 @@
   {
     "name": "target-package-claim",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -9004,7 +9004,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-8826a9a089a62a6916184dfc89bddb59ab1b1b23a83a56914b7166cba1b0d922",
+          "finding_id": "br-8826a9a089a62a6916184dfc89bddb59ab1b1b23a83a56914b7166cba1b0d922",
           "recipe": {
             "steps": [
               {
@@ -9059,7 +9059,7 @@
           }
         },
         {
-          "finding_id": "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
+          "finding_id": "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf",
           "recipe": {
             "steps": [
               {
@@ -9100,7 +9100,7 @@
               "predicate": "recipe_deltas_match && all(structured)",
               "structured": {
                 "findings_absent": [
-                  "ag-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
+                  "br-07bef910bea5bfb61d77465805414005925869f6df1127b4162d90c911fe2acf"
                 ]
               }
             },
@@ -9142,7 +9142,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -9364,10 +9364,10 @@
   {
     "name": "test-class-survives-rename",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -9542,7 +9542,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -9663,10 +9663,10 @@
   {
     "name": "written-barrel-rule-target",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -9813,7 +9813,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -9918,10 +9918,10 @@
   {
     "name": "chained-moves-with-rules",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -10171,7 +10171,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-00afc1e99f054d76294e50ca939648e8ad1b7c850603fa696bb1635731142bfb",
+          "finding_id": "br-00afc1e99f054d76294e50ca939648e8ad1b7c850603fa696bb1635731142bfb",
           "recipe": {
             "steps": [
               {
@@ -10254,7 +10254,7 @@
           }
         },
         {
-          "finding_id": "ag-8e0bc2bd77599d105fa5435aaa451b567d1657fa97e29335f9b6dd35eaefcd01",
+          "finding_id": "br-8e0bc2bd77599d105fa5435aaa451b567d1657fa97e29335f9b6dd35eaefcd01",
           "recipe": {
             "steps": [
               {
@@ -10308,7 +10308,7 @@
           }
         },
         {
-          "finding_id": "ag-cd3ef4c4595282f9bdd37619c7958a7def394b2dec746d4e4c05d98cb690f67a",
+          "finding_id": "br-cd3ef4c4595282f9bdd37619c7958a7def394b2dec746d4e4c05d98cb690f67a",
           "recipe": {
             "steps": [
               {
@@ -10365,7 +10365,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {
@@ -10533,10 +10533,10 @@
   {
     "name": "grabbag-refinement-needs-cli",
     "document": {
-      "schema": "archgraph/v1.2",
+      "schema": "boundrail/v1.2",
       "kind": "scan",
       "tool": {
-        "name": "archgraph",
+        "name": "boundrail",
         "version": "0.1.0"
       },
       "source": {
@@ -10942,7 +10942,7 @@
       },
       "findings": [
         {
-          "finding_id": "ag-245a13bad14b5211ed9056a171d26ffdba569091a5c866516b34ca1996fd84e8",
+          "finding_id": "br-245a13bad14b5211ed9056a171d26ffdba569091a5c866516b34ca1996fd84e8",
           "recipe": {
             "steps": [
               {
@@ -10981,7 +10981,7 @@
               "predicate": "recipe_deltas_match && all(structured)",
               "structured": {
                 "findings_absent": [
-                  "ag-245a13bad14b5211ed9056a171d26ffdba569091a5c866516b34ca1996fd84e8"
+                  "br-245a13bad14b5211ed9056a171d26ffdba569091a5c866516b34ca1996fd84e8"
                 ]
               }
             },
@@ -11026,7 +11026,7 @@
       "diagnostics": [
         {
           "finding": {
-            "finding_id": "ag-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
+            "finding_id": "br-2dc6566db2d3edd5cd3acaf072dec6adf09448b2caf5db5021bdd015160d9fe8",
             "kind": "small-repo",
             "subject": ".",
             "evidence": {

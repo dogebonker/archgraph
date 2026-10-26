@@ -73,12 +73,12 @@ fn hash(bytes: &[u8]) -> String {
 }
 fn valid_id(id: &str) -> Result<()> {
     ensure!(
-        id.starts_with("ag-")
+        id.starts_with("br-")
             && id.len() == 67
             && id[3..]
                 .bytes()
                 .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c)),
-        "invalid finding_id: use an ag- ID returned by report"
+        "invalid finding_id: use an br- ID returned by report"
     );
     Ok(())
 }
@@ -87,8 +87,8 @@ fn safe_path(root: &Path, relative: &str) -> Result<PathBuf> {
         crate::collect::is_relative_path(relative, false)
             && !relative
                 .split('/')
-                .any(|p| p == ".git" || p == ".archgraph"),
-        "unsafe source path {relative:?}: use a repository-relative file outside Git/archgraph state"
+                .any(|p| p == ".git" || p == ".boundrail"),
+        "unsafe source path {relative:?}: use a repository-relative file outside Git/boundrail state"
     );
     checked_path(root, relative)
 }
@@ -662,7 +662,7 @@ impl IndexGuard {
             .duration_since(std::time::UNIX_EPOCH)?
             .as_nanos();
         let private =
-            index.with_file_name(format!("archgraph-index-{}-{stamp}", std::process::id()));
+            index.with_file_name(format!("boundrail-index-{}-{stamp}", std::process::id()));
         let mut guard = Self {
             lock,
             private,
@@ -732,7 +732,7 @@ impl Drop for IndexGuard {
 fn write_preserving(path: &Path, bytes: &[u8], permissions: &fs::Permissions) -> Result<()> {
     crate::history::refuse_symlink(path)?;
     let temp = path.with_file_name(format!(
-        ".archgraph-edit-{}-{}",
+        ".boundrail-edit-{}-{}",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)?
@@ -841,7 +841,7 @@ fn rollback(
 }
 fn receipt_path(root: &Path, id: &str) -> Result<PathBuf> {
     valid_id(id)?;
-    checked_path(root, &format!(".archgraph/applied/{id}.json"))
+    checked_path(root, &format!(".boundrail/applied/{id}.json"))
 }
 
 fn preserve_resolution(before: &Document, after: &Document, plan: &Plan) -> Result<()> {
@@ -1007,7 +1007,7 @@ pub fn execute(
             );
         }
         let receipt_value = Receipt {
-            schema: "archgraph/apply-receipt/v1".into(),
+            schema: "boundrail/apply-receipt/v1".into(),
             finding_id: plan.finding_id.clone(),
             before: serde_json::to_value(before)?,
             recipe: plan.recipe.clone(),
@@ -1061,7 +1061,7 @@ pub fn verify_receipt(root: &Path, id: &str, after: &Document) -> Result<Verific
     let receipt: Receipt = serde_json::from_slice(&fs::read(path)?)
         .context("invalid apply receipt: rescan and verify explicit predicates")?;
     ensure!(
-        receipt.schema == "archgraph/apply-receipt/v1" && receipt.finding_id == id,
+        receipt.schema == "boundrail/apply-receipt/v1" && receipt.finding_id == id,
         "apply receipt identity mismatch; inspect it manually"
     );
     for (file, expected) in &receipt.fingerprints {
@@ -1094,7 +1094,7 @@ fn read_receipt(root: &Path, path: &Path, id: &str) -> Result<Receipt> {
     let receipt: Receipt = serde_json::from_slice(&fs::read(path)?)
         .context("invalid recipe baseline: call propose again")?;
     ensure!(
-        receipt.schema == "archgraph/apply-receipt/v1" && receipt.finding_id == id,
+        receipt.schema == "boundrail/apply-receipt/v1" && receipt.finding_id == id,
         "recipe baseline identity mismatch: call propose again"
     );
     Ok(receipt)
@@ -1105,7 +1105,7 @@ fn write_state(path: &Path, bytes: &[u8]) -> Result<()> {
         "recipe baseline exceeds 64 MiB; use explicit current predicates instead"
     );
     let temp = path.with_file_name(format!(
-        ".archgraph-state-{}-{}",
+        ".boundrail-state-{}-{}",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)?
@@ -1136,11 +1136,11 @@ pub fn remember_proposal(root: &Path, before: &Document, id: &str, recipe: &Reci
     valid_id(id)?;
     crate::recipes::recipe_for(before, id)?;
     let root = root.canonicalize()?;
-    let path = checked_path(&root, &format!(".archgraph/proposed/{id}.json"))?;
+    let path = checked_path(&root, &format!(".boundrail/proposed/{id}.json"))?;
     let mut created = Vec::new();
     make_parents(&root, &path, &mut created)?;
     let receipt = Receipt {
-        schema: "archgraph/apply-receipt/v1".into(),
+        schema: "boundrail/apply-receipt/v1".into(),
         finding_id: id.into(),
         before: serde_json::to_value(before)?,
         recipe: recipe.clone(),
@@ -1162,7 +1162,7 @@ pub fn verify_predicate(
     );
     let root = root.canonicalize()?;
     let applied = receipt_path(&root, id)?;
-    let proposed = checked_path(&root, &format!(".archgraph/proposed/{id}.json"))?;
+    let proposed = checked_path(&root, &format!(".boundrail/proposed/{id}.json"))?;
     let mut candidate = None;
     for path in [applied, proposed] {
         if !path.exists() {

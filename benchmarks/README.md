@@ -32,24 +32,24 @@ Three changes survived verification:
 2. History embeds one graph template and one copy of each snapshot, creating only the selected page when needed. A size-budget regression failed on the old renderer. JavaScript unit tests check navigation and preserve literal `$&`, `{{GRAPH}}` and script-end strings in paths.
 3. Rust precomputes each document's module namespaces and skips namespace searching for ordinary symbols. An isolated parser benchmark (20 parses per sample, seven interleaved samples per binary) fell from 0.130295 s to 0.115404 s, **11.4%**. End-to-end indexing remains the dominant cost.
 
-Raw samples, binary hashes and graph fingerprints: [before](results/before.json), [after](results/after.json), [Java edge comparison](results/java-correctness.json), [Rust parser samples](results/rust-parser.json). The baseline is the uncommitted implementation from the preceding development pass, identified by its binary hash; it is not a released archgraph version. The isolated Rust samples used a retained SCIP dump; the standalone parser benchmark below regenerates that input before timing.
+Raw samples, binary hashes and graph fingerprints: [before](results/before.json), [after](results/after.json), [Java edge comparison](results/java-correctness.json), [Rust parser samples](results/rust-parser.json). The baseline is the uncommitted implementation from the preceding development pass, identified by its binary hash; it is not a released boundrail version. The isolated Rust samples used a retained SCIP dump; the standalone parser benchmark below regenerates that input before timing.
 
 ## Reproduce
 
-Needs Python 3, Git, JDK 11+, and rustup with rust-analyzer/rust-src. Build archgraph first:
+Needs Python 3, Git, JDK 11+, and rustup with rust-analyzer/rust-src. Build boundrail first:
 
 ```sh
 cargo +stable build --release --locked
 RUSTUP_TOOLCHAIN=stable python3 benchmarks/run.py \
-  --work /tmp/archgraph-benchmarks --output /tmp/archgraph-results.json --runs 3
+  --work /tmp/boundrail-benchmarks --output /tmp/boundrail-results.json --runs 3
 ```
 
-The runner fetches each pinned commit with eight commits of history, reuses an existing clean checkout at that pin, and preserves the final raw graphs and collector logs under `--work/outputs`. `--only gson` selects one workload and can be repeated. `--binary /path/to/archgraph` compares another binary. A source assertion failure or scan failure exits 1 but still writes the other results.
+The runner fetches each pinned commit with eight commits of history, reuses an existing clean checkout at that pin, and preserves the final raw graphs and collector logs under `--work/outputs`. `--only gson` selects one workload and can be repeated. `--binary /path/to/boundrail` compares another binary. A source assertion failure or scan failure exits 1 but still writes the other results.
 
 Rust needs cached dependencies; the first run can record a missing-cache failure. Fetch the pinned ripgrep dependencies without building it, then rerun:
 
 ```sh
-cargo +stable fetch --locked --manifest-path /tmp/archgraph-benchmarks/repos/ripgrep/Cargo.toml
+cargo +stable fetch --locked --manifest-path /tmp/boundrail-benchmarks/repos/ripgrep/Cargo.toml
 ```
 
 Use the same Cargo registry protocol for fetching and scanning. This machine's cache uses `CARGO_REGISTRIES_CRATES_IO_PROTOCOL=git`; that variable was set for the Rust measurements. No Maven/Gradle build, annotation processor, Rust build script or proc macro runs during these scans.
@@ -58,9 +58,9 @@ For the isolated Rust parser, compile against the optimized library. Indexing ha
 
 ```sh
 rustc +stable --edition=2024 -O benchmarks/rust_parse.rs \
-  --extern archgraph=target/release/libarchgraph.rlib \
-  -L dependency=target/release/deps -o /tmp/archgraph-rust-parse
-RUSTUP_TOOLCHAIN=stable /tmp/archgraph-rust-parse /tmp/archgraph-benchmarks/repos/ripgrep
+  --extern boundrail=target/release/libboundrail.rlib \
+  -L dependency=target/release/deps -o /tmp/boundrail-rust-parse
+RUSTUP_TOOLCHAIN=stable /tmp/boundrail-rust-parse /tmp/boundrail-benchmarks/repos/ripgrep
 ```
 
 Check the benchmark assertions and timeline logic without fetching projects:

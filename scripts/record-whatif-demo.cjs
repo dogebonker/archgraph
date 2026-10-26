@@ -22,7 +22,7 @@ async function main() {
     headless: true,
     ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}),
   });
-  const frames = await fs.mkdtemp(path.join(os.tmpdir(), 'archgraph-whatif-frames-'));
+  const frames = await fs.mkdtemp(path.join(os.tmpdir(), 'boundrail-whatif-frames-'));
   const errors = [];
   let frame = 0;
   try {
@@ -74,7 +74,7 @@ async function main() {
     await capture(30);
     await page.screenshot({ path: path.resolve(output.replace(/\.webp$/, '.png')) });
     await page.locator('#whatif-copy-cli').click();
-    assert((await page.locator('#whatif-cli').inputValue()).includes('archgraph simulate'),
+    assert((await page.locator('#whatif-cli').inputValue()).includes('boundrail simulate'),
       'Copy action must expose the authoritative CLI command');
     await capture(12);
     await page.locator('#whatif-clear').click();

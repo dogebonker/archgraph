@@ -14,8 +14,8 @@ pub const FILES: [&str; 4] = [
     ".cursorrules",
     ".github/copilot-instructions.md",
 ];
-const START: &str = "<!-- archgraph:start -->";
-const END: &str = "<!-- archgraph:end -->";
+const START: &str = "<!-- boundrail:start -->";
+const END: &str = "<!-- boundrail:end -->";
 
 #[derive(Debug, Serialize)]
 pub struct Conflict {
@@ -168,12 +168,12 @@ fn lines(rules: &RulesRef) -> Vec<String> {
 }
 pub(crate) fn block(rules: &RulesRef, full: bool, body: &str) -> String {
     let payload = format!(
-        "<!-- archgraph:layout-sha256 {} -->\n<!-- archgraph:mode {} -->\n{body}",
+        "<!-- boundrail:layout-sha256 {} -->\n<!-- boundrail:mode {} -->\n{body}",
         rules.sha256,
         if full { "full" } else { "brief" }
     );
     format!(
-        "{START}\n<!-- archgraph:sha256 {} -->\n{payload}{END}",
+        "{START}\n<!-- boundrail:sha256 {} -->\n{payload}{END}",
         hash(payload.as_bytes())
     )
 }
@@ -255,14 +255,14 @@ pub(crate) fn owned_mode(bytes: &[u8]) -> Option<bool> {
         .strip_suffix(END)?;
     let (checksum, payload) = content.split_once('\n')?;
     let checksum = checksum
-        .strip_prefix("<!-- archgraph:sha256 ")?
+        .strip_prefix("<!-- boundrail:sha256 ")?
         .strip_suffix(" -->")?;
     if checksum != hash(payload.as_bytes()) {
         return None;
     }
     match payload.lines().nth(1)? {
-        "<!-- archgraph:mode full -->" => Some(true),
-        "<!-- archgraph:mode brief -->" => Some(false),
+        "<!-- boundrail:mode full -->" => Some(true),
+        "<!-- boundrail:mode brief -->" => Some(false),
         _ => None,
     }
 }
@@ -305,7 +305,7 @@ pub fn run(root: &Path, full: bool, check: bool) -> Result<Report> {
     ensure!(root.is_dir(), "sync root must be a directory");
     let rules = crate::rules::load(&path(&root, "layout.yaml")?)?;
     let mut report = Report {
-        schema: "archgraph/sync-rules/v1",
+        schema: "boundrail/sync-rules/v1",
         written: vec![],
         stale: vec![],
         conflicts: vec![],

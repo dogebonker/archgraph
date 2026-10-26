@@ -20,14 +20,14 @@ if weaken_policy:
 if not no_help:
     source.write_text('forbidden\n')
 if (root / '.claude/settings.json').exists() and not no_help and not weaken_policy:
-    state = root / '.archgraph'
+    state = root / '.boundrail'
     state.mkdir(exist_ok=True)
     (state / 'fires.log').write_text(json.dumps({'rule': 'domain-no-adapters',
         'file': 'src/domain.txt', 'agent': 'claude', 'ts': 1, 'finding_id': 'mock-1'}) + '\n')
     receipts = state / 'applied'
     receipts.mkdir()
     (receipts / 'mock-1.json').write_text(json.dumps({
-        'schema': 'archgraph/apply-receipt/v1', 'finding_id': 'mock-1',
+        'schema': 'boundrail/apply-receipt/v1', 'finding_id': 'mock-1',
         **({'before': {}, 'recipe': {}, 'fingerprints': {}} if prompt == 'Valid receipt' else {})}))
     source.write_text('repaired\n')
 print(json.dumps({'type': 'result', 'usage': {'input_tokens': 10, 'output_tokens': 5}}))

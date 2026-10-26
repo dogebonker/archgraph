@@ -1,7 +1,7 @@
 mod common;
 
 use common::{
-    archgraph, finding, fixture, layout, scan, scan_file, scan_recorded, stable, synthetic,
+    boundrail, finding, fixture, layout, scan, scan_file, scan_recorded, stable, synthetic,
     validate, validate_sarif, verdicts, write_tmp,
 };
 use serde_json::json;
@@ -14,7 +14,7 @@ fn v(rows: &[(&str, &str, &str, &str)]) -> Vec<(String, String, String, String)>
 }
 
 fn check(args: &[&str]) -> (String, String, Option<i32>) {
-    let out = archgraph(&[&["check"], args].concat());
+    let out = boundrail(&[&["check"], args].concat());
     (
         String::from_utf8(out.stdout).unwrap(),
         String::from_utf8(out.stderr).unwrap(),
@@ -942,7 +942,7 @@ fn rules_errors() {
     let dir = fixture("ts-hexagonal");
     let input = dir.join("depcruise.json");
     let scan_with = |rules: &str| {
-        let out = archgraph(&[
+        let out = boundrail(&[
             "scan",
             dir.to_str().unwrap(),
             "--collector-input",
@@ -1161,7 +1161,7 @@ fn captures_are_rejected_where_nothing_binds_them() {
     let dir = fixture("ts-modmono");
     let input = dir.join("depcruise.json");
     let scan_with = |rules: &str| {
-        let out = archgraph(&[
+        let out = boundrail(&[
             "scan",
             dir.to_str().unwrap(),
             "--collector-input",
@@ -1223,7 +1223,7 @@ fn inconsistent_scan_documents_are_input_errors() {
                 "src/x/main.ts",
             ],
         ] {
-            let out = archgraph(&args);
+            let out = boundrail(&args);
             let stderr = String::from_utf8(out.stderr).unwrap();
             assert_eq!(out.status.code(), Some(2), "{name} {args:?}: {stderr}");
             assert!(!stderr.contains("panicked"), "{name}: {stderr}");

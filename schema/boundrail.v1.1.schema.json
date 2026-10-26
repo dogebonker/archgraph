@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "archgraph v1.2 document",
+  "title": "boundrail v1.1 document",
   "type": "object",
   "required": [
     "schema",
@@ -8,7 +8,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "archgraph/v1.2"
+      "const": "boundrail/v1.1"
     },
     "kind": {
       "enum": [
@@ -22,12 +22,7 @@
         "surface",
         "package-splits",
         "context",
-        "services",
-        "services-diff",
-        "recipe",
-        "apply-plan",
-        "apply",
-        "verification"
+        "services"
       ]
     }
   },
@@ -163,237 +158,9 @@
       "then": {
         "$ref": "#/$defs/services"
       }
-    },
-    {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "recipe"
-          }
-        }
-      },
-      "then": {
-        "$ref": "#/$defs/recipe-document"
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "apply-plan"
-          }
-        }
-      },
-      "then": {
-        "$ref": "#/$defs/apply-plan"
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "apply"
-          }
-        }
-      },
-      "then": {
-        "$ref": "#/$defs/apply"
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "verification"
-          }
-        }
-      },
-      "then": {
-        "$ref": "#/$defs/verification"
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "services-diff"
-          }
-        }
-      },
-      "then": {
-        "$ref": "#/$defs/services-diff"
-      }
     }
   ],
   "$defs": {
-    "services-diff": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "schema",
-        "kind",
-        "policy_basis",
-        "policy_changed",
-        "before",
-        "after",
-        "new_forbidden_calls",
-        "existing_forbidden_calls",
-        "resolved_forbidden_calls",
-        "new_forbidden_resources",
-        "existing_forbidden_resources",
-        "resolved_forbidden_resources",
-        "caveats"
-      ],
-      "properties": {
-        "schema": {
-          "const": "archgraph/v1.2"
-        },
-        "kind": {
-          "const": "services-diff"
-        },
-        "policy_basis": {
-          "const": "after"
-        },
-        "policy_changed": {
-          "type": "boolean"
-        },
-        "before": {
-          "$ref": "#/$defs/service-diff-snapshot"
-        },
-        "after": {
-          "$ref": "#/$defs/service-diff-snapshot"
-        },
-        "new_forbidden_calls": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/service-call-change"
-          }
-        },
-        "existing_forbidden_calls": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/service-call-change"
-          }
-        },
-        "resolved_forbidden_calls": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/service-call-change"
-          }
-        },
-        "new_forbidden_resources": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/service-resource-change"
-          }
-        },
-        "existing_forbidden_resources": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/service-resource-change"
-          }
-        },
-        "resolved_forbidden_resources": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/service-resource-change"
-          }
-        },
-        "caveats": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "service-diff-snapshot": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "source",
-        "forbid",
-        "caveats"
-      ],
-      "properties": {
-        "source": {
-          "$ref": "#/$defs/services/properties/source"
-        },
-        "forbid": {
-          "$ref": "#/$defs/services/properties/forbid"
-        },
-        "caveats": {
-          "$ref": "#/$defs/services/properties/caveats"
-        }
-      }
-    },
-    "service-call-change": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "before",
-        "after"
-      ],
-      "properties": {
-        "before": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/services/properties/edges/items"
-          }
-        },
-        "after": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/services/properties/edges/items"
-          }
-        }
-      }
-    },
-    "service-resource-change": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "before",
-        "after"
-      ],
-      "properties": {
-        "before": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/services/properties/resources/items"
-          }
-        },
-        "after": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/services/properties/resources/items"
-          }
-        }
-      }
-    },
-    "known-entry": {
-      "description": "A forbidden import by importer, written target as check prints it and first-match rule.",
-      "type": "object",
-      "required": [
-        "from",
-        "to",
-        "rule"
-      ],
-      "properties": {
-        "from": {
-          "type": "string",
-          "minLength": 1
-        },
-        "to": {
-          "type": "string",
-          "minLength": 1
-        },
-        "rule": {
-          "type": "string",
-          "minLength": 1
-        }
-      }
-    },
     "symbol-target": {
       "type": "object",
       "required": [
@@ -1506,7 +1273,7 @@
           ],
           "properties": {
             "name": {
-              "const": "archgraph"
+              "const": "boundrail"
             },
             "version": {
               "type": "string"
@@ -1523,7 +1290,7 @@
           ],
           "properties": {
             "language": {
-              "description": "May grow within archgraph/v1 as languages are added.",
+              "description": "May grow within boundrail/v1 as languages are added.",
               "enum": [
                 "typescript",
                 "python",
@@ -1542,7 +1309,7 @@
               ],
               "properties": {
                 "name": {
-                  "description": "May grow within archgraph/v1 as collectors are added.",
+                  "description": "May grow within boundrail/v1 as collectors are added.",
                   "enum": [
                     "dependency-cruiser",
                     "grimp",
@@ -1584,40 +1351,10 @@
                   }
                 },
                 "bound_files": {
-                  "description": "Native Go: every file, since tree-sitter cannot tell which files could leave their package and still compile. None of them is proposed for a move. Absent otherwise.",
+                  "description": "Go: files that cannot leave their package and still compile, sorted: a file declaring a method of a type declared in another file, or using an unexported name another file declares, and that other file, when both are scanned. None of them is proposed for a move. Absent otherwise.",
                   "type": "array",
                   "items": {
                     "$ref": "#/$defs/path"
-                  }
-                },
-                "bound": {
-                  "description": "Go: pairs of scanned files of one package that cannot be split across packages and still compile, sorted by from, then to. Their files are never proposed for a move. Absent otherwise.",
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "required": [
-                      "from",
-                      "to"
-                    ],
-                    "properties": {
-                      "from": {
-                        "$ref": "#/$defs/path"
-                      },
-                      "to": {
-                        "$ref": "#/$defs/path"
-                      },
-                      "names": {
-                        "description": "The unexported names from uses that to declares, sorted: a field or method as Type.name, named by the type it is selected on (the outer type for a promoted one), anything else bare. Absent when none.",
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      },
-                      "together": {
-                        "description": "true when one file holds a method of a type the other declares, or both declare one name for different platforms. Absent otherwise.",
-                        "type": "boolean"
-                      }
-                    }
                   }
                 },
                 "go_modules": {
@@ -1764,25 +1501,6 @@
                     },
                     "doc": {
                       "$ref": "#/$defs/rules"
-                    },
-                    "known": {
-                      "description": "The known list beside the rules file (layout.known.yaml).",
-                      "type": "object",
-                      "required": [
-                        "path",
-                        "entries"
-                      ],
-                      "properties": {
-                        "path": {
-                          "type": "string"
-                        },
-                        "entries": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/$defs/known-entry"
-                          }
-                        }
-                      }
                     }
                   }
                 }
@@ -2079,31 +1797,6 @@
             "$ref": "#/$defs/import-record"
           }
         },
-        "globals": {
-          "description": "Host globals each file uses without declaring them, at their first use. Native JavaScript/TypeScript scans only; absent when not collected.",
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "from",
-              "name",
-              "line"
-            ],
-            "properties": {
-              "from": {
-                "$ref": "#/$defs/path"
-              },
-              "name": {
-                "type": "string",
-                "minLength": 1
-              },
-              "line": {
-                "type": "integer",
-                "minimum": 1
-              }
-            }
-          }
-        },
         "unresolved": {
           "type": "array",
           "items": {
@@ -2158,10 +1851,6 @@
               "package": {
                 "type": "string",
                 "minLength": 1
-              },
-              "global": {
-                "description": "A host global a global: rule names; package then holds the global's name.",
-                "const": true
               }
             }
           }
@@ -2181,24 +1870,8 @@
         "package_splits": {
           "$ref": "#/$defs/package-splits"
         },
-        "target": {
-          "$ref": "#/$defs/target"
-        },
-        "stale_known": {
-          "description": "Entries of the known list that no forbidden import matches. Absent when empty.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/known-entry"
-          }
-        },
         "external_exposure": {
           "$ref": "#/$defs/external-exposure"
-        },
-        "diagnostics": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/diagnostic"
-          }
         }
       }
     },
@@ -2273,243 +1946,6 @@
         },
         "resolution_reason": {
           "type": "string"
-        },
-        "known": {
-          "description": "A forbidden import the known list beside the rules has. Absent unless true.",
-          "type": "boolean"
-        }
-      }
-    },
-    "target": {
-      "type": "object",
-      "required": [
-        "claims",
-        "progress"
-      ],
-      "properties": {
-        "claims": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "id",
-              "reason",
-              "source",
-              "verdict",
-              "slices",
-              "notes"
-            ],
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "reason": {
-                "type": "string"
-              },
-              "source": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "verdict": {
-                "enum": [
-                  "holds",
-                  "holds_in",
-                  "broken",
-                  "vacuous"
-                ]
-              },
-              "slices": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": [
-                    "slice",
-                    "files",
-                    "broken"
-                  ],
-                  "properties": {
-                    "slice": {
-                      "type": "string"
-                    },
-                    "files": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "broken": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/$defs/link"
-                      }
-                    },
-                    "cochanged": {
-                      "description": "With --cochange, pairs with one file on a claim rule's `from` side and the other on its `to` side in this slice, `from` side first, and no import either way. Absent when empty.",
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "files",
-                          "commits"
-                        ],
-                        "properties": {
-                          "files": {
-                            "type": "array",
-                            "minItems": 2,
-                            "maxItems": 2,
-                            "items": {
-                              "$ref": "#/$defs/path"
-                            }
-                          },
-                          "commits": {
-                            "type": "integer",
-                            "minimum": 1
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              },
-              "notes": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "moves": {
-          "description": "Every slice a move rule touches, absent without moves. A slice whose files is empty has moved.",
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "slice",
-              "files",
-              "import_lines",
-              "names"
-            ],
-            "properties": {
-              "slice": {
-                "type": "string"
-              },
-              "files": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": [
-                    "file",
-                    "to"
-                  ],
-                  "properties": {
-                    "file": {
-                      "$ref": "#/$defs/path"
-                    },
-                    "to": {
-                      "$ref": "#/$defs/path"
-                    }
-                  }
-                }
-              },
-              "import_lines": {
-                "description": "Go: new (importer, imported folder) pairs across folders after this slice's moves. Other languages: import records, or edges when the collector keeps none, whose importer or target moves.",
-                "$ref": "#/$defs/count"
-              },
-              "names": {
-                "description": "Go: the unexported names to export, from bound pairs whose two files land in different folders after this slice's moves, sorted by name; [] when none. null when unknown: native Go and other languages.",
-                "type": [
-                  "array",
-                  "null"
-                ],
-                "items": {
-                  "type": "object",
-                  "required": [
-                    "name",
-                    "declared_in",
-                    "used_by"
-                  ],
-                  "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "declared_in": {
-                      "$ref": "#/$defs/path"
-                    },
-                    "used_by": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/$defs/path"
-                      }
-                    }
-                  }
-                }
-              },
-              "together": {
-                "description": "Go: bound pairs that move together or not at all (a method and its type, platform variants) whose files land in different folders after this slice's moves. Absent when empty.",
-                "type": "array",
-                "items": {
-                  "$ref": "#/$defs/link"
-                }
-              },
-              "new_cycles": {
-                "description": "Go only: imports in package cycles that applying every pending move together would create, with a file in one of this slice's source or destination folders. Absent when empty.",
-                "type": "array",
-                "items": {
-                  "$ref": "#/$defs/link"
-                }
-              }
-            }
-          }
-        },
-        "progress": {
-          "type": "object",
-          "required": [
-            "conforming"
-          ],
-          "properties": {
-            "conforming": {
-              "type": "object",
-              "required": [
-                "done",
-                "of"
-              ],
-              "properties": {
-                "done": {
-                  "$ref": "#/$defs/count"
-                },
-                "of": {
-                  "$ref": "#/$defs/count"
-                }
-              }
-            },
-            "moved": {
-              "description": "Captured slices with no file left to move, of those with a file matching a move's from or already below its to. Absent without moves.",
-              "type": "object",
-              "required": [
-                "done",
-                "of"
-              ],
-              "properties": {
-                "done": {
-                  "$ref": "#/$defs/count"
-                },
-                "of": {
-                  "$ref": "#/$defs/count"
-                }
-              }
-            }
-          }
-        },
-        "notes": {
-          "description": "Notes on the whole target, such as a move rule matching no file. Absent when empty.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
       }
     },
@@ -2525,52 +1961,6 @@
         },
         "to": {
           "$ref": "#/$defs/path"
-        }
-      }
-    },
-    "slice-change": {
-      "description": "A claim's slice whose verdict changed, with the claim's reason and source and the slice's broken imports; an import's `line` is absent when the collector records none.",
-      "type": "object",
-      "required": [
-        "claim",
-        "reason",
-        "slice",
-        "imports"
-      ],
-      "properties": {
-        "claim": {
-          "type": "string"
-        },
-        "reason": {
-          "type": "string"
-        },
-        "source": {
-          "type": "string"
-        },
-        "slice": {
-          "type": "string"
-        },
-        "imports": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "from",
-              "to"
-            ],
-            "properties": {
-              "from": {
-                "$ref": "#/$defs/path"
-              },
-              "to": {
-                "$ref": "#/$defs/path"
-              },
-              "line": {
-                "type": "integer",
-                "minimum": 1
-              }
-            }
-          }
         }
       }
     },
@@ -2607,12 +1997,8 @@
             "$ref": "#/$defs/link"
           }
         },
-        "grouping": {
-          "description": "Module cycles only: true when no file cycle among the members' files (over the same import kinds) holds files of two or more members, so the cycle comes only from files sharing a module.",
-          "type": "boolean"
-        },
         "registrar_moves": {
-          "description": "Module cycles only, absent when empty: registrars (files wiring many modules, imported by at least one file) whose imports alone form the other side of 3 or more two-way pairs, each with a simulated move that adds no new cycle; with lists the other modules of those pairs. A file nobody imports is listed only when the cycle is grouping and the file is in its break set (entrypoint); an index file is never listed.",
+          "description": "Module cycles only, absent when empty: registrars (files wiring many modules, imported by at least one file) whose imports alone form the other side of 3 or more two-way pairs, each with a simulated move that adds no new cycle; with lists the other modules of those pairs. A file nobody imports, or an index file, is never listed.",
           "type": "array",
           "items": {
             "type": "object",
@@ -2654,10 +2040,6 @@
               "cycle_after": {
                 "description": "Modules in the cycle holding module after the move, 0 when it is in none.",
                 "$ref": "#/$defs/count"
-              },
-              "entrypoint": {
-                "description": "Present and true when nothing imports file: an entry point whose deploy and config references follow the move.",
-                "const": true
               }
             }
           }
@@ -2719,7 +2101,7 @@
       }
     },
     "rules": {
-      "description": "The parsed layout.yaml. archgraph rejects unknown keys when it loads layout.yaml; readers of a document ignore them.",
+      "description": "The parsed layout.yaml. boundrail rejects unknown keys when it loads layout.yaml; readers of a document ignore them.",
       "type": "object",
       "required": [
         "version"
@@ -2817,7 +2199,7 @@
               "to": {
                 "type": "string",
                 "minLength": 1,
-                "description": "Internal file glob, pkg:<package glob>, category:<declared category>, or global:<host global glob>. Package and global selectors match known external identities only."
+                "description": "Internal file glob, pkg:<package glob>, or category:<declared category>. Package selectors match known external identities only."
               },
               "reachable": {
                 "type": "boolean"
@@ -2828,11 +2210,7 @@
                   "null"
                 ]
               },
-              "source": {
-                "type": "string",
-                "minLength": 1,
-                "description": "Repository-relative ADR path supplying this rule."
-              },
+              "source": { "type": "string", "minLength": 1, "description": "Repository-relative ADR path supplying this rule." },
               "kinds": {
                 "type": "array",
                 "items": {
@@ -2869,7 +2247,7 @@
               "to": {
                 "type": "string",
                 "minLength": 1,
-                "description": "Internal file glob, pkg:<package glob>, category:<declared category>, or global:<host global glob>. Package and global selectors match known external identities only."
+                "description": "Internal file glob, pkg:<package glob>, or category:<declared category>. Package selectors match known external identities only."
               },
               "reason": {
                 "type": [
@@ -2877,11 +2255,7 @@
                   "null"
                 ]
               },
-              "source": {
-                "type": "string",
-                "minLength": 1,
-                "description": "Repository-relative ADR path supplying this rule."
-              },
+              "source": { "type": "string", "minLength": 1, "description": "Repository-relative ADR path supplying this rule." },
               "kinds": {
                 "type": "array",
                 "items": {
@@ -2892,28 +2266,6 @@
                     "reexport"
                   ]
                 }
-              }
-            }
-          }
-        },
-        "moves": {
-          "description": "Where files go in the target, first match wins; used for move cost and progress only, never for verdicts.",
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "from",
-              "to"
-            ],
-            "properties": {
-              "from": {
-                "type": "string",
-                "minLength": 1
-              },
-              "to": {
-                "description": "A folder ending in /, without globs, that may use from's capture. A file goes to to plus its path below the literal leading folders of from.",
-                "type": "string",
-                "minLength": 2
               }
             }
           }
@@ -3157,10 +2509,6 @@
         "forbidden": {
           "$ref": "#/$defs/count"
         },
-        "known": {
-          "description": "Of forbidden, those the known list beside the rules has. Absent when zero.",
-          "$ref": "#/$defs/count"
-        },
         "unplanned": {
           "$ref": "#/$defs/count"
         },
@@ -3272,13 +2620,6 @@
         },
         "simulation": {
           "$ref": "#/$defs/finding_simulation"
-        },
-        "finding_id": {
-          "type": "string",
-          "pattern": "^ag-[0-9a-f]{64}$"
-        },
-        "recipe": {
-          "$ref": "#/$defs/recipe"
         }
       },
       "allOf": [
@@ -3440,66 +2781,6 @@
                 "$ref": "#/$defs/evidence-grabbag"
               }
             }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "forbidden-edge"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-forbidden-edge"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "deep-import"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-deep-import"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "enum": [
-                  "sink-split",
-                  "misplaced-file",
-                  "cycle",
-                  "hidden-coupling",
-                  "internals-reach",
-                  "unstable-dependency",
-                  "seam",
-                  "small-repo",
-                  "reexport-cycle",
-                  "cycle-via-grabbag",
-                  "forbidden-edge",
-                  "deep-import"
-                ]
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "finding_id",
-              "recipe"
-            ]
           }
         }
       ]
@@ -3923,12 +3204,6 @@
             "$ref": "#/$defs/cycle"
           }
         },
-        "new_cyclic_imports": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/link"
-          }
-        },
         "resolved_cycles": {
           "type": "array",
           "items": {
@@ -3952,148 +3227,6 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/edge"
-          }
-        },
-        "stale_known": {
-          "description": "Entries of the new scan's known list that no forbidden import matches. Absent when empty.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/known-entry"
-          }
-        },
-        "target": {
-          "description": "Claim progress between the scans, absent when neither has a target. Slices broken in new that were not broken in old are listed with their imports as newly broken, and slices broken in old that are not broken in new, also when no longer bound or gone, as newly fixed.",
-          "type": "object",
-          "required": [
-            "conforming",
-            "newly_broken",
-            "newly_fixed"
-          ],
-          "properties": {
-            "conforming": {
-              "description": "[old, new] captured slices that hold in every claim bound to them.",
-              "type": "array",
-              "minItems": 2,
-              "maxItems": 2,
-              "items": {
-                "type": "object",
-                "required": [
-                  "done",
-                  "of"
-                ],
-                "properties": {
-                  "done": {
-                    "$ref": "#/$defs/count"
-                  },
-                  "of": {
-                    "$ref": "#/$defs/count"
-                  }
-                }
-              }
-            },
-            "moved": {
-              "description": "[old, new] slices with no file left to move; present when both scans have moves.",
-              "type": "array",
-              "minItems": 2,
-              "maxItems": 2,
-              "items": {
-                "type": "object",
-                "required": [
-                  "done",
-                  "of"
-                ],
-                "properties": {
-                  "done": {
-                    "$ref": "#/$defs/count"
-                  },
-                  "of": {
-                    "$ref": "#/$defs/count"
-                  }
-                }
-              }
-            },
-            "newly_broken": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/slice-change"
-              }
-            },
-            "newly_fixed": {
-              "description": "Slices broken in the old scan and not broken in the new one. A slice the new scan no longer binds, or whose files are gone, counts as fixed.",
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/slice-change"
-              }
-            },
-            "newly_vacuous": {
-              "description": "Claims vacuous in the new scan that the old scan states and that are not vacuous there, with the claim's notes on rule sides matching no file. Absent when empty.",
-              "type": "array",
-              "items": {
-                "type": "object",
-                "required": [
-                  "claim",
-                  "reason",
-                  "notes"
-                ],
-                "properties": {
-                  "claim": {
-                    "type": "string"
-                  },
-                  "reason": {
-                    "type": "string"
-                  },
-                  "source": {
-                    "type": "string"
-                  },
-                  "notes": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            },
-            "newly_cochanged": {
-              "description": "Co-changed pairs a slice lists in the new scan and not in the old one, from-side file first; computed only when both scans read --cochange. Absent when empty.",
-              "type": "array",
-              "items": {
-                "type": "object",
-                "required": [
-                  "claim",
-                  "reason",
-                  "slice",
-                  "files",
-                  "commits"
-                ],
-                "properties": {
-                  "claim": {
-                    "type": "string"
-                  },
-                  "reason": {
-                    "type": "string"
-                  },
-                  "source": {
-                    "type": "string"
-                  },
-                  "slice": {
-                    "type": "string"
-                  },
-                  "files": {
-                    "type": "array",
-                    "minItems": 2,
-                    "maxItems": 2,
-                    "items": {
-                      "$ref": "#/$defs/path"
-                    }
-                  },
-                  "commits": {
-                    "type": "integer",
-                    "minimum": 1
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -4124,30 +3257,6 @@
             },
             "module": {
               "type": "string"
-            }
-          }
-        },
-        "moves": {
-          "description": "Every move in order, present only when more than one was applied; `move` is the first.",
-          "type": "array",
-          "minItems": 2,
-          "items": {
-            "type": "object",
-            "required": [
-              "file",
-              "to",
-              "module"
-            ],
-            "properties": {
-              "file": {
-                "$ref": "#/$defs/path"
-              },
-              "to": {
-                "$ref": "#/$defs/path"
-              },
-              "module": {
-                "type": "string"
-              }
             }
           }
         },
@@ -4349,9 +3458,8 @@
       "properties": {
         "schema": {
           "enum": [
-            "archgraph/v1",
-            "archgraph/v1.1",
-            "archgraph/v1.2"
+            "boundrail/v1",
+            "boundrail/v1.1"
           ]
         },
         "kind": {
@@ -4646,7 +3754,7 @@
       ],
       "properties": {
         "schema": {
-          "const": "archgraph/v1.2"
+          "const": "boundrail/v1.1"
         },
         "kind": {
           "const": "context"
@@ -4769,7 +3877,7 @@
       ],
       "properties": {
         "schema": {
-          "const": "archgraph/v1.2"
+          "const": "boundrail/v1.1"
         },
         "kind": {
           "const": "services"
@@ -4784,11 +3892,7 @@
           ],
           "properties": {
             "collector": {
-              "enum": [
-                "declarative",
-                "inferred",
-                "inferred+declarative"
-              ]
+              "const": "declarative"
             },
             "path": {
               "type": "string",
@@ -5206,14 +4310,6 @@
             "low_confidence_calls": {
               "type": "integer",
               "minimum": 0
-            },
-            "resources": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "forbidden_resources": {
-              "type": "integer",
-              "minimum": 0
             }
           }
         },
@@ -5222,110 +4318,6 @@
           "items": {
             "type": "string",
             "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
-          }
-        },
-        "resources": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "service",
-              "kind",
-              "package",
-              "confidence",
-              "source",
-              "verdict"
-            ],
-            "properties": {
-              "service": {
-                "type": "string",
-                "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "minLength": 1,
-                "not": {
-                  "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
-                },
-                "allOf": [
-                  {
-                    "not": {
-                      "pattern": "[\\s*?\\[\\]{}<>]"
-                    }
-                  }
-                ]
-              },
-              "kind": {
-                "enum": [
-                  "database",
-                  "cache",
-                  "queue",
-                  "http"
-                ]
-              },
-              "package": {
-                "type": "string",
-                "minLength": 1
-              },
-              "operation": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "confidence": {
-                "enum": [
-                  "low",
-                  "medium",
-                  "high"
-                ],
-                "default": "low"
-              },
-              "source": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "file",
-                  "line"
-                ],
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "pattern": "^[^\\\\:\\u0000-\\u001f\\u007f-\\u009f]+$",
-                    "minLength": 1,
-                    "not": {
-                      "pattern": "^/|//|/$|(^|/)\\.{1,2}(/|$)"
-                    }
-                  },
-                  "line": {
-                    "type": "integer",
-                    "minimum": 1
-                  }
-                }
-              },
-              "verdict": {
-                "enum": [
-                  "allowed",
-                  "forbidden"
-                ]
-              },
-              "rule": {
-                "type": "string",
-                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
-                "minLength": 1
-              }
-            }
-          }
-        },
-        "forbidden_resources": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "integer",
-            "minimum": 0
           }
         }
       }
@@ -5429,730 +4421,6 @@
               }
             }
           }
-        }
-      }
-    },
-    "recipe-step": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "kind",
-        "file",
-        "from",
-        "to",
-        "detail",
-        "mechanical"
-      ],
-      "properties": {
-        "kind": {
-          "enum": [
-            "cut_import",
-            "move_file",
-            "add_reexport",
-            "extract_interface",
-            "split_module"
-          ]
-        },
-        "file": {
-          "type": "string"
-        },
-        "line": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 1
-        },
-        "from": {
-          "type": "string"
-        },
-        "to": {
-          "type": "string"
-        },
-        "detail": {
-          "type": "object"
-        },
-        "mechanical": {
-          "type": "boolean"
-        }
-      }
-    },
-    "recipe-expected": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "pairs_removed",
-        "cycle_size_after",
-        "new_cycles",
-        "instability_delta"
-      ],
-      "properties": {
-        "pairs_removed": {
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "cycle_size_after": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 0
-        },
-        "new_cycles": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 0
-        },
-        "instability_delta": {
-          "type": "object",
-          "additionalProperties": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "minimum": -1,
-            "maximum": 1
-          }
-        }
-      }
-    },
-    "recipe-predicate": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "findings_absent": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "absent_edges": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/link"
-          }
-        },
-        "files_present": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "files_absent": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "cycles_in": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "equals": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 0
-        },
-        "expected": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "$ref": "#/$defs/recipe-expected"
-            }
-          ]
-        },
-        "scope": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "forbidden": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "baseline_id": {
-          "type": "string",
-          "pattern": "^ag-[0-9a-f]{64}$"
-        }
-      }
-    },
-    "recipe-verification": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "predicate",
-        "structured"
-      ],
-      "properties": {
-        "predicate": {
-          "type": "string",
-          "minLength": 1
-        },
-        "structured": {
-          "$ref": "#/$defs/recipe-predicate"
-        }
-      }
-    },
-    "recipe": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "steps",
-        "expected",
-        "verify",
-        "confidence",
-        "risk_notes"
-      ],
-      "properties": {
-        "steps": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/recipe-step"
-          }
-        },
-        "expected": {
-          "$ref": "#/$defs/recipe-expected"
-        },
-        "verify": {
-          "$ref": "#/$defs/recipe-verification"
-        },
-        "confidence": {
-          "enum": [
-            "high",
-            "medium",
-            "low"
-          ]
-        },
-        "risk_notes": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "diagnostic-finding": {
-      "type": "object",
-      "required": [
-        "kind",
-        "subject",
-        "evidence"
-      ],
-      "properties": {
-        "introduced_by": {
-          "$ref": "#/$defs/introduced-commit"
-        },
-        "age_days": {
-          "$ref": "#/$defs/count"
-        },
-        "provenance": {
-          "$ref": "#/$defs/provenance"
-        },
-        "hotspot_priority": {
-          "type": "number",
-          "minimum": 0
-        },
-        "kind": {
-          "description": "Open: consumers ignore kinds they do not know. Known kinds type their evidence below.",
-          "type": "string",
-          "minLength": 1
-        },
-        "subject": {
-          "type": "string",
-          "minLength": 1
-        },
-        "evidence": {
-          "type": "object"
-        },
-        "suggestion": {
-          "type": "object",
-          "required": [
-            "move"
-          ],
-          "properties": {
-            "move": {
-              "$ref": "#/$defs/move"
-            }
-          }
-        },
-        "simulation": {
-          "$ref": "#/$defs/finding_simulation"
-        },
-        "finding_id": {
-          "type": "string",
-          "pattern": "^ag-[0-9a-f]{64}$"
-        },
-        "recipe": {
-          "$ref": "#/$defs/recipe"
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "sink-split"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-sink-split"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "misplaced-file"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-misplaced-file"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "cycle"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-cycle"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "hidden-coupling"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-hidden-coupling"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "internals-reach"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-internals-reach"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "unstable-dependency"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-unstable-dependency"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "seam"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-seam"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "small-repo"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-small-repo"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "reexport-cycle"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-reexport-cycle"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "cycle-via-grabbag"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "evidence": {
-                "$ref": "#/$defs/evidence-grabbag"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "diagnostic": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "finding",
-        "reason"
-      ],
-      "properties": {
-        "finding": {
-          "$ref": "#/$defs/diagnostic-finding"
-        },
-        "reason": {
-          "type": "string",
-          "minLength": 1
-        }
-      }
-    },
-    "evidence-forbidden-edge": {
-      "type": "object",
-      "required": [
-        "edge"
-      ],
-      "properties": {
-        "edge": {
-          "$ref": "#/$defs/edge"
-        }
-      }
-    },
-    "evidence-deep-import": {
-      "type": "object",
-      "required": [
-        "from",
-        "to",
-        "entrypoint",
-        "symbols"
-      ],
-      "properties": {
-        "from": {
-          "$ref": "#/$defs/path"
-        },
-        "to": {
-          "$ref": "#/$defs/path"
-        },
-        "entrypoint": {
-          "$ref": "#/$defs/path"
-        },
-        "symbols": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "verification-check": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "predicate",
-        "pass",
-        "expected",
-        "actual"
-      ],
-      "properties": {
-        "predicate": {
-          "type": "string"
-        },
-        "pass": {
-          "type": "boolean"
-        },
-        "expected": {},
-        "actual": {}
-      }
-    },
-    "verification-result": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "pass",
-        "checks"
-      ],
-      "properties": {
-        "pass": {
-          "type": "boolean"
-        },
-        "checks": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/verification-check"
-          }
-        }
-      }
-    },
-    "apply-change": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "file",
-        "to",
-        "before_sha256",
-        "after_sha256",
-        "before",
-        "after"
-      ],
-      "properties": {
-        "file": {
-          "$ref": "#/$defs/path"
-        },
-        "to": {
-          "$ref": "#/$defs/path"
-        },
-        "before_sha256": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
-        },
-        "after_sha256": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
-        },
-        "before": {
-          "type": "string"
-        },
-        "after": {
-          "type": "string"
-        }
-      }
-    },
-    "recipe-document": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "steps",
-        "expected",
-        "verify",
-        "confidence",
-        "risk_notes",
-        "schema",
-        "kind",
-        "finding_id"
-      ],
-      "properties": {
-        "steps": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/recipe-step"
-          }
-        },
-        "expected": {
-          "$ref": "#/$defs/recipe-expected"
-        },
-        "verify": {
-          "$ref": "#/$defs/recipe-verification"
-        },
-        "confidence": {
-          "enum": [
-            "high",
-            "medium",
-            "low"
-          ]
-        },
-        "risk_notes": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "schema": {
-          "const": "archgraph/v1.2"
-        },
-        "finding_id": {
-          "type": "string",
-          "pattern": "^ag-[0-9a-f]{64}$"
-        },
-        "kind": {
-          "const": "recipe"
-        }
-      }
-    },
-    "apply-plan": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "schema",
-        "finding_id",
-        "kind",
-        "recipe",
-        "can_apply",
-        "pending",
-        "changes",
-        "moves"
-      ],
-      "properties": {
-        "schema": {
-          "const": "archgraph/v1.2"
-        },
-        "finding_id": {
-          "type": "string",
-          "pattern": "^ag-[0-9a-f]{64}$"
-        },
-        "kind": {
-          "const": "apply-plan"
-        },
-        "recipe": {
-          "$ref": "#/$defs/recipe"
-        },
-        "can_apply": {
-          "type": "boolean"
-        },
-        "pending": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "changes": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/apply-change"
-          }
-        },
-        "moves": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/move"
-          }
-        }
-      }
-    },
-    "apply": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "schema",
-        "finding_id",
-        "kind",
-        "applied",
-        "verify",
-        "hint"
-      ],
-      "properties": {
-        "schema": {
-          "const": "archgraph/v1.2"
-        },
-        "finding_id": {
-          "type": "string",
-          "pattern": "^ag-[0-9a-f]{64}$"
-        },
-        "kind": {
-          "const": "apply"
-        },
-        "applied": {
-          "type": "boolean"
-        },
-        "verify": {
-          "$ref": "#/$defs/verification-result"
-        },
-        "hint": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      }
-    },
-    "verification": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "schema",
-        "finding_id",
-        "kind",
-        "verify"
-      ],
-      "properties": {
-        "schema": {
-          "const": "archgraph/v1.2"
-        },
-        "finding_id": {
-          "type": "string",
-          "pattern": "^ag-[0-9a-f]{64}$"
-        },
-        "kind": {
-          "const": "verification"
-        },
-        "verify": {
-          "$ref": "#/$defs/verification-result"
         }
       }
     }

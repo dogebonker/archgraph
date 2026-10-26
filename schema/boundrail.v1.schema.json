@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "archgraph v1 document",
+  "title": "boundrail v1 document",
   "type": "object",
   "required": ["schema", "kind"],
-  "properties": { "schema": {"const": "archgraph/v1"}, "kind": {"enum": ["scan", "simulation", "diff", "history", "bisect", "hotspots", "impact", "surface"]} },
+  "properties": { "schema": {"const": "boundrail/v1"}, "kind": {"enum": ["scan", "simulation", "diff", "history", "bisect", "hotspots", "impact", "surface"]} },
   "allOf": [
     { "if": {"properties": {"kind": {"const": "scan"}}}, "then": {"$ref": "#/$defs/scan"} },
     { "if": {"properties": {"kind": {"const": "simulation"}}}, "then": {"$ref": "#/$defs/simulation"} },
@@ -93,18 +93,18 @@
         "tool": {
           "type": "object",
           "required": ["name", "version"],
-          "properties": { "name": {"const": "archgraph"}, "version": {"type": "string"} }
+          "properties": { "name": {"const": "boundrail"}, "version": {"type": "string"} }
         },
         "source": {
           "type": "object",
           "required": ["language", "collector", "git", "generated_at"],
           "properties": {
-            "language": { "description": "May grow within archgraph/v1 as languages are added.", "enum": ["typescript", "python", "go", "rust", "java", "elixir"] },
+            "language": { "description": "May grow within boundrail/v1 as languages are added.", "enum": ["typescript", "python", "go", "rust", "java", "elixir"] },
             "collector": {
               "type": "object",
               "required": ["name", "version", "cruised"],
               "properties": {
-                "name": { "description": "May grow within archgraph/v1 as collectors are added.", "enum": ["dependency-cruiser", "grimp", "go-types", "rust-analyzer", "java-javac", "elixir-ast", "tree-sitter-typescript", "tree-sitter-python", "tree-sitter-go", "tree-sitter-rust", "tree-sitter-java", "tree-sitter-elixir"] },
+                "name": { "description": "May grow within boundrail/v1 as collectors are added.", "enum": ["dependency-cruiser", "grimp", "go-types", "rust-analyzer", "java-javac", "elixir-ast", "tree-sitter-typescript", "tree-sitter-python", "tree-sitter-go", "tree-sitter-rust", "tree-sitter-java", "tree-sitter-elixir"] },
                 "limitations": { "type": "array", "items": { "type": "string" } },
                 "version": { "type": ["string", "null"] },
                 "cruised": { "$ref": "#/$defs/count" },
@@ -281,7 +281,7 @@
       }
     },
     "rules": {
-      "description": "The parsed layout.yaml. archgraph rejects unknown keys when it loads layout.yaml; readers of a document ignore them.",
+      "description": "The parsed layout.yaml. boundrail rejects unknown keys when it loads layout.yaml; readers of a document ignore them.",
       "type": "object",
       "required": ["version"],
       "properties": {

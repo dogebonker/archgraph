@@ -610,7 +610,7 @@ mod tests {
 
     fn input(modules: &[(&str, &[&str])], edges: &[(&str, &str)]) -> ScanInput {
         let mut input: ScanInput = serde_json::from_value(json!({
-            "schema": "archgraph/v1.1", "kind": "scan",
+            "schema": "boundrail/v1.1", "kind": "scan",
             "source": {"language":"typescript", "collector":{"name":"fixture", "cruised":0}, "generated_at":"fixture"},
             "config": {"depth":1, "source_root":"", "excludes":[], "include_tests":false},
             "files": [], "edges": []

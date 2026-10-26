@@ -1,4 +1,4 @@
-# The collector the archgraph action installs for Python (CPython 3.10 to 3.14 have wheels), every file hashed:
+# The collector the boundrail action installs for Python (CPython 3.10 to 3.14 have wheels), every file hashed:
 #   echo grimp==3.17 | uv pip compile --universal --generate-hashes --python-version 3.10 --no-header - -o ci/tools/requirements.txt
 grimp==3.17 \
     --hash=sha256:0100ff6f08067c8eb8a77dd1433af5e173aea8dbf6a6b76f5372a3b49f2e0a43 \

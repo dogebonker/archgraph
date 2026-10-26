@@ -1,5 +1,5 @@
 {
-  "schema": "archgraph/adr-corpora/v1",
+  "schema": "boundrail/adr-corpora/v1",
   "corpora": [
     {
       "name": "adr-kit",

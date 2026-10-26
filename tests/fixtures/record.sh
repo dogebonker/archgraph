@@ -1,17 +1,17 @@
 #!/bin/sh
 # Regenerates every recorded collector output under tests/fixtures.
-#   ARCHGRAPH_DEPCRUISE  path to depcruise 18.4.0 (typescript 6.0.3 installed beside it)
-#   ARCHGRAPH_PYTHON     python with grimp 3.17
-#   ARCHGRAPH_GO         go 1.27.1
-# The depcruise arguments and the grimp and Go helpers are the ones `archgraph scan` uses.
+#   BOUNDRAIL_DEPCRUISE  path to depcruise 18.4.0 (typescript 6.0.3 installed beside it)
+#   BOUNDRAIL_PYTHON     python with grimp 3.17
+#   BOUNDRAIL_GO         go 1.27.1
+# The depcruise arguments and the grimp and Go helpers are the ones `boundrail scan` uses.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
-depcruise=${ARCHGRAPH_DEPCRUISE:-depcruise}
-python=${ARCHGRAPH_PYTHON:-python3}
-go=$(command -v "${ARCHGRAPH_GO:-go}")
+depcruise=${BOUNDRAIL_DEPCRUISE:-depcruise}
+python=${BOUNDRAIL_PYTHON:-python3}
+go=$(command -v "${BOUNDRAIL_GO:-go}")
 
 # The options of depcruise::options in src/collect/depcruise.rs (every fixture has a tsconfig).
-config=$(mktemp "${TMPDIR:-/tmp}/archgraph-record.XXXXXX")
+config=$(mktemp "${TMPDIR:-/tmp}/boundrail-record.XXXXXX")
 trap 'rm -f "$config"' EXIT
 printf '%s' '{ "options": { "doNotFollow": { "path": "node_modules" }, "tsPreCompilationDeps": "specify", "tsConfig": { "fileName": "tsconfig.json" } } }' >"$config"
 
@@ -42,7 +42,7 @@ done
 
 # The environment of go::run in src/collect/go.rs; the helper runs from an empty directory outside
 # the fixture.
-gotmp=$(mktemp -d "${TMPDIR:-/tmp}/archgraph-record-go.XXXXXX")
+gotmp=$(mktemp -d "${TMPDIR:-/tmp}/boundrail-record-go.XXXXXX")
 trap 'rm -f "$config"; rm -rf "$gotmp"' EXIT
 cp "$here/../../src/collect/go_dump.go" "$gotmp/"
 for fixture in go-resolve go-cycles go-misplaced go-layers go-internals go-excludes; do

@@ -26,8 +26,8 @@ for (const fixture of fixtures) {
 test('browser export has the same pure API without DOM or module globals', () => {
   const sandbox = {};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../assets/whatif.js'),'utf8'), sandbox);
-  assert.equal(typeof sandbox.ArchgraphPreview.simulate,'function');
-  assert.equal(typeof sandbox.ArchgraphPreview.analyze,'function');
+  assert.equal(typeof sandbox.BoundrailPreview.simulate,'function');
+  assert.equal(typeof sandbox.BoundrailPreview.analyze,'function');
 });
 test('reject unknown, duplicate, no-op and unsafe destinations', () => {
   const doc=fixtures[0].document, file=doc.files[0].path;
@@ -40,7 +40,7 @@ test('reject unknown, duplicate, no-op and unsafe destinations', () => {
   assert.throws(()=>preview.simulate(doc,[{file:a,to:'new/x.ts'},{file:b,to:'new/x.ts'}]),/Two files/);
 });
 test('legacy, unknown schema and unsupported glob rules explicitly mark partial', () => {
-  for(const schema of ['archgraph/v1','archgraph/v100']) {
+  for(const schema of ['boundrail/v1','boundrail/v100']) {
     const doc={...fixtures[0].document,schema};
     assert.equal(preview.analyze(doc).partial,true);
   }
@@ -58,7 +58,7 @@ test('moving a file in a file-granularity SCC does not invent a new cycle',()=>{
 test('large chains and cycles do not overflow the JavaScript call stack',()=>{
   const count=12000, files=Array.from({length:count},(_,i)=>({path:`m${i}/file.ts`,barrel:false}));
   const edges=files.slice(1).map((f,i)=>({from:files[i].path,to:f.path,kind:'runtime'}));
-  const doc={schema:'archgraph/v1.1',source:{language:'typescript'},config:{depth:1,source_root:'.'},files,edges};
+  const doc={schema:'boundrail/v1.1',source:{language:'typescript'},config:{depth:1,source_root:'.'},files,edges};
   assert.equal(preview.analyze(doc).cycles.length,0);
   edges.push({from:files.at(-1).path,to:files[0].path,kind:'runtime'});
   assert.equal(preview.analyze(doc).largest_cycle,count);
@@ -75,7 +75,7 @@ test('grab-bag fan-in threshold uses rounded Rust metrics',()=>{
   const files=[{path:'utils/a.ts',barrel:false},{path:'utils/b.ts',barrel:false},{path:'app/a.ts',barrel:false}];
   const edges=[{from:'app/a.ts',to:'utils/a.ts',kind:'runtime'},{from:'utils/b.ts',to:'app/a.ts',kind:'runtime'}];
   for(let i=0;i<50;i++){files.push({path:`x${i}/a.ts`,barrel:false});edges.push({from:`x${i}/a.ts`,to:'utils/a.ts',kind:'type'});}
-  const doc={schema:'archgraph/v1.1',source:{language:'typescript'},config:{depth:1,source_root:'.',rules:{doc:{version:1,grabbag:{fan_in_min:6}}}},files,edges};
+  const doc={schema:'boundrail/v1.1',source:{language:'typescript'},config:{depth:1,source_root:'.',rules:{doc:{version:1,grabbag:{fan_in_min:6}}}},files,edges};
   const result=preview.analyze(doc);
   assert.equal(result.modules.utils.weighted_ca,6);
   assert.equal(result.partial,true);
@@ -106,7 +106,7 @@ test('pkg-category and external_exposure layout fields keep internal rule verdic
 });
 
 test('a move that clears one kind of a forbidden pair reports that import as fixed', () => {
-  const doc = { schema: 'archgraph/v1.1', source: { language: 'typescript' },
+  const doc = { schema: 'boundrail/v1.1', source: { language: 'typescript' },
     config: { depth: 1, source_root: '.', rules: { doc: { version: 1, forbid: [
       { id: 'no-store-types', from: 'app/**', to: 'store/**', kinds: ['type'] },
       { id: 'no-runtime-b', from: 'app/**', to: '**/b.ts', kinds: ['runtime'] }] } } },

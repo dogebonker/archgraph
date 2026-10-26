@@ -154,7 +154,7 @@ pub(super) fn cached_scan(
                     || root
                         .canonicalize()
                         .ok()
-                        .is_none_or(|r| !p.starts_with(r.join(".archgraph")))
+                        .is_none_or(|r| !p.starts_with(r.join(".boundrail")))
             })
         })
     {
@@ -268,7 +268,7 @@ pub(super) fn configure_index(root: &Path) -> Result<()> {
         return Ok(());
     };
     let actual = PathBuf::from(path.trim());
-    let private = root.join(".archgraph/daemon.index");
+    let private = root.join(".boundrail/daemon.index");
     if !actual.is_file() || actual == private {
         return Ok(());
     }
@@ -322,7 +322,7 @@ fn environment() -> BTreeMap<String, Option<String>> {
 }
 
 fn descriptor(root: &Path) -> PathBuf {
-    root.join(".archgraph/daemon.json")
+    root.join(".boundrail/daemon.json")
 }
 fn discover(root: &Path) -> Option<Endpoint> {
     let start = root.canonicalize().ok()?;
@@ -481,9 +481,9 @@ pub(super) fn forward_args(
 pub(super) fn status(args: Status) -> Result<()> {
     let active = ACTIVE.with(|a| a.borrow().clone());
     let value = if let Some(a) = active {
-        json!({"schema":"archgraph/daemon/v1","kind":"status","running":true,"root":a.root,"files":a.doc.files.len(),"modules":a.doc.modules.len(),"cycles":a.doc.cycles.len(),"snapshot_limit":2,"generation":a.stats["generation"],"parsed_files":a.stats["parsed_files"],"refresh_ms":a.stats["refresh_ms"],"fallback_reason":a.stats["fallback_reason"],"cached_snapshots":a.stats["cached_snapshots"],"timings":a.stats["timings"]})
+        json!({"schema":"boundrail/daemon/v1","kind":"status","running":true,"root":a.root,"files":a.doc.files.len(),"modules":a.doc.modules.len(),"cycles":a.doc.cycles.len(),"snapshot_limit":2,"generation":a.stats["generation"],"parsed_files":a.stats["parsed_files"],"refresh_ms":a.stats["refresh_ms"],"fallback_reason":a.stats["fallback_reason"],"cached_snapshots":a.stats["cached_snapshots"],"timings":a.stats["timings"]})
     } else {
-        json!({"schema":"archgraph/daemon/v1","kind":"status","running":false,"root":args.root.canonicalize()?,"hint":"Start boundrail serve . to keep this graph warm."})
+        json!({"schema":"boundrail/daemon/v1","kind":"status","running":false,"root":args.root.canonicalize()?,"hint":"Start boundrail serve . to keep this graph warm."})
     };
     write(None, &value)
 }
@@ -551,7 +551,7 @@ fn ignored(path: &Path, root: &Path) -> bool {
         p.components().any(|c| {
             matches!(
                 c.as_os_str().to_str(),
-                Some(".archgraph" | "node_modules" | "target" | "__pycache__")
+                Some(".boundrail" | "node_modules" | "target" | "__pycache__")
             )
         })
     })
@@ -596,7 +596,7 @@ fn stamps(warm: &Warm, extra: &[PathBuf]) -> BTreeMap<PathBuf, Option<Stamp>> {
     for name in [
         "layout.yaml",
         ".gitignore",
-        ".archgraphignore",
+        ".boundrailignore",
         "CODEOWNERS",
         ".github/CODEOWNERS",
         "docs/CODEOWNERS",
@@ -824,8 +824,8 @@ fn refresh_pending(
 pub(super) fn serve(mut args: Serve) -> Result<ExitCode> {
     let base_globals = globals();
     let root = args.root.canonicalize()?;
-    history::refuse_symlink(&root.join(".archgraph"))?;
-    fs::create_dir_all(root.join(".archgraph"))?;
+    history::refuse_symlink(&root.join(".boundrail"))?;
+    fs::create_dir_all(root.join(".boundrail"))?;
     args.socket = args.socket.map(std::path::absolute).transpose()?;
     let path = descriptor(&root);
     let existing = fs::read(&path)
@@ -849,7 +849,7 @@ pub(super) fn serve(mut args: Serve) -> Result<ExitCode> {
         Some(
             args.socket
                 .clone()
-                .unwrap_or_else(|| root.join(".archgraph/daemon.sock")),
+                .unwrap_or_else(|| root.join(".boundrail/daemon.sock")),
         )
     };
     #[cfg(unix)]
@@ -1216,14 +1216,14 @@ mod tests {
             let log_write = notify::Event::new(notify::EventKind::Modify(
                 notify::event::ModifyKind::Data(notify::event::DataChange::Any),
             ))
-            .add_path(root.join(".archgraph/regression.log"));
+            .add_path(root.join(".boundrail/regression.log"));
             enqueue(&tx, &overflow, root, Ok(log_write));
         }
         let source = root.join("src/b.ts");
         let edit = notify::Event::new(notify::EventKind::Modify(notify::event::ModifyKind::Data(
             notify::event::DataChange::Any,
         )))
-        .add_path(root.join(".archgraph/regression.log"))
+        .add_path(root.join(".boundrail/regression.log"))
         .add_path(source.clone());
         enqueue(&tx, &overflow, root, Ok(edit));
         assert!(!overflow.load(std::sync::atomic::Ordering::Relaxed));
@@ -1237,7 +1237,7 @@ mod tests {
         let (tx, rx) = mpsc::sync_channel(2);
         let overflow = std::sync::atomic::AtomicBool::new(false);
         let rescan = notify::Event::new(notify::EventKind::Access(notify::event::AccessKind::Any))
-            .add_path(root.join(".archgraph/regression.log"))
+            .add_path(root.join(".boundrail/regression.log"))
             .set_flag(notify::event::Flag::Rescan);
         enqueue(&tx, &overflow, root, Ok(rescan));
         let mut dirty = BTreeSet::new();

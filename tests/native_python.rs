@@ -19,7 +19,7 @@ impl Drop for Fixture {
 fn fixture(files: &[(&str, &str)]) -> Fixture {
     static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let dir = Fixture(std::env::temp_dir().join(format!(
-        "archgraph-native-python-{}-{}",
+        "boundrail-native-python-{}-{}",
         std::process::id(),
         NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     )));

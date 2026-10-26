@@ -145,7 +145,7 @@ fn ledger_counts_imports_independently_of_edges_and_lists_failures() {
             ("pkg/__init__.py", ""),
             (
                 "pkg/app.py",
-                "import json\nimport archgraph_definitely_missing_package\nfrom . import sibling\nfrom .missing import Thing\nimport importlib\nimportlib.import_module(name)\n",
+                "import json\nimport boundrail_definitely_missing_package\nfrom . import sibling\nfrom .missing import Thing\nimport importlib\nimportlib.import_module(name)\n",
             ),
             ("pkg/sibling.py", "class Thing: pass\n"),
         ],
@@ -166,7 +166,7 @@ fn ledger_counts_imports_independently_of_edges_and_lists_failures() {
     assert!(matches!(
         imports
             .iter()
-            .find(|i| i.specifier == "archgraph_definitely_missing_package")
+            .find(|i| i.specifier == "boundrail_definitely_missing_package")
             .unwrap()
             .unresolved,
         Some(ImportReason::Missing)

@@ -162,7 +162,7 @@ fn elixir_tests_and_build_outputs_share_selection_overrides() {
 fn includes_restore_defaults_and_ignored_paths_but_explicit_excludes_win() {
     let root = root("precedence");
     write(&root, ".gitignore", "ignored/**\n");
-    write(&root, ".archgraphignore", "custom/**\n");
+    write(&root, ".boundrailignore", "custom/**\n");
     let options = Options {
         includes: paths(&["tests/**", "ignored/**", "custom/**"]),
         excludes: paths(&["tests/blocked.ts"]),
@@ -202,7 +202,7 @@ fn git_syntax_handles_negations_escapes_anchoring_and_nested_ignore_files_withou
     write(&root, "nested/.gitignore", "*.ts\n!keep.ts\n");
     write(
         &root,
-        ".archgraphignore",
+        ".boundrailignore",
         "custom/*.ts\n!custom/keep.ts\nspace\\ name.ts\n\\#literal.ts\ncache/\n",
     );
     assert_eq!(
@@ -242,7 +242,7 @@ fn ignores_honor_tracked_files_and_monorepo_ancestor_rules() {
     write(&root, ".gitignore", "tracked.ts\npackages/app/ignored.ts\n");
     assert!(keep(&root, Options::default(), &["tracked.ts"]).is_empty());
     std::fs::create_dir_all(root.join("packages/app")).unwrap();
-    write(&root, "packages/app/.archgraphignore", "/local.ts\n");
+    write(&root, "packages/app/.boundrailignore", "/local.ts\n");
     assert_eq!(
         keep(
             &root.join("packages/app"),
@@ -286,7 +286,7 @@ fn classification_does_not_mark_ordinary_names_as_tests() {
 }
 
 #[test]
-fn invalid_patterns_and_unreadable_archgraphignore_are_errors() {
+fn invalid_patterns_and_unreadable_boundrailignore_are_errors() {
     let root = root("errors");
     assert!(
         Policy::new(
@@ -301,7 +301,7 @@ fn invalid_patterns_and_unreadable_archgraphignore_are_errors() {
     );
     let policy = Policy::new(&root, Language::Typescript, Options::default()).unwrap();
     assert!(policy.select(&["src/a\0b.ts".into()]).is_err());
-    std::fs::create_dir(root.join(".archgraphignore")).unwrap();
+    std::fs::create_dir(root.join(".boundrailignore")).unwrap();
     assert!(Policy::new(&root, Language::Typescript, Options::default()).is_err());
 }
 
@@ -350,7 +350,7 @@ fn language_discovery_uses_the_same_restored_selection_policy() {
         .unwrap(),
         Language::Typescript
     );
-    write(&root, ".archgraphignore", "src/build/only.ts\n");
+    write(&root, ".boundrailignore", "src/build/only.ts\n");
     assert!(
         detect_language_with_options(
             &root,
@@ -378,21 +378,21 @@ fn language_discovery_uses_the_same_restored_selection_policy() {
 
 #[cfg(unix)]
 #[test]
-fn broken_and_escaping_archgraphignore_symlinks_are_errors() {
+fn broken_and_escaping_boundrailignore_symlinks_are_errors() {
     let root = root("ignore-symlinks");
-    std::os::unix::fs::symlink("missing", root.join(".archgraphignore")).unwrap();
+    std::os::unix::fs::symlink("missing", root.join(".boundrailignore")).unwrap();
     assert!(Policy::new(&root, Language::Typescript, Options::default()).is_err());
-    std::fs::remove_file(root.join(".archgraphignore")).unwrap();
+    std::fs::remove_file(root.join(".boundrailignore")).unwrap();
     let outside = root.with_extension("outside-ignore");
     std::fs::write(&outside, "*.ts\n").unwrap();
-    std::os::unix::fs::symlink(&outside, root.join(".archgraphignore")).unwrap();
+    std::os::unix::fs::symlink(&outside, root.join(".boundrailignore")).unwrap();
     assert!(Policy::new(&root, Language::Typescript, Options::default()).is_err());
 }
 
 #[test]
 fn a_scan_outside_any_repository_works_in_a_translated_locale() {
     // CARGO_TARGET_TMPDIR sits inside this repository; the system temporary directory does not.
-    let root = std::env::temp_dir().join(format!("archgraph-no-repo-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("boundrail-no-repo-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     write(&root, "src/a.ts", "export const A = 1;");
     let input = root.with_extension("json");

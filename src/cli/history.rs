@@ -36,7 +36,7 @@ pub(super) struct HistoryArgs {
     hotspots: HotspotOpts,
     #[command(flatten)]
     collector: CollectorOpts,
-    /// Directory for history.json and history.html [default: <root>/.archgraph]
+    /// Directory for history.json and history.html [default: <root>/.boundrail]
     #[arg(long)]
     out_dir: Option<PathBuf>,
 }
@@ -92,7 +92,7 @@ pub(super) fn run(mut args: HistoryArgs) -> Result<()> {
     let out_dir = args
         .out_dir
         .clone()
-        .unwrap_or_else(|| args.root.join(".archgraph"));
+        .unwrap_or_else(|| args.root.join(".boundrail"));
     let identity = cache_identity(&args, language, rules.as_deref())?;
     let history_options = history::HistoryOptions {
         sampling: args.sample,

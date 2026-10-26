@@ -341,7 +341,7 @@ fn elixir_live_selection_precedes_parsing_ignored_tests_and_generated_sources() 
             ("test/broken_test.exs", "defmodule Test do @not valid !!!"),
             ("_build/broken.ex", "defmodule Generated do @not valid !!!"),
             ("ignored/broken.ex", "defmodule Ignored do @not valid !!!"),
-            (".archgraphignore", "ignored/\n"),
+            (".boundrailignore", "ignored/\n"),
         ],
     );
     let raw = elixir::parse(&elixir::run(&root, "elixir", &policy(&root)).unwrap()).unwrap();

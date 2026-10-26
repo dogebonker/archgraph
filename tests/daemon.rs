@@ -19,13 +19,13 @@ impl Fixture {
             std::env::temp_dir()
         };
         let root = temp.join(format!(
-            "archgraph-daemon-{}-{}",
+            "boundrail-daemon-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir_all(root.join("src/a")).unwrap();
         fs::create_dir_all(root.join("src/b")).unwrap();
-        fs::create_dir_all(root.join(".archgraph")).unwrap();
+        fs::create_dir_all(root.join(".boundrail")).unwrap();
         fs::write(
             root.join("package.json"),
             "{\"name\":\"daemon-fixture\",\"type\":\"module\"}\n",
@@ -58,8 +58,8 @@ impl Fixture {
             .unwrap_or_else(|e| panic!("{args:?}: {e}: {}", String::from_utf8_lossy(&out.stdout)))
     }
     fn start(&mut self, extra: &[&str]) {
-        let previous_endpoint = fs::read(self.root.join(".archgraph/daemon.json")).ok();
-        let log = fs::File::create(self.root.join(".archgraph/server.log")).unwrap();
+        let previous_endpoint = fs::read(self.root.join(".boundrail/daemon.json")).ok();
+        let log = fs::File::create(self.root.join(".boundrail/server.log")).unwrap();
         self.child = Some(
             Command::new(env!("CARGO_BIN_EXE_boundrail"))
                 .args([
@@ -81,7 +81,7 @@ impl Fixture {
         );
         let start = Instant::now();
         loop {
-            if fs::read(self.root.join(".archgraph/daemon.json"))
+            if fs::read(self.root.join(".boundrail/daemon.json"))
                 .ok()
                 .is_some_and(|bytes| Some(bytes) != previous_endpoint)
             {
@@ -91,7 +91,7 @@ impl Fixture {
             assert!(
                 failed.is_none(),
                 "serve exited {failed:?}: {}",
-                fs::read_to_string(self.root.join(".archgraph/server.log")).unwrap()
+                fs::read_to_string(self.root.join(".boundrail/server.log")).unwrap()
             );
             assert!(
                 start.elapsed() < Duration::from_secs(30),
@@ -109,7 +109,7 @@ impl Fixture {
     fn wait_cycle_count(&self, expected: usize) -> Duration {
         let start = Instant::now();
         loop {
-            let value = self.json(&["--brief", "check", ".archgraph/daemon-graph.json"]);
+            let value = self.json(&["--brief", "check", ".boundrail/daemon-graph.json"]);
             if value["result"]["cycles"].as_array().unwrap().len() == expected {
                 return start.elapsed();
             }
@@ -173,12 +173,12 @@ fn watched_cycle_revert_and_standalone_bytes_match() {
     assert!(status["generation"].as_u64().unwrap() >= 2);
     assert!(status["parsed_files"].as_u64().unwrap() <= 1, "{status}");
     assert_eq!(status["cached_snapshots"], 2);
-    let warm = f.command(&["--brief", "check", ".archgraph/daemon-graph.json"]);
+    let warm = f.command(&["--brief", "check", ".boundrail/daemon-graph.json"]);
     let cold = f.command(&[
         "--no-daemon",
         "--brief",
         "check",
-        ".archgraph/daemon-graph.json",
+        ".boundrail/daemon-graph.json",
     ]);
     assert_eq!(warm.status.code(), cold.status.code());
     assert_eq!(warm.stdout, cold.stdout);
@@ -201,7 +201,7 @@ fn killed_socket_falls_back_and_a_new_server_reclaims_it() {
         "SIGKILL must leave a stale socket for this test"
     );
     assert_eq!(f.json(&["status"])["running"], false);
-    f.json(&["--brief", "check", ".archgraph/daemon-graph.json"]);
+    f.json(&["--brief", "check", ".boundrail/daemon-graph.json"]);
     // Existing socket is intentionally retained to exercise safe stale socket replacement.
     f.start(&["--socket", socket.to_str().unwrap()]);
     assert_eq!(f.json(&["status"])["running"], true);
@@ -214,7 +214,7 @@ fn once_answers_one_tcp_request_and_exits() {
     let mut f = Fixture::new();
     f.start(&["--port=0", "--once"]);
     let endpoint: Value =
-        serde_json::from_slice(&fs::read(f.root.join(".archgraph/daemon.json")).unwrap()).unwrap();
+        serde_json::from_slice(&fs::read(f.root.join(".boundrail/daemon.json")).unwrap()).unwrap();
     assert!(endpoint["port"].as_u64().unwrap() > 0);
     assert_eq!(f.json(&["status"])["running"], true);
     let start = Instant::now();
@@ -230,7 +230,7 @@ fn once_answers_one_tcp_request_and_exits() {
         std::thread::sleep(Duration::from_millis(5));
     }
     f.child = None;
-    assert!(!f.root.join(".archgraph/daemon.json").exists());
+    assert!(!f.root.join(".boundrail/daemon.json").exists());
     assert_eq!(f.json(&["status"])["running"], false);
 }
 
@@ -298,7 +298,7 @@ fn changed_caller_environment_requires_restart_or_standalone() {
     let changed = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .arg("status")
         .current_dir(&f.root)
-        .env("ARCHGRAPH_DAEMON_TEST_ENV", "caller-only-change")
+        .env("BOUNDRAIL_DAEMON_TEST_ENV", "caller-only-change")
         .output()
         .unwrap();
     assert!(!changed.status.success());
@@ -308,7 +308,7 @@ fn changed_caller_environment_requires_restart_or_standalone() {
     let standalone = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args(["--no-daemon", "status"])
         .current_dir(&f.root)
-        .env("ARCHGRAPH_DAEMON_TEST_ENV", "caller-only-change")
+        .env("BOUNDRAIL_DAEMON_TEST_ENV", "caller-only-change")
         .output()
         .unwrap();
     assert!(standalone.status.success());

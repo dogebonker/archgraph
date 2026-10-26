@@ -480,7 +480,7 @@ fn inventory(root: &Path, policy: &excludes::Policy) -> Result<Vec<String>> {
             let relative = path.to_string_lossy().replace('\\', "/");
             let kind = entry.file_type()?;
             if kind.is_dir() {
-                if !defaults.is_match(format!("{relative}/__archgraph.ts"))
+                if !defaults.is_match(format!("{relative}/__boundrail.ts"))
                     && !matches!(relative.as_str(), "target" | "venv")
                 {
                     pending.push(path);

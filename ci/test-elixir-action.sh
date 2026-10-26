@@ -28,7 +28,7 @@ else:
     pathlib.Path(os.environ["CAPTURE"]).write_text(json.dumps(sys.argv[1:]))
     output = pathlib.Path(sys.argv[sys.argv.index("--out-dir") + 1])
     output.mkdir(parents=True)
-    (output / "archgraph.json").write_text('{"summary":{"forbidden":0}}')
+    (output / "boundrail.json").write_text('{"summary":{"forbidden":0}}')
     print(os.environ.get("REPORT_TEXT", "plain report without code fences"))
 ''')
     binary.chmod(0o755)
@@ -41,7 +41,7 @@ else:
                INPUT_LANGUAGE="elixir", INPUT_BASE_REF="", INPUT_RULES="",
                RUNNER_TEMP=str(runner), GITHUB_OUTPUT=str(root / "output"),
                GITHUB_STEP_SUMMARY=str(root / "summary"),
-               CAPTURE=str(root / "capture"), ARCHGRAPH_ELIXIR=str(runtime))
+               CAPTURE=str(root / "capture"), BOUNDRAIL_ELIXIR=str(runtime))
 
     def run(expected):
         result = subprocess.run(["bash", "ci/action.sh"], env=env,
@@ -62,14 +62,14 @@ else:
     run(0)
     assert "``````text\n" in (root / "summary").read_text()
 
-    env["ARCHGRAPH_ELIXIR"] = str(root / "missing-elixir")
+    env["BOUNDRAIL_ELIXIR"] = str(root / "missing-elixir")
     assert "Elixir scans need" in run(2).stdout
 
     env["INPUT_LANGUAGE"] = ""
     run(0)
     arguments = json.loads((root / "capture").read_text())
     assert "--language" not in arguments
-    assert arguments[arguments.index("--elixir") + 1] == env["ARCHGRAPH_ELIXIR"]
+    assert arguments[arguments.index("--elixir") + 1] == env["BOUNDRAIL_ELIXIR"]
 
     # A pull request that deletes the rules file; the base scan sees the project's node_modules.
     repo = root / "repo"

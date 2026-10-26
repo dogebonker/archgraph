@@ -6,13 +6,13 @@ const os = require('node:os');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 const { resolve } = require('../src/impact_typescript.cjs');
-let compiler = process.env.ARCHGRAPH_TYPESCRIPT;
+let compiler = process.env.BOUNDRAIL_TYPESCRIPT;
 if (!compiler) {
   try { compiler = createRequire(__filename).resolve('typescript/package.json'); } catch {}
 }
 
-test('symbol resolution distinguishes nested barrel exports and keeps namespace or dynamic consumers', { skip: !compiler && 'requires installed TypeScript (ARCHGRAPH_TYPESCRIPT)' }, t => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'archgraph-impact-symbols-'));
+test('symbol resolution distinguishes nested barrel exports and keeps namespace or dynamic consumers', { skip: !compiler && 'requires installed TypeScript (BOUNDRAIL_TYPESCRIPT)' }, t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'boundrail-impact-symbols-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const sources = {
     'a.ts': 'export function a() { return 1; }',

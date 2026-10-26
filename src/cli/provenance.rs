@@ -633,7 +633,7 @@ mod tests {
     #[test]
     fn advisory_finding_does_not_claim_a_guard_failure() {
         let result = super::Investigation {
-            schema: "archgraph/v1",
+            schema: "boundrail/v1",
             kind: "bisect",
             target: super::Target::Finding {
                 finding_kind: "misplaced-file".into(),

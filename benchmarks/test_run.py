@@ -35,7 +35,7 @@ class BenchmarkChecks(unittest.TestCase):
     def test_failed_fetch_leaves_no_checkout_and_can_be_retried(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            binary = root / "archgraph"
+            binary = root / "boundrail"
             binary.write_bytes(b"test binary; subprocesses are mocked")
             (root / "repos.json").write_text(json.dumps([{
                 "name": "retry", "repo": "https://github.com/example/retry",

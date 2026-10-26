@@ -2,7 +2,7 @@ mod common;
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use common::{archgraph, layout, run_json, scan, scan_recorded, synthetic, write_tmp};
+use common::{boundrail, layout, run_json, scan, scan_recorded, synthetic, write_tmp};
 use serde_json::{Value, json};
 
 /// The scan of `name` and a copy without the edge `from -> to`, as files.
@@ -27,7 +27,7 @@ fn diff_shows_a_resolved_cycle() {
     let (old, new) = before_after("ts-cycles", &[], "src/c/z.ts", "src/a/x.ts");
     let (diff, code) = run_json(&["diff", &old, &new]);
     assert_eq!(code, Some(0));
-    assert_eq!(diff["schema"], "archgraph/v1.2");
+    assert_eq!(diff["schema"], "boundrail/v1.2");
     assert_eq!(diff["kind"], "diff");
     // The commit of the checkout holding the fixtures, or null outside a git repository.
     let scanned: Value = serde_json::from_str(&std::fs::read_to_string(&old).unwrap()).unwrap();
@@ -98,7 +98,7 @@ fn diff_shows_a_resolved_forbidden_edge_and_a_removed_module() {
 
 /// Runs `diff`, returning stdout, stderr and the exit code.
 fn diff(args: &[&str]) -> (String, String, Option<i32>) {
-    let out = archgraph(&[&["diff"], args].concat());
+    let out = boundrail(&[&["diff"], args].concat());
     (
         String::from_utf8(out.stdout).unwrap(),
         String::from_utf8(out.stderr).unwrap(),

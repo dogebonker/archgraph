@@ -25,7 +25,7 @@ def truth():
 
 
 def report(edges):
-    return {"app": {"schema": "archgraph/v1.2", "kind": "services",
+    return {"app": {"schema": "boundrail/v1.2", "kind": "services",
                     "source": {"collector": "inferred", "complete": False},
                     "services": ["a", "b", "c"], "edges": edges, "summary": {"calls": len(edges)}}}
 
@@ -154,10 +154,10 @@ class ServiceFlowEvidenceTests(unittest.TestCase):
     def args(self):
         truth_path = self.repos / "truth.json"
         truth_path.write_text(json.dumps(self.data))
-        tool = self.repos / "fake archgraph"
+        tool = self.repos / "fake boundrail"
         tool.write_text("#!/usr/bin/env python3\nimport json\nprint(" + repr(json.dumps(report([edge()])["app"])) + ")\n")
         tool.chmod(0o755)
-        return SimpleNamespace(truth=truth_path, repos=self.repos, archgraph=tool,
+        return SimpleNamespace(truth=truth_path, repos=self.repos, boundrail=tool,
                                output=self.repos / "evaluation.json", timeout=10)
 
     def test_runner_freezes_the_binary_for_every_repository(self):
@@ -171,14 +171,14 @@ class ServiceFlowEvidenceTests(unittest.TestCase):
         self.data["flows"].append(second_case)
         args = self.args()
         script = ("#!/usr/bin/env python3\nfrom pathlib import Path\n"
-                  + f"Path({str(args.archgraph)!r}).write_text('#!/bin/sh\\nexit 9\\n')\n"
+                  + f"Path({str(args.boundrail)!r}).write_text('#!/bin/sh\\nexit 9\\n')\n"
                   + "print(" + repr(json.dumps(report([edge()])["app"])) + ")\n")
-        args.archgraph.write_text(script)
+        args.boundrail.write_text(script)
         expected_hash = hashlib.sha256(script.encode()).hexdigest()
         result = run(args)
         self.assertEqual(result["comparison"]["matched_flows"], 2)
         self.assertEqual(result["binary_sha256"], expected_hash)
-        self.assertNotEqual(hashlib.sha256(args.archgraph.read_bytes()).hexdigest(), expected_hash)
+        self.assertNotEqual(hashlib.sha256(args.boundrail.read_bytes()).hexdigest(), expected_hash)
         self.assertEqual(len({entry["command"][0] for entry in result["runs"].values()}), 1)
 
     def test_runner_refuses_artifacts_inside_or_symlinked_into_sources(self):

@@ -64,7 +64,7 @@ def wrapper(path, program):
     # Capture collector output while preserving bytes, arguments and return status.
     path.write_text('#!' + sys.executable + '\n' + '''import os,pathlib,subprocess,sys,time
 r=subprocess.run([''' + repr(str(program)) + ''']+sys.argv[1:],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-p=pathlib.Path(os.environ['ARCHGRAPH_EDGE_CAPTURE'])/str(time.time_ns())
+p=pathlib.Path(os.environ['BOUNDRAIL_EDGE_CAPTURE'])/str(time.time_ns())
 p.with_suffix('.stdout').write_bytes(r.stdout)
 p.with_suffix('.stderr').write_bytes(r.stderr)
 p.with_suffix('.argv.json').write_text(__import__('json').dumps(sys.argv[1:]))
@@ -138,7 +138,7 @@ def cycle_edge_changes(members, before, after):
     for edge in old:
         pair = (edge['from'], edge['to'])
         was_runtime = edge.get('kind') in ('static', 'runtime') or (
-            before['schema'] == 'archgraph/v1' and edge.get('kind') == 'reexport')
+            before['schema'] == 'boundrail/v1' and edge.get('kind') == 'reexport')
         if was_runtime and pair not in runtime_after:
             result['runtime_edges_removed'].append(edge)
         if pair not in endpoints and all(p in kept for p in pair):
@@ -242,7 +242,7 @@ def compare_published(work, entries, documents):
                 raise RuntimeError(f'{name}: deployed semantic graph differs from corrected measurement')
             full_matches.append(name)
     return {'sha256': digest(path), 'repositories': len(entries), 'full_semantic_matches': full_matches,
-            'engine_commit': json.loads(path.read_text()).get('archgraph', {}).get('commit', 'unavailable')}
+            'engine_commit': json.loads(path.read_text()).get('boundrail', {}).get('commit', 'unavailable')}
 
 
 def report(work, entries, output):
@@ -286,7 +286,7 @@ def report(work, entries, output):
             raise RuntimeError(f'{stage}: inconsistent engine provenance')
         commit, binary_hash = fingerprints.pop()
         lines.append(f'| {stage} | `{commit}` | `{binary_hash}` |')
-    lines += ['', 'Collector versions are recorded per scan in `metadata.json`. Reproduce a stage with:', '', '```sh', 'python3 -B showcase/edge_quality.py --engine /absolute/frozen-archgraph \\', '  --engine-commit FULL_SOURCE_COMMIT --stage fixN', 'python3 -B showcase/edge_quality.py --report-output showcase/edge-quality-report.md', '```', '', '## Published 20 repositories', '',
+    lines += ['', 'Collector versions are recorded per scan in `metadata.json`. Reproduce a stage with:', '', '```sh', 'python3 -B showcase/edge_quality.py --engine /absolute/frozen-boundrail \\', '  --engine-commit FULL_SOURCE_COMMIT --stage fixN', 'python3 -B showcase/edge_quality.py --report-output showcase/edge-quality-report.md', '```', '', '## Published 20 repositories', '',
               'Arrow cells compare baseline → ' + latest + '. SCC means a strongly connected component with a cycle; largest is its module count. All intermediate stages remain in the cohort totals, provenance and full SCC inventory.', '',
               '| Repository | Files | File edges | Module SCCs | Largest SCC | Runtime / lazy / type / re-export edges (' + latest + ') | Barrels (' + latest + ') | Excluded candidate files | Non-runtime / extended-runtime SCCs | Via grab-bag: complete / partial |',
               '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
@@ -581,18 +581,18 @@ def readme_text(source, entries, documents):
     start = source.index(heading)
     end = source.index('\n## ', start + len(heading))
     original = source[start:end]
-    order = re.findall(r'https://dogebonker\.github\.io/archgraph/([a-z0-9._-]+)\.html', original)
+    order = re.findall(r'https://dogebonker\.github\.io/boundrail/([a-z0-9._-]+)\.html', original)
     by_name = {entry['name']: entry for entry in entries}
     if len(order) != len(entries) or set(order) != set(by_name):
         raise RuntimeError('README showcase rows do not match the published manifest cohort')
     escape = lambda value: html.escape(str(value), quote=True).replace('|', '&#124;').replace('\n', ' ')
     lines = [heading, '',
-             'archgraph on 20 open-source projects at pinned commits. Each name opens its live map; the path under a name is the folder that was scanned.', '',
+             'boundrail on 20 open-source projects at pinned commits. Each name opens its live map; the path under a name is the folder that was scanned.', '',
              '| Project | Files | Largest cycle | Suggested cut |', '|---|--:|--:|---|']
     for name in order:
         entry, document = by_name[name], documents[name]
         project = escape(entry['repo'].removeprefix('https://github.com/'))
-        label = f'[{project}](https://dogebonker.github.io/archgraph/{name}.html)'
+        label = f'[{project}](https://dogebonker.github.io/boundrail/{name}.html)'
         if entry['path'] != '.':
             label += '<br><sub><code>' + escape(entry['path']) + '</code></sub>'
         cycles = [cycle for cycle in document['cycles'] if cycle['level'] == 'module']
@@ -614,12 +614,12 @@ def readme_text(source, entries, documents):
     updated = source[:start] + '\n'.join(lines) + source[end:]
     if 'next.js' in by_name:
         entry, document = by_name['next.js'], documents['next.js']
-        caption = '<p align="center"><sub>Next.js (<code>' + escape(entry['path']) + '</code> at <code>' + entry['commit'][:7] + '</code>): ' + f"{len(document['files']):,} files, {len(document['modules']):,} modules, {len(document['edges']):,} internal file dependencies." + ' The static illustration shows an earlier scan; click it for the current map. Made with <code>archgraph report</code> (<a href="showcase/">how</a>).</sub></p>'
+        caption = '<p align="center"><sub>Next.js (<code>' + escape(entry['path']) + '</code> at <code>' + entry['commit'][:7] + '</code>): ' + f"{len(document['files']):,} files, {len(document['modules']):,} modules, {len(document['edges']):,} internal file dependencies." + ' The static illustration shows an earlier scan; click it for the current map. Made with <code>boundrail report</code> (<a href="showcase/">how</a>).</sub></p>'
         updated, replaced = re.subn(r'<p align="center"><sub>Next\.js .*?</sub></p>', lambda _: caption, updated, count=1)
         if replaced != 1:
             raise RuntimeError('README Next.js caption was not found')
-        updated = re.sub(r'alt="The archgraph map of Next\.js:[^"]*"',
-                         'alt="The archgraph map of Next.js: modules as discs with cycle and finding rings; the selected module highlights its importers and imports"', updated, count=1)
+        updated = re.sub(r'alt="The boundrail map of Next\.js:[^"]*"',
+                         'alt="The boundrail map of Next.js: modules as discs with cycle and finding rings; the selected module highlights its importers and imports"', updated, count=1)
     return updated
 
 
@@ -661,7 +661,7 @@ def scan(entry, args, binary_hash):
                    collector_option, str(shim), *entry['flags'], *args.extra_flag, '-o', str(graph)]
         with (destination / 'scan.log').open('wb') as log:
             result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT,
-                                    env=dict(os.environ, ARCHGRAPH_EDGE_CAPTURE=str(capture)), timeout=args.timeout)
+                                    env=dict(os.environ, BOUNDRAIL_EDGE_CAPTURE=str(capture)), timeout=args.timeout)
         if result.returncode:
             raise RuntimeError(f'scan exited {result.returncode}; see {destination / "scan.log"}')
         document = json.loads(graph.read_text())
@@ -691,11 +691,11 @@ def main():
     outputs = parser.add_mutually_exclusive_group()
     outputs.add_argument('--report-output', type=Path, help='Generate a report from complete archived stages; no scanning')
     outputs.add_argument('--readme-output', type=Path, help='Generate README rows from the latest complete verified final cohort, including corrections')
-    parser.add_argument('--work', type=Path, default=Path('/private/tmp/archgraph-edge-quality'))
-    parser.add_argument('--cache', type=Path, default=Path('/private/tmp/archgraph-hotspot-validation'))
+    parser.add_argument('--work', type=Path, default=Path('/private/tmp/boundrail-edge-quality'))
+    parser.add_argument('--cache', type=Path, default=Path('/private/tmp/boundrail-hotspot-validation'))
     parser.add_argument('--manifest', type=Path, default=HERE / 'repos.json')
-    parser.add_argument('--depcruise', type=Path, default=Path('/private/tmp/archgraph-impact-collectors/node_modules/.bin/depcruise'))
-    parser.add_argument('--python', type=Path, default=Path('/private/tmp/archgraph-impact-python/bin/python'))
+    parser.add_argument('--depcruise', type=Path, default=Path('/private/tmp/boundrail-impact-collectors/node_modules/.bin/depcruise'))
+    parser.add_argument('--python', type=Path, default=Path('/private/tmp/boundrail-impact-python/bin/python'))
     parser.add_argument('--go', type=Path, default=Path(shutil.which('go') or 'go'))
     parser.add_argument('--jobs', type=int, default=3)
     parser.add_argument('--timeout', type=int, default=1800)

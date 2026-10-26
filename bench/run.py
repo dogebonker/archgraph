@@ -100,7 +100,7 @@ def violation_count(value):
 
 
 def app_server_module():
-    spec = importlib.util.spec_from_file_location('archgraph_bench_codex',
+    spec = importlib.util.spec_from_file_location('boundrail_bench_codex',
                                                 Path(__file__).with_name('codex_app_server.py'))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -112,10 +112,10 @@ def runner_argv(runner, prompt, context=None):
     if adapter == 'codex-app-server':
         argv = [sys.executable, str(Path(__file__).with_name('codex_app_server.py').resolve()),
                 '--model', '{model}', '--prompt', '{prompt}', '--mode', '{mode}', '--run-id', '{run_id}',
-                '--archgraph', '{archgraph}', '--archgraph-sha256', '{archgraph_sha256}',
+                '--boundrail', '{boundrail}', '--boundrail-sha256', '{boundrail_sha256}',
                 '--artifact-dir', '{artifact_dir}']
-        if runner.get('trust_reviewed_archgraph') is True:
-            argv.append('--trust-reviewed-archgraph')
+        if runner.get('trust_reviewed_boundrail') is True:
+            argv.append('--trust-reviewed-boundrail')
         if runner.get('auth_file'):
             argv.extend(['--auth-file', runner['auth_file']])
         if runner.get('codex'):
@@ -136,7 +136,7 @@ def runner_argv(runner, prompt, context=None):
     values = {'model': runner['model'], 'prompt': prompt, 'seed': str(runner.get('seed', '')),
               **{key: str(value) for key, value in (context or {}).items()}}
     # Deliberate replacement leaves unrelated braces in agent prompts/argv untouched.
-    return [re.sub(r'\{(model|prompt|seed|mode|run_id|archgraph|archgraph_sha256|artifact_dir)\}', lambda m: values.get(m[1], m[0]), arg) for arg in argv], seeded
+    return [re.sub(r'\{(model|prompt|seed|mode|run_id|boundrail|boundrail_sha256|artifact_dir)\}', lambda m: values.get(m[1], m[0]), arg) for arg in argv], seeded
 
 
 def remove_configs(root):
@@ -144,7 +144,7 @@ def remove_configs(root):
     rules = ('CLAUDE.md', 'AGENTS.md', '.cursorrules', '.github/copilot-instructions.md')
     codex = []
     for parent, directories, files in os.walk(root, followlinks=False):
-        directories[:] = [name for name in directories if name not in ('.git', '.archgraph')]
+        directories[:] = [name for name in directories if name not in ('.git', '.boundrail')]
         if '.codex' in directories or '.codex' in files:
             codex.append(str((Path(parent) / '.codex').relative_to(root)))
             if '.codex' in directories:
@@ -174,7 +174,7 @@ def remove_configs(root):
         path = root / relative
         if path.is_file():
             before = path.read_bytes()
-            after = re.sub(rb'<!-- archgraph:start -->.*?<!-- archgraph:end -->', b'', before, flags=re.S)
+            after = re.sub(rb'<!-- boundrail:start -->.*?<!-- boundrail:end -->', b'', before, flags=re.S)
             if before != after:
                 updated.append({'path': relative, 'before_sha256': hashlib.sha256(before).hexdigest(),
                                 'after_sha256': hashlib.sha256(after).hexdigest()})
@@ -191,13 +191,13 @@ def remove_configs(root):
 
 def stage_changes(root, base, timeout, env):
     required(['git', 'add', '-A'], root, timeout, env)
-    # Negative add pathspecs fail on ignored .archgraph; restore only its index entries.
-    required(['git', 'reset', '-q', base, '--', '.archgraph'], root, timeout, env)
+    # Negative add pathspecs fail on ignored .boundrail; restore only its index entries.
+    required(['git', 'reset', '-q', base, '--', '.boundrail'], root, timeout, env)
 
 
 def diff_metrics(root, base, timeout, environment=None):
     # A private index includes untracked files without changing the agent's index.
-    with tempfile.TemporaryDirectory(prefix='archgraph-diff-index-') as work:
+    with tempfile.TemporaryDirectory(prefix='boundrail-diff-index-') as work:
         env = dict(os.environ if environment is None else environment, GIT_INDEX_FILE=str(Path(work) / 'index'))
         required(['git', 'read-tree', base], root, timeout, env)
         stage_changes(root, base, timeout, env)
@@ -246,14 +246,14 @@ def one_run(repo, commit, task, runner, binary, arm, repeat, timeout, artifact_d
     result = dict(task=task['id'], arm=arm, repeat=repeat, model=runner['model'],
                   seed=runner.get('seed'), expected_area=task['area'], commands=[], errors=[],
                   hook_activation='unknown' if arm == 'guarded' else 'not_applicable')
-    with tempfile.TemporaryDirectory(prefix='archgraph-paired-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='boundrail-paired-') as temporary:
         temporary = Path(temporary)
         root = temporary / 'repo'
         credential_names = {key for key in os.environ if any(marker in key.upper()
             for marker in ('TOKEN', 'SECRET', 'PASSWORD', 'API_KEY', 'ACCESS_KEY'))}
         credential_names.update(runner.get('env', {}))
         env = {key: value for key, value in os.environ.items() if key not in credential_names}
-        env.pop('ARCHGRAPH_BYPASS', None)
+        env.pop('BOUNDRAIL_BYPASS', None)
         for name in ISOLATION:
             location = temporary / name.lower()
             location.mkdir(mode=0o700)
@@ -269,7 +269,7 @@ def one_run(repo, commit, task, runner, binary, arm, repeat, timeout, artifact_d
         result['reviewed_policy'] = reviewed_policy
         result['configuration_cleanup'] = remove_configs(root)
         # State and historical receipts must never leak into either arm.
-        state = root / '.archgraph'
+        state = root / '.boundrail'
         if state.is_symlink() or state.is_file():
             state.unlink()
         elif state.exists():
@@ -289,12 +289,12 @@ def one_run(repo, commit, task, runner, binary, arm, repeat, timeout, artifact_d
         # Freeze setup so reported agent diff excludes installation changes.
         stage_changes(root, commit, timeout, env)
         setup_tree = required(['git', 'write-tree'], root, timeout, env)
-        setup_commit = required(['git', '-c', 'user.name=Archgraph benchmark', '-c',
+        setup_commit = required(['git', '-c', 'user.name=Boundrail benchmark', '-c',
                                  'user.email=benchmark@example.invalid', '-c', 'commit.gpgsign=false',
                                  'commit-tree', setup_tree, '-p', commit, '-m', 'benchmark setup'], root, timeout, env)
         if not result['errors']:
-            context = {'mode': arm, 'run_id': uuid.uuid4().hex, 'archgraph': binary,
-                       'archgraph_sha256': hashlib.sha256(Path(binary).read_bytes()).hexdigest(),
+            context = {'mode': arm, 'run_id': uuid.uuid4().hex, 'boundrail': binary,
+                       'boundrail_sha256': hashlib.sha256(Path(binary).read_bytes()).hexdigest(),
                        'artifact_dir': str(artifact_dir)}
             expected_config = (hashlib.sha256((root / '.codex/hooks.json').read_bytes()).hexdigest()
                 if arm == 'guarded' and (root / '.codex/hooks.json').is_file() else 'absent')
@@ -307,7 +307,7 @@ def one_run(repo, commit, task, runner, binary, arm, repeat, timeout, artifact_d
             if runner.get('adapter') == 'codex-app-server' and agent['code'] == 0:
                 try:
                     receipt = json.loads(agent['stdout'])
-                    expected = {key: context[key] for key in ('run_id', 'mode', 'archgraph_sha256', 'archgraph')}
+                    expected = {key: context[key] for key in ('run_id', 'mode', 'boundrail_sha256', 'boundrail')}
                     expected.update(model=runner['model'], cwd=str(root.resolve()),
                                     hook_config_sha256=expected_config)
                     result['hook_activation'] = app_server_module().validate_result(receipt, expected)
@@ -347,7 +347,7 @@ def one_run(repo, commit, task, runner, binary, arm, repeat, timeout, artifact_d
             result['new_violations'] = None
             result['errors'].append(str(error))
         try:
-            fires = json_lines(root / '.archgraph/fires.log')
+            fires = json_lines(root / '.boundrail/fires.log')
             if not all(isinstance(x, dict) and all(k in x for k in ('rule', 'file', 'agent', 'ts')) for x in fires):
                 raise ValueError('malformed fires log')
             result['edit_blocks'] = len(fires)
@@ -357,7 +357,7 @@ def one_run(repo, commit, task, runner, binary, arm, repeat, timeout, artifact_d
             result['edit_blocks'] = None
             result['errors'].append(str(error))
         # File presence is not proof of a valid Rust Receipt or an automatically applied fix.
-        result['raw_receipt_files'] = sorted(path.name for path in (root / '.archgraph/applied').glob('*.json'))
+        result['raw_receipt_files'] = sorted(path.name for path in (root / '.boundrail/applied').glob('*.json'))
         result['raw_receipt_file_count'] = len(result['raw_receipt_files'])
         result['recipes_applied'] = 0
         result['verified_recipe_receipts'] = []
@@ -470,13 +470,13 @@ def render(data, path):
 def benchmark(repo, tasks, runner, binary, output, repeats=3, timeout=900, package=None):
     repo, binary = Path(repo).resolve(), Path(binary).resolve()
     if not binary.is_file():
-        raise ValueError('archgraph must be an existing executable file')
+        raise ValueError('boundrail must be an existing executable file')
     if not isinstance(runner.get('model'), str) or not runner['model'] or runner.get('agent') not in ('claude', 'codex'):
         raise ValueError('runner requires exact model and agent claude|codex')
     if not isinstance(runner.get('env', {}), dict) or not all(
             isinstance(key, str) and isinstance(value, str) for key, value in runner.get('env', {}).items()):
         raise ValueError('runner env must be a string mapping')
-    if runner.get('env', {}).get('ARCHGRAPH_BYPASS'):
+    if runner.get('env', {}).get('BOUNDRAIL_BYPASS'):
         raise ValueError('benchmark runner cannot bypass architecture hooks')
     runner_argv(runner, 'validation')
     if not isinstance(tasks, list) or not tasks or repeats < 1:
@@ -500,7 +500,7 @@ def benchmark(repo, tasks, runner, binary, output, repeats=3, timeout=900, packa
     path = output / f'{name}-{datetime.now(timezone.utc).date()}.md'
     if any(path.with_suffix(suffix).exists() for suffix in ('.md', '.json', '.svg')):
         raise ValueError('report already exists; choose a new output directory to preserve evidence')
-    data = dict(schema='archgraph/paired-benchmark/v1', repo_name=repo.name, commit=commit, package=package,
+    data = dict(schema='boundrail/paired-benchmark/v1', repo_name=repo.name, commit=commit, package=package,
                 created=datetime.now(timezone.utc).isoformat(), repeats=repeats,
                 binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
                 runner=redacted({key: value for key, value in runner.items() if key not in ('env', 'auth_file')},
@@ -509,7 +509,7 @@ def benchmark(repo, tasks, runner, binary, output, repeats=3, timeout=900, packa
                 runner_env_keys=sorted(runner.get('env', {})), tasks=tasks, runs=[],
                 host={'system': platform.system(), 'machine': platform.machine(),
                       'python': platform.python_version()},
-                archgraph_version=invoke([str(binary), '--version'], repo, timeout))
+                boundrail_version=invoke([str(binary), '--version'], repo, timeout))
     for task in tasks:
         for repeat in range(1, repeats + 1):
             # Alternate order to reduce a systematic first-arm cache/time effect.
@@ -535,7 +535,7 @@ def benchmark(repo, tasks, runner, binary, output, repeats=3, timeout=900, packa
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ('repo', 'tasks', 'runner', 'archgraph'):
+    for name in ('repo', 'tasks', 'runner', 'boundrail'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--output', default=str(Path(__file__).parent / 'results'))
     parser.add_argument('--repeats', type=int, default=3)
@@ -543,7 +543,7 @@ def main():
     parser.add_argument('--package', help='Explicit architecture package for monorepos')
     args = parser.parse_args()
     path, data = benchmark(args.repo, json.loads(Path(args.tasks).read_text()),
-                           json.loads(Path(args.runner).read_text()), args.archgraph,
+                           json.loads(Path(args.runner).read_text()), args.boundrail,
                            args.output, args.repeats, args.timeout, args.package)
     print(path)
     return int(any(row['errors'] for row in data['runs']))

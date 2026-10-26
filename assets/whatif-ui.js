@@ -43,7 +43,7 @@ function whatifRuleShifts(moves) {
     globs.push([`${id} from`, r.from]);
     if (!/^(?:pkg|category):/.test(r.to || "")) globs.push([`${id} to`, r.to]);
   });
-  const bind = ArchgraphPreview.bind, layer = path => (rules.layers || []).find(g => bind(g, path) !== undefined);
+  const bind = BoundrailPreview.bind, layer = path => (rules.layers || []).find(g => bind(g, path) !== undefined);
   const shown = (label, glob, value) => `${label} "${glob}"` + (typeof value === "string" ? ` (${glob.match(/<[^>]*>/)[0]} = ${value})` : "");
   try {
     return moves.map(({ file, to }) => {
@@ -244,7 +244,7 @@ function whatifShow() {
   const moves = whatifPlan();
   if (!moves.length) { whatifListRender(); return; }
   try {
-    const result = ArchgraphPreview.simulate(doc, moves.map(({ file, to }) => ({ file, to })));
+    const result = BoundrailPreview.simulate(doc, moves.map(({ file, to }) => ({ file, to })));
     whatifResult = result;
     result.moves.forEach((move, k) => {
       const i = fileIndex.get(move.file), m = modIndex.get(move.module);

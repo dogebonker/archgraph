@@ -9,7 +9,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { version } = require('../package.json');
 
-const REPO = 'https://github.com/dogebonker/archgraph';
+const REPO = 'https://github.com/dogebonker/boundrail';
 const SUMS = path.join(__dirname, '..', 'SHA256SUMS');
 const TARGETS = {
   'linux x64': 'x86_64-unknown-linux-musl',
@@ -78,15 +78,12 @@ async function ensureBinary(env = process.env, platform = process.platform, arch
 
   const t = target(platform, arch);
   const tag = `v${version}`;
-  const strict = !env.ARCHGRAPH_DOWNLOAD_BASE;
-  const base = (env.ARCHGRAPH_DOWNLOAD_BASE || `${REPO}/releases/download`).replace(/\/+$/, '');
+  const strict = !env.BOUNDRAIL_DOWNLOAD_BASE;
+  const base = (env.BOUNDRAIL_DOWNLOAD_BASE || `${REPO}/releases/download`).replace(/\/+$/, '');
   // The published package carries the release's SHA256SUMS; a checkout of the repository does not.
   const sums = (fs.existsSync(SUMS) ? fs.readFileSync(SUMS) : await download(`${base}/${tag}/SHA256SUMS`, strict)).toString('utf8');
   const extension = platform === 'win32' ? '.zip' : '.tar.gz';
-  const preferred = `boundrail-${tag}-${t}${extension}`;
-  const names = sums.split('\n').map((line) => line.trim().split(/\s+/)[1]);
-  const product = names.some((name) => name === preferred || name === `*${preferred}`) ? 'boundrail' : 'archgraph';
-  const stem = `${product}-${tag}-${t}`;
+  const stem = `boundrail-${tag}-${t}`;
   const archive = `${stem}${extension}`;
   const expected = expectedSum(sums, archive);
   process.stderr.write(`boundrail-cli: downloading ${archive}\n`);
@@ -109,7 +106,7 @@ async function ensureBinary(env = process.env, platform = process.platform, arch
     if (r.error || r.status !== 0) {
       throw new Error(`could not extract ${archive}: ${r.error ? r.error.message : r.stderr}`);
     }
-    const extracted = path.join(tmp, stem, platform === 'win32' ? `${product}.exe` : product);
+    const extracted = path.join(tmp, stem, exe);
     fs.chmodSync(extracted, 0o755);
     // A concurrent first run may have won; rename replaces its identical file.
     fs.renameSync(extracted, bin);
@@ -120,7 +117,7 @@ async function ensureBinary(env = process.env, platform = process.platform, arch
 }
 
 async function main() {
-  const bin = process.env.ARCHGRAPH_BINARY || (await ensureBinary());
+  const bin = process.env.BOUNDRAIL_BINARY || (await ensureBinary());
   const r = spawnSync(bin, process.argv.slice(2), { stdio: 'inherit' });
   if (r.error) throw new Error(`could not run ${bin}: ${r.error.message}`);
   if (r.signal) process.kill(process.pid, r.signal);

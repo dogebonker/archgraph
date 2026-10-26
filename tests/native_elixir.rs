@@ -43,7 +43,7 @@ fn native_elixir_matches_recorded_fixture_without_a_vm() {
             .iter()
             .any(|r| r.external.as_deref() == Some("elixir"))
     );
-    let output = common::archgraph(&[
+    let output = common::boundrail(&[
         "scan",
         root.to_str().unwrap(),
         "--engine",

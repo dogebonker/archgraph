@@ -22,12 +22,12 @@ added and removed dependencies, module membership, deciding rules, and source lo
 
 ```sh
 # Capture the baseline before editing.
-mkdir -p .archgraph
-boundrail scan . --engine native --symbols --rules layout.yaml -o .archgraph/before.json
+mkdir -p .boundrail
+boundrail scan . --engine native --symbols --rules layout.yaml -o .boundrail/before.json
 
 # After editing, collect with the same options and review the change.
-boundrail scan . --engine native --symbols --rules layout.yaml -o .archgraph/after.json
-boundrail diff .archgraph/before.json .archgraph/after.json --html changes.html --fail-on new-forbidden
+boundrail scan . --engine native --symbols --rules layout.yaml -o .boundrail/after.json
+boundrail diff .boundrail/before.json .boundrail/after.json --html changes.html --fail-on new-forbidden
 ```
 
 Open `changes.html` to inspect the comparison. Removed imports remain selectable. A moved line is
@@ -54,28 +54,26 @@ production traffic trace. [Comparison behavior and compatibility](docs/guide.md#
 Build the checked-out source with stable Rust:
 
 ```sh
-git clone https://github.com/dogebonker/archgraph.git
-cd archgraph
+git clone https://github.com/dogebonker/boundrail.git
+cd boundrail
 cargo +stable install --path . --locked --bin boundrail
 
 boundrail report /path/to/your/project --engine native
 ```
 
-`report` prints a summary and writes a JSON document and an offline HTML map in `.archgraph/`.
+`report` prints a summary and writes a JSON document and an offline HTML map in `.boundrail/`.
 Open the HTML file in your browser. The native engine is experimental. Go import collection still
 uses the Go toolchain for read-only package metadata.
 Run the remaining examples from your project's root directory.
 
-Boundrail was previously named **Archgraph**. The repository URL and `.archgraph/` project state
-retain their existing names for compatibility. [Upgrade notes](docs/rename-boundrail.md) ·
 [Installation and collector requirements](docs/guide.md#install).
 
-<a href="https://dogebonker.github.io/archgraph/next.js.html">
-  <img alt="Interactive import map of Next.js: modules, dependency connections, cycle rings, and a selected module's evidence. Click to explore the published map." src="docs/assets/hero.png" width="100%">
+<a href="https://dogebonker.github.io/boundrail/next.js.html">
+  <img alt="Interactive import map of Next.js: modules, dependency connections, cycle rings, and a selected module's evidence. Click to explore the published map." src="docs/assets/boundrail-map.png" width="100%">
 </a>
 
-*Explore the [Next.js map](https://dogebonker.github.io/archgraph/next.js.html) or the
-[public-repository gallery](showcase/). This earlier capture uses the Archgraph name.*
+*Explore the [Next.js map](https://dogebonker.github.io/boundrail/next.js.html) or the
+[public-repository gallery](showcase/).*
 
 The map supports zoom, module selection, remembered positions, and a file-level view. Its
 **What-if** mode previews file moves without changing source. Rust simulations and the project's
@@ -121,7 +119,7 @@ Analyze the repository into an inactive skill draft:
 boundrail skill draft .
 ```
 
-Review `.archgraph/drafts/project-architecture/SKILL.md` and its policy references. With a reviewed
+Review `.boundrail/drafts/project-architecture/SKILL.md` and its policy references. With a reviewed
 root `layout.yaml` in place, regenerate the draft and adopt it:
 
 ```sh
@@ -145,8 +143,6 @@ Keep the daemon running and start the agent in another terminal. Claude Code and
 bounded context before edits and checks for new violations afterwards. Existing findings remain
 advisory. Codex requires explicit hook trust through `/hooks`. Cursor and OpenCode use
 `--feedback-only`. [Host contracts, recovery, and the scripted demo](docs/agents/loop.md).
-
-![Recorded CLI fixture: capture a baseline, add a forbidden domain-to-adapters import, receive BLOCK with a recipe, repair against the same snapshot, and receive PASS. The recording uses the earlier Archgraph name.](docs/assets/edit-loop.webp)
 
 ### Connect through MCP
 
@@ -271,7 +267,7 @@ Reports show **at least these relationships** within the collected scope. Folder
 misrepresent deployment or ownership boundaries. Inferred suggestions require review, missing
 provenance stays visible, and semantic changes still need the project's build and tests.
 
-Historical screenshots, measurements, and transcripts retain the name used when they were captured.
+Measurements and transcripts stay with their pinned inputs and recorded tool versions.
 [Full command guide](docs/guide.md) · [Changelog](CHANGELOG.md) · [Third-party notices](THIRD_PARTY_NOTICES.md).
 
 ## License

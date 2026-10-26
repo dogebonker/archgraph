@@ -15,7 +15,7 @@ struct Fixture(PathBuf);
 impl Fixture {
     fn new(files: &[(&str, &str)]) -> Self {
         let root = std::env::temp_dir().join(format!(
-            "archgraph-native-rust-{}-{}",
+            "boundrail-native-rust-{}-{}",
             std::process::id(),
             SEQ.fetch_add(1, Ordering::Relaxed)
         ));

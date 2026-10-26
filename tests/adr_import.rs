@@ -93,9 +93,9 @@ fn review_apply_check_and_recipe_retain_adr_provenance() {
                 })
             })
     }));
-    for version in ["archgraph/v1", "archgraph/v1.1", "archgraph/v1.2"] {
+    for version in ["boundrail/v1", "boundrail/v1.1", "boundrail/v1.2"] {
         let mut legacy = graph.clone();
-        if version == "archgraph/v1" {
+        if version == "boundrail/v1" {
             boundrail::compat::v1(&mut legacy).unwrap();
         } else {
             legacy["schema"] = version.into();

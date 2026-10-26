@@ -21,13 +21,13 @@ class HarnessTests(unittest.TestCase):
                 root.mkdir()
                 self.fixture(root)
                 if ignored:
-                    (root / '.gitignore').write_text('.archgraph/\n')
+                    (root / '.gitignore').write_text('.boundrail/\n')
                     self.git(root, 'add', '.')
                     self.git(root, '-c', 'commit.gpgsign=false', 'commit', '-m', 'ignore generated state')
-                binary = work / 'mock-archgraph'
-                script = (FIXTURES / 'mock_archgraph.py').read_text().replace(
+                binary = work / 'mock-boundrail'
+                script = (FIXTURES / 'mock_boundrail.py').read_text().replace(
                     "    agent = args[args.index('--agent') + 1]",
-                    "    state = root / '.archgraph'\n    state.mkdir(exist_ok=True)\n"
+                    "    state = root / '.boundrail'\n    state.mkdir(exist_ok=True)\n"
                     "    (state / 'setup-state.json').write_text('{}')\n"
                     "    agent = args[args.index('--agent') + 1]")
                 binary.write_text(script)
@@ -42,7 +42,7 @@ class HarnessTests(unittest.TestCase):
                     self.assertEqual(row['errors'], [])
                     self.assertEqual(row['diff']['files'], ['src/domain.txt'])
                 self.assertEqual(self.git(root, 'status', '--porcelain'), '')
-                self.assertFalse((root / '.archgraph').exists())
+                self.assertFalse((root / '.boundrail').exists())
 
     def git(self, root, *args):
         return subprocess.check_output(['git', '-c', 'core.hooksPath=/dev/null', *args], cwd=root,
@@ -68,8 +68,8 @@ class HarnessTests(unittest.TestCase):
             root.mkdir()
             self.fixture(root)
             before = self.git(root, 'rev-parse', 'HEAD')
-            binary = work / 'mock-archgraph'
-            binary.write_text((FIXTURES / 'mock_archgraph.py').read_text())
+            binary = work / 'mock-boundrail'
+            binary.write_text((FIXTURES / 'mock_boundrail.py').read_text())
             binary.chmod(0o755)
             tasks = [{'id': 'feature', 'prompt': 'A literal $(not-a-shell) prompt', 'area': ['src/**'],
                       'tests': [sys.executable, '-c', 'from pathlib import Path; assert Path("src/domain.txt").exists()']},
@@ -113,8 +113,8 @@ class HarnessTests(unittest.TestCase):
             root = work / 'source'
             root.mkdir()
             self.fixture(root)
-            binary = work / 'old-archgraph'
-            binary.write_text((FIXTURES / 'mock_archgraph.py').read_text().replace(
+            binary = work / 'old-boundrail'
+            binary.write_text((FIXTURES / 'mock_boundrail.py').read_text().replace(
                 "elif args == ['sync-rules']:", "elif args == ['sync-rules']:\n    raise SystemExit(2)"))
             binary.chmod(0o755)
             runner = {'agent': 'codex', 'model': 'mock', 'argv': [sys.executable,
@@ -145,8 +145,8 @@ class HarnessTests(unittest.TestCase):
             self.git(root, 'add', '.')
             self.git(root, '-c', 'commit.gpgsign=false', 'commit', '-m', 'unreviewed agent config')
             original = {str(path.relative_to(root)): path.read_bytes() for path in (config, policy)}
-            binary = work / 'mock-archgraph'
-            binary.write_text((FIXTURES / 'mock_archgraph.py').read_text())
+            binary = work / 'mock-boundrail'
+            binary.write_text((FIXTURES / 'mock_boundrail.py').read_text())
             binary.chmod(0o755)
             runner = {'agent': 'claude', 'model': 'mock', 'argv': [sys.executable,
                 str((FIXTURES / 'mock_runner.py').resolve()), '--model', '{model}', '--prompt', '{prompt}']}
@@ -167,8 +167,8 @@ class HarnessTests(unittest.TestCase):
             root = work / 'source'
             root.mkdir()
             self.fixture(root)
-            binary = work / 'mock-archgraph'
-            binary.write_text((FIXTURES / 'mock_archgraph.py').read_text())
+            binary = work / 'mock-boundrail'
+            binary.write_text((FIXTURES / 'mock_boundrail.py').read_text())
             binary.chmod(0o755)
             runner = {'agent': 'claude', 'model': 'mock', 'argv': [sys.executable,
                 str((FIXTURES / 'mock_runner.py').resolve()), '--model', '{model}', '--prompt', '{prompt}']}
@@ -191,8 +191,8 @@ class HarnessTests(unittest.TestCase):
             root = work / 'source'
             root.mkdir()
             self.fixture(root)
-            binary = work / 'mock-archgraph'
-            binary.write_text((FIXTURES / 'mock_archgraph.py').read_text())
+            binary = work / 'mock-boundrail'
+            binary.write_text((FIXTURES / 'mock_boundrail.py').read_text())
             binary.chmod(0o755)
             codex = work / 'mock-codex'
             codex.write_text((FIXTURES / 'mock_codex_server.py').read_text())
@@ -201,7 +201,7 @@ class HarnessTests(unittest.TestCase):
             auth.write_bytes(b'private auth fixture never parsed')
             auth.chmod(0o600)
             runner = {'agent': 'codex', 'adapter': 'codex-app-server', 'model': 'MOCK-model',
-                'trust_reviewed_archgraph': True, 'codex': str(codex), 'auth_file': str(auth)}
+                'trust_reviewed_boundrail': True, 'codex': str(codex), 'auth_file': str(auth)}
             path, data = bench.benchmark(root, [{'id': 'safe', 'prompt': 'safe task',
                 'area': ['src/**'], 'tests': [sys.executable, '-c',
                     'import os; from pathlib import Path; assert not (Path(os.environ["CODEX_HOME"]) / "auth.json").exists()']}], runner,
@@ -228,8 +228,8 @@ class HarnessTests(unittest.TestCase):
             root = work / 'source'
             root.mkdir()
             self.fixture(root)
-            binary = work / 'mock-archgraph'
-            binary.write_text((FIXTURES / 'mock_archgraph.py').read_text())
+            binary = work / 'mock-boundrail'
+            binary.write_text((FIXTURES / 'mock_boundrail.py').read_text())
             binary.chmod(0o755)
             runner = {'agent': 'claude', 'model': 'mock', 'env': {
                 'CODEX_API_KEY': 'fixture-key', 'CUSTOM_RUNNER_SECRET': 'private-fixture-value'},
@@ -256,8 +256,8 @@ class HarnessTests(unittest.TestCase):
             root = work / 'source'
             root.mkdir()
             self.fixture(root)
-            binary = work / 'mock-archgraph'
-            binary.write_text((FIXTURES / 'mock_archgraph.py').read_text())
+            binary = work / 'mock-boundrail'
+            binary.write_text((FIXTURES / 'mock_boundrail.py').read_text())
             binary.chmod(0o755)
             runner = {'agent': 'claude', 'model': 'mock', 'argv': [sys.executable,
                 str((FIXTURES / 'mock_runner.py').resolve()), '--model', '{model}', '--prompt', '{prompt}']}
@@ -283,10 +283,10 @@ class HarnessTests(unittest.TestCase):
                 external.mkdir()
                 outside = external / target
                 outside.parent.mkdir(parents=True, exist_ok=True)
-                outside.write_bytes(b'<!-- archgraph:start -->external<!-- archgraph:end -->\x00')
+                outside.write_bytes(b'<!-- boundrail:start -->external<!-- boundrail:end -->\x00')
                 (root / parent).symlink_to(external, target_is_directory=True)
                 owned = root / 'AGENTS.md'
-                owned.write_bytes(b'before<!-- archgraph:start -->owned<!-- archgraph:end -->after')
+                owned.write_bytes(b'before<!-- boundrail:start -->owned<!-- boundrail:end -->after')
                 before = {path.relative_to(work): path.read_bytes()
                           for path in (owned, outside)}
                 with self.assertRaisesRegex(ValueError, 'symlink'):

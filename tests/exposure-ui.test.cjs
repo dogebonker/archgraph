@@ -114,7 +114,7 @@ test('ring integrates camera bounds, hit testing, search, selection and module c
     ['function bounds(k)', 'function fitK()', /externalPositions/],
     ['function hit(sx', '/* ---------- tooltip', /externalHit/],
     ['function find(q)', '$("find").addEventListener', /externalNodes/],
-    ['function showPanel()', '/*__ARCHGRAPH_PREVIEW_UI__*/', /externalPanel/],
+    ['function showPanel()', '/*__BOUNDRAIL_PREVIEW_UI__*/', /externalPanel/],
     ['function modulePanel(i)', 'function filePanel', /externalContext\(m.id\)/],
   ]) assert.match(fragment(start, end), expected);
 });

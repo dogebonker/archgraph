@@ -1,13 +1,13 @@
 mod common;
 
-use common::{archgraph, fixture, scan, validate, write_tmp};
+use common::{boundrail, fixture, scan, validate, write_tmp};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn success(args: &[&str]) -> std::process::Output {
-    let out = archgraph(args);
+    let out = boundrail(args);
     assert!(
         out.status.success(),
         "{args:?}: {}",
@@ -96,7 +96,7 @@ fn recorded_elixir_reaches_shared_analysis_rules_and_saved_graph_commands() {
         assert!(!output.stdout.is_empty());
     }
     let (legacy, _, _) = scan(&[&args[..], &["--legacy-v1"]].concat());
-    assert_eq!(legacy["schema"], "archgraph/v1");
+    assert_eq!(legacy["schema"], "boundrail/v1");
 
     let (included, _, _) = scan(&[&args[..], &["--include-tests"]].concat());
     assert_eq!(included["files"].as_array().unwrap().len(), 7);
@@ -115,7 +115,7 @@ fn recorded_elixir_reaches_shared_analysis_rules_and_saved_graph_commands() {
         "version: 1\npkg-category:\n  runtime: [elixir]\nforbid:\n  - {from: mix.exs, to: 'category:runtime'}\n",
     );
     let checked = write_tmp("elixir-basic-checked.json", "");
-    let output = archgraph(&["check", &graph, "--rules", &package_rules, "-o", &checked]);
+    let output = boundrail(&["check", &graph, "--rules", &package_rules, "-o", &checked]);
     assert_eq!(
         output.status.code(),
         Some(1),
@@ -143,7 +143,7 @@ fn git(root: &Path, args: &[&str]) {
         .arg(root)
         .args([
             "-c",
-            "user.name=archgraph-test",
+            "user.name=boundrail-test",
             "-c",
             "user.email=test@example.invalid",
             "-c",
@@ -177,7 +177,7 @@ fn copy_tree(from: &Path, to: &Path) {
 #[test]
 #[ignore = "needs Elixir 1.14+ / OTP 25+; run with --include-ignored"]
 fn live_elixir_matches_recorded_and_history_never_evaluates_the_project() {
-    let elixir = std::env::var("ARCHGRAPH_ELIXIR").unwrap_or_else(|_| "elixir".into());
+    let elixir = std::env::var("BOUNDRAIL_ELIXIR").unwrap_or_else(|_| "elixir".into());
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("elixir-live-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);

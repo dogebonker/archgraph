@@ -43,18 +43,18 @@ inputs:
     description: Commit to compare HEAD against (default the pull request's base commit on pull_request)
     default: ""
   artifact-name:
-    description: Name of the uploaded artifact with archgraph.html and archgraph.json; set a unique one per matrix job
+    description: Name of the uploaded artifact with boundrail.html and boundrail.json; set a unique one per matrix job
     default: boundrail-${{ github.job }}
 
 outputs:
   json:
-    description: Path of archgraph.json, the HEAD scan document
+    description: Path of boundrail.json, the HEAD scan document
     value: ${{ steps.boundrail.outputs.json }}
   html:
-    description: Path of archgraph.html, the HEAD graph page
+    description: Path of boundrail.html, the HEAD graph page
     value: ${{ steps.boundrail.outputs.html }}
   sarif:
-    description: Path of archgraph.sarif, the HEAD forbidden imports and broken claims for github/codeql-action/upload-sarif; empty without rules
+    description: Path of boundrail.sarif, the HEAD forbidden imports and broken claims for github/codeql-action/upload-sarif; empty without rules
     value: ${{ steps.boundrail.outputs.sarif }}
   forbidden:
     description: Number of forbidden imports at HEAD
@@ -93,5 +93,5 @@ runs:
       with:
         name: ${{ inputs.artifact-name }}
         path: |
-          ${{ runner.temp }}/boundrail/head/archgraph.json
-          ${{ runner.temp }}/boundrail/head/archgraph.html
+          ${{ runner.temp }}/boundrail/head/boundrail.json
+          ${{ runner.temp }}/boundrail/head/boundrail.html

@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path, PurePosixPath
 
 REPO = Path(__file__).resolve().parents[1]
-WORK = Path("/private/tmp/archgraph-context-validation")
+WORK = Path("/private/tmp/boundrail-context-validation")
 PROTOCOL = {
     "version": 1,
     "population": "First 20 showcase repositories; latest merged PRs in first 500 closed pulls returned at collection time, then descending merged_at and PR number.",
@@ -80,7 +80,7 @@ def prepare(entry):
     clone = WORK / "repos" / entry["name"]
     if not clone.exists():
         clone.parent.mkdir(parents=True, exist_ok=True)
-        cache = Path("/private/tmp/archgraph-edge-quality/repos") / entry["name"]
+        cache = Path("/private/tmp/boundrail-edge-quality/repos") / entry["name"]
         if cache.exists():
             run(["git", "clone", "--shared", "--no-checkout", cache, clone], 120)
         else:
@@ -234,7 +234,7 @@ def scan(entry, pull, binary, options):
             text=True,
             capture_output=True,
             timeout=600,
-            env=dict(os.environ, ARCHGRAPH_TYPESCRIPT=options.typescript),
+            env=dict(os.environ, BOUNDRAIL_TYPESCRIPT=options.typescript),
         )
         (case / "scan.log").write_text(result.stdout + result.stderr)
         if result.returncode:
@@ -638,14 +638,14 @@ def main():
     p.add_argument("--binary", type=Path, default=REPO / "target/release/boundrail")
     p.add_argument(
         "--depcruise",
-        default="/private/tmp/archgraph-impact-collectors/node_modules/.bin/depcruise",
+        default="/private/tmp/boundrail-impact-collectors/node_modules/.bin/depcruise",
     )
     p.add_argument(
-        "--python", default="/private/tmp/archgraph-impact-python/bin/python"
+        "--python", default="/private/tmp/boundrail-impact-python/bin/python"
     )
     p.add_argument(
         "--typescript",
-        default="/private/tmp/archgraph-impact-collectors/node_modules/typescript/package.json",
+        default="/private/tmp/boundrail-impact-collectors/node_modules/typescript/package.json",
     )
     p.add_argument("--jobs", type=int, default=3)
     p.add_argument("--cases", type=Path, default=REPO / "benchmarks/context-prs.json")

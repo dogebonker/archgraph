@@ -1,5 +1,5 @@
 {
-  "schema": "archgraph/v1.2",
+  "schema": "boundrail/v1.2",
   "kind": "services",
   "source": {
     "collector": "declarative",

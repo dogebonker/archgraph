@@ -9,7 +9,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
 import javax.tools.*;
 
-class ArchgraphJava {
+class BoundrailJava {
     static String quote(String value) {
         StringBuilder out = new StringBuilder("\"");
         for (char c : value.toCharArray()) {

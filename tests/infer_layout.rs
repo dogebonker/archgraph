@@ -65,7 +65,7 @@ fn success(output: &Output) {
 
 #[test]
 fn printed_draft_is_valid_and_checks_both_schemas_without_writing() {
-    for schema in ["archgraph/v1", "archgraph/v1.1"] {
+    for schema in ["boundrail/v1", "boundrail/v1.1"] {
         let scratch = Scratch::new();
         let paths = [
             "entry/main.ts",
@@ -131,7 +131,7 @@ fn printed_draft_is_valid_and_checks_both_schemas_without_writing() {
 #[test]
 fn apply_creates_default_or_explicit_path_and_never_overwrites() {
     let scratch = Scratch::new();
-    let graph = scratch.graph("archgraph/v1.1", &["app/main.ts".into()], vec![]);
+    let graph = scratch.graph("boundrail/v1.1", &["app/main.ts".into()], vec![]);
     let graph = graph.to_str().unwrap();
     let output = scratch.run(&["infer-layout", graph, "--apply"]);
     success(&output);
@@ -161,7 +161,7 @@ fn apply_creates_default_or_explicit_path_and_never_overwrites() {
 #[test]
 fn invalid_input_and_thresholds_cannot_create_a_layout() {
     let scratch = Scratch::new();
-    let graph = scratch.graph("archgraph/v1.1", &["app/main.ts".into()], vec![]);
+    let graph = scratch.graph("boundrail/v1.1", &["app/main.ts".into()], vec![]);
     let graph = graph.to_str().unwrap();
     for arguments in [
         vec!["--min-potential-edges", "0"],
@@ -175,7 +175,7 @@ fn invalid_input_and_thresholds_cannot_create_a_layout() {
         assert_eq!(output.status.code(), Some(2));
         assert!(!scratch.0.join("layout.yaml").exists());
     }
-    fs::write(graph, "{\"schema\":\"archgraph/v999\"}").unwrap();
+    fs::write(graph, "{\"schema\":\"boundrail/v999\"}").unwrap();
     let output = scratch.run(&["infer-layout", graph, "--apply"]);
     assert_eq!(output.status.code(), Some(2));
     assert!(!scratch.0.join("layout.yaml").exists());
@@ -195,7 +195,7 @@ fn sparse_proposal_reports_and_checks_written_import_violations() {
         edge["original_to"] = json!("adapters-out/index.ts");
         edge["line"] = json!(11 + i);
     }
-    let graph = scratch.graph("archgraph/v1.1", &paths, edges);
+    let graph = scratch.graph("boundrail/v1.1", &paths, edges);
     let output = scratch.run(&["infer-layout", graph.to_str().unwrap()]);
     success(&output);
     let yaml = String::from_utf8(output.stdout).unwrap();
@@ -256,7 +256,7 @@ fn drafted_slice_claim_checks_as_holding_in_most_slices() {
         ));
     }
     edges.push(edge("internal/e/service.go", "internal/e/handler.go"));
-    let graph = scratch.graph("archgraph/v1.1", &paths, edges);
+    let graph = scratch.graph("boundrail/v1.1", &paths, edges);
     let output = scratch.run(&["infer-layout", graph.to_str().unwrap()]);
     success(&output);
     let draft = scratch.0.join("draft.yaml");
@@ -283,7 +283,7 @@ fn type_back_edge_makes_cycle_unresolved_even_without_all_kinds_flag() {
     let mut back = edge("domain/model.ts", "app/main.ts");
     back["kind"] = json!("type");
     let graph = scratch.graph(
-        "archgraph/v1.1",
+        "boundrail/v1.1",
         &["app/main.ts".into(), "domain/model.ts".into()],
         vec![edge("app/main.ts", "domain/model.ts"), back],
     );

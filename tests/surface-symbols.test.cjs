@@ -7,7 +7,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { collect } = require('../src/symbols/typescript.cjs');
 function fixture(files) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'archgraph-symbols-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'boundrail-symbols-'));
   for (const [file, contents] of Object.entries(files)) { fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true }); fs.writeFileSync(path.join(root, file), contents); }
   return root;
 }
@@ -50,7 +50,7 @@ test('Python external re-exports and mutated exports remain explicit coverage ga
   assert.ok(result.limitations.some(message => message.includes('external')));
   assert.ok(result.limitations.some(message => message.includes('Mutated')));
 });
-let compilerPath = process.env.ARCHGRAPH_TYPESCRIPT;
+let compilerPath = process.env.BOUNDRAIL_TYPESCRIPT;
 if (!compilerPath) { try { compilerPath = require.resolve('typescript/package.json'); } catch {} }
 test('TypeScript resolves paths, aliases, star and default re-exports', { skip: !compilerPath || !fs.existsSync(compilerPath) }, () => {
   const files = {
@@ -98,7 +98,7 @@ test('TypeScript CommonJS property exports explicitly withhold completeness', { 
 test('Explicit TypeScript tool path never falls back to repository compiler code', () => {
   const root = fixture({ 'node_modules/typescript/index.js': 'throw new Error("executed repository compiler");', 'api.ts': 'export class Foo {}' });
   try {
-    assert.throws(() => collect({ root, files: ['api.ts'], depcruise: path.join(os.tmpdir(), 'nonexistent-archgraph-tool') }), /TypeScript compiler API unavailable/);
+    assert.throws(() => collect({ root, files: ['api.ts'], depcruise: path.join(os.tmpdir(), 'nonexistent-boundrail-tool') }), /TypeScript compiler API unavailable/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 test('Python package attributes take precedence over same-name submodules', () => {
