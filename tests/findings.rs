@@ -1,6 +1,6 @@
 mod common;
 
-use common::{archgraph, layout, scan_file};
+use common::{boundrail, layout, scan_file};
 use serde_json::{Value, json};
 
 /// `{ cohesion, ca, ce, instability }` of one module in a Summary.
@@ -153,7 +153,7 @@ fn simulate_cli_destination_decides_layer() {
     assert_eq!(
         common::without_import_metadata(&sim),
         json!({
-            "schema": "archgraph/v1.2",
+            "schema": "boundrail/v1.2",
             "kind": "simulation",
             "move": { "file": "src/adapters/out/queue.ts", "to": "src/adapters/in/queue.ts",
                       "module": "adapters/in" },
@@ -254,7 +254,7 @@ fn simulate_cli_destination_decides_layer() {
         )]
     );
 
-    let out = archgraph(&["simulate", &plain, "--move", "src/nope.ts", "src/x.ts"]);
+    let out = boundrail(&["simulate", &plain, "--move", "src/nope.ts", "src/x.ts"]);
     assert_eq!(out.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&out.stderr).contains("src/nope.ts"));
 }

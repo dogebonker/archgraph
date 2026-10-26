@@ -59,11 +59,11 @@ jobs:
       - name: Verify symbol collectors
         run: node --test tests/impact-typescript.test.cjs tests/surface-symbols.test.cjs
         env:
-          ARCHGRAPH_TYPESCRIPT: ${{ runner.temp }}/tools/node_modules/typescript/package.json
+          BOUNDRAIL_TYPESCRIPT: ${{ runner.temp }}/tools/node_modules/typescript/package.json
       - run: cargo test --locked --test live -- --ignored
         env:
-          ARCHGRAPH_DEPCRUISE: ${{ runner.temp }}/tools/node_modules/.bin/depcruise
-          ARCHGRAPH_PYTHON: ${{ runner.temp }}/venv/bin/python
+          BOUNDRAIL_DEPCRUISE: ${{ runner.temp }}/tools/node_modules/.bin/depcruise
+          BOUNDRAIL_PYTHON: ${{ runner.temp }}/venv/bin/python
       - run: cargo test --locked --test symbols --test surface_go --test go_resolution --test elixir --test elixir_collector --test native_go -- --include-ignored
 
   binary:
@@ -108,7 +108,7 @@ jobs:
       - run: node --test
         working-directory: npm
         env:
-          ARCHGRAPH_TEST_BINARY: ${{ runner.temp }}/bin/boundrail
+          BOUNDRAIL_TEST_BINARY: ${{ runner.temp }}/bin/boundrail
       - name: install.sh against a fake release on a local server
         run: |
           mkdir "$RUNNER_TEMP/install-test"

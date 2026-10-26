@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Builds the archgraph showcase: for every entry of repos.json, a shallow fetch of its pinned
-# commit, an archgraph scan of its `path`, the rendered report and a stats row in index.json, then
+# Builds the boundrail showcase: for every entry of repos.json, a shallow fetch of its pinned
+# commit, an boundrail scan of its `path`, the rendered report and a stats row in index.json, then
 # index.html from index.template.html.
 #
 #   showcase/build.sh [--only <name>] [--work <dir>] [--out <dir>] [--keep] [--compare <dir>]
 #
-#   ARCHGRAPH            archgraph binary (default: target/release/boundrail of this repository)
-#   ARCHGRAPH_DEPCRUISE  dependency-cruiser executable for TypeScript entries (required for them)
-#   ARCHGRAPH_PYTHON     Python with grimp 3.17 for Python entries (default: python3)
-#   ARCHGRAPH_GO         Go 1.27.1 for Go entries (default: go)
+#   BOUNDRAIL            boundrail binary (default: target/release/boundrail of this repository)
+#   BOUNDRAIL_DEPCRUISE  dependency-cruiser executable for TypeScript entries (required for them)
+#   BOUNDRAIL_PYTHON     Python with grimp 3.17 for Python entries (default: python3)
+#   BOUNDRAIL_GO         Go 1.27.1 for Go entries (default: go)
 #
 # --compare <dir> then compares the config, files, edges, cycles, summary and findings of every
-# scan built with <dir>/<name>.json, an earlier build's output (by another archgraph, say), and
+# scan built with <dir>/<name>.json, an earlier build's output (by another boundrail, say), and
 # exits 1 when any differs or is missing there.
 #
 # Nothing is installed into the targets. Every entry is validated first; a bad one stops the build
@@ -23,11 +23,11 @@ set -euo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 manifest=$here/repos.json
 template=$here/index.template.html
-archgraph=${ARCHGRAPH:-$here/../target/release/boundrail}
-python=${ARCHGRAPH_PYTHON:-python3}
-depcruise=${ARCHGRAPH_DEPCRUISE:-}
-go=${ARCHGRAPH_GO:-go}
-work=${TMPDIR:-/tmp}/archgraph-showcase
+boundrail=${BOUNDRAIL:-$here/../target/release/boundrail}
+python=${BOUNDRAIL_PYTHON:-python3}
+depcruise=${BOUNDRAIL_DEPCRUISE:-}
+go=${BOUNDRAIL_GO:-go}
+work=${TMPDIR:-/tmp}/boundrail-showcase
 out=$here/out
 only=
 keep=
@@ -52,7 +52,7 @@ done
 
 command -v jq >/dev/null || die "jq is required"
 command -v git >/dev/null || die "git is required"
-[[ -x $archgraph ]] || die "no archgraph binary at $archgraph (cargo build --release, or set ARCHGRAPH)"
+[[ -x $boundrail ]] || die "no boundrail binary at $boundrail (cargo build --release, or set BOUNDRAIL)"
 work=${work%/}
 mkdir -p "$work/.stats" "$out"
 work=$(cd "$work" && pwd)
@@ -62,7 +62,7 @@ out=$(cd "$out" && pwd)
 stats=$work/.stats
 
 # Every entry is checked before anything runs: names become file names and paths, repo is
-# fetched and flags reach archgraph. Any bad entry stops the build.
+# fetched and flags reach boundrail. Any bad entry stops the build.
 validate_manifest() {
   local entry name repo i
   local -a flags
@@ -137,7 +137,7 @@ build_one() {
   local -a collector=()
   case $language in
     typescript)
-      [[ -n $depcruise ]] || { echo "ARCHGRAPH_DEPCRUISE is not set"; return 1; }
+      [[ -n $depcruise ]] || { echo "BOUNDRAIL_DEPCRUISE is not set"; return 1; }
       collector=(--depcruise "$depcruise") ;;
     python) collector=(--python "$python") ;;
     go) collector=(--go "$go") ;;
@@ -147,14 +147,14 @@ build_one() {
   # EPOCHREALTIME (bash 5) uses the locale's decimal separator.
   start=${EPOCHREALTIME:-$(date +%s)}
   start=${start/,/.}
-  if ! "$archgraph" scan "$dir/$path" --language "$language" "${collector[@]}" "${flags[@]}" \
+  if ! "$boundrail" scan "$dir/$path" --language "$language" "${collector[@]}" "${flags[@]}" \
     -o "$out/$name.json" >>"$log" 2>&1; then
     echo "scan failed: $(grep -v '^warning:' "$log" | tail -n 3 | tr '\n' ' ')"
     return 1
   fi
   end=${EPOCHREALTIME:-$(date +%s)}
   end=${end/,/.}
-  if ! "$archgraph" render "$out/$name.json" -o "$out/$name.html" >>"$log" 2>&1; then
+  if ! "$boundrail" render "$out/$name.json" -o "$out/$name.html" >>"$log" 2>&1; then
     echo "render failed: $(tail -n 3 "$log" | tr '\n' ' ')"
     return 1
   fi
@@ -168,7 +168,7 @@ build_one() {
     import_resolution: .import_resolution,
     external_packages: ((.external_nodes // []) | length),
     collector: { name: .source.collector.name, version: .source.collector.version },
-    archgraph: .tool.version,
+    boundrail: .tool.version,
     depth: .config.depth,
     source_root: .config.source_root,
     module_cycles: ([.cycles[] | select(.level == "module")] | length),
@@ -225,11 +225,11 @@ while IFS= read -r entry_name; do
 done < <(jq -r '.[].name' "$manifest") | jq -s --slurpfile m "$manifest" \
   --arg generated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --arg commit "$(git -C "$here/.." rev-parse HEAD 2>/dev/null || echo unknown)" \
-  --arg version "$("$archgraph" --version | awk '{ print $2 }')" '
+  --arg version "$("$boundrail" --version | awk '{ print $2 }')" '
   (map({ (.name): . }) | add) as $r
   | {
       generated_at: $generated,
-      archgraph: { version: $version, commit: $commit },
+      boundrail: { version: $version, commit: $commit },
       collectors: ([.[].stats.collector | select(.)] | unique),
       cochange: false,
       repos: [$m[0][] | . + $r[.name]]
@@ -242,7 +242,7 @@ jq -rn --rawfile tpl "$template" --slurpfile idx "$out/index.json" \
 
 echo "wrote $out/index.html" >&2
 
-# What a change to archgraph may not move: config, files, edges, cycles, summary and findings.
+# What a change to boundrail may not move: config, files, edges, cycles, summary and findings.
 # Left out: schema, kind, tool, source (collector, git, generated_at), package_entries, modules,
 # module_edges and cochange.
 if [[ -n $compare ]]; then

@@ -49,8 +49,8 @@ jobs:
       - name: Build the showcase
         run: showcase/build.sh --work "$RUNNER_TEMP/work" --out site
         env:
-          ARCHGRAPH_DEPCRUISE: ${{ runner.temp }}/tools/node_modules/.bin/depcruise
-          ARCHGRAPH_PYTHON: ${{ runner.temp }}/venv/bin/python
+          BOUNDRAIL_DEPCRUISE: ${{ runner.temp }}/tools/node_modules/.bin/depcruise
+          BOUNDRAIL_PYTHON: ${{ runner.temp }}/venv/bin/python
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site

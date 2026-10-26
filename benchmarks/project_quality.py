@@ -134,7 +134,7 @@ def render_report(result):
     lines = ['# Native input-quality regression comparison', '',
              'Same actual working trees; no source edits or recipes applied. Frozen binary copies identify each engine. Times include native collection, Git co-change/hotspot work and analysis; repeated scans alternate engine order and benefit from OS caches.', '',
              '**Grouping:** MoneyLust backend uses old `--depth 3` versus new `--depth 2` because Rust now normalizes the `src/` root. A separate saved-graph render applies identical old physical-folder module rules to both graphs; this comparison layout is a measurement device, not an approved architecture policy.', '',
-             'Raw graphs, source paths, recipe buffers and logs remain in the private artifact directory. Source/index proofs cover Git-visible tracked and nonignored untracked files, modes and symlinks; `.archgraph/`, ignored install/build artifacts and submodule contents are outside the reused preservation check.', '',
+             'Raw graphs, source paths, recipe buffers and logs remain in the private artifact directory. Source/index proofs cover Git-visible tracked and nonignored untracked files, modes and symlinks; `.boundrail/`, ignored install/build artifacts and submodule contents are outside the reused preservation check.', '',
              f"Before binary SHA-256: `{result['binaries']['before']}`. After: `{result['binaries']['after']}`.", '',
              '| Scan | Engine | Files | Modules | Internal edges | Resolved % | Module SCCs / largest | Deep imports | Median seconds (min–max) |',
              '| --- | --- | ---: | ---: | ---: | ---: | --- | ---: | --- |']
@@ -179,7 +179,7 @@ def compare(args):
         raise ValueError('--out must have private permissions (chmod 700)')
     binaries = {}
     for engine in ['before', 'after']:
-        target = out / f'{engine}-archgraph'
+        target = out / f'{engine}-boundrail'
         shutil.copyfile(getattr(args, engine).resolve(), target)
         target.chmod(0o500)
         binaries[engine] = target

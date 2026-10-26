@@ -4,7 +4,7 @@ use std::process::Output;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use boundrail::services::{self, Manifest};
-use common::{archgraph, validate, write_tmp};
+use common::{boundrail, validate, write_tmp};
 use serde_json::{Value, json};
 
 fn call(operation: &str, line: usize) -> Value {
@@ -43,7 +43,7 @@ fn run(before: &Value, after: &Value, extra: &[&str]) -> Output {
         &before.to_string(),
     );
     let new = write_tmp(&format!("service-diff/{next}-new.json"), &after.to_string());
-    archgraph(&[&["diff", &old, &new], extra].concat())
+    boundrail(&[&["diff", &old, &new], extra].concat())
 }
 
 fn result(output: &Output, code: i32) -> Value {
@@ -187,7 +187,7 @@ fn gate_checks_calls_and_resources_independently_and_before_brief_output() {
     let output = run(&old, &new, &["--brief", "--fail-on", "new-forbidden"]);
     assert_eq!(output.status.code(), Some(1));
     let brief: Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(brief["schema"], "archgraph/brief/v1");
+    assert_eq!(brief["schema"], "boundrail/brief/v1");
     assert!(!brief["omitted"].as_object().unwrap().is_empty());
 }
 

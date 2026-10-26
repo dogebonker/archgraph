@@ -186,7 +186,7 @@ test('showcase distinguishes occurrence accounting from legacy collector gaps', 
   const elements=new Map();
   const run=stats=>{
     elements.clear();
-    const data={archgraph:{version:'test',commit:'a'.repeat(40)},collectors:[],generated_at:'test',repos:[{name:'go-example',repo:'https://github.com/org/repo',commit:'b'.repeat(40),path:'.',language:'go',status:'ok',stats}]};
+    const data={boundrail:{version:'test',commit:'a'.repeat(40)},collectors:[],generated_at:'test',repos:[{name:'go-example',repo:'https://github.com/org/repo',commit:'b'.repeat(40),path:'.',language:'go',status:'ok',stats}]};
     const payload=node();payload.textContent=JSON.stringify(data);elements.set('data',payload);
     const ctx=vm.createContext({document:{createElement:node,getElementById:id=>{if(!elements.has(id))elements.set(id,node());return elements.get(id);}}});
     vm.runInContext(code.replace('{{INDEX}}',JSON.stringify(data)),ctx);

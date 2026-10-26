@@ -30,9 +30,9 @@ class ContextHookTests(unittest.TestCase):
                                    {"tier": "must-read", "path": "a.ts", "reason": "explicit seed",
                                     "tokens": 6, "mode": "body"}],
                        "budget": 40000, "used_tokens": 16, "limitations": ["estimates"]}
-        self.environment = mock.patch.dict(os.environ, {"ARCHGRAPH_BINARY": "/opt/boundrail",
-                                                       "ARCHGRAPH_CONTEXT_BUDGET": "40k",
-                                                       "ARCHGRAPH_CONTEXT_FILES": "[]"})
+        self.environment = mock.patch.dict(os.environ, {"BOUNDRAIL_BINARY": "/opt/boundrail",
+                                                       "BOUNDRAIL_CONTEXT_BUDGET": "40k",
+                                                       "BOUNDRAIL_CONTEXT_FILES": "[]"})
         self.environment.start()
         self.addCleanup(self.environment.stop)
         self.collect = mock.patch.object(HOOK.subprocess, "run", return_value=subprocess.CompletedProcess(
@@ -50,10 +50,10 @@ class ContextHookTests(unittest.TestCase):
 
     def manifest(self, client="claude", event=None):
         _, session = HOOK.workspace(client, event or self.event())
-        return json.loads((self.root / ".archgraph" / "context-hooks" / session / "manifest.json").read_text())
+        return json.loads((self.root / ".boundrail" / "context-hooks" / session / "manifest.json").read_text())
 
     def test_claude_protocol_argv_and_immutable_artifacts(self):
-        with mock.patch.dict(os.environ, {"ARCHGRAPH_CONTEXT_FILES": '["a.ts", "-odd.ts"]'}):
+        with mock.patch.dict(os.environ, {"BOUNDRAIL_CONTEXT_FILES": '["a.ts", "-odd.ts"]'}):
             result = HOOK.run("claude", self.event())
         args, options = self.process.call_args
         self.assertEqual(args[0][:2], ["/opt/boundrail", "context"])
@@ -90,13 +90,13 @@ class ContextHookTests(unittest.TestCase):
 
     def test_default_command_is_boundrail_and_legacy_state_path_is_preserved(self):
         with mock.patch.dict(os.environ, {}):
-            os.environ.pop("ARCHGRAPH_BINARY", None)
-            os.environ.pop("ARCHGRAPH_CONTEXT_GRAPH", None)
+            os.environ.pop("BOUNDRAIL_BINARY", None)
+            os.environ.pop("BOUNDRAIL_CONTEXT_GRAPH", None)
             HOOK.run("claude", self.event())
         args, _ = self.process.call_args
         self.assertEqual(args[0][0], "boundrail")
         self.assertEqual(args[0][args[0].index("--graph") + 1],
-                         str(self.root / ".archgraph" / "archgraph.json"))
+                         str(self.root / ".boundrail" / "boundrail.json"))
         self.assertEqual(self.manifest()["status"], "ready")
 
     def test_failure_and_timeout_invalidate_only_current_session(self):
@@ -117,7 +117,7 @@ class ContextHookTests(unittest.TestCase):
 
     def test_invalid_seed_environment_invalidates_previous_report(self):
         HOOK.run("claude", self.event())
-        with mock.patch.dict(os.environ, {"ARCHGRAPH_CONTEXT_FILES": "not json"}), \
+        with mock.patch.dict(os.environ, {"BOUNDRAIL_CONTEXT_FILES": "not json"}), \
                 mock.patch("sys.stderr", io.StringIO()):
             self.assertEqual(HOOK.run("claude", self.event()), {})
         self.assertEqual(self.manifest()["status"], "unavailable")
@@ -137,7 +137,7 @@ class ContextHookTests(unittest.TestCase):
     def test_symlink_artifact_directory_cannot_escape(self):
         outside = self.root / "outside"
         outside.mkdir()
-        (self.root / ".archgraph").symlink_to(outside, target_is_directory=True)
+        (self.root / ".boundrail").symlink_to(outside, target_is_directory=True)
         with self.assertRaises(OSError):
             HOOK.run("claude", self.event())
         self.assertEqual(list(outside.iterdir()), [])
@@ -145,7 +145,7 @@ class ContextHookTests(unittest.TestCase):
     def test_manifest_symlink_is_replaced_without_touching_target(self):
         HOOK.run("claude", self.event())
         _, session = HOOK.workspace("claude", self.event())
-        manifest = self.root / ".archgraph" / "context-hooks" / session / "manifest.json"
+        manifest = self.root / ".boundrail" / "context-hooks" / session / "manifest.json"
         target = self.root / "untouched.json"
         target.write_text("untouched")
         manifest.unlink()
@@ -197,7 +197,7 @@ class ContextHookTests(unittest.TestCase):
                           + "pathlib.Path(" + repr(str(trace)) + ").write_text(json.dumps(sys.argv))\n"
                           + "print(" + repr(json.dumps(self.report)) + ")\n")
         binary.chmod(0o700)
-        environment = dict(os.environ, ARCHGRAPH_BINARY=str(binary), ARCHGRAPH_CONTEXT_FILES='["a.ts"]')
+        environment = dict(os.environ, BOUNDRAIL_BINARY=str(binary), BOUNDRAIL_CONTEXT_FILES='["a.ts"]')
         for client in ("claude", "cursor"):
             completed = subprocess.run([sys.executable, str(SCRIPT), client],
                                        input=json.dumps(self.event(), ensure_ascii=False), text=True,

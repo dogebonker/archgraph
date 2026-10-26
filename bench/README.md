@@ -9,14 +9,14 @@ tested with a mock architecture CLI and mock agent. The [first real results](res
 retain all 24 public synthetic runs. No performance claims come from mocks.
 
 Run `python3 -B bench/run.py --repo /path/to/repo --tasks tasks.json --runner runner.json
---archgraph /absolute/path/to/archgraph --output bench/results`. Three repetitions are the
+--boundrail /absolute/path/to/boundrail --output bench/results`. Three repetitions are the
 default and minimum for a published comparison. Use `--repeats 1` only for a smoke test.
 Use `--package NAME` for a monorepo requiring explicit package selection (for example
 `--package pydantic`). The same selection reaches hook installation, final graph comparison
 and receipt verification, and is recorded in report JSON/Markdown.
 The source must have a clean tracked/untracked worktree. Each run uses a private local
 clone with no hard links; the source worktree and index are never changed. Setup and
-private diff staging respect Git ignore rules and exclude `.archgraph` with an index-only
+private diff staging respect Git ignore rules and exclude `.boundrail` with an index-only
 restore, including repositories that ignore that directory. Temporary
 clones are deleted; command stdout/stderr and measurements remain in the raw report.
 
@@ -50,8 +50,8 @@ runners remain activation-unknown and excluded from efficacy means.
 Configuration paths are checked before cleanup; symlink parents/targets are rejected before any mutation.
 Both arms remove repository hook configs, every root/nested project `.codex` directory
 (including config.toml, MCP declarations, skills and execution policies), and previously
-generated archgraph rule blocks before setup; original files remain in the source
-repo. Removed file paths and SHA-256 hashes are recorded without config values. Guarded setup requires `archgraph sync-rules` and fails visibly if it is unavailable.
+generated boundrail rule blocks before setup; original files remain in the source
+repo. Removed file paths and SHA-256 hashes are recorded without config values. Guarded setup requires `boundrail sync-rules` and fails visibly if it is unavailable.
 A local setup commit separates installation changes from the reported agent diff. Tests and final checks always run after an
 agent failure. Commands have timeouts (POSIX process groups are stopped together; Windows only stops the direct child); errors do not silently become zero violations.
 
@@ -63,7 +63,7 @@ from efficacy means; raw current-policy diagnostic results remain visible.
 The raw response preserves findings and policy notes. These counts are graph regressions,
 not a claim that every possible smell is enforced. Fires count JSONL block events (including
 repeated blocks); distinct finding IDs are also reported. Raw receipt JSON filenames/counts
-are diagnostic only. Applied recipe counts use `archgraph verify <finding_id>` without an
+are diagnostic only. Applied recipe counts use `boundrail verify <finding_id>` without an
 explicit predicate: the Rust reader validates the complete Receipt, restores its baseline,
 checks fingerprints and checks the recipe against current sources. No receipts means zero;
 any malformed, stale or failed receipt means unknown. Manual fixes are not counted.
@@ -87,7 +87,7 @@ reviewed host activation evidence. These benign tasks did not establish an effic
 ## Reviewed Codex app-server runner (0.163.0, POSIX)
 
 Runner JSON: `{"agent":"codex","adapter":"codex-app-server","model":"EXACT_MODEL",
-"trust_reviewed_archgraph":true,"auth_file":"/operator/reviewed/private/auth.json"}`.
+"trust_reviewed_boundrail":true,"auth_file":"/operator/reviewed/private/auth.json"}`.
 `codex` optionally selects an explicit Codex executable. The adapter checks
 `codex --version` equals `codex-cli 0.163.0`; its protocol was read from upstream commit
 `83086188ae0614bd882818ff1aa23f3194962012` and the generated 0.163.0 schemas. No model
@@ -107,8 +107,8 @@ The adapter starts `codex app-server --disable apps` in both arms to exclude the
 builtin codex_apps MCP transport, then initializes app-server and enables only the stable `features.hooks` flag in both
 isolated profiles, and trusts only the private clone via `config/batchWrite`
 with explicit isolated config.toml `filePath`, and inventories hooks. Guarded mode reviews
-exactly three archgraph commands, their source path, matcher, key and current hash. Only
-with `trust_reviewed_archgraph:true` does it upsert those exact `hooks.state` trusted hashes.
+exactly three boundrail commands, their source path, matcher, key and current hash. Only
+with `trust_reviewed_boundrail:true` does it upsert those exact `hooks.state` trusted hashes.
 It relists and verifies enabled/trusted handlers with unchanged hashes before starting a
 turn. Standalone use rejects remaining project Codex config/exec policies before linking
 auth or granting trust. The effective thread response must retain the requested model/cwd,

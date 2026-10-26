@@ -212,14 +212,14 @@ fn reads_legacy_graph_but_rejects_legacy_context_json_output() {
     let mut graph: Value =
         serde_json::from_slice(&fs::read(fixture.0.join("graph.json")).unwrap()).unwrap();
     boundrail::compat::v1(&mut graph).unwrap();
-    assert_eq!(graph["schema"], "archgraph/v1");
+    assert_eq!(graph["schema"], "boundrail/v1");
     fs::write(
         fixture.0.join("graph.json"),
         serde_json::to_vec(&graph).unwrap(),
     )
     .unwrap();
     let value: Value = serde_json::from_str(&success(fixture.run(&["--files", "a.ts"]))).unwrap();
-    assert_eq!(value["schema"], "archgraph/v1.2");
+    assert_eq!(value["schema"], "boundrail/v1.2");
     let output = fixture.run(&["--files", "a.ts", "--legacy-v1"]);
     assert!(!output.status.success());
     assert!(output.stdout.is_empty());

@@ -9,7 +9,7 @@ impl Fixture {
     fn new(files: &[(&str, &str)]) -> Self {
         static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let mut fixture = Self(std::env::temp_dir().join(format!(
-            "archgraph-incremental-{}-{}",
+            "boundrail-incremental-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         )));
@@ -341,7 +341,7 @@ fn typescript_session_reselects_when_new_policy_changes_options_or_ignore_files(
         comparable(update.output),
         comparable(native::typescript::collect(fixture.path(), ".", &changed, false).unwrap())
     );
-    fixture.write(".archgraphignore", "src/a.ts\n");
+    fixture.write(".boundrailignore", "src/a.ts\n");
     let changed = fixture.policy(Language::Typescript);
     let update = session.collect(&changed).unwrap();
     assert_eq!(

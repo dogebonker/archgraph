@@ -42,12 +42,12 @@ class EdgeQualityTests(unittest.TestCase):
 
     def test_runtime_edge_inventory_ignores_kind_renames(self):
         before = {
-            'schema': 'archgraph/v1',
+            'schema': 'boundrail/v1',
             'files': [{'path': 'a.ts', 'module': 'a'}, {'path': 'b.ts', 'module': 'b'}],
             'edges': [{'from': 'a.ts', 'to': 'b.ts', 'kind': 'static'},
                       {'from': 'b.ts', 'to': 'a.ts', 'kind': 'reexport'}],
         }
-        after = dict(before, schema='archgraph/v1.1', edges=[
+        after = dict(before, schema='boundrail/v1.1', edges=[
             {'from': 'a.ts', 'to': 'b.ts', 'kind': 'runtime'},
             {'from': 'b.ts', 'to': 'a.ts', 'kind': 'reexport'}])
         changes = MODULE.cycle_edge_changes({'a', 'b'}, before, after)
@@ -92,7 +92,7 @@ class EdgeQualityTests(unittest.TestCase):
         source = ('intro\n<p align="center"><sub>Next.js old caption</sub></p>\n'
                   '## Results on 20 well-known repositories\n\n'
                   '| Project | Files |\n|---|---|\n'
-                  '| [old](https://dogebonker.github.io/archgraph/next.js.html) | old |\n'
+                  '| [old](https://dogebonker.github.io/boundrail/next.js.html) | old |\n'
                   '\n## Keep this section\nunchanged\n')
         entry = {'name': 'next.js', 'repo': 'https://github.com/vercel/next.js',
                  'path': 'packages/next', 'commit': 'a' * 40}
@@ -117,7 +117,7 @@ class EdgeQualityTests(unittest.TestCase):
             self.assertFalse((root / 'README.md').exists())
 
     def test_transition_reasons_use_new_edge_kind_and_added_targets(self):
-        before = {'schema': 'archgraph/v1.1',
+        before = {'schema': 'boundrail/v1.1',
                   'files': [{'path': 'a', 'module': 'one'}, {'path': 'b', 'module': 'two'}],
                   'edges': [{'from': 'a', 'to': 'b', 'kind': 'runtime'}]}
         after = dict(before, edges=[{'from': 'a', 'to': 'b', 'kind': 'type'},

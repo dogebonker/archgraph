@@ -211,7 +211,7 @@ fn threshold_config_defaults_ranges_and_typos_are_checked() {
     ] {
         assert!(thresholds.validate().is_err());
     }
-    let path = std::env::temp_dir().join(format!("archgraph-grabbag-{}.yaml", std::process::id()));
+    let path = std::env::temp_dir().join(format!("boundrail-grabbag-{}.yaml", std::process::id()));
     std::fs::write(&path, "version: 1\ngrabbag: {fan_in_min: 3}").unwrap();
     boundrail::rules::load(&path).unwrap();
     std::fs::write(&path, "version: 1\ngrabbag: {fan_in_mni: 3}").unwrap();

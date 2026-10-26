@@ -22,7 +22,7 @@ pub(super) fn project(value: &Value) -> Value {
         })
         .collect();
     json!({
-        "schema": "archgraph/brief/v1",
+        "schema": "boundrail/brief/v1",
         "kind": value.get("kind").cloned().unwrap_or(Value::Null),
         "result": result,
         "counts": counts,

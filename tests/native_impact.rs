@@ -27,7 +27,7 @@ fn native_impact_and_saved_native_graph_never_run_node_or_prepare_unused_collect
             .arg(root)
             .args([
                 "-c",
-                "user.name=archgraph",
+                "user.name=boundrail",
                 "-c",
                 "user.email=test@example.invalid",
                 "-c",
@@ -63,7 +63,7 @@ fn native_impact_and_saved_native_graph_never_run_node_or_prepare_unused_collect
     )
     .unwrap();
     let graph = common::write_tmp("native-impact-graphs/head.json", "");
-    let output = common::archgraph(&[
+    let output = common::boundrail(&[
         "scan",
         root.to_str().unwrap(),
         "--engine",

@@ -17,15 +17,15 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'boundrail-cli-test-'));
 test.after(() => fs.rmSync(TMP, { recursive: true, force: true }));
 const tmp = (name) => fs.mkdtempSync(path.join(TMP, `${name}-`));
 
-/** The boundrail binary built by cargo: ARCHGRAPH_TEST_BINARY, else target/release, else target/debug. */
+/** The boundrail binary built by cargo: BOUNDRAIL_TEST_BINARY, else target/release, else target/debug. */
 function builtBinary() {
   const root = path.join(__dirname, '..', '..', 'target');
   const found = [
-    process.env.ARCHGRAPH_TEST_BINARY,
+    process.env.BOUNDRAIL_TEST_BINARY,
     path.join(root, 'release', 'boundrail'),
     path.join(root, 'debug', 'boundrail'),
   ].find((p) => p && fs.existsSync(p));
-  assert.ok(found, 'build boundrail first (cargo build), or set ARCHGRAPH_TEST_BINARY');
+  assert.ok(found, 'build boundrail first (cargo build), or set BOUNDRAIL_TEST_BINARY');
   return found;
 }
 
@@ -73,7 +73,7 @@ function packageWithSums(sums) {
 function run(args, env, wrapper = WRAPPER) {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [wrapper, ...args], {
-      env: { ...process.env, ARCHGRAPH_BINARY: '', ...env },
+      env: { ...process.env, BOUNDRAIL_BINARY: '', ...env },
     });
     let stdout = '';
     let stderr = '';
@@ -111,7 +111,7 @@ test('refuses an archive whose checksum does not match', async () => {
   const cache = tmp('cache');
   const { base, server } = await serve(release);
   try {
-    const r = await run(['--version'], { XDG_CACHE_HOME: cache, ARCHGRAPH_DOWNLOAD_BASE: base });
+    const r = await run(['--version'], { XDG_CACHE_HOME: cache, BOUNDRAIL_DOWNLOAD_BASE: base });
     assert.equal(r.status, 2);
     assert.match(r.stderr, /checksum mismatch for boundrail-v.*\.tar\.gz: expected 0{64}, got [0-9a-f]{64}; not running it/);
     assert.equal(fs.existsSync(path.join(cache, 'boundrail-cli', version, 'boundrail')), false);
@@ -123,14 +123,14 @@ test('refuses an archive whose checksum does not match', async () => {
 test('reports a missing release and a refused connection', async () => {
   const { base, server } = await serve(tmp('empty'));
   try {
-    const r = await run(['--version'], { XDG_CACHE_HOME: tmp('cache'), ARCHGRAPH_DOWNLOAD_BASE: base });
+    const r = await run(['--version'], { XDG_CACHE_HOME: tmp('cache'), BOUNDRAIL_DOWNLOAD_BASE: base });
     assert.equal(r.status, 2);
     assert.match(r.stderr, /could not download http:\/\/127\.0\.0\.1:\d+\/v.*: HTTP 404/);
   } finally {
     server.close();
   }
   // The server is closed now: nothing listens on its port.
-  const r = await run(['--version'], { XDG_CACHE_HOME: tmp('cache'), ARCHGRAPH_DOWNLOAD_BASE: base });
+  const r = await run(['--version'], { XDG_CACHE_HOME: tmp('cache'), BOUNDRAIL_DOWNLOAD_BASE: base });
   assert.equal(r.status, 2);
   assert.match(r.stderr, /could not download http:\/\/127\.0\.0\.1:\d+\/v.*: .*ECONNREFUSED/);
 });
@@ -140,7 +140,7 @@ test('downloads, verifies, extracts and runs the binary, then reuses the cache',
   const release = fakeRelease(binary);
   const cache = tmp('cache');
   const { base, requests, server } = await serve(release);
-  const env = { XDG_CACHE_HOME: cache, ARCHGRAPH_DOWNLOAD_BASE: base };
+  const env = { XDG_CACHE_HOME: cache, BOUNDRAIL_DOWNLOAD_BASE: base };
   try {
     const first = await run(['--version'], env);
     assert.equal(first.status, 0, first.stderr);
@@ -158,11 +158,11 @@ test('downloads, verifies, extracts and runs the binary, then reuses the cache',
   }
 });
 
-test('ARCHGRAPH_BINARY runs that binary without downloading', async () => {
+test('BOUNDRAIL_BINARY runs that binary without downloading', async () => {
   const r = await run(['--version'], {
-    ARCHGRAPH_BINARY: builtBinary(),
+    BOUNDRAIL_BINARY: builtBinary(),
     XDG_CACHE_HOME: tmp('cache'),
-    ARCHGRAPH_DOWNLOAD_BASE: 'http://127.0.0.1:9',
+    BOUNDRAIL_DOWNLOAD_BASE: 'http://127.0.0.1:9',
   });
   assert.equal(r.status, 0, r.stderr);
   assert.equal(r.stdout.trim(), `boundrail ${version}`);
@@ -181,7 +181,7 @@ test('a published SHA256SUMS is used instead of the release one', async () => {
   try {
     // The embedded sums match; the server's are wrong and never read.
     fs.writeFileSync(sumsPath, good.replace(/^[0-9a-f]{64}/, '0'.repeat(64)));
-    const ok = await run(['--version'], { XDG_CACHE_HOME: tmp('cache'), ARCHGRAPH_DOWNLOAD_BASE: base }, packageWithSums(good));
+    const ok = await run(['--version'], { XDG_CACHE_HOME: tmp('cache'), BOUNDRAIL_DOWNLOAD_BASE: base }, packageWithSums(good));
     assert.equal(ok.status, 0, ok.stderr);
     assert.equal(ok.stdout.trim(), `boundrail ${version}`);
     assert.deepEqual(requests.filter((r) => r.endsWith('SHA256SUMS')), []);
@@ -190,7 +190,7 @@ test('a published SHA256SUMS is used instead of the release one', async () => {
     fs.writeFileSync(sumsPath, good);
     const bad = await run(
       ['--version'],
-      { XDG_CACHE_HOME: tmp('cache'), ARCHGRAPH_DOWNLOAD_BASE: base },
+      { XDG_CACHE_HOME: tmp('cache'), BOUNDRAIL_DOWNLOAD_BASE: base },
       packageWithSums(good.replace(/^[0-9a-f]{64}/, '0'.repeat(64))),
     );
     assert.equal(bad.status, 2);
@@ -201,7 +201,7 @@ test('a published SHA256SUMS is used instead of the release one', async () => {
   }
 });
 
-test('downloads are https-only unless ARCHGRAPH_DOWNLOAD_BASE is set', async () => {
+test('downloads are https-only unless BOUNDRAIL_DOWNLOAD_BASE is set', async () => {
   // Strict (the default base): every URL, the first and each redirect hop, must be https.
   await assert.rejects(download('http://127.0.0.1:9/x', true), /refusing http:\/\/127\.0\.0\.1:9\/x: not https/);
   // With a custom base, plain http and redirects are followed.
@@ -219,54 +219,35 @@ test('downloads are https-only unless ARCHGRAPH_DOWNLOAD_BASE is set', async () 
 });
 
 
-test('legacy archive layout installs as boundrail and remains checksum verified', async () => {
-  for (const corrupt of [false, true]) {
-    const release = fakeRelease(builtBinary(), (hash) => corrupt ? '0'.repeat(64) : hash, 'archgraph');
-    const cache = tmp('legacy-cache');
-    const { base, requests, server } = await serve(release);
-    try {
-      const result = await run(['--version'], { XDG_CACHE_HOME: cache, ARCHGRAPH_DOWNLOAD_BASE: base });
-      assert.equal(result.status, corrupt ? 2 : 0, result.stderr);
-      assert.equal(fs.existsSync(path.join(cache, 'boundrail-cli', version, 'boundrail')), !corrupt);
-      assert.ok(requests.some((url) => url.includes('/archgraph-')));
-      if (corrupt) assert.match(result.stderr, /checksum mismatch/);
-      else assert.equal(result.stdout.trim(), `boundrail ${version}`);
-    } finally {
-      server.close();
-    }
+
+test('rejects other archive layouts without downloading them', async () => {
+  const release = fakeRelease(builtBinary(), (hash) => hash, 'other-product');
+  const cache = tmp('unsupported-cache');
+  const { base, requests, server } = await serve(release);
+  try {
+    const result = await run(['--version'], { XDG_CACHE_HOME: cache, BOUNDRAIL_DOWNLOAD_BASE: base });
+    assert.equal(result.status, 2, result.stderr);
+    assert.match(result.stderr, /SHA256SUMS has no entry for boundrail-/);
+    assert.equal(requests.some((url) => url.endsWith('.tar.gz')), false);
+    assert.equal(fs.existsSync(path.join(cache, 'boundrail-cli', version, 'boundrail')), false);
+  } finally {
+    server.close();
   }
 });
 
-test('prefers Boundrail when both layouts exist and never falls back after a mismatch', async () => {
-  for (const corrupt of [false, true]) {
-    const release = fakeRelease(builtBinary(), (hash) => corrupt ? '0'.repeat(64) : hash);
-    const legacy = fakeRelease(builtBinary(), (hash) => hash, 'archgraph');
-    for (const file of fs.readdirSync(path.join(legacy, TAG)).filter((file) => file.endsWith('.tar.gz'))) {
-      fs.copyFileSync(path.join(legacy, TAG, file), path.join(release, TAG, file));
-    }
-    fs.appendFileSync(path.join(release, TAG, 'SHA256SUMS'), fs.readFileSync(path.join(legacy, TAG, 'SHA256SUMS')));
-    const { base, requests, server } = await serve(release);
-    try {
-      const result = await run(['--version'], { XDG_CACHE_HOME: tmp('mixed-cache'), ARCHGRAPH_DOWNLOAD_BASE: base });
-      assert.equal(result.status, corrupt ? 2 : 0, result.stderr);
-      assert.ok(requests.some((url) => url.includes('/boundrail-')));
-      assert.equal(requests.some((url) => url.includes('/archgraph-')), false);
-      if (corrupt) assert.match(result.stderr, /checksum mismatch/);
-    } finally {
-      server.close();
-    }
-  }
-});
-
-test('legacy executable branding is preserved when cached under the Boundrail command', async () => {
-  const binary = path.join(tmp('legacy-binary'), 'archgraph');
-  fs.writeFileSync(binary, `#!/bin/sh\necho 'archgraph ${version}'\n`, { mode: 0o755 });
-  const release = fakeRelease(binary, (hash) => hash, 'archgraph');
+test('only BOUNDRAIL_BINARY selects an explicit executable', async () => {
+  const release = fakeRelease(builtBinary());
+  const rejected = path.join(tmp('old-override'), 'program');
+  fs.writeFileSync(rejected, '#!/bin/sh\nexit 9\n', { mode: 0o755 });
   const { base, server } = await serve(release);
   try {
-    const result = await run(['--version'], { XDG_CACHE_HOME: tmp('legacy-cache'), ARCHGRAPH_DOWNLOAD_BASE: base });
+    const result = await run(['--version'], {
+      ARCHGRAPH_BINARY: rejected,
+      XDG_CACHE_HOME: tmp('canonical-cache'),
+      BOUNDRAIL_DOWNLOAD_BASE: base,
+    });
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.stdout.trim(), `archgraph ${version}`);
+    assert.equal(result.stdout.trim(), `boundrail ${version}`);
   } finally {
     server.close();
   }

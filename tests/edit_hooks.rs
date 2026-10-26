@@ -9,7 +9,7 @@ impl Fixture {
     fn new() -> Self {
         static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let root = std::env::temp_dir().join(format!(
-            "archgraph-native-hook-{}-{}",
+            "boundrail-native-hook-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
@@ -27,7 +27,7 @@ impl Fixture {
             .args(["--no-daemon"])
             .args(args)
             .current_dir(&self.0)
-            .env_remove("ARCHGRAPH_BYPASS");
+            .env_remove("BOUNDRAIL_BYPASS");
         if let Some(input) = input {
             let mut child = command
                 .stdin(Stdio::piped())
@@ -159,7 +159,7 @@ fn mcp_snapshot_uses_pre_edit_baseline_without_git_and_does_not_consume_it() {
     assert_eq!(result["verdict"], "BLOCK");
     assert_eq!(result["new_forbidden"].as_array().unwrap().len(), 1);
     assert!(!result["violations"].as_array().unwrap().is_empty());
-    assert!(!fixture.0.join(".archgraph/fires.log").exists());
+    assert!(!fixture.0.join(".boundrail/fires.log").exists());
     let checked = fixture.command(
         &[
             "hook",

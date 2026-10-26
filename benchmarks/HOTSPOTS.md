@@ -37,11 +37,11 @@ The random comparison samples the same number of files uniformly without replace
 
 The [runner](validate_hotspots.py) consumes an inventory of prepared graph files and full-history clones. The original 20 names, pins, subroots and exclusions are the first 20 entries in [showcase/repos.json](../showcase/repos.json). Graph URLs are recorded in [the result artifact](results/hotspots-validation.json), along with binary/raw-report hashes, per-repository statistics and three highest-scoring examples.
 
-Each inventory entry needs `name`, `repo`, `commit`, `files`, `graph_path`, `repo_path`, `scan_root`, `pin_matches: true`, and `shallow: false`. Graphs can be downloaded from `https://dogebonker.github.io/archgraph/<name>.json`; verify `source.git.commit` against the manifest. Use full-history clones at that pin; a blob-filtered clone avoids initially downloading every historical file.
+Each inventory entry needs `name`, `repo`, `commit`, `files`, `graph_path`, `repo_path`, `scan_root`, `pin_matches: true`, and `shallow: false`. Graphs can be downloaded from `https://dogebonker.github.io/boundrail/<name>.json`; verify `source.git.commit` against the manifest. Use full-history clones at that pin; a blob-filtered clone avoids initially downloading every historical file.
 
 ```sh
 python3 benchmarks/validate_hotspots.py --coverage /tmp/coverage.json \
-  --binary target/release/archgraph --out /tmp/hotspot-validation \
+  --binary target/release/boundrail --out /tmp/hotspot-validation \
   --prefetch --timeout 240 --jobs 3
 ```
 

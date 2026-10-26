@@ -1,5 +1,5 @@
 mod common;
-use common::{archgraph, scan, synthetic, write_tmp};
+use common::{boundrail, scan, synthetic, write_tmp};
 use serde_json::json;
 #[test]
 fn file_granularity_overrides_grouping_preserves_policy_and_round_trips() {
@@ -64,7 +64,7 @@ fn file_granularity_overrides_grouping_preserves_policy_and_round_trips() {
         ],
         vec!["diff", graph.as_str(), graph.as_str()],
     ] {
-        let output = archgraph(&command);
+        let output = boundrail(&command);
         assert!(
             output.status.success(),
             "{command:?}: {}",
@@ -72,7 +72,7 @@ fn file_granularity_overrides_grouping_preserves_policy_and_round_trips() {
         );
     }
     let (legacy, _, _) = scan(&[&args[..], &["--legacy-v1"]].concat());
-    assert_eq!(legacy["schema"], "archgraph/v1");
+    assert_eq!(legacy["schema"], "boundrail/v1");
     assert!(legacy["config"].get("granularity").is_none());
     assert!(
         legacy["files"]

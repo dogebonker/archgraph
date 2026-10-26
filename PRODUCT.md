@@ -57,9 +57,9 @@ The product is Boundrail and its executable is `boundrail`. The user selected th
 2026-10-25. Keep the established report palette and use direct technical copy. Distinguish inferred
 evidence from declared evidence and measured outcomes. Historical captures retain their original name.
 
-Existing report schemas, project state, owned markers, finding IDs, and environment overrides
-retain their compatibility identities. Repository and package publication are separate operations.
-The README explains current capabilities with an illustrative overview and actual report captures.
+Use Boundrail consistently in report schemas, project state, owned markers, finding IDs,
+environment variables, and repository URLs. The README explains current capabilities with an
+illustrative overview and actual report captures. Registry publication is a separate operation.
 
 ## Evidence on Hand
 

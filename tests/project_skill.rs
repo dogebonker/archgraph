@@ -12,7 +12,7 @@ impl Fixture {
     fn new(policy: bool) -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let fixture = Self(std::env::temp_dir().join(format!(
-            "archgraph-project-skill-{}-{}",
+            "boundrail-project-skill-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         )));
@@ -251,8 +251,8 @@ fn conflicting_or_unowned_files_are_preserved() {
     let initial = fixture.read(DRAFT);
     for changed in [
         initial.replace("Read current policy", "Hand-edited owned policy"),
-        initial.clone() + "<!-- archgraph:start -->\n<!-- archgraph:end -->\n",
-        initial.replace("<!-- archgraph:end -->", ""),
+        initial.clone() + "<!-- boundrail:start -->\n<!-- boundrail:end -->\n",
+        initial.replace("<!-- boundrail:end -->", ""),
         "---\nname: project-architecture\ndescription: Hand-written\n---\nMy own skill.\n".into(),
         String::new(),
     ] {
@@ -288,8 +288,8 @@ fn service_workflow_gates_only_authored_rules_and_quotes_literal_manifest_paths(
     fixture.write("worker/main.ts", "export const worker = true;\n");
     fixture.ok(&["skill", "draft", "--manifest", manifest]);
     let draft = fixture.read(DRAFT);
-    assert_eq!(draft.matches("<!-- archgraph:start -->").count(), 1);
-    assert_eq!(draft.matches("<!-- archgraph:end -->").count(), 1);
+    assert_eq!(draft.matches("<!-- boundrail:start -->").count(), 1);
+    assert_eq!(draft.matches("<!-- boundrail:end -->").count(), 1);
     fixture.ok(&["skill", "adopt"]);
     let commands = fixture.commands();
     assert!(commands[1][3].contains("--fail-on new-forbidden"));
@@ -337,15 +337,15 @@ fn repository_markers_remain_data_and_frontmatter_requires_a_valid_mapping() {
         "layout.yaml",
         &LAYOUT.replace(
             "Keep policy independent.",
-            "literal <!-- archgraph:start --> --> <script> & data",
+            "literal <!-- boundrail:start --> --> <script> & data",
         ),
     );
     fixture.write("src/shared/<marker>&.ts", "export const marker = 1;\n");
     fixture.write("src/domain/a.ts", "import '../adapters/b';\n");
     fixture.ok(&["skill", "draft"]);
     let draft = fixture.read(DRAFT);
-    assert_eq!(draft.matches("<!-- archgraph:start -->").count(), 1);
-    assert_eq!(draft.matches("<!-- archgraph:end -->").count(), 1);
+    assert_eq!(draft.matches("<!-- boundrail:start -->").count(), 1);
+    assert_eq!(draft.matches("<!-- boundrail:end -->").count(), 1);
     assert!(draft.contains("\\u003c"));
     fixture.ok(&["skill", "adopt"]);
     for header in [
@@ -365,9 +365,9 @@ fn repository_markers_remain_data_and_frontmatter_requires_a_valid_mapping() {
 fn symlink_components_and_escaping_manifests_are_rejected_without_writes() {
     use std::os::unix::fs::symlink;
     for component in [
-        ".archgraph",
-        ".archgraph/drafts",
-        ".archgraph/drafts/project-architecture",
+        ".boundrail",
+        ".boundrail/drafts",
+        ".boundrail/drafts/project-architecture",
         DRAFT,
         "layout.yaml",
         "services.yaml",

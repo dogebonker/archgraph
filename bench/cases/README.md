@@ -16,7 +16,7 @@ are not designed to force an architecture violation or demonstrate efficacy.
 Prepare four private baselines and their `NAME-tasks.json` files:
 
 ```sh
-python3 -B bench/cases/prepare.py --sources /path/to/pinned/clones --output /private/tmp/archgraph-cases --python /path/to/python3.13 --node /path/to/node24
+python3 -B bench/cases/prepare.py --sources /path/to/pinned/clones --output /private/tmp/boundrail-cases --python /path/to/python3.13 --node /path/to/node24
 ```
 
 Preparation checks each source HEAD against its declared pin, clones with

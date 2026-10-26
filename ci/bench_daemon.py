@@ -82,12 +82,12 @@ def edit_plan(doc, language, count):
                 module = target.removesuffix(".py").replace("/", ".")
                 if not all(part.isidentifier() for part in module.split(".")):
                     break
-                addition = f"\nimport {module}  # archgraph daemon benchmark\n"
+                addition = f"\nimport {module}  # boundrail daemon benchmark\n"
             else:
                 relative = os.path.relpath(str(Path(target).with_suffix("")), str(Path(source).parent)).replace(os.sep, "/")
                 if not relative.startswith("."):
                     relative = "./" + relative
-                addition = f"\nimport {json.dumps(relative)}; // archgraph daemon benchmark\n"
+                addition = f"\nimport {json.dumps(relative)}; // boundrail daemon benchmark\n"
             plan.append((source, target, addition.encode()))
         if len(plan) == count:
             return plan
@@ -105,7 +105,7 @@ def wait_graph(root, expected, absent, process, timeout):
         if process.poll() is not None:
             raise RuntimeError("daemon exited while waiting for changed imports")
         try:
-            doc = load(root / ".archgraph/daemon-graph.json")
+            doc = load(root / ".boundrail/daemon-graph.json")
             pairs = {(e["from"], e["to"]) for e in doc["edges"]}
             if expected <= pairs and not (absent & pairs):
                 return doc
@@ -122,11 +122,11 @@ def bench(entry, args, work):
         value = getattr(args, option)
         if value:
             flags += ["--" + option, str(value)]
-    data, _ = run([args.archgraph, "--no-daemon", "scan", ".", *flags], root, args.timeout)
+    data, _ = run([args.boundrail, "--no-daemon", "scan", ".", *flags], root, args.timeout)
     doc = json.loads(data)
     cold = []
     for _ in range(args.repeats):
-        _, elapsed = run([args.archgraph, "--no-daemon", "--brief", "scan", ".", *flags], root, args.timeout)
+        _, elapsed = run([args.boundrail, "--no-daemon", "--brief", "scan", ".", *flags], root, args.timeout)
         cold.append(elapsed)
     baseline_pairs = {(e["from"], e["to"]) for e in doc["edges"]}
     log_path = work / (entry["name"] + "-daemon.log")
@@ -134,10 +134,10 @@ def bench(entry, args, work):
               "engine": args.engine, "files": len(doc["files"]), "cold_scan_ms": cold,
               "cold": quantiles(cold), "warm": {}}
     with log_path.open("wb") as log:
-        process = subprocess.Popen([str(args.archgraph), "serve", ".", "--port=0", *flags], cwd=root, stdout=log, stderr=log)
+        process = subprocess.Popen([str(args.boundrail), "serve", ".", "--port=0", *flags], cwd=root, stdout=log, stderr=log)
         try:
             started = time.perf_counter()
-            descriptor = root / ".archgraph/daemon.json"
+            descriptor = root / ".boundrail/daemon.json"
             while not descriptor.is_file():
                 if process.poll() is not None:
                     raise RuntimeError(f"daemon warmup failed: {log_path.read_text(errors='replace')}")
@@ -145,7 +145,7 @@ def bench(entry, args, work):
                     raise RuntimeError("daemon readiness timed out")
                 time.sleep(.005)
             result["daemon_start_ms"] = round((time.perf_counter() - started) * 1000, 3)
-            idle = [run([args.archgraph, "--brief", "scan", ".", *flags], root, args.timeout)[1]
+            idle = [run([args.boundrail, "--brief", "scan", ".", *flags], root, args.timeout)[1]
                     for _ in range(args.repeats)]
             result["warm_idle_ms"] = idle
             result["warm_idle"] = quantiles(idle)
@@ -163,7 +163,7 @@ def bench(entry, args, work):
                             (root / source).write_bytes(originals[source] + addition)
                         deadline = time.perf_counter() + args.timeout
                         while True:
-                            response, command_ms = run([args.archgraph, "--brief", "scan", ".", *flags], root, args.timeout)
+                            response, command_ms = run([args.boundrail, "--brief", "scan", ".", *flags], root, args.timeout)
                             if json.loads(response)["counts"]["edges"] == len(doc["edges"]) + len(expected):
                                 elapsed = (time.perf_counter() - started) * 1000
                                 break
@@ -173,7 +173,7 @@ def bench(entry, args, work):
                         # Exact edge verification follows timing, so parsing a full snapshot cannot
                         # inflate the measured latency. The response count already proves freshness.
                         changed = wait_graph(root, expected, set(), process, args.timeout)
-                        status_data, _ = run([args.archgraph, "status"], root, args.timeout)
+                        status_data, _ = run([args.boundrail, "status"], root, args.timeout)
                         status = json.loads(status_data)
                         samples.append({"edit_to_answer_ms": round(elapsed, 3), "answer_ms": round(command_ms, 3),
                                         "status": status, "daemon_rss_kib": rss_kib(process.pid),
@@ -197,7 +197,7 @@ def bench(entry, args, work):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--boundrail", "--archgraph", dest="archgraph", metavar="BINARY", type=Path, default=REPO / "target/release/boundrail")
+    parser.add_argument("--boundrail", dest="boundrail", metavar="BINARY", type=Path, default=REPO / "target/release/boundrail")
     parser.add_argument("--cache", type=Path, help="existing pristine showcase repository clones; originals are never edited")
     parser.add_argument("--work", type=Path, help="new directory for isolated checkouts and daemon logs")
     parser.add_argument("--output", type=Path, help="also save the JSON measurements here")
@@ -210,19 +210,19 @@ def main():
     args = parser.parse_args()
     if args.repeats < 1 or args.timeout <= 0:
         parser.error("--repeats and --timeout must be positive")
-    args.archgraph = args.archgraph.resolve(strict=True)
+    args.boundrail = args.boundrail.resolve(strict=True)
     if args.cache:
         args.cache = args.cache.resolve(strict=True)
     for name in ("depcruise", "python"):
         if getattr(args, name):
             setattr(args, name, getattr(args, name).resolve(strict=True))
-    work = args.work.resolve() if args.work else Path(tempfile.mkdtemp(prefix="archgraph-daemon-bench-"))
+    work = args.work.resolve() if args.work else Path(tempfile.mkdtemp(prefix="boundrail-daemon-bench-"))
     work.mkdir(parents=True, exist_ok=True)
     entries = json.loads((REPO / "showcase/repos.json").read_text())
     selected = [e for name in args.repos for e in entries if e["name"] == name]
-    result = {"schema": "archgraph/daemon-benchmark/v1", "engine": args.engine,
+    result = {"schema": "boundrail/daemon-benchmark/v1", "engine": args.engine,
               "mode": "native incremental" if args.engine == "native" else "reference full-refresh fallback",
-              "binary": str(args.archgraph), "binary_sha256": hashlib.sha256(args.archgraph.read_bytes()).hexdigest(),
+              "binary": str(args.boundrail), "binary_sha256": hashlib.sha256(args.boundrail.read_bytes()).hexdigest(),
               "host": {"platform": platform.platform(), "machine": platform.machine(), "cpus": os.cpu_count()},
               "work": str(work), "repeats": args.repeats,
               "method": "Wall clock from first file write until a brief scan response has the exact newly-added edge count; exact added pairs are then verified outside timing. Cold and warm use the same brief scan command; cold bypasses daemon and retains OS filesystem caches. Restores are verified before the next sample. p95 is nearest-rank; small samples are observational.",

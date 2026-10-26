@@ -3,7 +3,7 @@
 ## Source of truth
 
 Status: Active. Date: 2026-10-25. Surfaces: the service catalog and flow report exported by
-`archgraph render`, and the import comparison exported by `archgraph diff --html`.
+`boundrail render`, and the import comparison exported by `boundrail diff --html`.
 Both reuse the existing offline report identity.
 
 Evidence: PRODUCT.md, assets/graph.html, src/render.rs, tests/render.rs, existing Node UI tests,

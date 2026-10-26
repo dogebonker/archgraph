@@ -17,7 +17,7 @@ struct Fixture {
 impl Fixture {
     fn new(nested: bool) -> Self {
         let base = std::env::temp_dir().join(format!(
-            "ag-daemon-reg-{}-{}",
+            "br-daemon-reg-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -130,8 +130,8 @@ impl Fixture {
         self.command(&args)
     }
     fn spawn(&mut self) {
-        fs::create_dir_all(self.root.join(".archgraph")).unwrap();
-        let log = fs::File::create(self.root.join(".archgraph/regression.log")).unwrap();
+        fs::create_dir_all(self.root.join(".boundrail")).unwrap();
+        let log = fs::File::create(self.root.join(".boundrail/regression.log")).unwrap();
         self.child = Some(
             Command::new(env!("CARGO_BIN_EXE_boundrail"))
                 .current_dir(&self.root)
@@ -154,11 +154,11 @@ impl Fixture {
         );
     }
     fn log(&self) -> String {
-        fs::read_to_string(self.root.join(".archgraph/regression.log")).unwrap_or_default()
+        fs::read_to_string(self.root.join(".boundrail/regression.log")).unwrap_or_default()
     }
     fn ready(&mut self) {
         let start = Instant::now();
-        while !self.root.join(".archgraph/daemon.json").exists() {
+        while !self.root.join(".boundrail/daemon.json").exists() {
             assert!(
                 self.child.as_mut().unwrap().try_wait().unwrap().is_none(),
                 "serve failed: {}",
@@ -323,7 +323,7 @@ fn edit_after_collection_warning_during_startup_is_in_first_ready_snapshot() {
         std::thread::sleep(Duration::from_millis(1));
     }
     assert!(
-        !f.root.join(".archgraph/daemon.json").exists(),
+        !f.root.join(".boundrail/daemon.json").exists(),
         "fixture did not expose the startup window"
     );
     fs::write(
@@ -384,7 +384,7 @@ fn local_and_forwarded_hook_snapshots_preserve_verdicts_and_output_exclusions() 
     fs::write(f.root.join("layout.yaml"), "version: 1\nforbid:\n  - {id: boundary, from: 'src/a/**', to: 'src/b/**', reason: 'Keep a independent'}\n").unwrap();
     f.git(&["add", "."]);
     f.commit("2001-01-01T00:00:00+0000");
-    fs::create_dir_all(f.root.join(".archgraph")).unwrap();
+    fs::create_dir_all(f.root.join(".boundrail")).unwrap();
     f.child = Some(
         Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .current_dir(&f.root)
@@ -437,7 +437,7 @@ fn local_and_forwarded_hook_snapshots_preserve_verdicts_and_output_exclusions() 
         let mut graph: Value = serde_json::from_slice(
             &fs::read(
                 f.root
-                    .join(format!(".archgraph/hooks/snapshots/{id}.graph.json")),
+                    .join(format!(".boundrail/hooks/snapshots/{id}.graph.json")),
             )
             .unwrap(),
         )
@@ -514,7 +514,7 @@ fn local_and_forwarded_hook_snapshots_preserve_verdicts_and_output_exclusions() 
     ] {
         assert_eq!(reports[0][key], reports[1][key], "transport changed {key}");
     }
-    assert!(!f.root.join(".archgraph/fires.log").exists());
+    assert!(!f.root.join(".boundrail/fires.log").exists());
     let status = f.command(&["status"]);
     assert!(
         status.status.success(),

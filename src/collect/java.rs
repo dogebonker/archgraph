@@ -27,12 +27,12 @@ pub fn run(root: &Path, java: &str, excludes: &GlobSet) -> Result<Vec<u8>> {
     ensure!(!files.is_empty(), "no Java source files after excludes");
     let dir = super::TempDir::new("java")?;
     fs::write(
-        dir.path().join("ArchgraphJava.java"),
-        include_str!("ArchgraphJava.java"),
+        dir.path().join("BoundrailJava.java"),
+        include_str!("BoundrailJava.java"),
     )?;
     let out = super::run_with_input(
         Command::new(&java)
-            .args(["--class-path", ".", "ArchgraphJava.java"])
+            .args(["--class-path", ".", "BoundrailJava.java"])
             .arg(&root)
             .current_dir(dir.path())
             .env_remove("JDK_JAVA_OPTIONS")

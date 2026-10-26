@@ -25,13 +25,13 @@ def git(root, *args):
 
 
 def source_state(checkout):
-    """Hash Git-visible file bytes/modes and index, excluding only .archgraph metadata."""
+    """Hash Git-visible file bytes/modes and index, excluding only .boundrail metadata."""
     files = sorted(set(git(checkout, 'ls-files', '-z', '--cached', '--others', '--exclude-standard').split(b'\0')) - {b''})
     state = hashlib.sha256()
     count = 0
     for name in files:
         relative = os.fsdecode(name)
-        if '.archgraph' in Path(relative).parts:
+        if '.boundrail' in Path(relative).parts:
             continue
         path = checkout / relative
         try:
@@ -110,7 +110,7 @@ def render(report):
     ready = sum(bool(row.get('dry_run', {}).get('can_apply')) for row in report['repos'])
     errors = sum(bool(row.get('error')) for row in report['repos'])
     lines += ['', f'Measured: {len(report["repos"])} repositories; {ready} mechanically ready dry-runs; {sum(bool(row.get("dry_run")) for row in report["repos"]) - ready} blocked; {sum(not row.get("finding") and not row.get("error") for row in report["repos"])} with no actionable finding; {errors} audit errors. Source bytes/modes and the real Git index were unchanged around each audit.', '',
-              'The unchanged-source check hashes tracked and nonignored untracked files from `git ls-files`, including symlink targets and file modes. `.archgraph/` metadata is explicitly allowed; ignored build/install artifacts and submodule contents are outside this check. Each graph’s recorded commit and the checkout HEAD must both equal the manifest pin. Tracked-clean status is recorded for each checkout; any existing dirtiness is preserved rather than discarded.', '']
+              'The unchanged-source check hashes tracked and nonignored untracked files from `git ls-files`, including symlink targets and file modes. `.boundrail/` metadata is explicitly allowed; ignored build/install artifacts and submodule contents are outside this check. Each graph’s recorded commit and the checkout HEAD must both equal the manifest pin. Tracked-clean status is recorded for each checkout; any existing dirtiness is preserved rather than discarded.', '']
     return '\n'.join(lines)
 
 
@@ -137,7 +137,7 @@ def audit(args):
     manifest = json.loads(args.manifest.read_bytes())
     entries = {entry['name']: entry for entry in manifest}
     report = {'methodology': 'current ranked recipes over saved corrected graphs; actual CLI propose and apply --dry-run; no source collection or apply --yes',
-              'binary_sha256': digest(args.archgraph.read_bytes()), 'inventory_sha256': digest(args.inventory.read_bytes()),
+              'binary_sha256': digest(args.boundrail.read_bytes()), 'inventory_sha256': digest(args.inventory.read_bytes()),
               'manifest_sha256': digest(args.manifest.read_bytes()), 'script_sha256': digest(Path(__file__).read_bytes()),
               'working_revision': git(args.code_root, 'rev-parse', 'HEAD').decode().strip(),
               'code_input_sha256': code_inputs(args.code_root), 'binary_source': args.binary_source,
@@ -162,8 +162,8 @@ def audit(args):
                 finding = found['value'][0]
                 row['finding'] = finding
                 identifier = finding['finding_id']
-                propose = [args.archgraph, '--no-daemon', 'propose', identifier, '--graph', graph_path, '--root', root]
-                dry = [args.archgraph, '--no-daemon', 'apply', identifier, '--graph', graph_path, '--root', root, '--dry-run']
+                propose = [args.boundrail, '--no-daemon', 'propose', identifier, '--graph', graph_path, '--root', root]
+                dry = [args.boundrail, '--no-daemon', 'apply', identifier, '--graph', graph_path, '--root', root, '--dry-run']
                 row['commands'] = [[str(part) for part in command] for command in [propose, dry]]
                 proposed = call(propose)
                 row['propose'] = {key: value for key, value in proposed.items() if key != 'value'}
@@ -211,9 +211,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--self-test', action='store_true')
     parser.add_argument('--manifest', type=Path, default=Path(__file__).with_name('repos.json'))
-    parser.add_argument('--graphs', type=Path, default=Path('/private/tmp/archgraph-edge-quality/corrected'))
-    parser.add_argument('--repos', type=Path, default=Path('/private/tmp/archgraph-edge-quality/repos'))
-    parser.add_argument('--boundrail', '--archgraph', dest='archgraph', metavar='BINARY', type=Path, default=Path('target/debug/boundrail'))
+    parser.add_argument('--graphs', type=Path, default=Path('/private/tmp/boundrail-edge-quality/corrected'))
+    parser.add_argument('--repos', type=Path, default=Path('/private/tmp/boundrail-edge-quality/repos'))
+    parser.add_argument('--boundrail', dest='boundrail', metavar='BINARY', type=Path, default=Path('target/debug/boundrail'))
     parser.add_argument('--inventory', type=Path, default=Path('target/debug/examples/recipe_inventory'))
     parser.add_argument('--output', type=Path, default=Path(__file__).with_name('recipes-results.json'))
     parser.add_argument('--markdown', type=Path, default=Path(__file__).with_name('recipes.md'))
@@ -221,16 +221,16 @@ def main():
     if args.self_test:
         self_test()
         return 0
-    args.archgraph = args.archgraph.resolve()
+    args.boundrail = args.boundrail.resolve()
     args.inventory = args.inventory.resolve()
     args.repos = args.repos.resolve()
     args.graphs = args.graphs.resolve()
     args.code_root = Path(__file__).resolve().parents[1]
-    args.binary_source = str(args.archgraph)
+    args.binary_source = str(args.boundrail)
     args.inventory_source = str(args.inventory)
     # Snapshot executable bytes so concurrent cargo builds cannot change the measured engine.
-    with tempfile.TemporaryDirectory(prefix='archgraph-recipe-audit-') as directory:
-        for name in ['archgraph', 'inventory']:
+    with tempfile.TemporaryDirectory(prefix='boundrail-recipe-audit-') as directory:
+        for name in ['boundrail', 'inventory']:
             original = getattr(args, name)
             frozen = Path(directory) / name
             frozen.write_bytes(original.read_bytes())

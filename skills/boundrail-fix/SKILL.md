@@ -1,6 +1,6 @@
 ---
 name: boundrail-fix
-description: Fixes one boundrail finding end to end, keeping the change only when a re-scan and the tests prove it. Use when asked to fix, apply or act on a Boundrail finding, break an import cycle, move a misplaced file, or route an import through a module's public entry.
+description: Fixes one Boundrail finding end to end, keeping the change only when a re-scan and the tests prove it. Use when asked to fix, apply or act on a Boundrail finding, break an import cycle, move a misplaced file, or route an import through a module's public entry.
 license: MIT OR Apache-2.0
 metadata:
   compatibility: Needs git, the boundrail binary (setup in the boundrail skill), and the project's own type checker and test command.
@@ -33,7 +33,7 @@ When a per-edit hook supplies a recipe, retain its snapshot ID through the repai
 5. **Verify the exact contract and regressions.** After mechanical application, run `boundrail verify <finding_id> --root <repo> <matching scan flags>` against its receipt. After manual work, call MCP `verify({expect: <saved verify.structured>})` or CLI `verify <finding_id> --expect '<saved JSON>'`. Use the original proposal baseline; do not regenerate it after editing to erase a mismatch. A predicted delta must match actual evidence. Then repeat `check_diff` against the same base (or `boundrail diff <before> <after> --fail-on new-forbidden,new-cycles,new-unplanned`) and run the build/type check and tests. MCP verification without `expect` only confirms inspection; omitted findings are not absent findings.
 6. **Leave a reviewable result.** Successful mechanical moves are staged; rewritten import contents remain worktree edits. Inspect both diffs before staging the complete fix. The CLI never commits. Report actual deltas, predicate results and language test results. On failure, preserve concurrent/pre-existing edits and revert only the changes this run owns; never restore whole files from HEAD over another change. If the apply command reports a rollback conflict, inspect the named files and retain the user's edits.
 
-See [recipe semantics and limits](https://github.com/dogebonker/archgraph/blob/main/docs/guide.md#fix-recipes-and-verification). One run fixes one finding; rescan before starting another because moves interact.
+See [recipe semantics and limits](https://github.com/dogebonker/boundrail/blob/main/docs/guide.md#fix-recipes-and-verification). One run fixes one finding; rescan before starting another because moves interact.
 
 ## Scope
 

@@ -1,6 +1,6 @@
 mod common;
 
-use common::{archgraph, validate};
+use common::{boundrail, validate};
 use serde_json::{Value, json};
 use std::fs;
 use std::path::Path;
@@ -15,7 +15,7 @@ fn package_verdicts_reach_check_simulate_diff_and_legacy_export() {
     let layout = root.join("layout.yaml");
     let draft = root.join("draft.yaml");
     let input = json!({
-        "schema":"archgraph/v1.1", "kind":"scan",
+        "schema":"boundrail/v1.1", "kind":"scan",
         "source":{"language":"typescript", "collector":{"name":"dependency-cruiser","cruised":2}, "generated_at":"2026-10-18T00:00:00Z"},
         "config":{"depth":2,"source_root":"src","excludes":[],"include_tests":false},
         "files":[{"path":"src/domain/a.ts","module":"domain","barrel":false},
@@ -33,7 +33,7 @@ fn package_verdicts_reach_check_simulate_diff_and_legacy_export() {
         "--output",
         checked.to_str().unwrap(),
     ];
-    let output = archgraph(&args);
+    let output = boundrail(&args);
     assert_eq!(
         output.status.code(),
         Some(1),
@@ -52,7 +52,7 @@ fn package_verdicts_reach_check_simulate_diff_and_legacy_export() {
         doc["external_exposure"]["modules"][1]["external_percent"],
         100.0
     );
-    let simulation = archgraph(&[
+    let simulation = boundrail(&[
         "simulate",
         checked.to_str().unwrap(),
         "--move",
@@ -67,7 +67,7 @@ fn package_verdicts_reach_check_simulate_diff_and_legacy_export() {
     let simulation: Value = serde_json::from_slice(&simulation.stdout).unwrap();
     validate(&simulation);
     assert_eq!(simulation["removed_forbidden"].as_array().unwrap().len(), 1);
-    let difference = archgraph(&[
+    let difference = boundrail(&[
         "diff",
         graph.to_str().unwrap(),
         checked.to_str().unwrap(),
@@ -78,7 +78,7 @@ fn package_verdicts_reach_check_simulate_diff_and_legacy_export() {
     let difference: Value = serde_json::from_slice(&difference.stdout).unwrap();
     validate(&difference);
     assert_eq!(difference["new_forbidden"].as_array().unwrap().len(), 1);
-    let legacy = archgraph(&[&args[..], &["--legacy-v1"]].concat());
+    let legacy = boundrail(&[&args[..], &["--legacy-v1"]].concat());
     assert_eq!(legacy.status.code(), Some(1));
     validate(&serde_json::from_slice(&fs::read(&checked).unwrap()).unwrap());
     fs::write(
@@ -106,7 +106,7 @@ fn package_verdicts_reach_check_simulate_diff_and_legacy_export() {
             "src/adapter/a.ts",
         ],
     ] {
-        let output = archgraph(&args);
+        let output = boundrail(&args);
         assert!(!output.status.success());
         assert!(String::from_utf8_lossy(&output.stderr).contains("require import accounting"));
     }
@@ -125,7 +125,7 @@ fn global_verdicts_reach_check_simulate_diff_and_legacy_export() {
         path("layout.yaml"),
     );
     let input = json!({
-        "schema":"archgraph/v1.2", "kind":"scan",
+        "schema":"boundrail/v1.2", "kind":"scan",
         "source":{"language":"typescript", "collector":{"name":"tree-sitter-typescript","cruised":3}, "generated_at":"2026-10-22T00:00:00Z"},
         "config":{"depth":2,"source_root":"src","excludes":[],"include_tests":false},
         "files":[{"path":"src/domain/a.ts","module":"domain","barrel":false},
@@ -140,7 +140,7 @@ fn global_verdicts_reach_check_simulate_diff_and_legacy_export() {
     fs::write(&graph, serde_json::to_vec(&input).unwrap()).unwrap();
     let check = |rules: &str, extra: &[&str]| {
         fs::write(&layout, format!("version: 1\n{rules}")).unwrap();
-        archgraph(
+        boundrail(
             &[
                 &["check", &graph, "--rules", &layout, "--output", &checked],
                 extra,
@@ -222,7 +222,7 @@ fn global_verdicts_reach_check_simulate_diff_and_legacy_export() {
     );
 
     check(rule, &[]);
-    let simulation = archgraph(&[
+    let simulation = boundrail(&[
         "simulate",
         &checked,
         "--move",
@@ -237,7 +237,7 @@ fn global_verdicts_reach_check_simulate_diff_and_legacy_export() {
     let simulation: Value = serde_json::from_slice(&simulation.stdout).unwrap();
     validate(&simulation);
     assert_eq!(simulation["removed_forbidden"].as_array().unwrap().len(), 1);
-    let difference = archgraph(&["diff", &graph, &checked, "--fail-on", "new-forbidden"]);
+    let difference = boundrail(&["diff", &graph, &checked, "--fail-on", "new-forbidden"]);
     assert_eq!(difference.status.code(), Some(1));
     let difference: Value = serde_json::from_slice(&difference.stdout).unwrap();
     validate(&difference);
@@ -277,7 +277,7 @@ fn global_verdicts_reach_check_simulate_diff_and_legacy_export() {
     )
     .unwrap();
     fs::write(repo.join("layout.yaml"), format!("version: 1\n{rule}")).unwrap();
-    let report = archgraph(&[
+    let report = boundrail(&[
         "report",
         repo.to_str().unwrap(),
         "--engine",
@@ -293,7 +293,7 @@ fn global_verdicts_reach_check_simulate_diff_and_legacy_export() {
         String::from_utf8_lossy(&report.stderr)
     );
     let reported: Value =
-        serde_json::from_slice(&fs::read(root.join("report/archgraph.json")).unwrap()).unwrap();
+        serde_json::from_slice(&fs::read(root.join("report/boundrail.json")).unwrap()).unwrap();
     assert_eq!(reported["external_nodes"].as_array().unwrap().len(), 2);
 
     // A scan without collected globals cannot enforce a global rule.

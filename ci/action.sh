@@ -5,8 +5,8 @@
 #
 #   INPUT_PATH INPUT_RULES INPUT_DEPTH INPUT_LANGUAGE INPUT_ENGINE INPUT_PACKAGE INPUT_EXCLUDE INPUT_FAIL_ON
 #   INPUT_FAIL_ON_RULES_CHANGE INPUT_VERSION INPUT_BINARY INPUT_BASE_REF   as in action.yml
-#   ARCHGRAPH_DEPCRUISE, ARCHGRAPH_PYTHON, ARCHGRAPH_GO   a collector to use instead of installing one
-#   ARCHGRAPH_ELIXIR   a preinstalled Elixir executable (default elixir)
+#   BOUNDRAIL_DEPCRUISE, BOUNDRAIL_PYTHON, BOUNDRAIL_GO   a collector to use instead of installing one
+#   BOUNDRAIL_ELIXIR   a preinstalled Elixir executable (default elixir)
 #
 # Without a base ref: `report` on INPUT_PATH, its summary in the job summary, exit 1 as `report`
 # exits (a forbidden import the known list does not hold, or a stale known entry). With one: `report` on HEAD, a scan of the base commit (in a worktree) with
@@ -65,17 +65,13 @@ if [[ -n ${INPUT_BINARY:-} ]]; then
 else
   # The release this checkout of the action was cut from.
   version=${INPUT_VERSION:-$(sed -n 's/^version = "\(.*\)"$/\1/p' "$here/Cargo.toml" | head -n 1)}
-  ARCHGRAPH_VERSION=$version ARCHGRAPH_INSTALL_DIR=$work/bin sh "$here/install.sh"
+  BOUNDRAIL_VERSION=$version BOUNDRAIL_INSTALL_DIR=$work/bin sh "$here/install.sh"
   boundrail=$work/bin/boundrail
 fi
 "$boundrail" --version
 
 # Options shared by the HEAD report and the base scan.
-# Keep reference defaults compatible with previously released binaries that lack --engine.
-opts=()
-if [[ $engine != reference ]]; then
-  opts+=(--engine "$engine")
-fi
+opts=(--engine "$engine")
 if [[ -n ${INPUT_DEPTH:-} ]]; then
   opts+=(--depth "$INPUT_DEPTH")
 fi
@@ -131,7 +127,7 @@ has() {
 }
 if [[ $engine != native ]]; then
 if [[ $lang == typescript ]] || { [[ -z $lang ]] && has package.json tsconfig.json; }; then
-  depcruise=${ARCHGRAPH_DEPCRUISE:-}
+  depcruise=${BOUNDRAIL_DEPCRUISE:-}
   if [[ -z $depcruise ]]; then
     node_major=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null) ||
       die "TypeScript scans need Node 22 or later on PATH: add actions/setup-node"
@@ -146,7 +142,7 @@ if [[ $lang == typescript ]] || { [[ -z $lang ]] && has package.json tsconfig.js
   opts+=(--depcruise "$depcruise")
 fi
 if [[ $lang == python ]] || { [[ -z $lang ]] && has pyproject.toml setup.py setup.cfg; }; then
-  python=${ARCHGRAPH_PYTHON:-}
+  python=${BOUNDRAIL_PYTHON:-}
   if [[ -z $python ]]; then
     venv=$RUNNER_TEMP/boundrail-venv
     python3 -m venv "$venv"
@@ -160,7 +156,7 @@ if [[ $lang == python ]] || { [[ -z $lang ]] && has pyproject.toml setup.py setu
 fi
 
 if [[ $lang == go ]] || { [[ -z $lang ]] && has go.mod go.work; }; then
-  go=${ARCHGRAPH_GO:-}
+  go=${BOUNDRAIL_GO:-}
   if [[ -z $go ]]; then
     # Go 1.27.1 from go.dev, checked against these SHA-256 sums. boundrail runs it with
     # GOTOOLCHAIN=local, GOPROXY=off, GOWORK=off, CGO_ENABLED=0 and GOFLAGS=-mod=readonly.
@@ -169,7 +165,7 @@ if [[ $lang == go ]] || { [[ -z $lang ]] && has go.mod go.work; }; then
       Linux-aarch64 | Linux-arm64) platform=linux-arm64 sum=3450b45a3f9ee8568792736a5c5e70a1f2e9b36c35a8f74958c03e51d7d92bec ;;
       Darwin-x86_64) platform=darwin-amd64 sum=8f8f52c6649542cf027bbc9b9c68d1ec042f9f34808a40413f0b8b3f66f3caa4 ;;
       Darwin-arm64) platform=darwin-arm64 sum=ee215d57e0ec269c60cc9ceca68e6bda321ba9ee5afe24f4b0988703c2d87d12 ;;
-      *) die "no Go 1.27.1 download for $(uname -s) $(uname -m): set ARCHGRAPH_GO" ;;
+      *) die "no Go 1.27.1 download for $(uname -s) $(uname -m): set BOUNDRAIL_GO" ;;
     esac
     goroot=$RUNNER_TEMP/boundrail-go
     rm -rf "$goroot"
@@ -190,16 +186,16 @@ if [[ $lang == go ]] || { [[ -z $lang ]] && has go.mod go.work; }; then
 fi
 
 if [[ $lang == elixir ]] || { [[ -z $lang ]] && has mix.exs; }; then
-  elixir=${ARCHGRAPH_ELIXIR:-elixir}
+  elixir=${BOUNDRAIL_ELIXIR:-elixir}
   if [[ $lang == elixir ]]; then
     command -v "$elixir" >/dev/null ||
-      die "Elixir scans need Elixir 1.14+ / OTP 25+ on PATH: install Elixir or set ARCHGRAPH_ELIXIR"
+      die "Elixir scans need Elixir 1.14+ / OTP 25+ on PATH: install Elixir or set BOUNDRAIL_ELIXIR"
   fi
   opts+=(--elixir "$elixir")
 fi
-elif [[ -n ${ARCHGRAPH_GO:-} ]]; then
+elif [[ -n ${BOUNDRAIL_GO:-} ]]; then
   # Native Go only reads package metadata; use an explicitly provided toolchain without installing one.
-  opts+=(--go "$ARCHGRAPH_GO")
+  opts+=(--go "$BOUNDRAIL_GO")
 fi
 
 head=$work/head
@@ -208,17 +204,17 @@ status=0
 cat "$work/report.txt"
 ((status <= 1)) || exit "$status"
 {
-  echo "json=$head/archgraph.json"
-  echo "html=$head/archgraph.html"
-  echo "forbidden=$(jq '.summary.forbidden' "$head/archgraph.json")"
+  echo "json=$head/boundrail.json"
+  echo "html=$head/boundrail.html"
+  echo "forbidden=$(jq '.summary.forbidden' "$head/boundrail.json")"
 } >>"$GITHUB_OUTPUT"
 
 # SARIF for github/codeql-action/upload-sarif, from HEAD's rules; exit 1 is "forbidden imports".
 if [[ -n $rules ]]; then
   sarif_status=0
-  "$boundrail" check "$head/archgraph.json" --format sarif >"$head/archgraph.sarif" || sarif_status=$?
+  "$boundrail" check "$head/boundrail.json" --format sarif >"$head/boundrail.sarif" || sarif_status=$?
   ((sarif_status <= 1)) || die "check --format sarif failed with exit $sarif_status"
-  echo "sarif=$head/archgraph.sarif" >>"$GITHUB_OUTPUT"
+  echo "sarif=$head/boundrail.sarif" >>"$GITHUB_OUTPUT"
 fi
 
 if [[ -z $base_ref ]]; then
@@ -266,9 +262,9 @@ fi
 "$boundrail" scan "$worktree${prefix:+/${prefix%/}}" ${opts[@]+"${opts[@]}"} -o "$work/base.json" ||
   die "scanning the base commit $base failed"
 
-"$boundrail" diff "$work/base.json" "$head/archgraph.json" >"$work/diff.json"
+"$boundrail" diff "$work/base.json" "$head/boundrail.json" >"$work/diff.json"
 status=0
-"$boundrail" diff "$work/base.json" "$head/archgraph.json" ${fail_on:+--fail-on "$fail_on"} \
+"$boundrail" diff "$work/base.json" "$head/boundrail.json" ${fail_on:+--fail-on "$fail_on"} \
   --format markdown >"$work/diff.md" || status=$?
 ((status <= 1)) || exit "$status"
 
@@ -308,7 +304,7 @@ fi
       echo "| forbidden imports | under the base's rules | under HEAD's rules |"
       echo "| --- | --- | --- |"
       echo "| base | $(count "$work/base.json") | $(jq '.summary.forbidden' "$work/base.json") |"
-      echo "| HEAD | $(count "$head/archgraph.json") | $(jq '.summary.forbidden' "$head/archgraph.json") |"
+      echo "| HEAD | $(count "$head/boundrail.json") | $(jq '.summary.forbidden' "$head/boundrail.json") |"
     fi
     if [[ ${INPUT_FAIL_ON_RULES_CHANGE:-false} == true ]]; then
       echo

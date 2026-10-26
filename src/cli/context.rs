@@ -4,7 +4,7 @@ use boundrail::context::{self, Options};
 #[derive(Args)]
 pub(super) struct ContextArgs {
     /// Saved scan document; scan with --symbols for export summaries
-    #[arg(long, default_value = ".archgraph/archgraph.json")]
+    #[arg(long, default_value = ".boundrail/boundrail.json")]
     graph: PathBuf,
     /// Source checkout corresponding to the graph
     #[arg(long, default_value = ".")]

@@ -185,7 +185,7 @@ fn brief_check_preserves_policy_exit_and_report_writes_complete_artifacts() {
     let graph = common::write_tmp("brief-cli/check-graph.json", &scan);
     let fixture = common::fixture("ts-hexagonal");
     let rules = fixture.join("layout.yaml");
-    let check = common::archgraph(&[
+    let check = common::boundrail(&[
         "--brief",
         "check",
         &graph,
@@ -202,7 +202,7 @@ fn brief_check_preserves_policy_exit_and_report_writes_complete_artifacts() {
     assert_eq!(value["kind"], "check");
     assert!(value["result"]["summary"]["forbidden"].as_u64().unwrap() > 0);
     let permissive = common::write_tmp("brief-cli/permissive.yaml", "version: 1\n");
-    let clear = common::archgraph(&["--brief", "check", &graph, "--rules", &permissive]);
+    let clear = common::boundrail(&["--brief", "check", &graph, "--rules", &permissive]);
     assert_eq!(
         clear.status.code(),
         Some(0),
@@ -211,7 +211,7 @@ fn brief_check_preserves_policy_exit_and_report_writes_complete_artifacts() {
     );
     let clear_value: Value = serde_json::from_slice(&clear.stdout).unwrap();
     assert_eq!(clear_value["result"]["summary"]["forbidden"], 0);
-    let missing = common::archgraph(&[
+    let missing = common::boundrail(&[
         "--brief",
         "check",
         &graph,
@@ -223,7 +223,7 @@ fn brief_check_preserves_policy_exit_and_report_writes_complete_artifacts() {
         .parent()
         .unwrap()
         .join("report");
-    let report = common::archgraph(&[
+    let report = common::boundrail(&[
         "--brief",
         "report",
         fixture.to_str().unwrap(),
@@ -237,15 +237,15 @@ fn brief_check_preserves_policy_exit_and_report_writes_complete_artifacts() {
     let value: Value = serde_json::from_slice(&report.stdout).unwrap();
     assert_eq!(value["kind"], "report");
     let artifact: Value =
-        serde_json::from_slice(&std::fs::read(output.join("archgraph.json")).unwrap()).unwrap();
+        serde_json::from_slice(&std::fs::read(output.join("boundrail.json")).unwrap()).unwrap();
     assert_eq!(artifact["kind"], "scan");
-    assert!(output.join("archgraph.html").is_file());
+    assert!(output.join("boundrail.html").is_file());
 }
 
 #[test]
 fn brief_surface_and_context_override_markdown() {
     let fixture = common::fixture("ts-cycles");
-    let scanned = common::archgraph(&[
+    let scanned = common::boundrail(&[
         "scan",
         fixture.to_str().unwrap(),
         "--engine",
@@ -276,14 +276,14 @@ fn brief_surface_and_context_override_markdown() {
             "markdown",
         ],
     ] {
-        let output = common::archgraph(&args);
+        let output = common::boundrail(&args);
         assert!(
             output.status.success(),
             "{}",
             String::from_utf8_lossy(&output.stderr)
         );
         let value: Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(value["schema"], "archgraph/brief/v1");
+        assert_eq!(value["schema"], "boundrail/brief/v1");
         assert!(matches!(
             value["kind"].as_str(),
             Some("surface" | "context")
@@ -293,7 +293,7 @@ fn brief_surface_and_context_override_markdown() {
 
 #[test]
 fn brief_impact_overrides_markdown_and_preserves_depth_exit() {
-    let root = std::env::temp_dir().join(format!("archgraph-brief-impact-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("boundrail-brief-impact-{}", std::process::id()));
     if root.exists() {
         std::fs::remove_dir_all(&root).unwrap();
     }
@@ -330,7 +330,7 @@ fn brief_impact_overrides_markdown_and_preserves_depth_exit() {
     std::fs::write(root.join("src/a.ts"), "export const value = 2;\n").unwrap();
     git(&["add", "."]);
     git(&["commit", "-qm", "change"]);
-    let scan = common::archgraph(&["scan", root.to_str().unwrap(), "--engine", "native"]);
+    let scan = common::boundrail(&["scan", root.to_str().unwrap(), "--engine", "native"]);
     assert!(
         scan.status.success(),
         "{}",
@@ -340,7 +340,7 @@ fn brief_impact_overrides_markdown_and_preserves_depth_exit() {
         "brief-cli/impact-graph.json",
         std::str::from_utf8(&scan.stdout).unwrap(),
     );
-    let output = common::archgraph(&[
+    let output = common::boundrail(&[
         "--brief",
         "impact",
         "HEAD~1..HEAD",
@@ -368,14 +368,14 @@ fn brief_impact_overrides_markdown_and_preserves_depth_exit() {
 #[test]
 fn brief_tour_captures_text_as_bounded_json() {
     let graph = common::scan_file("ts-cycles", &[]);
-    let output = common::archgraph(&["--brief", "tour", &graph, "--agent"]);
+    let output = common::boundrail(&["--brief", "tour", &graph, "--agent"]);
     assert!(
         output.status.success(),
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
     let value: Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(value["schema"], "archgraph/brief/v1");
+    assert_eq!(value["schema"], "boundrail/brief/v1");
     assert!(!value["result"]["text"].as_str().unwrap().is_empty());
     assert!(value["result"]["text"].as_str().unwrap().chars().count() <= 512);
 }
@@ -383,14 +383,14 @@ fn brief_tour_captures_text_as_bounded_json() {
 #[test]
 fn brief_infer_layout_captures_draft_and_apply_keeps_complete_file() {
     let graph = common::scan_file("ts-hexagonal", &[]);
-    let output = common::archgraph(&["--brief", "infer-layout", &graph]);
+    let output = common::boundrail(&["--brief", "infer-layout", &graph]);
     assert!(
         output.status.success(),
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
     let value: Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(value["schema"], "archgraph/brief/v1");
+    assert_eq!(value["schema"], "boundrail/brief/v1");
     assert!(
         value["result"]["text"]
             .as_str()
@@ -402,8 +402,8 @@ fn brief_infer_layout_captures_draft_and_apply_keeps_complete_file() {
     if applied.exists() {
         std::fs::remove_file(&applied).unwrap();
     }
-    let full = common::archgraph(&["infer-layout", &graph]);
-    let output = common::archgraph(&[
+    let full = common::boundrail(&["infer-layout", &graph]);
+    let output = common::boundrail(&[
         "--brief",
         "infer-layout",
         &graph,
@@ -425,7 +425,7 @@ fn brief_services_captures_markdown_but_preserves_complete_report_export() {
         r#"{"version":1,"services":["api","billing"],"edges":[{"from":"api","to":"billing","kind":"http","source":{"file":"calls.ts","line":1}}]}"#,
     );
     let report = std::path::Path::new(&manifest).with_file_name("services-report.json");
-    let output = common::archgraph(&[
+    let output = common::boundrail(&[
         "--brief",
         "services",
         &manifest,
@@ -438,12 +438,12 @@ fn brief_services_captures_markdown_but_preserves_complete_report_export() {
         String::from_utf8_lossy(&output.stderr)
     );
     let value: Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(value["schema"], "archgraph/brief/v1");
+    assert_eq!(value["schema"], "boundrail/brief/v1");
     assert!(!value["result"]["text"].as_str().unwrap().is_empty());
     let full: Value = serde_json::from_slice(&std::fs::read(report).unwrap()).unwrap();
     assert_eq!(full["kind"], "services");
     assert_eq!(full["edges"].as_array().unwrap().len(), 1);
-    assert_eq!(full["schema"], "archgraph/v1.2");
+    assert_eq!(full["schema"], "boundrail/v1.2");
     let package = common::write_tmp(
         "brief-services-directory/package.json",
         r#"{"scripts":{"start":"node main.js"},"dependencies":{"pg":"*"}}"#,
@@ -454,7 +454,7 @@ fn brief_services_captures_markdown_but_preserves_complete_report_export() {
     );
     let root = std::path::Path::new(&package).parent().unwrap();
     let export = root.join("services-report.json");
-    let output = common::archgraph(&[
+    let output = common::boundrail(&[
         "--brief",
         "services",
         root.to_str().unwrap(),

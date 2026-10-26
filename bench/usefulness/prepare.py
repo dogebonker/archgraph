@@ -39,7 +39,7 @@ def prepare(output, python):
     shutil.copytree(HERE / 'fixture', baseline)
     git(baseline, 'init', '--quiet', '--initial-branch=main')
     git(baseline, 'add', '.')
-    git(baseline, '-c', 'commit.gpgsign=false', '-c', 'user.name=Archgraph benchmark',
+    git(baseline, '-c', 'commit.gpgsign=false', '-c', 'user.name=Boundrail benchmark',
         '-c', 'user.email=benchmark@example.invalid', 'commit', '--quiet', '-m',
         'Freeze declared synthetic mini-shop benchmark')
     oracle = HERE / 'oracle.py'

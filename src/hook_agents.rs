@@ -221,7 +221,7 @@ fn write_changed(path: &Path, contents: &str) -> Result<bool> {
     }
     fs::create_dir_all(path.parent().context("missing hook parent directory")?)?;
     // A create-new sibling prevents following an attacker-controlled temporary symlink.
-    let temporary = path.with_extension(format!("archgraph-{}.tmp", std::process::id()));
+    let temporary = path.with_extension(format!("boundrail-{}.tmp", std::process::id()));
     let mut options = fs::OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)]
@@ -287,7 +287,7 @@ pub fn install(root: &Path, agent: Agent, executable: &Path, feedback_only: bool
         Agent::Claude => ".claude/settings.json",
         Agent::Codex => ".codex/hooks.json",
         Agent::Cursor => ".cursor/hooks.json",
-        Agent::Opencode => ".opencode/plugins/archgraph.ts",
+        Agent::Opencode => ".opencode/plugins/boundrail.ts",
     };
     let path = safe_path(&root, relative)?;
     let contents = if agent == Agent::Opencode {
@@ -299,7 +299,7 @@ pub fn install(root: &Path, agent: Agent, executable: &Path, feedback_only: bool
         ensure!(
             existing
                 .as_ref()
-                .is_none_or(|s| s.starts_with("// archgraph:managed\n")),
+                .is_none_or(|s| s.starts_with("// boundrail:managed\n")),
             "refusing to overwrite an unowned OpenCode plugin"
         );
         opencode_plugin(executable_text, root_text)?
@@ -349,7 +349,7 @@ pub fn install(root: &Path, agent: Agent, executable: &Path, feedback_only: bool
                 .or_insert_with(|| json!([]))
                 .as_array_mut()
                 .context("hook event must be an array")?;
-            let marker = format!(" # archgraph:managed:{event}");
+            let marker = format!(" # boundrail:managed:{event}");
             let owned = |v: &Value| {
                 v.get("command")
                     .and_then(Value::as_str)
@@ -386,7 +386,7 @@ pub fn install(root: &Path, agent: Agent, executable: &Path, feedback_only: bool
 
 fn opencode_plugin(executable: &str, root: &str) -> Result<String> {
     Ok(format!(
-        r#"// archgraph:managed
+        r#"// boundrail:managed
 // Feedback-only: session.idle cannot veto completion.
 import {{ spawn }} from "node:child_process";
 export const Boundrail = async ({{ client }}) => {{
@@ -568,29 +568,23 @@ mod tests {
     }
 
     #[test]
-    fn legacy_managed_handlers_reinstall_with_the_boundrail_executable() {
+    fn managed_handlers_retarget_the_current_executable() {
         for (agent, relative) in [
             (Agent::Claude, ".claude/settings.json"),
             (Agent::Codex, ".codex/hooks.json"),
             (Agent::Cursor, ".cursor/hooks.json"),
-            (Agent::Opencode, ".opencode/plugins/archgraph.ts"),
+            (Agent::Opencode, ".opencode/plugins/boundrail.ts"),
         ] {
             let root = directory();
-            install(&root, agent, Path::new("/legacy/archgraph"), true).unwrap();
+            install(&root, agent, Path::new("/previous/boundrail"), true).unwrap();
             let path = root.join(relative);
-            if agent == Agent::Opencode {
-                let legacy = fs::read_to_string(&path)
-                    .unwrap()
-                    .replace("export const Boundrail", "export const Archgraph");
-                fs::write(&path, legacy).unwrap();
-            }
             let updated = install(&root, agent, Path::new("/current/boundrail"), true).unwrap();
             assert_eq!(updated["written"], json!([relative]));
             let text = fs::read_to_string(&path).unwrap();
             assert!(text.contains("/current/boundrail"));
-            assert!(!text.contains("/legacy/archgraph"));
-            assert!(text.contains("archgraph:managed"));
-            assert!(!root.join(".opencode/plugins/boundrail.ts").exists());
+            assert!(!text.contains("/previous/boundrail"));
+            assert!(text.contains("boundrail:managed"));
+            assert!(!root.join(".opencode/plugins/archgraph.ts").exists());
             let repeated = install(&root, agent, Path::new("/current/boundrail"), true).unwrap();
             assert_eq!(repeated["unchanged"], json!([relative]));
             assert_eq!(fs::read_to_string(path).unwrap(), text);
@@ -607,7 +601,7 @@ mod tests {
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "{\"env\":{\"PRIVATE\":\"preserve\"}}").unwrap();
         fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
-        install(&root, Agent::Claude, Path::new("/opt/archgraph"), false).unwrap();
+        install(&root, Agent::Claude, Path::new("/opt/boundrail"), false).unwrap();
         assert_eq!(
             fs::metadata(&path).unwrap().permissions().mode() & 0o777,
             0o600
@@ -657,7 +651,7 @@ mod tests {
     fn unsupported_strict_installs_write_nothing() {
         for agent in [Agent::Cursor, Agent::Opencode] {
             let root = directory();
-            assert!(install(&root, agent, Path::new("/bin/archgraph"), false).is_err());
+            assert!(install(&root, agent, Path::new("/bin/boundrail"), false).is_err());
             assert_eq!(fs::read_dir(&root).unwrap().count(), 0);
             fs::remove_dir_all(root).unwrap();
         }
@@ -669,21 +663,21 @@ mod tests {
         let first = install(
             &root,
             Agent::Opencode,
-            Path::new("/path with spaces/archgraph"),
+            Path::new("/path with spaces/boundrail"),
             true,
         )
         .unwrap();
         assert_eq!(first["capabilities"]["completion_gate"], false);
-        let plugin = fs::read_to_string(root.join(".opencode/plugins/archgraph.ts")).unwrap();
+        let plugin = fs::read_to_string(root.join(".opencode/plugins/boundrail.ts")).unwrap();
         assert!(plugin.contains("tool.execute.before"));
         assert!(plugin.contains("tool.execute.after"));
         assert!(plugin.contains("session.idle"));
-        assert!(plugin.contains("spawn(\"/path with spaces/archgraph\""));
+        assert!(plugin.contains("spawn(\"/path with spaces/boundrail\""));
         assert_eq!(
             install(
                 &root,
                 Agent::Opencode,
-                Path::new("/path with spaces/archgraph"),
+                Path::new("/path with spaces/boundrail"),
                 true
             )
             .unwrap()["written"],
@@ -697,7 +691,7 @@ mod tests {
         let root = directory();
         fs::create_dir(root.join(".codex")).unwrap();
         fs::write(root.join(".codex/hooks.json"), "invalid").unwrap();
-        assert!(install(&root, Agent::Codex, Path::new("/bin/archgraph"), false).is_err());
+        assert!(install(&root, Agent::Codex, Path::new("/bin/boundrail"), false).is_err());
         assert_eq!(
             fs::read_to_string(root.join(".codex/hooks.json")).unwrap(),
             "invalid"
@@ -712,13 +706,13 @@ mod tests {
         let root = directory();
         let outside = directory();
         symlink(&outside, root.join(".codex")).unwrap();
-        assert!(install(&root, Agent::Codex, Path::new("/bin/archgraph"), false).is_err());
+        assert!(install(&root, Agent::Codex, Path::new("/bin/boundrail"), false).is_err());
         assert_eq!(fs::read_dir(&outside).unwrap().count(), 0);
         fs::remove_file(root.join(".codex")).unwrap();
         fs::create_dir(root.join(".codex")).unwrap();
         fs::write(outside.join("hooks.json"), "{}").unwrap();
         symlink(outside.join("hooks.json"), root.join(".codex/hooks.json")).unwrap();
-        assert!(install(&root, Agent::Codex, Path::new("/bin/archgraph"), false).is_err());
+        assert!(install(&root, Agent::Codex, Path::new("/bin/boundrail"), false).is_err());
         assert_eq!(
             fs::read_to_string(outside.join("hooks.json")).unwrap(),
             "{}"

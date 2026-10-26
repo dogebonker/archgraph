@@ -146,7 +146,7 @@ enum Cmd {
     Status(daemon_cli::Status),
     /// Collect the import graph and write a scan document
     Scan(scan_cli::Scan),
-    /// Scan, apply rules, write archgraph.json and archgraph.html, and print a summary
+    /// Scan, apply rules, write boundrail.json and boundrail.html, and print a summary
     Report(report_cli::Report),
     /// Recompute a scan document under rules and list forbidden and unplanned imports
     Check(check_cli::Check),
@@ -187,7 +187,7 @@ enum Cmd {
 #[derive(Args)]
 struct Explain {
     subject: String,
-    #[arg(long, default_value = ".archgraph/archgraph.json")]
+    #[arg(long, default_value = ".boundrail/boundrail.json")]
     graph: PathBuf,
     /// Compact edit context, bounded to 400 UTF-8 bytes
     #[arg(long)]
@@ -196,7 +196,7 @@ struct Explain {
 
 #[derive(Args)]
 struct Unresolved {
-    #[arg(default_value = ".archgraph/archgraph.json")]
+    #[arg(default_value = ".boundrail/boundrail.json")]
     graph: PathBuf,
     #[arg(long)]
     json: bool,
@@ -428,7 +428,7 @@ fn execute(cli: Cli) -> ExitCode {
         if !out.stdout.is_empty() {
             let value = serde_json::from_str::<serde_json::Value>(&out.stdout)
                 .unwrap_or_else(|_| serde_json::json!({"kind":"message","text":out.stdout}));
-            let value = if value["schema"] == "archgraph/brief/v1" {
+            let value = if value["schema"] == "boundrail/brief/v1" {
                 value
             } else {
                 brief_cli::project(&value)
@@ -562,7 +562,7 @@ fn show_excludes() -> Result<()> {
         }
     }
     println!(
-        "Also respects .gitignore and .archgraphignore. Layout include overrides defaults/ignore files; explicit exclude wins."
+        "Also respects .gitignore and .boundrailignore. Layout include overrides defaults/ignore files; explicit exclude wins."
     );
     Ok(())
 }
@@ -868,14 +868,14 @@ fn git_scan_root(root: &Path) -> Option<String> {
 }
 
 /// The checkout's commit, and whether anything other than Boundrail's own outputs changed:
-/// `.archgraph/` and those of `outputs` inside `root`.
+/// `.boundrail/` and those of `outputs` inside `root`.
 fn git(root: &Path, outputs: &[&Path]) -> Option<Git> {
     let canonical_root = fs::canonicalize(root).ok()?;
     let mut status = vec![
         "status".to_owned(),
         "--porcelain".into(),
         "--".into(),
-        ":(exclude,literal).archgraph".into(),
+        ":(exclude,literal).boundrail".into(),
     ];
     status.extend(outputs.iter().filter_map(|output| {
         let parent = output

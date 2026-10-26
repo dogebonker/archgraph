@@ -2,7 +2,7 @@ mod common;
 
 use std::fs;
 
-use common::{archgraph, fixture, layout, stable, synthetic, validate};
+use common::{boundrail, fixture, layout, stable, synthetic, validate};
 use serde_json::{Value, json};
 
 fn files(doc: &Value) -> Vec<&str> {
@@ -17,7 +17,7 @@ fn files(doc: &Value) -> Vec<&str> {
 #[test]
 fn ts_basic_metrics_by_hand() {
     let (doc, _, stderr) = scan_recorded("ts-basic", &[]);
-    assert_eq!(doc["schema"], "archgraph/v1.2");
+    assert_eq!(doc["schema"], "boundrail/v1.2");
     assert_eq!(doc["kind"], "scan");
     assert_eq!(doc["source"]["language"], "typescript");
     assert_eq!(
@@ -119,7 +119,7 @@ fn summary(cycles: usize, modules: Value) -> Value {
 #[test]
 fn schema_is_valid_draft_2020_12() {
     let schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../schema/boundrail.v1.2.schema.json")).unwrap();
     assert_eq!(
         schema["$schema"],
         "https://json-schema.org/draft/2020-12/schema"
@@ -429,7 +429,7 @@ fn greedy_break_set_above_sixteen_module_edges() {
 #[test]
 fn zero_cruised_files_is_an_error() {
     let (dir, input) = synthetic("empty", 0, &[]);
-    let out = archgraph(&[
+    let out = boundrail(&[
         "scan",
         &dir,
         "--collector-input",
@@ -534,12 +534,12 @@ fn cochange_finds_hidden_coupling_and_records_git() {
         ]
     );
 
-    // Archgraph's own outputs in the repository do not make it dirty on the next scan.
-    fs::create_dir_all(repo.join(".archgraph")).unwrap();
-    fs::write(repo.join(".archgraph/archgraph.json"), "{}").unwrap();
+    // Boundrail's own outputs in the repository do not make it dirty on the next scan.
+    fs::create_dir_all(repo.join(".boundrail")).unwrap();
+    fs::write(repo.join(".boundrail/boundrail.json"), "{}").unwrap();
     let output = repo.join("graph.json");
     for _ in 0..2 {
-        let out = archgraph(&[
+        let out = boundrail(&[
             "scan",
             root,
             "--collector-input",
@@ -1040,7 +1040,7 @@ fn a_tool_running_past_the_tool_timeout_is_killed_and_reported() {
     assert_eq!(probe.stdout, b"ready");
     assert!(!pid.exists(), "the probe must not run the timed branch");
     let started = std::time::Instant::now();
-    let out = archgraph(&[
+    let out = boundrail(&[
         "--tool-timeout",
         "1",
         "scan",
@@ -1711,7 +1711,7 @@ fn only_source_files_become_files() {
 #[test]
 fn cochange_of_zero_commits_is_a_usage_error() {
     let dir = fixture("ts-basic");
-    let out = archgraph(&["scan", dir.to_str().unwrap(), "--cochange=0"]);
+    let out = boundrail(&["scan", dir.to_str().unwrap(), "--cochange=0"]);
     assert_eq!(out.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&out.stderr).contains("--cochange"));
 }
@@ -1747,7 +1747,7 @@ fn git_runs_without_the_repository_fsmonitor_hook() {
 #[test]
 fn schema_accepts_unknown_finding_kinds_and_types_known_ones() {
     let schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../schema/boundrail.v1.2.schema.json")).unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
     let (doc, _, _) = common::scan_recorded("ts-basic", &[]);
     let with = |finding: Value| {
@@ -1765,7 +1765,7 @@ fn schema_accepts_unknown_finding_kinds_and_types_known_ones() {
 
 /// Runs `report`, returning stdout, stderr and the exit code.
 fn report(args: &[&str]) -> (String, String, Option<i32>) {
-    let out = archgraph(&[&["report"], args].concat());
+    let out = boundrail(&[&["report"], args].concat());
     (
         String::from_utf8(out.stdout).unwrap(),
         String::from_utf8(out.stderr).unwrap(),
@@ -1806,8 +1806,8 @@ fn report_finds_layout_yaml_writes_both_files_and_exits_1_on_forbidden() {
 
     // The JSON is the scan document `scan --rules layout.yaml` writes; the page embeds it.
     let (json, html) = (
-        out_dir.join("archgraph.json"),
-        out_dir.join("archgraph.html"),
+        out_dir.join("boundrail.json"),
+        out_dir.join("boundrail.html"),
     );
     let written = fs::read_to_string(&json).unwrap();
     validate(&serde_json::from_str(&written).unwrap());
@@ -1849,9 +1849,9 @@ fn report_without_rules_exits_0_and_writes_into_the_root_by_default() {
         assert!(stdout.contains(line), "{line:?} missing from\n{stdout}");
     }
     assert!(!stdout.contains("forbidden"), "{stdout}");
-    let out_dir = root.join(".archgraph");
-    assert!(out_dir.join("archgraph.json").is_file());
-    assert!(out_dir.join("archgraph.html").is_file());
+    let out_dir = root.join(".boundrail");
+    assert!(out_dir.join("boundrail.json").is_file());
+    assert!(out_dir.join("boundrail.html").is_file());
 }
 
 #[cfg(unix)]
@@ -1874,21 +1874,21 @@ fn report_refuses_to_write_through_symlinks_the_scanned_repository_planted() {
         ])
     };
 
-    // The repository ships .archgraph as a link to a folder elsewhere.
+    // The repository ships .boundrail as a link to a folder elsewhere.
     let root = base.join("dir-link");
     fs::create_dir_all(&root).unwrap();
-    symlink(&victim, root.join(".archgraph")).unwrap();
+    symlink(&victim, root.join(".boundrail")).unwrap();
     let (_, stderr, code) = run(&root);
     assert_eq!(code, Some(2), "{stderr}");
     assert!(stderr.contains("symbolic link"), "{stderr}");
-    assert!(!victim.join("archgraph.html").exists());
+    assert!(!victim.join("boundrail.html").exists());
 
-    // The repository ships .archgraph/archgraph.html as a link to a file elsewhere.
+    // The repository ships .boundrail/boundrail.html as a link to a file elsewhere.
     let root = base.join("file-link");
-    fs::create_dir_all(root.join(".archgraph")).unwrap();
+    fs::create_dir_all(root.join(".boundrail")).unwrap();
     symlink(
         victim.join("keep.txt"),
-        root.join(".archgraph/archgraph.html"),
+        root.join(".boundrail/boundrail.html"),
     )
     .unwrap();
     let (_, stderr, code) = run(&root);
@@ -1901,16 +1901,16 @@ fn report_refuses_to_write_through_symlinks_the_scanned_repository_planted() {
 
     // Outputs are replaced, never truncated in place: a hard link to the old file keeps it.
     let root = base.join("hard-link");
-    fs::create_dir_all(root.join(".archgraph")).unwrap();
+    fs::create_dir_all(root.join(".boundrail")).unwrap();
     fs::hard_link(
         victim.join("keep.txt"),
-        root.join(".archgraph/archgraph.json"),
+        root.join(".boundrail/boundrail.json"),
     )
     .unwrap();
     let (_, stderr, code) = run(&root);
     assert_eq!(code, Some(0), "{stderr}");
     assert!(
-        fs::read_to_string(root.join(".archgraph/archgraph.json"))
+        fs::read_to_string(root.join(".boundrail/boundrail.json"))
             .unwrap()
             .contains("\"scan\"")
     );
@@ -1940,7 +1940,7 @@ fn report_with_unreadable_rules_is_an_error() {
 
 #[test]
 fn depcruise_path_that_does_not_exist_is_a_usage_error() {
-    let out = archgraph(&[
+    let out = boundrail(&[
         "scan",
         fixture("ts-basic").to_str().unwrap(),
         "--depcruise",

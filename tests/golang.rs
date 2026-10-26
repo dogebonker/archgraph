@@ -1,6 +1,6 @@
 mod common;
 
-use common::{archgraph, finding, layout, scan, scan_file, scan_recorded, write_tmp};
+use common::{boundrail, finding, layout, scan, scan_file, scan_recorded, write_tmp};
 use serde_json::{Value, json};
 
 fn edges(doc: &Value) -> Vec<(&str, &str)> {
@@ -153,7 +153,7 @@ fn go_cycles_appear_only_between_merged_packages() {
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(&root).unwrap();
     let input = common::fixture("go-cycles").join("go.json");
-    let out = archgraph(&[
+    let out = boundrail(&[
         "report",
         root.to_str().unwrap(),
         "--language",
@@ -257,7 +257,7 @@ fn excluding_a_platform_variant_keeps_the_remaining_variants_bound() {
 #[test]
 fn go_layers_violation_fails_check() {
     let graph = scan_file("go-layers", &["--rules", &layout("go-layers")]);
-    let out = archgraph(&["check", &graph]);
+    let out = boundrail(&["check", &graph]);
     let stdout = String::from_utf8(out.stdout).unwrap();
     assert_eq!(out.status.code(), Some(1), "{stdout}");
     assert_eq!(
@@ -435,7 +435,7 @@ fn go_is_detected_only_beside_its_root_marker() {
         r#"{ "modules": [], "summary": { "totalCruised": 0 } }"#,
     );
     let detected = |root: &std::path::Path| {
-        let out = archgraph(&["scan", root.to_str().unwrap(), "--collector-input", &input]);
+        let out = boundrail(&["scan", root.to_str().unwrap(), "--collector-input", &input]);
         String::from_utf8_lossy(&out.stdout).to_string() + &String::from_utf8_lossy(&out.stderr)
     };
     // Without go.mod the .go files do not count: TypeScript, and the empty recording fails.
@@ -530,7 +530,7 @@ fn go_files_in_the_root_are_one_package_and_one_module() {
         "go-root-package-scan.json",
         &serde_json::to_string(&doc).unwrap(),
     );
-    let out = archgraph(&["simulate", &graph, "--move", "doc/gen.go", "gen.go"]);
+    let out = boundrail(&["simulate", &graph, "--move", "doc/gen.go", "gen.go"]);
     assert!(
         out.status.success(),
         "{}",
@@ -617,7 +617,7 @@ fn go_modules_group_packages_by_depth() {
         // render recomputes the modules from the config: it must agree.
         let graph = write_tmp("go-packages-scan.json", &stdout);
         assert!(
-            archgraph(&["render", &graph, "-o", "/dev/null"])
+            boundrail(&["render", &graph, "-o", "/dev/null"])
                 .status
                 .success()
         );
@@ -763,7 +763,7 @@ fn go_import_lines_count_new_importer_and_package_pairs() {
                                 { "from": "server/handle.go", "to": "core/server.go" }] }])
     );
     let saved = write_tmp("go-moves.json", &doc.to_string());
-    let stdout = String::from_utf8(archgraph(&["check", &saved]).stdout).unwrap();
+    let stdout = String::from_utf8(boundrail(&["check", &saved]).stdout).unwrap();
     assert!(
         stdout.contains(
             "move *: 1 file, 3 import lines, 2 names to export, 2 imports in new package cycles\n"
@@ -899,7 +899,7 @@ fn a_go_types_scan_saved_before_bound_pairs_leaves_names_unknown() {
         "{}/go-legacy-bound/checked.json",
         env!("CARGO_TARGET_TMPDIR")
     );
-    let out = archgraph(&["check", &saved, "--rules", &rules, "-o", &output]);
+    let out = boundrail(&["check", &saved, "--rules", &rules, "-o", &output]);
     assert!(
         out.status.success(),
         "{}",
@@ -931,7 +931,7 @@ fn report_summary_prints_the_target_block() {
         "version: 1\nknown:\n  - { rule: \"forbid[0]\", from: \"api/handler/handler.go\", to: \"store/store.go\" }\n",
     );
     let input = common::fixture("go-cycles").join("go.json");
-    let out = archgraph(&[
+    let out = boundrail(&[
         "report",
         root.to_str().unwrap(),
         "--language",

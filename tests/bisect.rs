@@ -460,7 +460,7 @@ fn cli_bisect_and_report_keep_verified_provenance_and_checkout() {
     assert_eq!(git(&repo.0, &["rev-parse", "HEAD"]), introducing);
     run(&["report", root, "--depcruise", collector, "--depth", "1"]);
     let document: serde_json::Value =
-        serde_json::from_slice(&fs::read(repo.0.join(".archgraph/archgraph.json")).unwrap())
+        serde_json::from_slice(&fs::read(repo.0.join(".boundrail/boundrail.json")).unwrap())
             .unwrap();
     let finding = document["findings"]
         .as_array()
@@ -481,7 +481,7 @@ fn cli_bisect_and_report_keep_verified_provenance_and_checkout() {
     let rendered = repo.0.join("rendered.html");
     run(&[
         "render",
-        repo.0.join(".archgraph/archgraph.json").to_str().unwrap(),
+        repo.0.join(".boundrail/boundrail.json").to_str().unwrap(),
         "--output",
         rendered.to_str().unwrap(),
     ]);
@@ -585,7 +585,7 @@ fn report_dates_hidden_coupling_with_the_original_cochange_window() {
         String::from_utf8_lossy(&output.stderr)
     );
     let doc: serde_json::Value =
-        serde_json::from_slice(&fs::read(repo.0.join(".archgraph/archgraph.json")).unwrap())
+        serde_json::from_slice(&fs::read(repo.0.join(".boundrail/boundrail.json")).unwrap())
             .unwrap();
     let finding = doc["diagnostics"]
         .as_array()

@@ -19,19 +19,19 @@ class AppServerTests(unittest.TestCase):
         root, profile, artifact = (work / name for name in ('repo', 'profile', 'artifacts'))
         for path in (root, profile, artifact):
             path.mkdir(mode=0o700)
-        binary = work / 'archgraph binary'
+        binary = work / 'boundrail binary'
         binary.write_bytes(b'mock architecture binary')
         if mode == 'guarded':
             (root / '.codex').mkdir()
             (root / '.codex/hooks.json').write_text('{"hooks":"fixture"}')
-        args = argparse.Namespace(archgraph=str(binary), archgraph_sha256=runner.digest(binary),
-            artifact_dir=str(artifact), auth_file=None, mode=mode, trust_reviewed_archgraph=True,
+        args = argparse.Namespace(boundrail=str(binary), boundrail_sha256=runner.digest(binary),
+            artifact_dir=str(artifact), auth_file=None, mode=mode, trust_reviewed_boundrail=True,
             codex='UNUSED-no-real-codex', model='MOCK-model', prompt='MOCK task', run_id='fixture-run', timeout=10)
         return root, profile, artifact, binary, args
 
     def execute(self, root, profile, binary, args, extra=None):
         before = Path.cwd()
-        with patch.dict(os.environ, {'CODEX_HOME': str(profile), 'MOCK_ARCHGRAPH_BINARY': str(binary), **(extra or {})}):
+        with patch.dict(os.environ, {'CODEX_HOME': str(profile), 'MOCK_BOUNDRAIL_BINARY': str(binary), **(extra or {})}):
             try:
                 os.chdir(root)
                 return runner.run(args, command=[sys.executable, str(FIXTURE.resolve())])
@@ -45,8 +45,8 @@ class AppServerTests(unittest.TestCase):
             self.assertEqual(value['activation'], 'verified_active')
             self.assertEqual(value['usage']['totalTokens'], 15)
             expected = {'run_id': args.run_id, 'mode': args.mode, 'model': args.model,
-                'cwd': str(root.resolve()), 'archgraph': str(binary.resolve()),
-                'archgraph_sha256': args.archgraph_sha256, 'hook_config_sha256': runner.digest(root / '.codex/hooks.json')}
+                'cwd': str(root.resolve()), 'boundrail': str(binary.resolve()),
+                'boundrail_sha256': args.boundrail_sha256, 'hook_config_sha256': runner.digest(root / '.codex/hooks.json')}
             self.assertEqual(runner.validate_result(value, expected), 'verified_active')
             edits = [json.loads(line) for line in (profile / 'mock-config-edits.jsonl').read_text().splitlines()]
             self.assertEqual([edit['edits'][0]['keyPath'] for edit in edits], ['features.hooks', 'projects', 'hooks.state'])
@@ -74,7 +74,7 @@ class AppServerTests(unittest.TestCase):
             self.assertNotIn('hooks.state', raw)
         with tempfile.TemporaryDirectory() as temporary:
             root, profile, artifact, binary, args = self.setup(Path(temporary))
-            args.trust_reviewed_archgraph = False
+            args.trust_reviewed_boundrail = False
             with self.assertRaisesRegex(ValueError, 'explicit'):
                 self.execute(root, profile, binary, args)
             self.assertEqual(list(artifact.iterdir()), [])
@@ -148,11 +148,11 @@ class AppServerTests(unittest.TestCase):
     def test_unreviewed_binary_and_public_profile_fail_before_rpc(self):
         with tempfile.TemporaryDirectory() as temporary:
             root, profile, artifact, binary, args = self.setup(Path(temporary))
-            args.archgraph_sha256 = '0' * 64
+            args.boundrail_sha256 = '0' * 64
             with self.assertRaisesRegex(ValueError, 'digest'):
                 self.execute(root, profile, binary, args)
             self.assertEqual(list(artifact.iterdir()), [])
-            args.archgraph_sha256 = runner.digest(binary)
+            args.boundrail_sha256 = runner.digest(binary)
             profile.chmod(0o755)
             with self.assertRaisesRegex(ValueError, 'private owned'):
                 self.execute(root, profile, binary, args)

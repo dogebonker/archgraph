@@ -1,7 +1,7 @@
 {
-  "name": "archgraph-collectors",
+  "name": "boundrail-collectors",
   "private": true,
-  "description": "The collector the archgraph action installs for TypeScript/JavaScript, locked by package-lock.json",
+  "description": "The collector the boundrail action installs for TypeScript/JavaScript, locked by package-lock.json",
   "dependencies": {
     "dependency-cruiser": "18.4.0",
     "typescript": "6.0.3"

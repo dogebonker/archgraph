@@ -3,7 +3,7 @@ mod common;
 use serde_json::{Value, json};
 
 fn schema() -> Value {
-    serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json")).unwrap()
+    serde_json::from_str(include_str!("../schema/boundrail.v1.2.schema.json")).unwrap()
 }
 
 fn recipe() -> Value {
@@ -57,7 +57,7 @@ fn actionable_findings_require_recipes_but_diagnostics_do_not() {
     let validator = definition("finding");
     let mut finding = json!({"kind":"deep-import","subject":"app/a.ts","evidence":{"from":"app/a.ts","to":"core/b.ts","entrypoint":"core/index.ts","symbols":["B"]}});
     assert!(!validator.is_valid(&finding));
-    finding["finding_id"] = json!(format!("ag-{}", "a".repeat(64)));
+    finding["finding_id"] = json!(format!("br-{}", "a".repeat(64)));
     finding["recipe"] = recipe();
     assert!(validator.is_valid(&finding));
     assert!(definition("diagnostic").is_valid(&json!({
@@ -68,15 +68,15 @@ fn actionable_findings_require_recipes_but_diagnostics_do_not() {
 
 #[test]
 fn legacy_export_restores_advisories_and_removes_recipe_fields() {
-    let mut value = json!({"schema":"archgraph/v1.2","kind":"scan",
+    let mut value = json!({"schema":"boundrail/v1.2","kind":"scan",
         "findings":[
             {"kind":"forbidden-edge","subject":"a","evidence":{},"recipe":recipe()},
-            {"kind":"cycle","subject":"a","evidence":{},"finding_id":"ag-id","recipe":recipe()}],
+            {"kind":"cycle","subject":"a","evidence":{},"finding_id":"br-id","recipe":recipe()}],
         "diagnostics":[{"finding":{"kind":"small-repo","subject":".",
-            "evidence":{"files":2,"modules":1},"finding_id":"ag-advisory"},"reason":"advisory"}]
+            "evidence":{"files":2,"modules":1},"finding_id":"br-advisory"},"reason":"advisory"}]
     });
     boundrail::compat::v1(&mut value).unwrap();
-    assert_eq!(value["schema"], "archgraph/v1");
+    assert_eq!(value["schema"], "boundrail/v1");
     assert!(value.get("diagnostics").is_none());
     assert_eq!(value["findings"].as_array().unwrap().len(), 2);
     assert_eq!(value["findings"][1]["kind"], "small-repo");
@@ -88,34 +88,34 @@ fn legacy_export_restores_advisories_and_removes_recipe_fields() {
 
 #[test]
 fn legacy_export_also_accepts_v11_documents() {
-    let mut value = json!({"schema":"archgraph/v1.1","kind":"scan","findings":[],
+    let mut value = json!({"schema":"boundrail/v1.1","kind":"scan","findings":[],
         "edges":[{"from":"a.ts","to":"b.ts","kind":"runtime"}]});
     boundrail::compat::v1(&mut value).unwrap();
-    assert_eq!(value["schema"], "archgraph/v1");
+    assert_eq!(value["schema"], "boundrail/v1");
     assert_eq!(value["edges"][0]["kind"], "static");
 }
 
 #[test]
 fn reader_recognizes_all_published_graph_versions() {
-    for version in ["archgraph/v1", "archgraph/v1.1", "archgraph/v1.2"] {
+    for version in ["boundrail/v1", "boundrail/v1.1", "boundrail/v1.2"] {
         assert!(boundrail::model::supported_schema(version), "{version}");
     }
-    assert!(!boundrail::model::supported_schema("archgraph/v2"));
+    assert!(!boundrail::model::supported_schema("boundrail/v2"));
 }
 
 #[test]
 fn old_scan_documents_restore_into_current_recipe_schema() {
     let (current, _, _) = common::scan_recorded("ts-basic", &[]);
-    for version in ["archgraph/v1", "archgraph/v1.1", "archgraph/v1.2"] {
+    for version in ["boundrail/v1", "boundrail/v1.1", "boundrail/v1.2"] {
         let mut value = current.clone();
-        if version == "archgraph/v1" {
+        if version == "boundrail/v1" {
             boundrail::compat::v1(&mut value).unwrap();
         } else {
             value["schema"] = json!(version);
         }
         let input = serde_json::from_value(value).unwrap();
         let restored = serde_json::to_value(boundrail::restore_scan(input).unwrap()).unwrap();
-        assert_eq!(restored["schema"], "archgraph/v1.2");
+        assert_eq!(restored["schema"], "boundrail/v1.2");
         common::validate(&restored);
     }
 }
@@ -123,17 +123,17 @@ fn old_scan_documents_restore_into_current_recipe_schema() {
 #[test]
 fn recipe_application_and_verification_documents_have_typed_public_schemas() {
     let validator = jsonschema::validator_for(&schema()).unwrap();
-    let id = format!("ag-{}", "b".repeat(64));
+    let id = format!("br-{}", "b".repeat(64));
     let verify = json!({"pass":true,"checks":[{"predicate":"cycles_in","pass":true,"expected":0,"actual":0}]});
     let mut proposal = recipe();
-    proposal["schema"] = json!("archgraph/v1.2");
+    proposal["schema"] = json!("boundrail/v1.2");
     proposal["kind"] = json!("recipe");
     proposal["finding_id"] = json!(id);
     let mut documents = vec![
         proposal,
-        json!({"schema":"archgraph/v1.2","kind":"apply-plan","finding_id":id,"recipe":recipe(),"can_apply":false,"pending":["requires agent work"],"changes":[],"moves":[]}),
-        json!({"schema":"archgraph/v1.2","kind":"apply","finding_id":id,"applied":true,"verify":verify,"hint":null}),
-        json!({"schema":"archgraph/v1.2","kind":"verification","finding_id":id,"verify":verify}),
+        json!({"schema":"boundrail/v1.2","kind":"apply-plan","finding_id":id,"recipe":recipe(),"can_apply":false,"pending":["requires agent work"],"changes":[],"moves":[]}),
+        json!({"schema":"boundrail/v1.2","kind":"apply","finding_id":id,"applied":true,"verify":verify,"hint":null}),
+        json!({"schema":"boundrail/v1.2","kind":"verification","finding_id":id,"verify":verify}),
     ];
     for value in &documents {
         assert!(validator.is_valid(value), "{value}");

@@ -486,8 +486,7 @@ fn build_inner(
         schema: SCHEMA,
         kind: "scan",
         tool: Tool {
-            // Persisted report identity stays stable across the Boundrail product rename.
-            name: "archgraph",
+            name: "boundrail",
             version: env!("CARGO_PKG_VERSION"),
         },
         modules: metrics,

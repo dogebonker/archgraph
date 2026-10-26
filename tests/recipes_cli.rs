@@ -124,7 +124,7 @@ impl Repo {
             "--root",
             ".",
             "--graph",
-            ".archgraph/test-graph.json",
+            ".boundrail/test-graph.json",
         ];
         args.extend_from_slice(extra);
         self.json(&args)
@@ -147,7 +147,7 @@ fn cycle_id(doc: &Value) -> String {
         .to_owned()
 }
 fn full(value: &Value) -> &Value {
-    if value["schema"] == "archgraph/brief/v1" {
+    if value["schema"] == "boundrail/brief/v1" {
         &value["result"]
     } else {
         value
@@ -163,9 +163,9 @@ fn round_trip(language: &'static str) {
         "identical input retains finding IDs"
     );
     assert!(!before["cycles"].as_array().unwrap().is_empty());
-    fs::create_dir(repo.root.join(".archgraph")).unwrap();
+    fs::create_dir(repo.root.join(".boundrail")).unwrap();
     fs::write(
-        repo.root.join(".archgraph/test-graph.json"),
+        repo.root.join(".boundrail/test-graph.json"),
         serde_json::to_vec_pretty(&before).unwrap(),
     )
     .unwrap();
@@ -185,7 +185,7 @@ fn round_trip(language: &'static str) {
     assert!(proposal["verify"]["structured"].is_object());
     assert_eq!(proposal["verify"]["structured"]["baseline_id"], id);
     let brief = repo.target("propose", &id, &["--brief"]);
-    assert_eq!(brief["schema"], "archgraph/brief/v1");
+    assert_eq!(brief["schema"], "boundrail/brief/v1");
     assert_eq!(full(&brief)["finding_id"], id);
 
     let sources = repo.sources();
@@ -209,7 +209,7 @@ fn round_trip(language: &'static str) {
     assert!(
         !repo
             .root
-            .join(format!(".archgraph/applied/{id}.json"))
+            .join(format!(".boundrail/applied/{id}.json"))
             .exists()
     );
 
@@ -237,7 +237,7 @@ fn round_trip(language: &'static str) {
     assert_eq!(verified["kind"], "verification");
     assert_eq!(verified["verify"]["pass"], true, "{verified}");
     let brief = repo.target("verify", &id, &["--brief"]);
-    assert_eq!(brief["schema"], "archgraph/brief/v1");
+    assert_eq!(brief["schema"], "boundrail/brief/v1");
     assert_eq!(full(&brief)["verify"]["pass"], true, "{brief}");
 }
 

@@ -1,5 +1,5 @@
 # Parse source only: never load Mix, expand macros or evaluate the scanned project.
-defmodule ArchgraphElixir do
+defmodule BoundrailElixir do
   def main do
     [root] = System.argv()
 
@@ -92,7 +92,7 @@ defmodule ArchgraphElixir do
     end
   end
 
-  defp module_name({:archgraph_module, name}, _), do: name
+  defp module_name({:boundrail_module, name}, _), do: name
   defp module_name({:__MODULE__, _, _}, ctx), do: ctx.current
 
   defp module_name({:__aliases__, _, parts}, ctx) do
@@ -246,7 +246,7 @@ defmodule ArchgraphElixir do
 
       case {name, suffix} do
         {name, {:__aliases__, _, parts}} when is_binary(name) ->
-          full = {:archgraph_module, name <> "." <> Enum.map_join(parts, ".", &Atom.to_string/1)}
+          full = {:boundrail_module, name <> "." <> Enum.map_join(parts, ".", &Atom.to_string/1)}
           {alias_binding(full, options, ctx), acc}
 
         _ ->
@@ -383,4 +383,4 @@ defmodule ArchgraphElixir do
   defp json(value) when is_integer(value), do: Integer.to_string(value)
 end
 
-ArchgraphElixir.main()
+BoundrailElixir.main()

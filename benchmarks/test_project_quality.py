@@ -91,8 +91,8 @@ class QualityComparisonTests(unittest.TestCase):
             self.assertNotIn('private_text', markdown)
             self.assertIn('<glarity>', markdown)
             self.assertIn('not an approved architecture policy', markdown)
-            self.assertEqual((args.out / 'before-archgraph').read_bytes(), b'old-binary')
-            self.assertEqual((args.out / 'after-archgraph').read_bytes(), b'new-binary')
+            self.assertEqual((args.out / 'before-boundrail').read_bytes(), b'old-binary')
+            self.assertEqual((args.out / 'after-boundrail').read_bytes(), b'new-binary')
             self.assertEqual((args.out.stat().st_mode & 0o777), 0o700)
 
     def test_positive_repeat_count_required(self):

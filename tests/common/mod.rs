@@ -12,7 +12,7 @@ pub fn fixture(name: &str) -> PathBuf {
         .join(name)
 }
 
-pub fn archgraph(args: &[&str]) -> Output {
+pub fn boundrail(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args(args)
         .output()
@@ -22,7 +22,7 @@ pub fn archgraph(args: &[&str]) -> Output {
 /// Runs `scan` and returns the parsed document, raw stdout and stderr. Fails on a non-zero exit
 /// or a schema violation.
 pub fn scan(args: &[&str]) -> (Value, String, String) {
-    let out = archgraph(&[&["scan"], args].concat());
+    let out = boundrail(&[&["scan"], args].concat());
     let stderr = String::from_utf8(out.stderr).unwrap();
     assert!(out.status.success(), "scan failed: {stderr}");
     let stdout = String::from_utf8(out.stdout).unwrap();
@@ -44,12 +44,12 @@ pub fn scan_recorded(name: &str, extra: &[&str]) -> (Value, String, String) {
 }
 
 pub fn validate(doc: &Value) {
-    let schema: Value = serde_json::from_str(if doc["schema"] == "archgraph/v1.2" {
-        include_str!("../../schema/archgraph.v1.2.schema.json")
-    } else if doc["schema"] == "archgraph/v1.1" {
-        include_str!("../../schema/archgraph.v1.1.schema.json")
+    let schema: Value = serde_json::from_str(if doc["schema"] == "boundrail/v1.2" {
+        include_str!("../../schema/boundrail.v1.2.schema.json")
+    } else if doc["schema"] == "boundrail/v1.1" {
+        include_str!("../../schema/boundrail.v1.1.schema.json")
     } else {
-        include_str!("../../schema/archgraph.v1.schema.json")
+        include_str!("../../schema/boundrail.v1.schema.json")
     })
     .unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
@@ -145,7 +145,7 @@ pub fn scan_file(name: &str, extra: &[&str]) -> String {
 
 /// Runs a subcommand that prints a document, returning it parsed and validated with the exit code.
 pub fn run_json(args: &[&str]) -> (Value, Option<i32>) {
-    let out = archgraph(args);
+    let out = boundrail(args);
     let stdout = String::from_utf8(out.stdout).unwrap();
     let doc: Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("{e}: {stdout}{}", String::from_utf8_lossy(&out.stderr)));

@@ -123,7 +123,7 @@ def compare(truth, reports):
     violated = set()
     emitted = 0
     for name, report in reports.items():
-        if (report.get("schema") != "archgraph/v1.2" or report.get("kind") != "services"
+        if (report.get("schema") != "boundrail/v1.2" or report.get("kind") != "services"
                 or not isinstance(report.get("edges"), list) or not isinstance(report.get("services"), list)
                 or report.get("source", {}).get("collector") not in {"inferred", "inferred+declarative"}
                 or report.get("source", {}).get("complete") is not False or report.get("truncated")):
@@ -192,11 +192,11 @@ def run(args):
     truth_hash = hashlib.sha256(truth_bytes).hexdigest()
     evidence = validate_truth(truth, args.repos)
     reports, runs = {}, {}
-    binary = args.archgraph.resolve(strict=True)
+    binary = args.boundrail.resolve(strict=True)
     output = scratch_path(args.output, evidence)
     artifacts = scratch_path(output.parent / (output.stem + "-reports"), evidence)
     artifacts.mkdir(parents=True, exist_ok=True)
-    frozen_binary = scratch_path(artifacts / "archgraph", evidence)
+    frozen_binary = scratch_path(artifacts / "boundrail", evidence)
     shutil.copy2(binary, frozen_binary)
     binary_hash = digest(frozen_binary)
     for name, source in evidence.items():
@@ -226,7 +226,7 @@ def run(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--archgraph", type=Path, required=True)
+    parser.add_argument("--boundrail", type=Path, required=True)
     parser.add_argument("--repos", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--truth", type=Path, default=HERE / "service-flows.json")

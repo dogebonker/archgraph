@@ -644,11 +644,11 @@ fn verify(doc: &Document, root: &Path, expect: Option<&Expect>) -> Result<Vec<Va
             bail!("expect.findings_absent must contain at least one finding_id");
         }
         for id in sorted(ids) {
-            if !id.starts_with("ag-")
+            if !id.starts_with("br-")
                 || id.len() != 67
                 || !id[3..].bytes().all(|b| b.is_ascii_hexdigit())
             {
-                bail!("invalid finding_id {id:?}: use an ag- ID returned by check_diff or verify");
+                bail!("invalid finding_id {id:?}: use an br- ID returned by check_diff or verify");
             }
             let present = doc.findings.iter().any(|f| finding_id(f) == id);
             checks.push(json!({"predicate":"finding_absent","finding_id":id,"pass":!present}));
@@ -715,9 +715,9 @@ pub fn schemas() -> Vec<ToolSchema> {
         &["from", "to"],
     );
     let cycle = json!({"type":"object","required":["level","members"],"properties":{"level":{"enum":["file","module"]},"members":strings()}});
-    let finding = json!({"type":"object","required":["finding_id","kind","subject","evidence"],"properties":{"finding_id":{"type":"string","pattern":"^ag-[0-9a-f]{64}$"},"kind":{"type":"string"},"subject":{"type":"string"},"evidence":{"type":"object"},"suggestion":{"type":["object","null"]}}});
+    let finding = json!({"type":"object","required":["finding_id","kind","subject","evidence"],"properties":{"finding_id":{"type":"string","pattern":"^br-[0-9a-f]{64}$"},"kind":{"type":"string"},"subject":{"type":"string"},"evidence":{"type":"object"},"suggestion":{"type":["object","null"]}}});
     let graph_schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json"))
+        serde_json::from_str(include_str!("../schema/boundrail.v1.2.schema.json"))
             .expect("recipe schema");
     let expect = inline_schema(
         &graph_schema["$defs"]["recipe-predicate"],
@@ -767,13 +767,13 @@ pub fn schemas() -> Vec<ToolSchema> {
         schema(
             "propose",
             "Return evidence-backed ordered move/cut proposals with explicit expected deltas and verify expectations.",
-            json!({"finding_id":{"type":"string","pattern":"^ag-[0-9a-f]{64}$"}}),
+            json!({"finding_id":{"type":"string","pattern":"^br-[0-9a-f]{64}$"}}),
             &["finding_id"],
             {
                 let mut schema =
                     inline_schema(&graph_schema["$defs"]["recipe"], &graph_schema["$defs"]);
                 schema["properties"]["finding_id"] =
-                    json!({"type":"string","pattern":"^ag-[0-9a-f]{64}$"});
+                    json!({"type":"string","pattern":"^br-[0-9a-f]{64}$"});
                 schema["required"]
                     .as_array_mut()
                     .expect("recipe required")

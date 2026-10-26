@@ -58,44 +58,6 @@ fn foreign_bytes_survive_stale_round_trip_and_repeated_sync_is_identical() {
 }
 
 #[test]
-fn legacy_owned_blocks_upgrade_commands_without_losing_manual_instructions() {
-    use sha2::{Digest, Sha256};
-    let dir = fixture();
-    let root = dir.path();
-    let rules = boundrail::rules::load(&root.join("layout.yaml")).unwrap();
-    let current = sync_rules::render(&rules, false);
-    let (_, payload) = current.split_once(" -->\n").unwrap();
-    let (_, payload) = payload.split_once('\n').unwrap();
-    let payload = payload
-        .strip_suffix("<!-- archgraph:end -->")
-        .unwrap()
-        .replace("boundrail", "archgraph");
-    let checksum: String = Sha256::digest(payload.as_bytes())
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect();
-    let legacy = format!(
-        "<!-- archgraph:start -->\n<!-- archgraph:sha256 {checksum} -->\n{payload}<!-- archgraph:end -->"
-    );
-    for name in FILES {
-        let path = root.join(name);
-        fs::create_dir_all(path.parent().unwrap()).unwrap();
-        fs::write(path, format!("Manual prefix\n{legacy}\nManual suffix\n")).unwrap();
-    }
-    let report = sync_rules::run(root, false, false).unwrap();
-    assert!(report.conflicts.is_empty());
-    assert_eq!(report.written.len(), FILES.len());
-    for bytes in contents(root) {
-        let text = String::from_utf8(bytes).unwrap();
-        assert!(text.starts_with("Manual prefix\n"));
-        assert!(text.ends_with("\nManual suffix\n"));
-        assert!(text.contains("boundrail explain"));
-        assert!(!text.contains("archgraph explain"));
-        assert_eq!(text.matches("<!-- archgraph:start -->").count(), 1);
-    }
-}
-
-#[test]
 fn hand_edited_block_refuses_all_writes_and_reports_a_diff() {
     let dir = fixture();
     let root = dir.path();

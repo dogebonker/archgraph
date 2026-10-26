@@ -52,7 +52,7 @@ def summarize(data):
                 rule_fire_records=sum(fires), fire_counts_unknown=len(rows)-len(fires),
                 wall_seconds_all_runs=stats(wall), tokens_all_runs=stats(tokens))
     control = groups['control']['guarded']
-    return {'schema': 'archgraph/controlled-usefulness/v1', 'planned_runs': 24,
+    return {'schema': 'boundrail/controlled-usefulness/v1', 'planned_runs': 24,
             'joint_criterion': 'agent exit 0; business oracle passes; expected area touched; policy unchanged; '
                 'verified arm activation/absence; measured zero final violations; no harness errors',
             'groups': groups,

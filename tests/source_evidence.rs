@@ -34,7 +34,7 @@ fn rust_report_and_agent_explanations_disclose_grouping_and_source_semantics() {
         "--out-dir",
         output.to_str().unwrap(),
     ];
-    let full = common::archgraph(&args);
+    let full = common::boundrail(&args);
     assert!(
         full.status.success(),
         "{}",
@@ -49,7 +49,7 @@ fn rust_report_and_agent_explanations_disclose_grouping_and_source_semantics() {
         text.contains("source/type coupling, not runtime initialization"),
         "{text}"
     );
-    let brief = common::archgraph(&[&args[..], &["--brief"]].concat());
+    let brief = common::boundrail(&[&args[..], &["--brief"]].concat());
     assert!(brief.status.success());
     let brief: Value = serde_json::from_slice(&brief.stdout).unwrap();
     assert_eq!(brief["result"]["grouping"], "folder depth 2 under src");
@@ -58,7 +58,7 @@ fn rust_report_and_agent_explanations_disclose_grouping_and_source_semantics() {
         "rust-source-references"
     );
     let value =
-        serde_json::from_slice(&std::fs::read(output.join("archgraph.json")).unwrap()).unwrap();
+        serde_json::from_slice(&std::fs::read(output.join("boundrail.json")).unwrap()).unwrap();
     let doc = boundrail::restore_scan(value).unwrap();
     let cli = explain::explain(&doc, "src/a.rs").unwrap();
     assert!(

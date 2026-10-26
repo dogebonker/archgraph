@@ -10,8 +10,8 @@ const PREVIEW_UI: &str = include_str!("../assets/whatif-ui.js");
 
 pub(crate) fn template() -> String {
     TEMPLATE
-        .replacen("/*__ARCHGRAPH_PREVIEW__*/", PREVIEW, 1)
-        .replacen("/*__ARCHGRAPH_PREVIEW_UI__*/", PREVIEW_UI, 1)
+        .replacen("/*__BOUNDRAIL_PREVIEW__*/", PREVIEW, 1)
+        .replacen("/*__BOUNDRAIL_PREVIEW_UI__*/", PREVIEW_UI, 1)
 }
 
 /// The page with `doc` embedded as JSON. Every `<` is escaped, so no path can close the script

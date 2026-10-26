@@ -116,14 +116,14 @@ pub fn enrich(
                     dependency["resolved"] = target.clone().into();
                     dependency["couldNotResolve"] = false.into();
                     dependency["coreModule"] = false.into();
-                    dependency["_archgraphLine"] = statement.line.into();
-                    dependency["_archgraphRequire"] = statement.require.into();
+                    dependency["_boundrailLine"] = statement.line.into();
+                    dependency["_boundrailRequire"] = statement.require.into();
                     if dependency.get("dependencyTypes").is_none() {
                         dependency["dependencyTypes"] = dependency_types(statement.kind);
                     }
                     enriched.retain(|dependency| {
                         dependency["module"].as_str() != Some(specifier)
-                            || dependency.get("_archgraphRequire").is_some()
+                            || dependency.get("_boundrailRequire").is_some()
                     });
                     enriched.push(dependency);
                     if code_file(target) && !visited.contains(target) {

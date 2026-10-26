@@ -522,7 +522,7 @@ fn cli_surface_enrichment_survives_rules_check_schema_and_render() {
         &serde_json::to_string(&doc).unwrap(),
     );
     let enriched = common::write_tmp("surface-cli-enriched.json", "");
-    let output = common::archgraph(&[
+    let output = common::boundrail(&[
         "surface",
         &input,
         "--format",
@@ -552,7 +552,7 @@ fn cli_surface_enrichment_survives_rules_check_schema_and_render() {
         "version: 1\nentrypoints:\n  'src/billing/**': src/billing/index.ts\n",
     );
     let checked = common::write_tmp("surface-cli-checked.json", "");
-    let output = common::archgraph(&["check", &enriched, "--rules", &rules, "-o", &checked]);
+    let output = common::boundrail(&["check", &enriched, "--rules", &rules, "-o", &checked]);
     assert_eq!(
         output.status.code(),
         Some(1),
@@ -573,7 +573,7 @@ fn cli_surface_enrichment_survives_rules_check_schema_and_render() {
         serde_json::from_str(&fs::read_to_string(checked).unwrap()).unwrap();
     common::validate(&checked);
     let html = common::write_tmp("surface-cli-render.html", "");
-    let output = common::archgraph(&["render", &enriched, "-o", &html]);
+    let output = common::boundrail(&["render", &enriched, "-o", &html]);
     assert!(
         output.status.success(),
         "{}",

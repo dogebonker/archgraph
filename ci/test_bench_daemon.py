@@ -22,7 +22,7 @@ class DaemonBenchmark(unittest.TestCase):
         doc = {"files": [{"path": "django/a.py"}, {"path": "django/b.py"}],
                "edges": [{"from": "django/a.py", "to": "django/b.py"}], "config": {}}
         plan = edit_plan(doc, "python", 1)
-        self.assertEqual(plan, [("django/b.py", "django/a.py", b"\nimport django.a  # archgraph daemon benchmark\n")])
+        self.assertEqual(plan, [("django/b.py", "django/a.py", b"\nimport django.a  # boundrail daemon benchmark\n")])
 
     def test_barrels_are_not_changed_into_runtime_files_by_the_probe(self):
         doc = {"files": [{"path": "src/a.ts", "barrel": True},

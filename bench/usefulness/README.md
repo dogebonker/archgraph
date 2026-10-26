@@ -9,7 +9,7 @@ not upstream truth. This is a controlled challenge, not evidence of real-world e
 Preparation requires a fresh destination outside this repository:
 
 ```sh
-python3 -B bench/usefulness/prepare.py --output /tmp/archgraph-usefulness
+python3 -B bench/usefulness/prepare.py --output /tmp/boundrail-usefulness
 python3 -B -m unittest discover -s bench/usefulness -p 'test_usefulness.py' -v
 ```
 
@@ -19,7 +19,7 @@ commit, Python path, canonical external oracle path, and source/task SHA-256 has
 The oracle and discarded reference implementations remain outside model workspaces.
 Preparation refuses an existing destination. The self-check prepares twice to verify
 deterministic commits, imports complete packages through the external oracle, and
-uses the existing `target/debug/archgraph` (or `ARCHGRAPH_TEST_BINARY`) native engine with symbols and package
+uses the existing `target/debug/boundrail` (or `BOUNDRAIL_TEST_BINARY`) native engine with symbols and package
 `shop`. It checks a clean baseline; each baseline fails its requested feature;
 all four correct patches pass behavior and `check_diff`; three independent tempting
 patches pass behavior but produce forbidden/public/cycle findings. Disposable patches
@@ -28,9 +28,9 @@ and Git commits live only in temporary directories. No models or APIs are called
 After prompt review, use **unchanged** `bench/run.py`:
 
 ```sh
-python3 -B bench/run.py --repo /tmp/archgraph-usefulness/baseline \
-  --tasks /tmp/archgraph-usefulness/tasks.json --runner /absolute/path/to/runner.json \
-  --archgraph "$PWD/target/release/archgraph" --package shop --repeats 3 \
+python3 -B bench/run.py --repo /tmp/boundrail-usefulness/baseline \
+  --tasks /tmp/boundrail-usefulness/tasks.json --runner /absolute/path/to/runner.json \
+  --boundrail "$PWD/target/release/boundrail" --package shop --repeats 3 \
   --output /absolute/path/to/results
 ```
 

@@ -89,7 +89,7 @@ pub(super) fn for_agent(doc: &Document, subjects: &[String]) -> Result<Value> {
     }
     let mut detail: String = detail.chars().take(400).collect();
     loop {
-        let value = json!({"schema":"archgraph/explain-agent/v1", "summary":format!("{base}{detail}"), "omitted":true});
+        let value = json!({"schema":"boundrail/explain-agent/v1", "summary":format!("{base}{detail}"), "omitted":true});
         if serde_json::to_vec(&value)?.len() <= 400 {
             return Ok(value);
         }
@@ -139,7 +139,7 @@ pub(super) fn explain(doc: &Document, subject: &str) -> Result<Value> {
             })
             .collect();
     Ok(json!({
-        "schema": "archgraph/explain/v1", "kind": "explain", "subject": subject,
+        "schema": "boundrail/explain/v1", "kind": "explain", "subject": subject,
         "file": file, "module": module, "imports": imports, "imported_by": imported_by,
         "cycles": cycles, "findings": findings,
         "grouping": boundrail::modules::grouping(&doc.config),

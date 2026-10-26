@@ -275,7 +275,7 @@ fn rejects_external_aggregate_weight_overflow() {
 #[test]
 fn yaml_loader_accepts_categories_and_rejects_unknown_threshold_keys() {
     let path = std::env::temp_dir().join(format!(
-        "archgraph-exposure-layout-{}.yaml",
+        "boundrail-exposure-layout-{}.yaml",
         std::process::id()
     ));
     std::fs::write(&path, "version: 1\npkg-category:\n  persistence: [typeorm, 'gorm.io/gorm{,/**}']\nexternal_exposure:\n  max_percent: 70\nforbid:\n  - {from: 'src/domain/**', to: 'category:persistence'}\n").unwrap();

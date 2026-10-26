@@ -49,7 +49,7 @@ impl Drop for Scratch {
 
 fn validate(report: &Value) {
     let schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../schema/boundrail.v1.2.schema.json")).unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
     let errors: Vec<_> = validator
         .iter_errors(report)
@@ -115,7 +115,7 @@ fn forbidden_gate_preserves_reports_and_saved_json_before_exiting_one() {
     ]);
     assert_eq!(checked.status.code(), Some(1));
     let brief: Value = serde_json::from_slice(&checked.stdout).unwrap();
-    assert_eq!(brief["schema"], "archgraph/brief/v1");
+    assert_eq!(brief["schema"], "boundrail/brief/v1");
     assert!(!brief["omitted"].as_object().unwrap().is_empty());
     let saved: Value =
         serde_json::from_slice(&fs::read(scratch.0.join("report.json")).unwrap()).unwrap();
@@ -229,7 +229,7 @@ fn forbidden_gate_rejects_unconfigured_policy_and_invalid_input() {
 fn mixed_transports_preserve_evidence_and_group_the_service_cycle() {
     let scratch = Scratch::new();
     let report = scratch.report(&fixture());
-    assert_eq!(report["schema"], "archgraph/v1.2");
+    assert_eq!(report["schema"], "boundrail/v1.2");
     assert_eq!(report["kind"], "services");
     assert_eq!(report["source"]["collector"], "declarative");
     assert_eq!(report["source"]["complete"], false);
@@ -479,7 +479,7 @@ fn manifest_and_report_schemas_reject_blank_policy_globs() {
     let manifest_schema: Value =
         serde_json::from_str(include_str!("../schema/services.v1.schema.json")).unwrap();
     let report_schema: Value =
-        serde_json::from_str(include_str!("../schema/archgraph.v1.2.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../schema/boundrail.v1.2.schema.json")).unwrap();
     jsonschema::draft202012::meta::validate(&manifest_schema).unwrap();
     let manifest_validator = jsonschema::validator_for(&manifest_schema).unwrap();
     let report_validator = jsonschema::validator_for(&report_schema).unwrap();

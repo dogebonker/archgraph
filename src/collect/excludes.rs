@@ -165,16 +165,16 @@ impl Policy {
             .collect();
         let patterns = defaults.iter().chain(&explicit).cloned().collect();
         let root = root.canonicalize().context("resolving exclusion root")?;
-        let ignore_path = root.join(".archgraphignore");
+        let ignore_path = root.join(".boundrailignore");
         let exists = match std::fs::symlink_metadata(&ignore_path) {
             Ok(_) => true,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
-            Err(error) => return Err(error).context("checking .archgraphignore"),
+            Err(error) => return Err(error).context("checking .boundrailignore"),
         };
         let archignore = if exists {
             let path = ignore_path.canonicalize()?;
             if !path.starts_with(&root) {
-                bail!(".archgraphignore must stay inside the scan root");
+                bail!(".boundrailignore must stay inside the scan root");
             }
             Some(
                 std::fs::read_to_string(&path)
@@ -331,7 +331,7 @@ fn ignored(root: &Path, paths: &[String], archignore: Option<&str>) -> Result<BT
             String::from_utf8_lossy(&init.stderr).trim()
         );
     }
-    let ignore_file = temp.path().join("archgraphignore");
+    let ignore_file = temp.path().join("boundrailignore");
     std::fs::write(&ignore_file, archignore.unwrap_or_default())?;
     let mut custom = Command::new("git");
     custom

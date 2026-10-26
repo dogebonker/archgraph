@@ -374,9 +374,9 @@ struct CruiseDependency {
     resolved: String,
     #[serde(default)]
     could_not_resolve: bool,
-    #[serde(default, rename = "_archgraphLine")]
+    #[serde(default, rename = "_boundrailLine")]
     line: Option<usize>,
-    #[serde(default, rename = "_archgraphRequire")]
+    #[serde(default, rename = "_boundrailRequire")]
     require: Option<bool>,
 }
 

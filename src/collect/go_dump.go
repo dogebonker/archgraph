@@ -1,4 +1,4 @@
-// archgraph's Go collector helper, run by `go run go_dump.go <root> <go> <module dir>...` from a
+// boundrail's Go collector helper, run by `go run go_dump.go <root> <go> <module dir>...` from a
 // temporary directory. Standard library only. It lists the local packages of every module under
 // <root> with `go list -find` (which loads no dependencies and builds nothing), type-checks them
 // with go/types (the standard library through go/importer, local packages from source) without
@@ -108,7 +108,7 @@ func main() {
 	gobin := args[1]
 	std = importer.ForCompiler(fset, "source", nil)
 
-	// The module directories, root-relative: archgraph finds them (honouring --exclude).
+	// The module directories, root-relative: boundrail finds them (honouring --exclude).
 	rels := args[2:]
 	sort.Strings(rels)
 	var dirs []string
@@ -141,7 +141,7 @@ func main() {
 		}
 		p := &pkg{path: l.ImportPath, name: l.Name, dir: l.Dir, decls: map[string][]string{}}
 		x := &pkg{path: l.ImportPath + "_test", dir: l.Dir, decls: map[string][]string{}}
-		// Tests too (archgraph drops them unless --include-tests). IgnoredGoFiles are the files
+		// Tests too (boundrail drops them unless --include-tests). IgnoredGoFiles are the files
 		// for other platforms, cgo files (cgo is off) and files behind other build tags; all but
 		// those needing `ignore` count: every platform's files at once.
 		names := append(append(append([]string{}, l.GoFiles...), l.CgoFiles...), l.TestGoFiles...)

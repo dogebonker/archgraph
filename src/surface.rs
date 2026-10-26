@@ -243,7 +243,7 @@ pub fn analyze(doc: &Document, max_symbols: usize) -> Result<SurfaceReport> {
                 loop {
                     let extension = file.rsplit_once('.').map_or("ts", |(_, ext)| ext);
                     let probe =
-                        crate::modules::join(dir, &format!("__archgraph_surface__.{extension}"));
+                        crate::modules::join(dir, &format!("__boundrail_surface__.{extension}"));
                     let assigned =
                         crate::modules::assigned(&probe, &doc.config, doc.source.language, rules);
                     if assigned != module.id {

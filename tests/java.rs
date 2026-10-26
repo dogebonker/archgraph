@@ -57,9 +57,9 @@ fn java_recording_uses_shared_analysis_and_test_excludes() {
         ]
     );
     let graph = write_tmp("java-recorded.json", &stdout);
-    assert!(common::archgraph(&["check", &graph]).status.success());
+    assert!(common::boundrail(&["check", &graph]).status.success());
     assert!(
-        common::archgraph(&["render", &graph, "-o", "/dev/null"])
+        common::boundrail(&["render", &graph, "-o", "/dev/null"])
             .status
             .success()
     );

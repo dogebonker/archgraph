@@ -613,7 +613,7 @@ fn diagnostic_provenance_survives_saved_scan_restore_and_render() {
     assert!(html.contains("0123456789012345678901234567890123456789"));
     // Older schemas stored this same evidence in findings; classification changes retain dates.
     let mut legacy = saved;
-    legacy["schema"] = json!("archgraph/v1.1");
+    legacy["schema"] = json!("boundrail/v1.1");
     legacy["findings"] = json!([legacy["diagnostics"][0]["finding"].clone()]);
     legacy.as_object_mut().unwrap().remove("diagnostics");
     let restored = boundrail::restore_scan(serde_json::from_value(legacy).unwrap()).unwrap();

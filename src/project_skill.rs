@@ -10,11 +10,11 @@ use serde_json::json;
 use crate::model::{Document, RulesRef, Verdict};
 use crate::{rules, sync_rules};
 
-pub const DRAFT: &str = ".archgraph/drafts/project-architecture/SKILL.md";
-pub const PROPOSAL: &str = ".archgraph/drafts/project-architecture/layout.yaml";
+pub const DRAFT: &str = ".boundrail/drafts/project-architecture/SKILL.md";
+pub const PROPOSAL: &str = ".boundrail/drafts/project-architecture/layout.yaml";
 pub const INSTALLED: &str = ".agents/skills/project-architecture/SKILL.md";
 const FRONTMATTER: &str = "---\nname: project-architecture\ndescription: Use before changing module dependencies or service relationships in this repository. Read current policy, capture a baseline, and check the edited code.\n---\n\n";
-const METADATA: &str = "<!-- archgraph:skill-policy ";
+const METADATA: &str = "<!-- boundrail:skill-policy ";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -178,35 +178,35 @@ fn body(doc: &Document, services: &crate::services::Report, metadata: &Metadata)
     } else {
         ""
     };
-    text.push_str(&format!("boundrail scan . --engine native --symbols{rules_arg} -o .archgraph/architecture-before.json\n"));
+    text.push_str(&format!("boundrail scan . --engine native --symbols{rules_arg} -o .boundrail/architecture-before.json\n"));
     let manifest_arg = metadata
         .manifest
         .as_ref()
         .map(|policy| format!(" --manifest={}", shell_word(&policy.path)))
         .unwrap_or_default();
-    text.push_str(&format!("boundrail services .{manifest_arg} --format json -o .archgraph/services-before.json\n```\n\n"));
+    text.push_str(&format!("boundrail services .{manifest_arg} --format json -o .boundrail/services-before.json\n```\n\n"));
     if metadata.manifest.is_some() {
         text.push_str("Read the service manifest identified in the metadata for authored service and explicit package-target rules. It remains separate from import rules.\n\n");
     } else {
         text.push_str("No service manifest was selected. Service evidence is advisory and does not establish an approved service policy.\n\n");
     }
     text.push_str("## After an edit\n\nCollect again and compare the full reports. Run the project's own tests for behavior that imports cannot establish.\n\n```sh\n");
-    text.push_str(&format!("boundrail scan . --engine native --symbols{rules_arg} -o .archgraph/architecture-after.json\n"));
+    text.push_str(&format!("boundrail scan . --engine native --symbols{rules_arg} -o .boundrail/architecture-after.json\n"));
     let import_gate = if configured {
         " --fail-on new-forbidden"
     } else {
         ""
     };
-    text.push_str(&format!("boundrail diff .archgraph/architecture-before.json .archgraph/architecture-after.json{import_gate} --format markdown\n"));
+    text.push_str(&format!("boundrail diff .boundrail/architecture-before.json .boundrail/architecture-after.json{import_gate} --format markdown\n"));
     text.push_str(&format!(
-        "boundrail services .{manifest_arg} --format json -o .archgraph/services-after.json\n"
+        "boundrail services .{manifest_arg} --format json -o .boundrail/services-after.json\n"
     ));
     let service_gate = if services.forbid.is_empty() {
         ""
     } else {
         " --fail-on new-forbidden"
     };
-    text.push_str(&format!("boundrail diff .archgraph/services-before.json .archgraph/services-after.json{service_gate} --format markdown\n```\n\n"));
+    text.push_str(&format!("boundrail diff .boundrail/services-before.json .boundrail/services-after.json{service_gate} --format markdown\n```\n\n"));
     if services.forbid.is_empty() {
         text.push_str("No authored service forbid rules are available, so the service comparison is advisory. A missing service or call is not proof of absence.\n\n");
     }

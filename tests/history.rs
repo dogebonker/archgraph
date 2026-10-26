@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use common::{archgraph, validate};
+use common::{boundrail, validate};
 use serde_json::{Value, json};
 
 fn git(root: &Path, args: &[&str]) -> String {
@@ -13,7 +13,7 @@ fn git(root: &Path, args: &[&str]) -> String {
         .arg(root)
         .args([
             "-c",
-            "user.name=archgraph-test",
+            "user.name=boundrail-test",
             "-c",
             "user.email=test@example.invalid",
             "-c",
@@ -92,7 +92,7 @@ fn history_cli_orders_snapshots_diffs_and_preserves_dirty_subdirectory_checkout(
     let worktrees = git(&root, &["worktree", "list", "--porcelain"]);
     let project = root.join("project");
     let output = root.join("reports");
-    let out = archgraph(&[
+    let out = boundrail(&[
         "history",
         "--sample",
         "commits",
@@ -161,9 +161,9 @@ fn history_cli_orders_snapshots_diffs_and_preserves_dirty_subdirectory_checkout(
         page.len()
     );
     assert!(page.contains("Architecture history"));
-    assert!(!page.contains("/*__ARCHGRAPH_PREVIEW__*/"));
-    assert!(!page.contains("/*__ARCHGRAPH_PREVIEW_UI__*/"));
-    assert_eq!(page.matches("root.ArchgraphPreview = api").count(), 1);
+    assert!(!page.contains("/*__BOUNDRAIL_PREVIEW__*/"));
+    assert!(!page.contains("/*__BOUNDRAIL_PREVIEW_UI__*/"));
+    assert_eq!(page.matches("root.BoundrailPreview = api").count(), 1);
     assert!(page.contains("sandbox=\"allow-scripts\""));
     assert!(!page.contains("cycle </script>"));
     assert!(page.contains("\\u003c/script>"));
@@ -192,7 +192,7 @@ fn history_supports_revision_ranges_limits_and_fixed_rules() {
         "version: 1\nforbid:\n  - { id: a-no-b, from: 'src/a/**', to: 'src/b/**' }\n",
     );
     let output = root.join("reports");
-    let out = archgraph(&[
+    let out = boundrail(&[
         "history",
         "--sample",
         "commits",
@@ -232,7 +232,7 @@ fn history_reuses_the_original_checkout_collector() {
     let program = bin.join("depcruise");
     fs::write(&program, "#!/bin/sh\ncat depcruise.json\n").unwrap();
     fs::set_permissions(&program, fs::Permissions::from_mode(0o755)).unwrap();
-    let out = archgraph(&[
+    let out = boundrail(&[
         "history",
         "--sample",
         "commits",
@@ -245,14 +245,14 @@ fn history_reuses_the_original_checkout_collector() {
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    assert!(root.join("project/.archgraph/history.html").is_file());
+    assert!(root.join("project/.boundrail/history.html").is_file());
 }
 
 #[test]
 fn history_rejects_invalid_revisions_empty_ranges_and_reused_recordings() {
     let (root, first, _) = repo("errors");
     for rev in ["not-a-commit", "--all", &format!("{first}..{first}")] {
-        let out = archgraph(&[
+        let out = boundrail(&[
             "history",
             "--sample",
             "commits",
@@ -261,9 +261,9 @@ fn history_rejects_invalid_revisions_empty_ranges_and_reused_recordings() {
             rev,
         ]);
         assert_eq!(out.status.code(), Some(2));
-        assert!(!root.join(".archgraph/history.json").exists());
+        assert!(!root.join(".boundrail/history.json").exists());
     }
-    let out = archgraph(&[
+    let out = boundrail(&[
         "history",
         "--sample",
         "commits",
@@ -315,7 +315,7 @@ fn java_history_scans_real_commits() {
         .unwrap();
         fs::set_permissions(program, fs::Permissions::from_mode(0o755)).unwrap();
     }
-    let out = archgraph(&[
+    let out = boundrail(&[
         "history",
         "--sample",
         "commits",
@@ -333,7 +333,7 @@ fn java_history_scans_real_commits() {
         "Java history must not execute unrelated TypeScript tooling from the repository"
     );
     let doc: Value =
-        serde_json::from_slice(&fs::read(root.join(".archgraph/history.json")).unwrap()).unwrap();
+        serde_json::from_slice(&fs::read(root.join(".boundrail/history.json")).unwrap()).unwrap();
     validate(&doc);
     assert_eq!(doc["snapshots"][0]["commit"], first);
     assert_eq!(
@@ -562,7 +562,7 @@ fn drift_cache_append_keeps_old_points_and_scans_only_missing_contexts() {
     };
     let mut options = HistoryOptions {
         limit: 2,
-        cache_dir: Some(root.join(".archgraph/history")),
+        cache_dir: Some(root.join(".boundrail/history")),
         cache_key: "fixture-options-v1".into(),
         append: true,
         ..HistoryOptions::default()
@@ -629,9 +629,9 @@ fn checkout_removes_clones_left_by_dead_processes() {
     exited.wait().unwrap();
     let mut running = Command::new("sleep").arg("30").spawn().unwrap();
     let temp = std::env::temp_dir();
-    let stale = temp.join(format!("archgraph-history-{}-1-0", exited.id()));
-    let live = temp.join(format!("archgraph-history-{}-1-0", running.id()));
-    let unrelated = temp.join(format!("archgraph-history-{}-other", exited.id()));
+    let stale = temp.join(format!("boundrail-history-{}-1-0", exited.id()));
+    let live = temp.join(format!("boundrail-history-{}-1-0", running.id()));
+    let unrelated = temp.join(format!("boundrail-history-{}-other", exited.id()));
     for dir in [&stale, &live, &unrelated] {
         fs::create_dir_all(dir.join("repo")).unwrap();
     }
@@ -738,7 +738,7 @@ fn history_cli_defaults_to_monthly_appends_from_cache_and_compares_release_refs(
         serde_json::from_slice(&fs::read(output.join("history.json")).unwrap()).unwrap()
     };
     let run = |rev: &str| {
-        let out = archgraph(&[
+        let out = boundrail(&[
             "history",
             root.to_str().unwrap(),
             "--rev",
@@ -786,7 +786,7 @@ fn history_cli_defaults_to_monthly_appends_from_cache_and_compares_release_refs(
         3,
         "only missing commits invoke the collector"
     );
-    let out = archgraph(&[
+    let out = boundrail(&[
         "history",
         root.to_str().unwrap(),
         "--diff",
@@ -841,7 +841,7 @@ fn history_cache_tracks_the_collector_package_not_only_the_interpreter() {
     fs::write(&data, recording("3.17", json!([])).to_string()).unwrap();
     let output = root.parent().unwrap().join("reports");
     let run = || {
-        let out = archgraph(&[
+        let out = boundrail(&[
             "history",
             root.to_str().unwrap(),
             "--sample",
@@ -900,7 +900,7 @@ fn history_retains_persisted_finding_context_without_scanning_cached_points() {
     use boundrail::model::{FindingKind, Provenance};
     let (root, commits) = drift_repo("cached-context");
     let options = HistoryOptions {
-        cache_dir: Some(root.join(".archgraph/history")),
+        cache_dir: Some(root.join(".boundrail/history")),
         cache_key: "context-fixture".into(),
         append: true,
         ..HistoryOptions::default()

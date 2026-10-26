@@ -70,7 +70,7 @@ def cleanup_auth(profile, identity):
 
 def reject_project_config(cwd):
     for parent, directories, files in os.walk(cwd, followlinks=False):
-        directories[:] = [name for name in directories if name not in ('.git', '.archgraph')]
+        directories[:] = [name for name in directories if name not in ('.git', '.boundrail')]
         if '.codex' not in directories and '.codex' not in files:
             continue
         folder = Path(parent) / '.codex'
@@ -114,7 +114,7 @@ def inventory(response, cwd, binary, mode, trusted=False):
     source = str(cwd / '.codex/hooks.json')
     for hook in hooks:
         event = EVENTS[hook['eventName']]
-        command = f'{quote(binary)} hook run --agent codex --event {event} --root {quote(cwd)} # archgraph:managed:{event}'
+        command = f'{quote(binary)} hook run --agent codex --event {event} --root {quote(cwd)} # boundrail:managed:{event}'
         if (hook.get('sourcePath') != source or hook.get('handlerType') != 'command'
                 or hook.get('command') != command or hook.get('matcher') not in (None, '')
                 or hook.get('source') != 'project' or hook.get('isManaged') is not False
@@ -252,17 +252,17 @@ class Rpc:
 
 def _run(args, command=None):
     cwd = Path.cwd().resolve(strict=True)
-    binary = Path(args.archgraph).resolve(strict=True)
-    if digest(binary) != args.archgraph_sha256:
-        raise ValueError('archgraph binary digest differs from reviewed binary')
+    binary = Path(args.boundrail).resolve(strict=True)
+    if digest(binary) != args.boundrail_sha256:
+        raise ValueError('boundrail binary digest differs from reviewed binary')
     profile = private_directory(os.environ['CODEX_HOME'])
     artifact = private_directory(args.artifact_dir)
     hook_path = cwd / '.codex/hooks.json'
     config_hash = digest(hook_path) if args.mode == 'guarded' else 'absent'
     if args.mode == 'bare' and (hook_path.exists() or hook_path.is_symlink()):
         raise ValueError('bare clone still contains hook configuration')
-    if args.mode == 'guarded' and not args.trust_reviewed_archgraph:
-        raise ValueError('guarded hook trust requires explicit --trust-reviewed-archgraph')
+    if args.mode == 'guarded' and not args.trust_reviewed_boundrail:
+        raise ValueError('guarded hook trust requires explicit --trust-reviewed-boundrail')
     version = 'mock-injected-protocol'
     if command is None:
         version_result = subprocess.run([args.codex, '--version'], cwd=cwd, capture_output=True, text=True, timeout=10)
@@ -271,7 +271,7 @@ def _run(args, command=None):
         version = version_result.stdout.strip()
     rpc = Rpc(command or [args.codex, 'app-server', '--disable', 'apps'], cwd, artifact, args.timeout)
     try:
-        rpc.request('initialize', {'clientInfo': {'name': 'archgraph_benchmark', 'version': '1'},
+        rpc.request('initialize', {'clientInfo': {'name': 'boundrail_benchmark', 'version': '1'},
                                   'capabilities': {'experimentalApi': True}})
         rpc.send({'method': 'initialized'})
         config_file = str(profile / 'config.toml')
@@ -306,7 +306,7 @@ def _run(args, command=None):
                         and event['params'].get('threadId') == thread and event['params']['turn']['id'] == turn)
         if terminal['status'] != 'completed':
             raise ValueError('agent turn failed or was interrupted')
-        if digest(binary) != args.archgraph_sha256 or (args.mode == 'guarded' and digest(hook_path) != config_hash):
+        if digest(binary) != args.boundrail_sha256 or (args.mode == 'guarded' and digest(hook_path) != config_hash):
             raise ValueError('reviewed binary or hook config changed during run')
         final = inventory(rpc.request('hooks/list', {'cwds': [str(cwd)]}), cwd, binary, args.mode, trusted=True)
         if final != after:
@@ -315,8 +315,8 @@ def _run(args, command=None):
         totals = [event['params']['tokenUsage']['total'] for event in rpc.events
             if event.get('method') == 'thread/tokenUsage/updated' and event['params'].get('threadId') == thread
             and event['params'].get('turnId') == turn]
-        return {'schema': 'archgraph/benchmark-runner/v1', 'run_id': args.run_id, 'mode': args.mode,
-            'model': args.model, 'cwd': str(cwd), 'codex_version': version, 'archgraph_sha256': args.archgraph_sha256,
+        return {'schema': 'boundrail/benchmark-runner/v1', 'run_id': args.run_id, 'mode': args.mode,
+            'model': args.model, 'cwd': str(cwd), 'codex_version': version, 'boundrail_sha256': args.boundrail_sha256,
             'hook_config_sha256': config_hash, 'inventory_sha256': inventory_hash,
             'inventory': after,
             'thread_id': thread, 'turn_id': turn, 'turn_status': terminal['status'],
@@ -342,9 +342,9 @@ def run(args, command=None):
 
 
 def validate_result(value, expected):
-    if value.get('schema') != 'archgraph/benchmark-runner/v1':
+    if value.get('schema') != 'boundrail/benchmark-runner/v1':
         raise ValueError('not a supported runner result')
-    for key in ('run_id', 'mode', 'model', 'cwd', 'archgraph_sha256', 'hook_config_sha256'):
+    for key in ('run_id', 'mode', 'model', 'cwd', 'boundrail_sha256', 'hook_config_sha256'):
         if value.get(key) != expected[key]:
             raise ValueError('runner identity or reviewed artifacts do not match')
     if value.get('turn_status') != 'completed' or not value.get('thread_id') or not value.get('turn_id'):
@@ -354,7 +354,7 @@ def validate_result(value, expected):
     if value.get('mcp_servers') != []:
         raise ValueError('runner did not prove an empty MCP inventory')
     hooks = inventory({'data': [{'cwd': expected['cwd'], 'errors': [], 'warnings': [],
-        'hooks': value.get('inventory')}]}, Path(expected['cwd']), expected['archgraph'], expected['mode'], trusted=True)
+        'hooks': value.get('inventory')}]}, Path(expected['cwd']), expected['boundrail'], expected['mode'], trusted=True)
     if hashlib.sha256(json.dumps(hooks, sort_keys=True).encode()).hexdigest() != value.get('inventory_sha256'):
         raise ValueError('runner inventory digest mismatch')
     raw = []
@@ -374,10 +374,10 @@ def validate_result(value, expected):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ('model', 'prompt', 'run-id', 'archgraph', 'archgraph-sha256', 'artifact-dir'):
+    for name in ('model', 'prompt', 'run-id', 'boundrail', 'boundrail-sha256', 'artifact-dir'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--mode', choices=('bare', 'guarded'), required=True)
-    parser.add_argument('--trust-reviewed-archgraph', action='store_true')
+    parser.add_argument('--trust-reviewed-boundrail', action='store_true')
     parser.add_argument('--auth-file')
     parser.add_argument('--codex', default='codex')
     parser.add_argument('--timeout', type=float, default=600)
@@ -386,7 +386,7 @@ def main():
         print(json.dumps(run(args)))
     except Exception as error:
         safe_error = str(error) if type(error) in (ValueError, TimeoutError) else type(error).__name__
-        print(json.dumps({'schema': 'archgraph/benchmark-runner-error/v1',
+        print(json.dumps({'schema': 'boundrail/benchmark-runner-error/v1',
                           'error': safe_error, 'hint': 'Inspect private diagnostics; no credential payloads emitted.'}))
         return 1
     return 0

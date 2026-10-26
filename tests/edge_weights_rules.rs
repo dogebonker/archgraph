@@ -110,7 +110,7 @@ fn allow_and_public_filters_do_not_affect_other_kinds() {
 #[test]
 fn layout_loader_accepts_new_keys_and_rejects_nested_typos() {
     let path = std::env::temp_dir().join(format!(
-        "archgraph-edge-weights-{}.yaml",
+        "boundrail-edge-weights-{}.yaml",
         std::process::id()
     ));
     std::fs::write(&path, "version: 1\nedge_weights: {runtime: 1}\npublic: [{module: 'api/**', entries: [api/index], kinds: [type]}]\nforbid: [{from: a, to: b, kinds: [type]}]\nallow: [{from: b, to: a, kinds: [type]}]").unwrap();

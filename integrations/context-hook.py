@@ -34,9 +34,9 @@ def seed_files(client, event, root):
         candidates = [item.get("file_path") for item in attachments
                       if isinstance(item, dict) and item.get("type") == "file"]
     else:
-        candidates = json.loads(os.environ.get("ARCHGRAPH_CONTEXT_FILES", "[]"))
+        candidates = json.loads(os.environ.get("BOUNDRAIL_CONTEXT_FILES", "[]"))
         if not isinstance(candidates, list):
-            raise ValueError("ARCHGRAPH_CONTEXT_FILES must be a JSON array")
+            raise ValueError("BOUNDRAIL_CONTEXT_FILES must be a JSON array")
     result = set()
     for candidate in candidates:
         if not isinstance(candidate, str):
@@ -55,7 +55,7 @@ def artifact_directory(root, session):
     """Open each directory without following symlinks; writes use this descriptor."""
     descriptor = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
-        for name in (".archgraph", "context-hooks", session):
+        for name in (".boundrail", "context-hooks", session):
             try:
                 os.mkdir(name, mode=0o700, dir_fd=descriptor)
             except FileExistsError:
@@ -81,7 +81,7 @@ def publish(root, session, metadata, report=None, markdown=None):
     try:
         # Each invocation has immutable artifacts; only its session manifest is replaced.
         stem = metadata["task_fingerprint"] + "-" + uuid.uuid4().hex
-        base = root / ".archgraph" / "context-hooks" / session
+        base = root / ".boundrail" / "context-hooks" / session
         if report is not None:
             write_new(directory, stem + ".json", json.dumps(report, ensure_ascii=False, indent=2) + "\n")
             write_new(directory, stem + ".md", markdown)
@@ -139,7 +139,7 @@ def claude_context(report, markdown, metadata):
 
 def run(client, event):
     root, session = workspace(client, event)
-    manifest = root / ".archgraph" / "context-hooks" / session / "manifest.json"
+    manifest = root / ".boundrail" / "context-hooks" / session / "manifest.json"
     if client == "cursor-session":
         return {"additional_context": (
             f"Optional boundrail context manifest for this conversation: {manifest}. "
@@ -157,10 +157,10 @@ def run(client, event):
         seeds = seed_files(client, event, root)
         metadata["seed_files"] = seeds
         metadata["task_fingerprint"] = digest([task, seeds, generation])
-        graph = os.environ.get("ARCHGRAPH_CONTEXT_GRAPH", str(root / ".archgraph" / "archgraph.json"))
-        command = [os.environ.get("ARCHGRAPH_BINARY", "boundrail"), "context", "--graph", graph,
+        graph = os.environ.get("BOUNDRAIL_CONTEXT_GRAPH", str(root / ".boundrail" / "boundrail.json"))
+        command = [os.environ.get("BOUNDRAIL_BINARY", "boundrail"), "context", "--graph", graph,
                    "--root", str(root), "--task", task, "--budget",
-                   os.environ.get("ARCHGRAPH_CONTEXT_BUDGET", "40k"), "--format", "json"]
+                   os.environ.get("BOUNDRAIL_CONTEXT_BUDGET", "40k"), "--format", "json"]
         if seeds:
             command += ["--files", *("./" + path if path.startswith("-") else path for path in seeds)]
         completed = subprocess.run(command, cwd=root, capture_output=True, text=True, timeout=8, check=True)

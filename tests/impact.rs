@@ -294,7 +294,7 @@ fn impact_cli_rejects_stale_or_dirty_graph_and_invalid_ranges() {
     assert!(!out.status.success());
     assert!(String::from_utf8_lossy(&out.stderr).contains("clean scan"));
     for range in ["HEAD", "HEAD...HEAD", "HEAD..", "..HEAD"] {
-        let out = common::archgraph(&["impact", range, "--root", fixture.root.to_str().unwrap()]);
+        let out = common::boundrail(&["impact", range, "--root", fixture.root.to_str().unwrap()]);
         assert!(!out.status.success(), "accepted {range}");
         assert!(String::from_utf8_lossy(&out.stderr).contains("impact expects"));
     }

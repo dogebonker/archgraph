@@ -81,7 +81,7 @@ fn embedded_ownership_survives_recompute_and_simulated_destinations_reassign_own
     fs::remove_file(Path::new(&root).join("CODEOWNERS")).unwrap();
     let out = common::write_tmp("ownership-embedded/recomputed.json", "");
     assert!(
-        common::archgraph(&["check", &graph, "-o", &out])
+        common::boundrail(&["check", &graph, "-o", &out])
             .status
             .success()
     );

@@ -1,6 +1,6 @@
 //! Runs the real collectors. Needs depcruise 18.4.0 (with typescript 6.0.3 beside it), a
-//! python with grimp 3.17 and go 1.27.1, from ARCHGRAPH_DEPCRUISE / ARCHGRAPH_PYTHON /
-//! ARCHGRAPH_GO or PATH, plus node and git (ARCHGRAPH_NODE / ARCHGRAPH_GIT or PATH). The Rust
+//! python with grimp 3.17 and go 1.27.1, from BOUNDRAIL_DEPCRUISE / BOUNDRAIL_PYTHON /
+//! BOUNDRAIL_GO or PATH, plus node and git (BOUNDRAIL_NODE / BOUNDRAIL_GIT or PATH). The Rust
 //! tests need rustup, whose active toolchain (1.95.0) has rust-analyzer and rust-src, and cc.
 
 mod common;
@@ -8,7 +8,7 @@ mod common;
 use std::path::{Path, PathBuf};
 use std::{env, fs};
 
-use common::{archgraph, fixture, scan, scan_recorded, stable, validate};
+use common::{boundrail, fixture, scan, scan_recorded, stable, validate};
 use serde_json::json;
 
 fn tool(var: &str, name: &str) -> PathBuf {
@@ -39,7 +39,7 @@ fn copy_dir(from: &Path, to: &Path) {
 fn depcruise_live_matches_recorded() {
     // `scan` runs `npx --no-install depcruise`, which finds the tool in the scanned project's
     // node_modules, so each fixture is copied next to a node_modules link to the pinned install.
-    let bin = fs::canonicalize(tool("ARCHGRAPH_DEPCRUISE", "depcruise")).unwrap();
+    let bin = fs::canonicalize(tool("BOUNDRAIL_DEPCRUISE", "depcruise")).unwrap();
     let node_modules = bin
         .ancestors()
         .find(|p| p.ends_with("node_modules"))
@@ -86,8 +86,8 @@ fn depcruise_live_matches_recorded() {
 fn depcruise_path_runs_a_pinned_install_outside_the_scanned_repository() {
     // No node_modules beside the fixture and only node and git on PATH: npx could not find
     // depcruise, so a matching scan proves --depcruise ran.
-    let bin = fs::canonicalize(tool("ARCHGRAPH_DEPCRUISE", "depcruise")).unwrap();
-    let dirs = [tool("ARCHGRAPH_NODE", "node"), tool("ARCHGRAPH_GIT", "git")]
+    let bin = fs::canonicalize(tool("BOUNDRAIL_DEPCRUISE", "depcruise")).unwrap();
+    let dirs = [tool("BOUNDRAIL_NODE", "node"), tool("BOUNDRAIL_GIT", "git")]
         .map(|p| p.parent().unwrap().to_owned());
     assert!(dirs.iter().all(|d| !d.join("depcruise").exists()));
     let dir = fixture("ts-basic");
@@ -116,7 +116,7 @@ fn depcruise_path_runs_a_pinned_install_outside_the_scanned_repository() {
 #[test]
 #[ignore = "needs depcruise 18.4.0 / grimp 3.17; run with --ignored"]
 fn grimp_live_matches_recorded() {
-    let python = tool("ARCHGRAPH_PYTHON", "python3");
+    let python = tool("BOUNDRAIL_PYTHON", "python3");
     for (name, package) in [
         ("py-cycles", "mypkg"),
         ("py-clean", "src/app"),
@@ -138,7 +138,7 @@ fn grimp_live_matches_recorded() {
 fn grimp_never_runs_code_from_the_scanned_repository() {
     // A json.py in the source root would shadow the stdlib module if the source root came first
     // on sys.path.
-    let python = tool("ARCHGRAPH_PYTHON", "python3");
+    let python = tool("BOUNDRAIL_PYTHON", "python3");
     let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("planted-json");
     let _ = fs::remove_dir_all(&root);
     let marker = root.join("RAN");
@@ -163,7 +163,7 @@ fn grimp_never_runs_code_from_the_scanned_repository() {
 #[test]
 #[ignore = "needs go 1.27.1; run with --ignored"]
 fn go_live_matches_recorded() {
-    let go = tool("ARCHGRAPH_GO", "go");
+    let go = tool("BOUNDRAIL_GO", "go");
     let go = go.to_str().unwrap();
     for name in [
         "go-resolve",
@@ -230,7 +230,7 @@ fn go_module(name: &str, go_mod: &str, files: &[(&str, String)]) -> PathBuf {
 #[test]
 #[ignore = "needs go 1.27.1; run with --ignored"]
 fn go_never_downloads_a_toolchain() {
-    let go = tool("ARCHGRAPH_GO", "go");
+    let go = tool("BOUNDRAIL_GO", "go");
     let a = [("a/a.go", "package a\n".to_owned())];
     // GOTOOLCHAIN=local ignores a toolchain line: the scan runs with the local Go, offline.
     let root = go_module(
@@ -243,7 +243,7 @@ fn go_never_downloads_a_toolchain() {
     // A go line newer than the local Go cannot be met without a download: the scan fails and
     // says why.
     let root = go_module("go-newer-go-line", "module example.com/t\n\ngo 1.99\n", &a);
-    let out = archgraph(&["scan", root.to_str().unwrap(), "--go", go.to_str().unwrap()]);
+    let out = boundrail(&["scan", root.to_str().unwrap(), "--go", go.to_str().unwrap()]);
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(2), "{stderr}");
     assert!(stderr.contains("go.mod requires go >= 1.99"), "{stderr}");
@@ -255,7 +255,7 @@ fn go_never_downloads_a_toolchain() {
 fn go_scan_runs_no_repository_code() {
     // Every place repository code could run from: go:generate, init and main, a test's TestMain,
     // and a go.work the go command would read (its go line would fail the scan).
-    let go = tool("ARCHGRAPH_GO", "go");
+    let go = tool("BOUNDRAIL_GO", "go");
     let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("go-planted");
     let marker = |what: &str| root.join(format!("RAN-{what}"));
     let write = |what: &str| {
@@ -313,7 +313,7 @@ fn go_scan_runs_no_repository_code() {
 fn go_scan_ignores_a_stale_vendor_directory() {
     // vendor/modules.txt disagrees with go.mod: -mod=vendor would fail the whole scan, and the
     // scan needs nothing from vendor/.
-    let go = tool("ARCHGRAPH_GO", "go");
+    let go = tool("BOUNDRAIL_GO", "go");
     let files = [
         (
             "a/a.go",
@@ -348,7 +348,7 @@ fn go_scan_ignores_a_stale_vendor_directory() {
 #[ignore = "needs go 1.27.1; run with --ignored"]
 fn go_scan_replaces_the_users_goflags() {
     // -toolexec=/bin/false would fail every compile, the helper's included.
-    let go = tool("ARCHGRAPH_GO", "go");
+    let go = tool("BOUNDRAIL_GO", "go");
     let root = go_module(
         "go-hostile-goflags",
         "module example.com/t\n\ngo 1.21\n",
@@ -373,7 +373,7 @@ fn go_scan_replaces_the_users_goflags() {
 fn go_scan_reads_a_module_go_list_rejects_with_go_build() {
     // legacy/go.mod has a require without a version: go list fails in that module, so its
     // packages are read with go/build, with a warning; --exclude leaves the module out entirely.
-    let go = tool("ARCHGRAPH_GO", "go");
+    let go = tool("BOUNDRAIL_GO", "go");
     let root = go_module(
         "go-list-fails",
         "module example.com/p\n\ngo 1.21\n",
@@ -428,7 +428,7 @@ fn go_scan_reads_a_module_go_list_rejects_with_go_build() {
 /// An empty directory for a Rust repository, under the system temp dir: Boundrail's own
 /// rust-toolchain.toml (1.95.0 by name) would be refused from any directory below it.
 fn rust_dir(name: &str) -> PathBuf {
-    let dir = env::temp_dir().join("archgraph-live-rust").join(name);
+    let dir = env::temp_dir().join("boundrail-live-rust").join(name);
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     fs::canonicalize(&dir).unwrap()
@@ -561,7 +561,7 @@ fn host() -> String {
 fn rust_refused(root: &Path, want: &str) {
     for extra in [&[][..], &["--rust-build-scripts"]] {
         let root = root.to_str().unwrap();
-        let out = archgraph(&[&["scan", root, "--language", "rust"], extra].concat());
+        let out = boundrail(&[&["scan", root, "--language", "rust"], extra].concat());
         let stderr = String::from_utf8_lossy(&out.stderr);
         assert_eq!(out.status.code(), Some(2), "{stderr}");
         assert!(stderr.contains(want), "{want} not in: {stderr}");
@@ -620,7 +620,7 @@ fn rust_history_scans_real_commits_and_preserves_the_checkout() {
             .arg(&root)
             .args([
                 "-c",
-                "user.name=archgraph-test",
+                "user.name=boundrail-test",
                 "-c",
                 "user.email=test@example.invalid",
                 "-c",
@@ -653,7 +653,7 @@ fn rust_history_scans_real_commits_and_preserves_the_checkout() {
     fs::write(root.join("src/a.rs"), "dirty source must survive\n").unwrap();
     let before = tree(&root);
     let reports = root.parent().unwrap().join("reports");
-    let out = archgraph(&[
+    let out = boundrail(&[
         "history",
         "--sample",
         "commits",
@@ -990,13 +990,13 @@ fn rust_fails_on_a_degraded_load() {
             (
                 "Cargo.toml",
                 "[package]\nname = \"w\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\
-                 [dependencies]\nzzzz-archgraph-missing = \"1\"\n",
+                 [dependencies]\nzzzz-boundrail-missing = \"1\"\n",
             ),
             (
                 "Cargo.lock",
                 "version = 4\n\n[[package]]\nname = \"w\"\nversion = \"0.1.0\"\n\
-                 dependencies = [\"zzzz-archgraph-missing\"]\n\n[[package]]\n\
-                 name = \"zzzz-archgraph-missing\"\nversion = \"1.0.0\"\n\
+                 dependencies = [\"zzzz-boundrail-missing\"]\n\n[[package]]\n\
+                 name = \"zzzz-boundrail-missing\"\nversion = \"1.0.0\"\n\
                  source = \"registry+https://github.com/rust-lang/crates.io-index\"\n\
                  checksum = \"0000000000000000000000000000000000000000000000000000000000000000\"\n",
             ),
@@ -1058,7 +1058,7 @@ fn impact_collects_external_tests_and_resolves_barrels() {
         ],
     );
     let git = |args: &[&str]| {
-        let output = Command::new(tool("ARCHGRAPH_GIT", "git"))
+        let output = Command::new(tool("BOUNDRAIL_GIT", "git"))
             .arg("-C")
             .arg(&root)
             .args([
@@ -1089,8 +1089,8 @@ fn impact_collects_external_tests_and_resolves_barrels() {
     git(&["add", "."]);
     git(&["commit", "-qm", "change a"]);
     let head = git(&["rev-parse", "HEAD"]);
-    let depcruise = fs::canonicalize(tool("ARCHGRAPH_DEPCRUISE", "depcruise")).unwrap();
-    let out = archgraph(&[
+    let depcruise = fs::canonicalize(tool("BOUNDRAIL_DEPCRUISE", "depcruise")).unwrap();
+    let out = boundrail(&[
         "impact",
         &format!("{base}..{head}"),
         "--root",

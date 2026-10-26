@@ -39,7 +39,7 @@ function setup(name = 'cut-module-cycle') {
     modR: mods.map(() => 30), modSignal: mods.map(() => 'cycle'), modHealth: mods.map(() => 'amber'),
     R_DOT: 2.6, SP: 10, fileRoom: () => 24, sunflower: () => [{x:10,y:10}],
     RING: { forbidden: 'red', cycle: 'amber', none: 'grey' }, hiddenMods: mods.map(() => false),
-    ArchgraphPreview: engine, unflagged: false, whatifMode: false, whatifResult: null, churnView: true,
+    BoundrailPreview: engine, unflagged: false, whatifMode: false, whatifResult: null, churnView: true,
     sel: null, sideHidden: false, sheetMode: false, panel: node(), navigator: {}, $, el,
     basename: p => p.slice(p.lastIndexOf('/') + 1), dirname: p => p.slice(0, Math.max(0, p.lastIndexOf('/'))),
     count: (n, a, b) => `${n} ${n === 1 ? a : b}`, fmt: n => n ?? 'n/a',

@@ -11,7 +11,7 @@ if '--version' in sys.argv:
 if 'app-server' in sys.argv:
     assert '--disable' in sys.argv and sys.argv[sys.argv.index('--disable') + 1] == 'apps'
 cwd = Path.cwd().resolve()
-binary = Path(os.environ.get('MOCK_ARCHGRAPH_BINARY', str(Path(sys.argv[0]).with_name('mock-archgraph')))).resolve()
+binary = Path(os.environ.get('MOCK_BOUNDRAIL_BINARY', str(Path(sys.argv[0]).with_name('mock-boundrail')))).resolve()
 trusted = False
 thread, turn = 'fixture-thread', 'fixture-turn'
 
@@ -51,7 +51,7 @@ for line in sys.stdin:
         hooks = []
         if (cwd / '.codex/hooks.json').exists():
             for event, native in [('pre', 'preToolUse'), ('post', 'postToolUse'), ('stop', 'stop')]:
-                command = f'{quote(binary)} hook run --agent codex --event {event} --root {quote(cwd)} # archgraph:managed:{event}'
+                command = f'{quote(binary)} hook run --agent codex --event {event} --root {quote(cwd)} # boundrail:managed:{event}'
                 if os.environ.get('MOCK_TAMPER_COMMAND'):
                     command += ' --unexpected'
                 hooks.append({'key': 'fixture-' + event, 'currentHash': 'a' * 64,

@@ -24,14 +24,11 @@ with tempfile.TemporaryDirectory(prefix="boundrail-native-action-") as temp:
     binary.write_text('''#!/bin/bash
 set -eu
 if [[ $1 == --version ]]; then echo 'boundrail test'; exit; fi
-for arg in "$@"; do
-  if [[ ${REJECT_ENGINE:-} == 1 && $arg == --engine ]]; then exit 88; fi
-done
 printf '%s\\n' "$@" > "$CAPTURE"
 while (($#)); do
   if [[ $1 == --out-dir ]]; then
     mkdir -p "$2"
-    printf '%s\\n' '{"summary":{"forbidden":0}}' > "$2/archgraph.json"
+    printf '%s\\n' '{"summary":{"forbidden":0}}' > "$2/boundrail.json"
     break
   fi
   shift
@@ -58,17 +55,18 @@ echo 'native report'
         assert not any(arg in args for arg in ("--depcruise", "--python", "--go", "--elixir")), args
         assert not (root / "called").exists(), "native Action invoked an external collector/tool"
     env["INPUT_LANGUAGE"] = "go"
-    env["ARCHGRAPH_GO"] = str(root / "explicit-go")
+    env["BOUNDRAIL_GO"] = str(root / "explicit-go")
     result = subprocess.run(["bash", "ci/action.sh"], env=env, capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
     args = (root / "capture").read_text().splitlines()
-    assert args[args.index("--go") + 1] == env["ARCHGRAPH_GO"], args
+    assert args[args.index("--go") + 1] == env["BOUNDRAIL_GO"], args
     assert not (root / "called").exists()
-    env.update(INPUT_ENGINE="reference", INPUT_LANGUAGE="elixir", REJECT_ENGINE="1",
-               ARCHGRAPH_ELIXIR=str(forbidden / "elixir"))
+    env.update(INPUT_ENGINE="reference", INPUT_LANGUAGE="elixir",
+               BOUNDRAIL_ELIXIR=str(forbidden / "elixir"))
     result = subprocess.run(["bash", "ci/action.sh"], env=env, capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "--engine" not in (root / "capture").read_text().splitlines()
+    args = (root / "capture").read_text().splitlines()
+    assert args[args.index("--engine") + 1] == "reference", args
     env["INPUT_ENGINE"] = "unknown"
     result = subprocess.run(["bash", "ci/action.sh"], env=env, capture_output=True, text=True)
     assert result.returncode == 2 and "engine must be" in result.stdout, result.stdout
