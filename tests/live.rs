@@ -92,7 +92,7 @@ fn depcruise_path_runs_a_pinned_install_outside_the_scanned_repository() {
     assert!(dirs.iter().all(|d| !d.join("depcruise").exists()));
     let dir = fixture("ts-basic");
     assert!(!dir.join("node_modules").exists());
-    let out = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args([
             "scan",
             dir.to_str().unwrap(),
@@ -247,7 +247,7 @@ fn go_never_downloads_a_toolchain() {
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(2), "{stderr}");
     assert!(stderr.contains("go.mod requires go >= 1.99"), "{stderr}");
-    assert!(stderr.contains("archgraph never downloads one"), "{stderr}");
+    assert!(stderr.contains("boundrail never downloads one"), "{stderr}");
 }
 
 #[test]
@@ -354,7 +354,7 @@ fn go_scan_replaces_the_users_goflags() {
         "module example.com/t\n\ngo 1.21\n",
         &[("a/a.go", "package a\n".to_owned())],
     );
-    let out = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args(["scan", root.to_str().unwrap(), "--go", go.to_str().unwrap()])
         .env("GOFLAGS", "-toolexec=/bin/false")
         .output()
@@ -425,7 +425,7 @@ fn go_scan_reads_a_module_go_list_rejects_with_go_build() {
     );
 }
 
-/// An empty directory for a Rust repository, under the system temp dir: archgraph's own
+/// An empty directory for a Rust repository, under the system temp dir: Boundrail's own
 /// rust-toolchain.toml (1.95.0 by name) would be refused from any directory below it.
 fn rust_dir(name: &str) -> PathBuf {
     let dir = env::temp_dir().join("archgraph-live-rust").join(name);
@@ -892,7 +892,7 @@ fn rust_never_downloads_or_runs_a_repository_toolchain() {
         "rust-toolchain",
         &[("rust-toolchain.toml", "[toolchain]\nchannel = \"1.60.0\"\n")],
     );
-    let out = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args(["scan", root.to_str().unwrap(), "--language", "rust"])
         .env("RUSTUP_DIST_SERVER", "http://127.0.0.1:9")
         .output()

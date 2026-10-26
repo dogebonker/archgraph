@@ -1,4 +1,4 @@
-//! Every Git subprocess archgraph runs, hardened so a repository's config never names a program
+//! Every Git subprocess boundrail runs, hardened so a repository's config never names a program
 //! Git would run on our behalf (fsmonitor, hooks).
 
 use std::path::{Path, PathBuf};

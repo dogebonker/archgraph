@@ -11,7 +11,7 @@
 #   ARCHGRAPH_RULES      rules file (default: <project>/layout.yaml when it exists)
 #   ARCHGRAPH_SCAN_ARGS  extra scan flags, e.g. "--language python --python .venv/bin/python --depth 1"
 #   ARCHGRAPH_FAIL_ON    diff conditions that fail (default: new-forbidden,new-cycles)
-#   ARCHGRAPH            archgraph executable (default: archgraph on PATH)
+#   ARCHGRAPH            boundrail executable (default: boundrail on PATH)
 #
 # --hook: Claude Code Stop hook mode. Reads the hook JSON on stdin and lets the agent stop when the
 # hook already blocked this stop once. New violations go to stderr with exit 2, which keeps the
@@ -31,8 +31,8 @@ if [[ ${1:-} == --hook ]]; then
   if grep -q '"stop_hook_active"[[:space:]]*:[[:space:]]*true' 2>/dev/null; then exit 0; fi
 fi
 
-archgraph=${ARCHGRAPH:-archgraph}
-command -v "$archgraph" >/dev/null || fail "archgraph is not installed"
+boundrail=${ARCHGRAPH:-boundrail}
+command -v "$boundrail" >/dev/null || fail "boundrail is not installed"
 repo=$(git rev-parse --show-toplevel 2>/dev/null) || fail "not inside a git repository"
 project=${ARCHGRAPH_PATH:-.}
 project=${project#./}
@@ -59,7 +59,7 @@ fi
 # Nothing to compare: no tracked change and no new file in the project since the base.
 if git -C "$repo" diff --quiet "$base" -- "${project:-.}" \
   && [[ -z $(git -C "$repo" ls-files --others --exclude-standard -- "${project:-.}") ]]; then
-  echo "archgraph guard: no changes in ${project:-the repository} against $short"
+  echo "boundrail guard: no changes in ${project:-the repository} against $short"
   exit 0
 fi
 
@@ -107,20 +107,20 @@ if [[ -d $dir/node_modules && ! -e $tmp/base/${prefix}node_modules ]]; then
   ln -s "$dir/node_modules" "$tmp/base/${prefix}node_modules"
 fi
 
-"$archgraph" scan "$dir" ${args[@]+"${args[@]}"} -o "$tmp/head.json" 2>"$tmp/head.err" \
+"$boundrail" scan "$dir" ${args[@]+"${args[@]}"} -o "$tmp/head.json" 2>"$tmp/head.err" \
   || fail "scanning the working tree failed: $(cat "$tmp/head.err")"
-"$archgraph" scan "$tmp/base/$project" ${args[@]+"${args[@]}"} -o "$tmp/base.json" 2>"$tmp/base.err" \
+"$boundrail" scan "$tmp/base/$project" ${args[@]+"${args[@]}"} -o "$tmp/base.json" 2>"$tmp/base.err" \
   || fail "scanning the base commit $short failed: $(cat "$tmp/base.err")"
 
 status=0
-"$archgraph" diff "$tmp/base.json" "$tmp/head.json" \
+"$boundrail" diff "$tmp/base.json" "$tmp/head.json" \
   --fail-on "${ARCHGRAPH_FAIL_ON:-new-forbidden,new-cycles}" --format markdown \
   >"$tmp/diff.md" 2>"$tmp/diff.err" || status=$?
 ((status <= 1)) || fail "diff failed: $(cat "$tmp/diff.err")"
 
 # Each file entry carries exactly one "barrel" key; edges carry none.
 files=$({ grep -o '"barrel":' "$tmp/head.json" || true; } | wc -l | tr -d ' ')
-header="archgraph guard: $files files scanned against $short${rules:+ with rules ${rules#"$repo/"}}"
+header="boundrail guard: $files files scanned against $short${rules:+ with rules ${rules#"$repo/"}}"
 
 out=1
 if [[ -n $hook && $status -eq 1 ]]; then out=2; fi

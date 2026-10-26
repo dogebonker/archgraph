@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use archgraph::{
+use boundrail::{
     graph,
     incremental::{Analysis, Options},
     model::{Edge, EdgeKind},

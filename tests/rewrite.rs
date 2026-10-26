@@ -1,4 +1,4 @@
-use archgraph::{
+use boundrail::{
     model::Language,
     rewrite::{self, Edit},
 };

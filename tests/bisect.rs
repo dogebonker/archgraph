@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use archgraph::bisect::{self, Options, Target};
-use archgraph::model::{Config, CycleLevel, Document, Edge, EdgeKind, Git, Source};
+use boundrail::bisect::{self, Options, Target};
+use boundrail::model::{Config, CycleLevel, Document, Edge, EdgeKind, Git, Source};
 use serde_json::json;
 
 fn git(root: &Path, args: &[&str]) -> String {
@@ -87,7 +87,7 @@ fn graph(commit: &str, cycle: bool, language: &str) -> Document {
         verdict: None,
         rule: None,
         reach: None,
-        ..archgraph::model::Edge::default()
+        ..boundrail::model::Edge::default()
     }];
     if cycle {
         edges.push(Edge {
@@ -97,10 +97,10 @@ fn graph(commit: &str, cycle: bool, language: &str) -> Document {
             verdict: None,
             rule: None,
             reach: None,
-            ..archgraph::model::Edge::default()
+            ..boundrail::model::Edge::default()
         });
     }
-    let mut doc = archgraph::analyze(
+    let mut doc = boundrail::analyze(
         source,
         config,
         vec!["src/a/a.ts".into(), "src/b/b.ts".into()],
@@ -307,7 +307,7 @@ fn forbidden_edge_requires_verdict_and_notes_fixed_rules() {
         let mut doc = graph(oid, oid != absent, "typescript");
         for edge in &mut doc.edges {
             if edge.from == "src/a/a.ts" {
-                edge.verdict = Some(archgraph::model::Verdict::Forbidden);
+                edge.verdict = Some(boundrail::model::Verdict::Forbidden);
             }
         }
         doc
@@ -401,7 +401,7 @@ fn cli_bisect_and_report_keep_verified_provenance_and_checkout() {
     let root = repo.0.to_str().unwrap();
     let collector = collector.to_str().unwrap();
     let run = |args: &[&str]| {
-        let output = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        let output = Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .args(args)
             .output()
             .unwrap();
@@ -490,7 +490,7 @@ fn cli_bisect_and_report_keep_verified_provenance_and_checkout() {
 
 #[test]
 fn generic_misplaced_finding_has_a_verified_introduction() {
-    use archgraph::model::{Evidence, Finding, FindingKind};
+    use boundrail::model::{Evidence, Finding, FindingKind};
     let repo = Repo::new();
     let absent = repo.commit(false, "before placement concern");
     let introduced = repo.commit(false, "placement concern appears");
@@ -567,7 +567,7 @@ fn report_dates_hidden_coupling_with_the_original_cochange_window() {
     let collector = repo.0.join("collector.sh");
     fs::write(&collector, "#!/bin/sh\ncat depcruise.json\n").unwrap();
     fs::set_permissions(&collector, fs::Permissions::from_mode(0o755)).unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let output = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args([
             "report",
             repo.0.to_str().unwrap(),
@@ -682,10 +682,10 @@ fn a_type_only_import_is_never_named_as_the_runtime_cycle_closer() {
                 verdict: None,
                 rule: None,
                 reach: None,
-                ..archgraph::model::Edge::default()
+                ..boundrail::model::Edge::default()
             });
         }
-        archgraph::analyze(
+        boundrail::analyze(
             doc.source,
             doc.config,
             vec![

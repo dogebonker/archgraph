@@ -146,7 +146,7 @@ pub fn run(
     if !out.status.success() {
         bail!(
             "grimp helper failed: {}\ngrimp 3.17 is required: pip install grimp==3.17, \
-             or run archgraph under uv run --with grimp==3.17",
+             or run boundrail under uv run --with grimp==3.17",
             String::from_utf8_lossy(&out.stderr).trim()
         );
     }

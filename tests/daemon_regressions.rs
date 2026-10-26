@@ -103,7 +103,7 @@ impl Fixture {
         );
     }
     fn command(&self, args: &[&str]) -> Output {
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .current_dir(&self.root)
             .env_remove("SOURCE_DATE_EPOCH")
             .args(args)
@@ -133,7 +133,7 @@ impl Fixture {
         fs::create_dir_all(self.root.join(".archgraph")).unwrap();
         let log = fs::File::create(self.root.join(".archgraph/regression.log")).unwrap();
         self.child = Some(
-            Command::new(env!("CARGO_BIN_EXE_archgraph"))
+            Command::new(env!("CARGO_BIN_EXE_boundrail"))
                 .current_dir(&self.root)
                 .env_remove("SOURCE_DATE_EPOCH")
                 .args([
@@ -386,7 +386,7 @@ fn local_and_forwarded_hook_snapshots_preserve_verdicts_and_output_exclusions() 
     f.commit("2001-01-01T00:00:00+0000");
     fs::create_dir_all(f.root.join(".archgraph")).unwrap();
     f.child = Some(
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .current_dir(&f.root)
             .env_remove("SOURCE_DATE_EPOCH")
             .args([

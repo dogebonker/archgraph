@@ -1,5 +1,5 @@
 use super::*;
-use archgraph::collect::elixir;
+use boundrail::collect::elixir;
 use sha2::Digest;
 
 #[derive(Args)]
@@ -80,7 +80,7 @@ pub(super) fn run(mut args: HistoryArgs) -> Result<()> {
     };
     if let [old, new] = args.diff.as_slice() {
         let resolve = |rev: &str| {
-            archgraph::git::resolve(&args.root, rev)
+            boundrail::git::resolve(&args.root, rev)
                 .with_context(|| format!("unknown release ref {rev}"))
         };
         let checkout = history::Checkout::new(&args.root)?;

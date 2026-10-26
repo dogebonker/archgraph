@@ -1,9 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use archgraph::collect::excludes::{Options, Policy};
-use archgraph::collect::native::go;
-use archgraph::model::{EdgeKind, Language};
+use boundrail::collect::excludes::{Options, Policy};
+use boundrail::collect::native::go;
+use boundrail::model::{EdgeKind, Language};
 
 struct Fixture(PathBuf);
 impl Fixture {
@@ -177,7 +177,7 @@ fn native_go_missing_metadata_is_unresolved_and_alias_shadowing_uses_conservativ
             .edges
             .iter()
             .any(|e| e.to == "other/doc.go"
-                && e.confidence == Some(archgraph::model::Confidence::Low))
+                && e.confidence == Some(boundrail::model::Confidence::Low))
     );
     assert!(!output.raw.edges.iter().any(|e| e.to == "other/value.go"));
     assert!(
@@ -255,7 +255,7 @@ fn native_go_binds_every_file_and_leaves_names_unknown() {
             serde_json::json!({"Dir":fixture.path(),"ImportPath":"example.test/app","Name":"app","GoFiles":["a.go","b.go"]}),
         ],
     );
-    let out = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args([
             "scan",
             fixture.path().to_str().unwrap(),

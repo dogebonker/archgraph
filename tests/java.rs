@@ -1,6 +1,6 @@
 mod common;
 
-use archgraph::collect::java;
+use boundrail::collect::java;
 use common::{fixture, scan, write_tmp};
 use serde_json::{Value, json};
 

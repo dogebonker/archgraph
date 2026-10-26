@@ -1,4 +1,4 @@
-use archgraph::rules::{Compiled, Rules};
+use boundrail::rules::{Compiled, Rules};
 use serde_json::Value;
 
 fn select(yaml: &str, paths: &[&str]) -> Value {

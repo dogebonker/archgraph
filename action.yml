@@ -1,4 +1,4 @@
-name: archgraph
+name: Boundrail
 description: Check a repository's imports against its layout rules, and fail a pull request that adds forbidden imports or cycles
 author: dogebonker
 branding:
@@ -34,45 +34,45 @@ inputs:
     description: "Pull requests: true fails the step when the rules file differs from the base commit's"
     default: "false"
   version:
-    description: archgraph release to install (default the version in this action's own Cargo.toml)
+    description: boundrail release to install (default the version in this action's own Cargo.toml)
     default: ""
   binary:
-    description: Path to an archgraph executable to use instead of downloading a release
+    description: Path to a boundrail executable to use instead of downloading a release
     default: ""
   base-ref:
     description: Commit to compare HEAD against (default the pull request's base commit on pull_request)
     default: ""
   artifact-name:
     description: Name of the uploaded artifact with archgraph.html and archgraph.json; set a unique one per matrix job
-    default: archgraph-${{ github.job }}
+    default: boundrail-${{ github.job }}
 
 outputs:
   json:
     description: Path of archgraph.json, the HEAD scan document
-    value: ${{ steps.archgraph.outputs.json }}
+    value: ${{ steps.boundrail.outputs.json }}
   html:
     description: Path of archgraph.html, the HEAD graph page
-    value: ${{ steps.archgraph.outputs.html }}
+    value: ${{ steps.boundrail.outputs.html }}
   sarif:
     description: Path of archgraph.sarif, the HEAD forbidden imports and broken claims for github/codeql-action/upload-sarif; empty without rules
-    value: ${{ steps.archgraph.outputs.sarif }}
+    value: ${{ steps.boundrail.outputs.sarif }}
   forbidden:
     description: Number of forbidden imports at HEAD
-    value: ${{ steps.archgraph.outputs.forbidden }}
+    value: ${{ steps.boundrail.outputs.forbidden }}
   new-forbidden:
     description: Number of forbidden imports HEAD adds over the base (pull requests only)
-    value: ${{ steps.archgraph.outputs.new-forbidden }}
+    value: ${{ steps.boundrail.outputs.new-forbidden }}
   new-cycles:
     description: Number of cycles HEAD adds over the base (pull requests only)
-    value: ${{ steps.archgraph.outputs.new-cycles }}
+    value: ${{ steps.boundrail.outputs.new-cycles }}
   rules-changed:
     description: true when the rules file differs from the base commit's (pull requests only)
-    value: ${{ steps.archgraph.outputs.rules-changed }}
+    value: ${{ steps.boundrail.outputs.rules-changed }}
 
 runs:
   using: composite
   steps:
-    - id: archgraph
+    - id: boundrail
       shell: bash
       env:
         INPUT_PATH: ${{ inputs.path }}
@@ -93,5 +93,5 @@ runs:
       with:
         name: ${{ inputs.artifact-name }}
         path: |
-          ${{ runner.temp }}/archgraph/head/archgraph.json
-          ${{ runner.temp }}/archgraph/head/archgraph.html
+          ${{ runner.temp }}/boundrail/head/archgraph.json
+          ${{ runner.temp }}/boundrail/head/archgraph.html

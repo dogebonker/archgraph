@@ -1,6 +1,6 @@
 //! One recipe contract for the CLI, agents and mechanical application.
 use super::*;
-use archgraph::{apply as executor, recipes};
+use boundrail::{apply as executor, recipes};
 use serde_json::json;
 
 #[derive(Args)]

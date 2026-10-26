@@ -2,7 +2,7 @@ mod common;
 
 use std::path::{Path, PathBuf};
 
-use archgraph::{
+use boundrail::{
     mcp_tools::{call, finding_id, schemas, services},
     model::{Cochange, CochangePair, Config, Document, Edge, Source},
 };
@@ -14,7 +14,7 @@ fn document(edges: &[(&str, &str)]) -> Document {
         json!({"depth":1,"source_root":"src","excludes":[],"include_tests":false,"rules":null}),
     )
     .unwrap();
-    archgraph::analyze(
+    boundrail::analyze(
         source,
         config,
         vec![
@@ -53,7 +53,7 @@ fn cycle() -> Document {
 fn with_claim() -> Document {
     let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","cruised":3},"git":{"commit":"test","dirty":false},"generated_at":"1970-01-01T00:00:00Z"})).unwrap();
     let config: Config = serde_json::from_value(json!({"depth":1,"source_root":"src","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"fixture","doc":{"version":1,"forbid":[{"id":"no-b","from":"src/a/**","to":"src/b/**","reason":"a never uses b"}]}}})).unwrap();
-    archgraph::analyze(
+    boundrail::analyze(
         source,
         config,
         vec!["src/a/a.ts".into(), "src/b/b.ts".into()],
@@ -78,7 +78,7 @@ fn validate(name: &str, value: &Value) {
 }
 #[test]
 fn edit_snapshot_arguments_are_validated_before_collection() {
-    use archgraph::mcp_tools::validate;
+    use boundrail::mcp_tools::validate;
     let id = "a".repeat(64);
     assert!(validate("check_diff", &json!({"snapshot":id})).is_ok());
     for arguments in [
@@ -112,7 +112,7 @@ fn stable_ids_exclude_timing_priority_and_member_order() {
     let mut other = f.clone();
     other.age_days = Some(300);
     other.hotspot_priority = Some(0.98);
-    if let archgraph::model::Evidence::Cycle(c) = &mut other.evidence {
+    if let boundrail::model::Evidence::Cycle(c) = &mut other.evidence {
         c.members.reverse();
         c.break_set.reverse();
     }
@@ -459,7 +459,7 @@ fn services_arguments_fail_before_collection_and_unknown_services_are_errors() {
         json!({"manifest":true}),
     ] {
         assert!(
-            archgraph::mcp_tools::validate("services", &args).is_err(),
+            boundrail::mcp_tools::validate("services", &args).is_err(),
             "{args}"
         );
         let error = services(Path::new("/missing-mcp-services-root"), args).unwrap_err();
@@ -567,7 +567,7 @@ fn context_uses_existing_budgeted_selection_without_exposing_source_bodies() {
 #[test]
 fn simulation_file_cycle_renames_preserve_identity_without_hiding_new_cycle_levels() {
     let base = document(&[]);
-    let doc = archgraph::analyze(
+    let doc = boundrail::analyze(
         base.source,
         base.config,
         vec!["src/a/a.ts".into(), "src/a/other.ts".into()],
@@ -588,7 +588,7 @@ fn simulation_file_cycle_renames_preserve_identity_without_hiding_new_cycle_leve
     )
     .unwrap();
     assert_eq!(doc.cycles.len(), 1);
-    assert_eq!(doc.cycles[0].level, archgraph::model::CycleLevel::File);
+    assert_eq!(doc.cycles[0].level, boundrail::model::CycleLevel::File);
     let renamed = tool(
         &doc,
         "simulate",
@@ -611,13 +611,13 @@ fn explain_modules_report_all_layers_and_unclassified_members() {
     let base = document(&[]);
     let make = |layers: Vec<&str>| {
         let mut config = base.config.clone();
-        config.rules = Some(archgraph::model::RulesRef {
+        config.rules = Some(boundrail::model::RulesRef {
             path: "layout.yaml".into(),
             sha256: "fixture".into(),
             known: None,
             doc: serde_json::from_value(json!({"version":1,"layers":layers})).unwrap(),
         });
-        archgraph::analyze(
+        boundrail::analyze(
             base.source.clone(),
             config,
             vec!["src/a/a.ts".into(), "src/a/other.ts".into()],
@@ -691,7 +691,7 @@ fn claims_in(files: Vec<String>, edges: Vec<Edge>) -> Document {
 fn claims_with(forbid: Value, files: Vec<String>, edges: Vec<Edge>) -> Document {
     let source: Source = serde_json::from_value(json!({"language":"typescript","collector":{"name":"fixture","cruised":5},"git":{"commit":"test","dirty":false},"generated_at":"1970-01-01T00:00:00Z"})).unwrap();
     let config: Config = serde_json::from_value(json!({"depth":1,"source_root":"src","excludes":[],"include_tests":false,"rules":{"path":"layout.yaml","sha256":"fixture","doc":{"version":1,"forbid":forbid}}})).unwrap();
-    archgraph::analyze(source, config, files, edges, Vec::new(), None).unwrap()
+    boundrail::analyze(source, config, files, edges, Vec::new(), None).unwrap()
 }
 
 /// `doc` with git co-change `(a, b, commits)` pairs and its target recomputed.
@@ -708,8 +708,8 @@ fn with_cochange(mut doc: Document, pairs: &[(&str, &str, usize)]) -> Document {
             })
             .collect(),
     });
-    let rules = archgraph::rules::compile(&doc.config).unwrap().unwrap();
-    doc.target = archgraph::target::analyze(&doc, &rules);
+    let rules = boundrail::rules::compile(&doc.config).unwrap().unwrap();
+    doc.target = boundrail::target::analyze(&doc, &rules);
     doc
 }
 
@@ -731,7 +731,7 @@ fn target_lists_files_changed_together_across_a_claim_without_an_import() {
         json!([{"files": [y, e], "commits": 3}])
     );
     assert_eq!(
-        archgraph::target::text(target),
+        boundrail::target::text(target),
         "claim app-no-domain: holds in 1 of 2 slices; broken in a reason=\"apps never reach a domain\" source=\"docs/adr/0001.md\"
   src/m/a/app/x.ts -> src/m/a/domain/d.ts
   co-change: src/m/b/app/y.ts <-> src/m/b/domain/e.ts, 3 commits, no import
@@ -773,7 +773,7 @@ fn diff_and_review_list_pairs_newly_changed_together_across_a_claim() {
     let (y, e) = ("src/m/b/app/y.ts", "src/m/b/domain/e.ts");
     let old = with_cochange(claims(&[(y, e, 3)]), &[(y, e, 3)]);
     let new = with_cochange(claims(&[]), &[(y, e, 3)]);
-    let d = archgraph::diff::diff(&old, &new);
+    let d = boundrail::diff::diff(&old, &new);
     let target = serde_json::to_value(&d.target).unwrap();
     assert_eq!(target["newly_fixed"][0]["slice"], "b");
     assert_eq!(
@@ -781,7 +781,7 @@ fn diff_and_review_list_pairs_newly_changed_together_across_a_claim() {
         json!([{"claim": "app-no-domain", "reason": "apps never reach a domain",
                 "source": "docs/adr/0001.md", "slice": "b", "files": [y, e], "commits": 3}])
     );
-    let md = archgraph::diff::markdown(&d, &[]);
+    let md = boundrail::diff::markdown(&d, &[]);
     assert!(
         md.contains("\nTarget: 2 of 2 slices conform (was 1 of 2), 1 newly co-changed pair.\n"),
         "{md}"
@@ -791,15 +791,15 @@ fn diff_and_review_list_pairs_newly_changed_together_across_a_claim() {
         "{md}"
     );
     // The pair is linked in the new scan, and a scan without co-change lists none.
-    let reverse = serde_json::to_value(archgraph::diff::diff(&new, &old).target).unwrap();
+    let reverse = serde_json::to_value(boundrail::diff::diff(&new, &old).target).unwrap();
     assert_eq!(reverse.get("newly_cochanged"), None);
     let unread =
-        serde_json::to_value(archgraph::diff::diff(&claims(&[(y, e, 3)]), &new).target).unwrap();
+        serde_json::to_value(boundrail::diff::diff(&claims(&[(y, e, 3)]), &new).target).unwrap();
     assert_eq!(unread.get("newly_cochanged"), None);
     let out = call(&new, Path::new("."), "review", json!({}), Some(&old)).unwrap();
     assert_eq!(
         out["markdown"],
-        "**archgraph review**: 0 newly broken slices, 0 other new forbidden imports, 1 newly fixed slice.
+        "**boundrail review**: 0 newly broken slices, 0 other new forbidden imports, 1 newly fixed slice.
 Target: 2 of 2 slices conform (was 1 of 2).
 
 ### Newly fixed (1)
@@ -829,7 +829,7 @@ fn diff_target_lists_newly_broken_and_newly_fixed_slices_with_lines() {
                 "imports": [{"from": from, "to": to, "line": line}]}])
     };
     assert_eq!(
-        serde_json::to_value(archgraph::diff::diff(&old, &new).target).unwrap(),
+        serde_json::to_value(boundrail::diff::diff(&old, &new).target).unwrap(),
         json!({
             "conforming": [{"done": 1, "of": 2}, {"done": 1, "of": 2}],
             "newly_broken": slice("b", "src/m/b/app/y.ts", "src/m/b/domain/e.ts", 3),
@@ -841,7 +841,7 @@ fn diff_target_lists_newly_broken_and_newly_fixed_slices_with_lines() {
         vec!["src/m/b/app/y.ts".into(), "src/m/b/domain/e.ts".into()],
         Vec::new(),
     );
-    let target = archgraph::diff::diff(&old, &gone).target.unwrap();
+    let target = boundrail::diff::diff(&old, &gone).target.unwrap();
     assert_eq!(
         serde_json::to_value(target.newly_fixed).unwrap(),
         slice("a", "src/m/a/app/x.ts", "src/m/a/domain/d.ts", 2)
@@ -858,7 +858,7 @@ fn review_quotes_each_newly_broken_other_forbidden_and_newly_fixed_import() {
     let out = call(&new, Path::new("."), "review", json!({}), Some(&old)).unwrap();
     assert_eq!(
         out["markdown"],
-        "**archgraph review**: 1 newly broken slice, 1 other new forbidden import, 1 newly fixed slice.
+        "**boundrail review**: 1 newly broken slice, 1 other new forbidden import, 1 newly fixed slice.
 Target: 1 of 2 slices conform.
 
 ### Newly broken (1)
@@ -881,7 +881,7 @@ Target: 1 of 2 slices conform.
     let out = call(&plain, Path::new("."), "review", json!({}), Some(&plain)).unwrap();
     assert_eq!(
         out["markdown"],
-        "**archgraph review**: 0 newly broken slices, 0 other new forbidden imports, 0 newly fixed slices.
+        "**boundrail review**: 0 newly broken slices, 0 other new forbidden imports, 0 newly fixed slices.
 No rules: nothing was checked; add layout.yaml or pass --rules.
 "
     );
@@ -901,7 +901,7 @@ fn review_lists_a_claim_the_change_makes_vacuous() {
     let out = call(&new, Path::new("."), "review", json!({}), Some(&old)).unwrap();
     assert_eq!(
         out["markdown"],
-        "**archgraph review**: 0 newly broken slices, 0 other new forbidden imports, 0 newly fixed slices.
+        "**boundrail review**: 0 newly broken slices, 0 other new forbidden imports, 0 newly fixed slices.
 Target: 0 of 0 slices conform (was 2 of 2).
 
 ### Newly vacuous claims (1)
@@ -921,7 +921,7 @@ Target: 0 of 0 slices conform (was 2 of 2).
         files,
         Vec::new(),
     );
-    let target = archgraph::diff::diff(&unclaimed, &new).target.unwrap();
+    let target = boundrail::diff::diff(&unclaimed, &new).target.unwrap();
     assert!(target.newly_vacuous.is_empty());
 }
 
@@ -954,7 +954,7 @@ fn review_marks_known_other_forbidden_imports_and_counts_stale_entries() {
         "known":{"path":"layout.known.yaml","entries":[
             known("src/gone.ts", "src/m/a/domain/d.ts"),
             known("src/shared/id.ts", "src/m/a/domain/d.ts")]}}})).unwrap();
-        archgraph::analyze(
+        boundrail::analyze(
             source,
             config,
             files.map(String::from).to_vec(),
@@ -968,14 +968,14 @@ fn review_marks_known_other_forbidden_imports_and_counts_stale_entries() {
     let out = call(&new, Path::new("."), "review", json!({}), Some(&old)).unwrap();
     assert_eq!(
         out["markdown"],
-        "**archgraph review**: 0 newly broken slices, 2 other new forbidden imports, 0 newly fixed slices.
+        "**boundrail review**: 0 newly broken slices, 2 other new forbidden imports, 0 newly fixed slices.
 
 ### Other new forbidden imports (2)
 
 - src/shared/id.ts:1 → src/m/a/domain/d.ts, forbid\\[0\\]: shared stays a leaf, listed in layout.known.yaml
 - src/shared/ids.ts:2 → src/m/a/domain/d.ts, forbid\\[0\\]: shared stays a leaf
 
-1 known entry no longer occurs: run archgraph check --update-known shrink.
+1 known entry no longer occurs: run boundrail check --update-known shrink.
 "
     );
     let rows = out["other_forbidden"].as_array().unwrap();
@@ -990,7 +990,7 @@ fn sarif_puts_each_broken_claim_and_other_forbidden_import_on_its_line() {
         ("src/m/b/app/y.ts", "src/m/b/domain/e.ts", 3),
         ("src/shared/id.ts", "src/m/a/domain/d.ts", 1),
     ]);
-    let out = archgraph::sarif::sarif(&new);
+    let out = boundrail::sarif::sarif(&new);
     common::validate_sarif(&out);
     let run = &out["runs"][0];
     assert_eq!(
@@ -1034,7 +1034,7 @@ fn sarif_puts_each_broken_claim_and_other_forbidden_import_on_its_line() {
         }],
     );
     lineless.source.scan_root = Some("web".into());
-    let out = archgraph::sarif::sarif(&lineless);
+    let out = boundrail::sarif::sarif(&lineless);
     common::validate_sarif(&out);
     let results = out["runs"][0]["results"].as_array().unwrap();
     assert_eq!(results.len(), 1);
@@ -1063,7 +1063,7 @@ fn sarif_reports_a_link_once_per_claim_id_and_does_not_double_a_closing_period()
             ..Default::default()
         }],
     );
-    let out = archgraph::sarif::sarif(&doc);
+    let out = boundrail::sarif::sarif(&doc);
     common::validate_sarif(&out);
     let results = out["runs"][0]["results"].as_array().unwrap();
     assert_eq!(results.len(), 1);
@@ -1092,7 +1092,7 @@ fn sarif_reports_a_link_once_per_claim_id_and_does_not_double_a_closing_period()
             ..Default::default()
         }],
     );
-    let out = archgraph::sarif::sarif(&doc);
+    let out = boundrail::sarif::sarif(&doc);
     assert_eq!(
         out["runs"][0]["results"][0]["message"]["text"],
         "src/shared/id.ts imports src/m/a/domain/d.ts, forbidden by forbid[0]: shared stays a leaf."
@@ -1133,7 +1133,7 @@ fn review_markdown_keeps_true_totals_within_its_budget() {
     assert!(md.contains("\n### Newly broken (40)\n"), "{md}");
     assert!(
         md.ends_with(
-            "\n\n25 more rows in `archgraph review --format json`.
+            "\n\n25 more rows in `boundrail review --format json`.
 Lines unknown for 40 imports: the fixture collector records none.
 "
         ),

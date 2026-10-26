@@ -22,16 +22,16 @@ pub(super) struct HotspotsArgs {
 
 pub(super) fn run(args: HotspotsArgs) -> Result<()> {
     let mut doc = recompute(&args.graph, None)?;
-    let report = archgraph::hotspots::collect(
+    let report = boundrail::hotspots::collect(
         &args.root,
         &doc,
-        &archgraph::hotspots::Options {
+        &boundrail::hotspots::Options {
             since: args.since,
             max_files: args.max_files,
             authors: args.authors,
         },
     )?;
-    archgraph::apply_hotspots(&mut doc, report);
+    boundrail::apply_hotspots(&mut doc, report);
     if let Some(path) = args.output {
         write(Some(&path), &doc)?;
     }

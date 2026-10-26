@@ -4,9 +4,9 @@ use std::path::Path;
 use std::process::Command;
 
 use anyhow::{Context, Result, bail};
-use archgraph::impact::{Impact, Reviewer};
-use archgraph::model::Document;
-use archgraph::{collect, git, modules};
+use boundrail::impact::{Impact, Reviewer};
+use boundrail::model::Document;
+use boundrail::{collect, git, modules};
 use serde::Deserialize;
 
 #[derive(Debug)]
@@ -129,7 +129,7 @@ pub(super) fn reviewers(
                 .map(|f| (f.path.as_str(), f.module.as_str())),
         )
         .collect();
-    let rules = archgraph::rules::compile(&doc.config)?;
+    let rules = boundrail::rules::compile(&doc.config)?;
     let mut counts: BTreeMap<String, BTreeMap<String, usize>> = BTreeMap::new();
     for commit in parse_commits(&log)? {
         let touched: BTreeSet<_> = commit

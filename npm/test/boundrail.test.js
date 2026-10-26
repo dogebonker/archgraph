@@ -8,33 +8,33 @@ const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { target, cacheDir, expectedSum, download } = require('../bin/archgraph.js');
+const { target, cacheDir, expectedSum, download } = require('../bin/boundrail.js');
 const { version } = require('../package.json');
 
-const WRAPPER = path.join(__dirname, '..', 'bin', 'archgraph.js');
+const WRAPPER = path.join(__dirname, '..', 'bin', 'boundrail.js');
 const TAG = `v${version}`;
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'archgraph-cli-test-'));
+const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'boundrail-cli-test-'));
 test.after(() => fs.rmSync(TMP, { recursive: true, force: true }));
 const tmp = (name) => fs.mkdtempSync(path.join(TMP, `${name}-`));
 
-/** The archgraph binary built by cargo: ARCHGRAPH_TEST_BINARY, else target/release, else target/debug. */
+/** The boundrail binary built by cargo: ARCHGRAPH_TEST_BINARY, else target/release, else target/debug. */
 function builtBinary() {
   const root = path.join(__dirname, '..', '..', 'target');
   const found = [
     process.env.ARCHGRAPH_TEST_BINARY,
-    path.join(root, 'release', 'archgraph'),
-    path.join(root, 'debug', 'archgraph'),
+    path.join(root, 'release', 'boundrail'),
+    path.join(root, 'debug', 'boundrail'),
   ].find((p) => p && fs.existsSync(p));
-  assert.ok(found, 'build archgraph first (cargo build), or set ARCHGRAPH_TEST_BINARY');
+  assert.ok(found, 'build boundrail first (cargo build), or set ARCHGRAPH_TEST_BINARY');
   return found;
 }
 
 /** A release directory `<dir>/<tag>/` with this host's archive and SHA256SUMS. */
-function fakeRelease(binary, sumsFor = (hash) => hash) {
+function fakeRelease(binary, sumsFor = (hash) => hash, product = 'boundrail') {
   const dir = tmp('release');
-  const stem = `archgraph-${TAG}-${target(process.platform, process.arch)}`;
+  const stem = `${product}-${TAG}-${target(process.platform, process.arch)}`;
   fs.mkdirSync(path.join(dir, 'stage', stem), { recursive: true });
-  fs.copyFileSync(binary, path.join(dir, 'stage', stem, 'archgraph'));
+  fs.copyFileSync(binary, path.join(dir, 'stage', stem, product));
   fs.mkdirSync(path.join(dir, TAG));
   const archive = path.join(dir, TAG, `${stem}.tar.gz`);
   execFileSync('tar', ['-czf', archive, '-C', path.join(dir, 'stage'), stem]);
@@ -63,10 +63,10 @@ async function serve(dir) {
 function packageWithSums(sums) {
   const dir = tmp('package');
   fs.mkdirSync(path.join(dir, 'bin'));
-  fs.copyFileSync(WRAPPER, path.join(dir, 'bin', 'archgraph.js'));
+  fs.copyFileSync(WRAPPER, path.join(dir, 'bin', 'boundrail.js'));
   fs.copyFileSync(path.join(__dirname, '..', 'package.json'), path.join(dir, 'package.json'));
   fs.writeFileSync(path.join(dir, 'SHA256SUMS'), sums);
-  return path.join(dir, 'bin', 'archgraph.js');
+  return path.join(dir, 'bin', 'boundrail.js');
 }
 
 /** Runs the wrapper with `env`; resolves to { status, stdout, stderr }. */
@@ -89,14 +89,14 @@ test('maps every released platform to its target', () => {
   assert.equal(target('darwin', 'x64'), 'x86_64-apple-darwin');
   assert.equal(target('darwin', 'arm64'), 'aarch64-apple-darwin');
   assert.equal(target('win32', 'x64'), 'x86_64-pc-windows-msvc');
-  assert.throws(() => target('win32', 'arm64'), /no prebuilt archgraph for win32 arm64/);
-  assert.throws(() => target('freebsd', 'x64'), /no prebuilt archgraph for freebsd x64/);
+  assert.throws(() => target('win32', 'arm64'), /no prebuilt boundrail for win32 arm64/);
+  assert.throws(() => target('freebsd', 'x64'), /no prebuilt boundrail for freebsd x64/);
 });
 
 test('caches under XDG_CACHE_HOME, or LOCALAPPDATA on Windows', () => {
-  assert.equal(cacheDir({ XDG_CACHE_HOME: '/c' }, 'linux'), path.join('/c', 'archgraph-cli', version));
-  assert.equal(cacheDir({ LOCALAPPDATA: '/l' }, 'win32'), path.join('/l', 'archgraph-cli', version));
-  assert.equal(cacheDir({}, 'darwin'), path.join(os.homedir(), '.cache', 'archgraph-cli', version));
+  assert.equal(cacheDir({ XDG_CACHE_HOME: '/c' }, 'linux'), path.join('/c', 'boundrail-cli', version));
+  assert.equal(cacheDir({ LOCALAPPDATA: '/l' }, 'win32'), path.join('/l', 'boundrail-cli', version));
+  assert.equal(cacheDir({}, 'darwin'), path.join(os.homedir(), '.cache', 'boundrail-cli', version));
 });
 
 test('reads SHA256SUMS in text and binary mode', () => {
@@ -113,8 +113,8 @@ test('refuses an archive whose checksum does not match', async () => {
   try {
     const r = await run(['--version'], { XDG_CACHE_HOME: cache, ARCHGRAPH_DOWNLOAD_BASE: base });
     assert.equal(r.status, 2);
-    assert.match(r.stderr, /checksum mismatch for archgraph-v.*\.tar\.gz: expected 0{64}, got [0-9a-f]{64}; not running it/);
-    assert.equal(fs.existsSync(path.join(cache, 'archgraph-cli', version, 'archgraph')), false);
+    assert.match(r.stderr, /checksum mismatch for boundrail-v.*\.tar\.gz: expected 0{64}, got [0-9a-f]{64}; not running it/);
+    assert.equal(fs.existsSync(path.join(cache, 'boundrail-cli', version, 'boundrail')), false);
   } finally {
     server.close();
   }
@@ -144,9 +144,9 @@ test('downloads, verifies, extracts and runs the binary, then reuses the cache',
   try {
     const first = await run(['--version'], env);
     assert.equal(first.status, 0, first.stderr);
-    assert.equal(first.stdout.trim(), `archgraph ${version}`);
+    assert.equal(first.stdout.trim(), `boundrail ${version}`);
     assert.equal(requests.length, 2);
-    assert.ok(fs.existsSync(path.join(cache, 'archgraph-cli', version, 'archgraph')));
+    assert.ok(fs.existsSync(path.join(cache, 'boundrail-cli', version, 'boundrail')));
 
     // The binary's own exit code comes through: 2 for a missing input file.
     const second = await run(['check', path.join(cache, 'missing.json')], env);
@@ -165,7 +165,7 @@ test('ARCHGRAPH_BINARY runs that binary without downloading', async () => {
     ARCHGRAPH_DOWNLOAD_BASE: 'http://127.0.0.1:9',
   });
   assert.equal(r.status, 0, r.stderr);
-  assert.equal(r.stdout.trim(), `archgraph ${version}`);
+  assert.equal(r.stdout.trim(), `boundrail ${version}`);
 });
 
 test('without its own SHA256SUMS the package downloads the release one', () => {
@@ -183,7 +183,7 @@ test('a published SHA256SUMS is used instead of the release one', async () => {
     fs.writeFileSync(sumsPath, good.replace(/^[0-9a-f]{64}/, '0'.repeat(64)));
     const ok = await run(['--version'], { XDG_CACHE_HOME: tmp('cache'), ARCHGRAPH_DOWNLOAD_BASE: base }, packageWithSums(good));
     assert.equal(ok.status, 0, ok.stderr);
-    assert.equal(ok.stdout.trim(), `archgraph ${version}`);
+    assert.equal(ok.stdout.trim(), `boundrail ${version}`);
     assert.deepEqual(requests.filter((r) => r.endsWith('SHA256SUMS')), []);
 
     // The embedded sums are wrong; the server's match and are not consulted.
@@ -213,6 +213,60 @@ test('downloads are https-only unless ARCHGRAPH_DOWNLOAD_BASE is set', async () 
   try {
     const body = await download(`http://127.0.0.1:${server.address().port}/first`, false);
     assert.equal(body.toString(), 'payload');
+  } finally {
+    server.close();
+  }
+});
+
+
+test('legacy archive layout installs as boundrail and remains checksum verified', async () => {
+  for (const corrupt of [false, true]) {
+    const release = fakeRelease(builtBinary(), (hash) => corrupt ? '0'.repeat(64) : hash, 'archgraph');
+    const cache = tmp('legacy-cache');
+    const { base, requests, server } = await serve(release);
+    try {
+      const result = await run(['--version'], { XDG_CACHE_HOME: cache, ARCHGRAPH_DOWNLOAD_BASE: base });
+      assert.equal(result.status, corrupt ? 2 : 0, result.stderr);
+      assert.equal(fs.existsSync(path.join(cache, 'boundrail-cli', version, 'boundrail')), !corrupt);
+      assert.ok(requests.some((url) => url.includes('/archgraph-')));
+      if (corrupt) assert.match(result.stderr, /checksum mismatch/);
+      else assert.equal(result.stdout.trim(), `boundrail ${version}`);
+    } finally {
+      server.close();
+    }
+  }
+});
+
+test('prefers Boundrail when both layouts exist and never falls back after a mismatch', async () => {
+  for (const corrupt of [false, true]) {
+    const release = fakeRelease(builtBinary(), (hash) => corrupt ? '0'.repeat(64) : hash);
+    const legacy = fakeRelease(builtBinary(), (hash) => hash, 'archgraph');
+    for (const file of fs.readdirSync(path.join(legacy, TAG)).filter((file) => file.endsWith('.tar.gz'))) {
+      fs.copyFileSync(path.join(legacy, TAG, file), path.join(release, TAG, file));
+    }
+    fs.appendFileSync(path.join(release, TAG, 'SHA256SUMS'), fs.readFileSync(path.join(legacy, TAG, 'SHA256SUMS')));
+    const { base, requests, server } = await serve(release);
+    try {
+      const result = await run(['--version'], { XDG_CACHE_HOME: tmp('mixed-cache'), ARCHGRAPH_DOWNLOAD_BASE: base });
+      assert.equal(result.status, corrupt ? 2 : 0, result.stderr);
+      assert.ok(requests.some((url) => url.includes('/boundrail-')));
+      assert.equal(requests.some((url) => url.includes('/archgraph-')), false);
+      if (corrupt) assert.match(result.stderr, /checksum mismatch/);
+    } finally {
+      server.close();
+    }
+  }
+});
+
+test('legacy executable branding is preserved when cached under the Boundrail command', async () => {
+  const binary = path.join(tmp('legacy-binary'), 'archgraph');
+  fs.writeFileSync(binary, `#!/bin/sh\necho 'archgraph ${version}'\n`, { mode: 0o755 });
+  const release = fakeRelease(binary, (hash) => hash, 'archgraph');
+  const { base, server } = await serve(release);
+  try {
+    const result = await run(['--version'], { XDG_CACHE_HOME: tmp('legacy-cache'), ARCHGRAPH_DOWNLOAD_BASE: base });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), `archgraph ${version}`);
   } finally {
     server.close();
   }

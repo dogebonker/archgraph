@@ -35,7 +35,7 @@ pub struct Options<'a> {
     pub build_scripts: bool,
 }
 
-/// SCIP messages, the fields archgraph reads (scip.proto, sourcegraph/scip).
+/// SCIP messages, the fields boundrail reads (scip.proto, sourcegraph/scip).
 mod scip {
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct Index {
@@ -334,7 +334,7 @@ fn run_in(
     if let Some((file, channel)) = channels.iter().find(|(_, c)| !tc.has(c)) {
         bail!(
             "refusing to scan: {} names toolchain {channel}, which is not installed, and \
-             archgraph never has rustup download one: install it with `rustup toolchain install \
+             boundrail never has rustup download one: install it with `rustup toolchain install \
              {channel}`",
             file.display()
         );
@@ -368,7 +368,7 @@ fn run_in(
     let meta: Metadata = serde_json::from_slice(&meta).context("reading cargo metadata")?;
     if !meta.workspace_root.join("Cargo.lock").is_file() {
         bail!(
-            "no Cargo.lock in {}: run `cargo generate-lockfile` there first (archgraph never writes \
+            "no Cargo.lock in {}: run `cargo generate-lockfile` there first (boundrail never writes \
              into the repository, and cargo would)",
             meta.workspace_root.display()
         );
@@ -415,7 +415,7 @@ fn run_in(
         bail!("rust-analyzer scip failed: {}", stderr.trim());
     }
     if let Some(line) = config_error(&stderr) {
-        bail!("rust-analyzer rejected archgraph's configuration: {line}");
+        bail!("rust-analyzer rejected Boundrail's configuration: {line}");
     }
     if let Some(error) = degraded_load(&stderr, &tc.library().to_string_lossy()) {
         bail!(
@@ -958,7 +958,7 @@ fn refuse(root: &Path) -> Result<Vec<(PathBuf, String)>> {
 /// is refused too.
 pub fn cargo_config_refusal(text: &str) -> Result<(), String> {
     let keys = toml_keys(text)
-        .map_err(|e| format!("cannot read it as TOML ({e}), so archgraph cannot check it"))?;
+        .map_err(|e| format!("cannot read it as TOML ({e}), so boundrail cannot check it"))?;
     match keys.iter().find(|(path, _)| refused(path)) {
         Some((path, _)) => Err(format!(
             "sets `{}`, so cargo would run with an environment, program, library or target the \

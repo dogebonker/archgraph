@@ -1,5 +1,5 @@
-use archgraph::collect::imports::{ImportStatement, analyze};
-use archgraph::model::EdgeKind;
+use boundrail::collect::imports::{ImportStatement, analyze};
+use boundrail::model::EdgeKind;
 
 fn typescript(source: &str) -> Vec<ImportStatement> {
     analyze(source).statements

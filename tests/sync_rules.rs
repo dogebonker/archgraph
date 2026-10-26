@@ -1,11 +1,11 @@
-use archgraph::sync_rules::{self, FILES};
+use boundrail::sync_rules::{self, FILES};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 
 const LAYOUT: &str = "version: 1\nlayer-reason: Keep foundations independent\nlayers: ['src/domain/**', 'src/adapters/**']\nmodules: [{id: domain, path: 'src/domain/**'}]\nentrypoints: {'src/domain/**': 'src/domain/index.ts'}\npublic: [{module: 'src/domain/**', entries: ['src/domain/index.ts']}]\npkg-category: {db: [typeorm]}\nforbid: [{id: domain-no-db, from: 'src/domain/**', to: 'category:db', reason: 'Domain excludes database drivers'}]\n";
-fn fixture() -> archgraph::collect::TempDir {
-    let dir = archgraph::collect::TempDir::new("sync-rules-test").unwrap();
+fn fixture() -> boundrail::collect::TempDir {
+    let dir = boundrail::collect::TempDir::new("sync-rules-test").unwrap();
     fs::write(dir.path().join("layout.yaml"), LAYOUT).unwrap();
     dir
 }
@@ -20,7 +20,7 @@ fn contents(root: &Path) -> Vec<Vec<u8>> {
 fn foreign_bytes_survive_stale_round_trip_and_repeated_sync_is_identical() {
     let dir = fixture();
     let root = dir.path();
-    let rules = archgraph::rules::load(&root.join("layout.yaml")).unwrap();
+    let rules = boundrail::rules::load(&root.join("layout.yaml")).unwrap();
     let original = sync_rules::render(&rules, false);
     let prefix = b"\xffForeign instructions\r\n";
     let suffix = b"\r\nForeign ending\xfe";
@@ -58,6 +58,44 @@ fn foreign_bytes_survive_stale_round_trip_and_repeated_sync_is_identical() {
 }
 
 #[test]
+fn legacy_owned_blocks_upgrade_commands_without_losing_manual_instructions() {
+    use sha2::{Digest, Sha256};
+    let dir = fixture();
+    let root = dir.path();
+    let rules = boundrail::rules::load(&root.join("layout.yaml")).unwrap();
+    let current = sync_rules::render(&rules, false);
+    let (_, payload) = current.split_once(" -->\n").unwrap();
+    let (_, payload) = payload.split_once('\n').unwrap();
+    let payload = payload
+        .strip_suffix("<!-- archgraph:end -->")
+        .unwrap()
+        .replace("boundrail", "archgraph");
+    let checksum: String = Sha256::digest(payload.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    let legacy = format!(
+        "<!-- archgraph:start -->\n<!-- archgraph:sha256 {checksum} -->\n{payload}<!-- archgraph:end -->"
+    );
+    for name in FILES {
+        let path = root.join(name);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, format!("Manual prefix\n{legacy}\nManual suffix\n")).unwrap();
+    }
+    let report = sync_rules::run(root, false, false).unwrap();
+    assert!(report.conflicts.is_empty());
+    assert_eq!(report.written.len(), FILES.len());
+    for bytes in contents(root) {
+        let text = String::from_utf8(bytes).unwrap();
+        assert!(text.starts_with("Manual prefix\n"));
+        assert!(text.ends_with("\nManual suffix\n"));
+        assert!(text.contains("boundrail explain"));
+        assert!(!text.contains("archgraph explain"));
+        assert_eq!(text.matches("<!-- archgraph:start -->").count(), 1);
+    }
+}
+
+#[test]
 fn hand_edited_block_refuses_all_writes_and_reports_a_diff() {
     let dir = fixture();
     let root = dir.path();
@@ -87,7 +125,7 @@ fn hand_edited_block_refuses_all_writes_and_reports_a_diff() {
 fn brief_budget_is_explicit_full_mode_survives_check_and_rule_sections_are_present() {
     let dir = fixture();
     let root = dir.path();
-    let rules = archgraph::rules::load(&root.join("layout.yaml")).unwrap();
+    let rules = boundrail::rules::load(&root.join("layout.yaml")).unwrap();
     let body = sync_rules::render(&rules, false);
     for expected in [
         "foundation first",
@@ -100,7 +138,7 @@ fn brief_budget_is_explicit_full_mode_survives_check_and_rule_sections_are_prese
     }
     let mut large = rules.clone();
     large.doc.forbid = (0..100)
-        .map(|index| archgraph::rules::Forbid {
+        .map(|index| boundrail::rules::Forbid {
             id: Some(format!("rule-{index}")),
             from: format!("src/domain/f{index}.ts"),
             to: "src/adapters/**".into(),
@@ -164,7 +202,7 @@ fn cli_check_reports_staleness_and_live_check_warns_without_changing_policy_exit
     let dir = fixture();
     let root = dir.path();
     let command = |args: &[&str]| {
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .args(args)
             .current_dir(root)
             .output()

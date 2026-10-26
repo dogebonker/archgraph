@@ -5,7 +5,7 @@ fn main() -> Result<()> {
         .nth(1)
         .context("usage: recipe_inventory graph.json")?;
     let input = serde_json::from_slice(&std::fs::read(path)?)?;
-    let doc = archgraph::restore_scan(input)?;
+    let doc = boundrail::restore_scan(input)?;
     println!("{}", serde_json::to_string(&doc.findings)?);
     Ok(())
 }

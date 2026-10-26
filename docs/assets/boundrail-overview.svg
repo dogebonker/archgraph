@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title description">
+  <title id="title">Boundrail: source evidence, explicit boundaries, and change review</title>
+  <desc id="description">An illustrative workflow. A source dependency graph contains an existing app-to-domain import and a new domain-to-database import. A declared layout rule forbids the latter. The change review retains the source location, rule identifier, and reason. Project skills and MCP let agents use the same policy. Static evidence can be incomplete.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111720"/>
+      <stop offset="0.56" stop-color="#0a0d12"/>
+      <stop offset="1" stop-color="#090b0f"/>
+    </linearGradient>
+    <linearGradient id="rail" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#77d9ff"/>
+      <stop offset="1" stop-color="#438cff"/>
+    </linearGradient>
+    <marker id="allowed-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0 7 3.5 0 7Z" fill="#6dd7c0"/>
+    </marker>
+    <marker id="forbidden-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0 7 3.5 0 7Z" fill="#ff7387"/>
+    </marker>
+    <marker id="step-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0 7 3.5 0 7Z" fill="#52647a"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; fill:#f1f5fa; }
+    .mono { font-family:ui-monospace,"SFMono-Regular",Consolas,"Liberation Mono",monospace; }
+    .muted { fill:#9aa9bb; }
+    .quiet { fill:#708298; }
+    .blue { fill:#82bdff; }
+    .teal { fill:#6dd7c0; }
+    .red { fill:#ff8b9c; }
+    .eyebrow { font-size:13px; font-weight:650; letter-spacing:1.7px; }
+    .card { fill:#111720; stroke:#2a3748; stroke-width:1; }
+  </style>
+
+  <rect x="0.5" y="0.5" width="1199" height="619" rx="22" fill="url(#background)" stroke="#293443"/>
+  <path d="M75 51V111M101 51V111M75 65H101M75 94H101" fill="none" stroke="url(#rail)" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="101" cy="80" r="5" fill="#6dd7c0"/>
+  <text x="127" y="92" font-size="47" font-weight="720" letter-spacing="-1.9">Boundrail</text>
+  <text x="55" y="148" font-size="25" font-weight="450" letter-spacing="-.4">Architecture you can see. Boundaries your agents can follow.</text>
+  <text x="1144" y="70" text-anchor="end" class="eyebrow quiet">CODE → POLICY → REVIEW</text>
+  <path d="M55 176H1145" stroke="#253142"/>
+
+  <text x="55" y="211" class="eyebrow blue">01 / READ THE CODE</text>
+  <text x="435" y="211" class="eyebrow blue">02 / DECLARE INTENT</text>
+  <text x="815" y="211" class="eyebrow blue">03 / REVIEW THE CHANGE</text>
+
+  <rect x="55" y="230" width="330" height="286" rx="14" class="card"/>
+  <rect x="435" y="230" width="330" height="286" rx="14" class="card"/>
+  <rect x="815" y="230" width="330" height="286" rx="14" class="card"/>
+  <path d="M394 373H424" fill="none" stroke="#52647a" stroke-width="1.5" marker-end="url(#step-arrow)"/>
+  <path d="M774 373H804" fill="none" stroke="#52647a" stroke-width="1.5" marker-end="url(#step-arrow)"/>
+
+  <text x="78" y="263" class="mono muted" font-size="13">Source dependency evidence</text>
+  <rect x="79" y="291" width="119" height="58" rx="9" fill="#1b2532" stroke="#3c536e"/>
+  <rect x="242" y="291" width="119" height="58" rx="9" fill="#1b2532" stroke="#3c536e"/>
+  <rect x="161" y="393" width="119" height="58" rx="9" fill="#211a24" stroke="#b96072"/>
+  <text x="138.5" y="326" text-anchor="middle" font-size="19" font-weight="600">domain</text>
+  <text x="301.5" y="326" text-anchor="middle" font-size="19" font-weight="600">app</text>
+  <text x="220.5" y="428" text-anchor="middle" font-size="19" font-weight="600">db</text>
+  <path d="M241 320H204" fill="none" stroke="#6dd7c0" stroke-width="2" marker-end="url(#allowed-arrow)"/>
+  <path d="M138 350V367Q138 378 150 378H208Q220 378 220 389" fill="none" stroke="#ff7387" stroke-width="2" marker-end="url(#forbidden-arrow)"/>
+  <text x="280" y="369" text-anchor="end" class="mono red" font-size="12">+ new import</text>
+  <circle cx="83" cy="481" r="3.5" fill="#6dd7c0"/>
+  <text x="94" y="486" class="muted" font-size="13">Existing import</text>
+  <circle cx="200" cy="481" r="3.5" fill="#ff7387"/>
+  <text x="211" y="486" class="muted" font-size="13">Forbidden by policy</text>
+
+  <text x="458" y="263" class="mono muted" font-size="13">layout.yaml</text>
+  <text x="458" y="302" class="mono blue" font-size="17">forbid:</text>
+  <text x="476" y="330" class="mono" font-size="15">- id: <tspan fill="#e8c580">domain-no-db</tspan></text>
+  <text x="494" y="358" class="mono" font-size="15">from: <tspan fill="#add8c7">'src/domain/**'</tspan></text>
+  <text x="494" y="386" class="mono" font-size="15">to: <tspan fill="#add8c7">'src/db/**'</tspan></text>
+  <path d="M458 409H742" stroke="#293747"/>
+  <text x="458" y="438" class="muted" font-size="13">Reason</text>
+  <text x="458" y="463" font-size="17">Keep domain independent</text>
+  <text x="458" y="487" font-size="17">of storage.</text>
+
+  <rect x="838" y="250" width="88" height="24" rx="6" fill="#1e2b29" stroke="#34564d"/>
+  <text x="882" y="266" text-anchor="middle" class="teal" font-size="12" font-weight="650">+ ADDED</text>
+  <rect x="937" y="250" width="184" height="24" rx="6" fill="#35212b"/>
+  <text x="1029" y="266" text-anchor="middle" class="red" font-size="12" font-weight="650">FORBIDDEN IMPORT</text>
+  <text x="838" y="309" class="mono" font-size="15">src/domain/order.ts:1</text>
+  <text x="838" y="336" class="mono muted" font-size="15">→ src/db/client.ts</text>
+  <path d="M838 357H1122" stroke="#293747"/>
+  <text x="838" y="385" class="quiet eyebrow">BEFORE</text>
+  <text x="938" y="385" class="muted" font-size="15">Not recorded</text>
+  <text x="838" y="416" class="quiet eyebrow">AFTER</text>
+  <text x="938" y="416" class="red" font-size="15">Forbidden</text>
+  <path d="M838 437H1122" stroke="#293747"/>
+  <text x="838" y="467" class="muted" font-size="13">Deciding rule</text>
+  <text x="838" y="492" class="mono blue" font-size="17">domain-no-db</text>
+
+  <rect x="55" y="540" width="1090" height="42" rx="10" fill="#141e2b" stroke="#2b405b"/>
+  <circle cx="76" cy="561" r="4" fill="#82bdff"/>
+  <text x="91" y="566" font-size="15" font-weight="600">For developers and coding agents</text>
+  <text x="1122" y="566" text-anchor="end" class="muted" font-size="15">Project skills + MCP · Before/after evidence · Offline reports</text>
+  <text x="55" y="604" class="quiet" font-size="12">Illustrative architecture. Static evidence can be incomplete. Observations do not approve policy.</text>
+</svg>

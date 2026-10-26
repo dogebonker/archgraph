@@ -14,7 +14,7 @@ function whatifCommands() {
   if (!whatifResult) return;
   const moves = whatifResult.moves, q = whatifQuote;
   const graph = whatifUI.graph.value.startsWith("-") ? "./" + whatifUI.graph.value : whatifUI.graph.value;
-  whatifUI.cli.value = `archgraph simulate ${q(graph)}` + moves.map(m => ` --move ${q(m.file)} ${q(m.to)}`).join("");
+  whatifUI.cli.value = `boundrail simulate ${q(graph)}` + moves.map(m => ` --move ${q(m.file)} ${q(m.to)}`).join("");
   const fresh = [...new Set(moves.map(m => dirname(m.to)))].filter(d => d && !scanDirs.has(d));
   whatifUI.git.value = ["set -e", ...(fresh.length ? [`mkdir -p -- ${fresh.map(q).join(" ")}`] : []), ...moves.map(m => `git mv -- ${q(m.file)} ${q(m.to)}`)].join("\n");
   whatifUI.rules.value = whatifRuleShifts(moves);

@@ -1,24 +1,41 @@
-# archgraph-cli
+# boundrail-cli
 
-Runs [archgraph](https://github.com/dogebonker/archgraph), which turns a repository's import graph into evidence for architecture decisions, from npm.
+This directory defines the npm wrapper for [Boundrail](https://github.com/dogebonker/archgraph).
+The package rename is prepared for the next release. Until a Boundrail package is published,
+[build the checked-out source](https://github.com/dogebonker/archgraph#quickstart) to use the current
+CLI and features.
+
+After publication:
 
 ```sh
-npx archgraph-cli report . --out-dir /tmp/arch
+npx boundrail-cli report . --engine native --out-dir /tmp/arch
 ```
 
-The package has no dependencies and no install script. On first run, `bin/archgraph.js` downloads the archgraph release archive matching the package version for your platform over HTTPS, checks its SHA-256 against the release's `SHA256SUMS` shipped inside this package (downloaded from the release only when the package lacks it, as in a repository checkout), extracts the binary with the system `tar`, and caches it under `${XDG_CACHE_HOME:-~/.cache}/archgraph-cli/<version>/` (`%LOCALAPPDATA%\archgraph-cli\<version>\` on Windows). Later runs use the cached binary. The binary runs with your stdin, stdout and stderr, and its exit code is the command's.
+The package has no dependencies or install script. On first run, `bin/boundrail.js` reads the
+release's `SHA256SUMS`, prefers the exact `boundrail-<tag>-<target>` archive, and accepts the exact
+legacy `archgraph-<tag>-<target>` layout only when the new entry is absent. It verifies the archive's
+SHA-256 before extraction and caches its executable as `boundrail`. A checksum mismatch never
+falls back to another archive. Published packages carry the release checksum file. A source
+checkout downloads it from the release.
 
-Platforms: Linux x64 and arm64 (static musl builds), macOS x64 and arm64, Windows x64. Node 18 or later. Elsewhere, build archgraph with `cargo install --git https://github.com/dogebonker/archgraph --locked`.
+The cache is `${XDG_CACHE_HOME:-~/.cache}/boundrail-cli/<version>/`, or
+`%LOCALAPPDATA%\boundrail-cli\<version>\` on Windows. Later runs use the cached executable.
+The child inherits stdin, stdout, stderr, and arguments. Its exit code is preserved.
 
-A checksum mismatch, a missing archive or a network error stops with exit 2 and a message saying which; nothing is cached then.
+Platforms: Linux x64 and arm64, macOS x64 and arm64, Windows x64. Node 18 or later and the system
+`tar` are required. On unsupported platforms, build from source.
 
-Environment:
+A checksum mismatch, missing archive, or network error exits 2 without installing that executable.
+Legacy archives contain the older application and may not provide current-main features.
 
-- `ARCHGRAPH_DOWNLOAD_BASE`: release URL base, read as `<base>/<tag>/<file>` (default `https://github.com/dogebonker/archgraph/releases/download`), for a mirror. Without it every URL, redirects included, must be HTTPS; with it, any URL is fetched.
-- `ARCHGRAPH_BINARY`: run this archgraph executable and download nothing.
+Existing environment overrides remain supported:
 
-Scans need a collector (dependency-cruiser or grimp): see the [archgraph README](https://github.com/dogebonker/archgraph#try-it).
+- `ARCHGRAPH_DOWNLOAD_BASE` selects a mirror as `<base>/<tag>/<file>`. Without it, every download
+  URL and redirect must use HTTPS.
+- `ARCHGRAPH_BINARY` selects an executable and skips downloading.
 
-For coding agents, Archgraph includes five skills for context selection, architecture analysis, regression checks, fixes and rules. Follow the [skill installation instructions](https://github.com/dogebonker/archgraph#install-the-skills) using a source checkout or extracted release archive.
+The repository URL, `.archgraph/` state, report schemas, and ownership markers keep their existing
+names for compatibility. See the [main README](https://github.com/dogebonker/archgraph#quickstart)
+for collector requirements and [agent workflows](https://github.com/dogebonker/archgraph#give-agents-a-project-workflow).
 
 MIT OR Apache-2.0.

@@ -31,7 +31,7 @@ impl Fixture {
         Self(root)
     }
     fn run(&self, args: &[&str]) -> Output {
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .arg("--no-daemon")
             .args(args)
             .current_dir(&self.0)
@@ -101,7 +101,7 @@ fn minimal_inference_preserves_folders_without_adding_import_bans() {
             .status
             .success()
     );
-    let rules = archgraph::rules::load(&fixture.0.join("layout.yaml")).unwrap();
+    let rules = boundrail::rules::load(&fixture.0.join("layout.yaml")).unwrap();
     assert!(rules.doc.forbid.is_empty());
     assert_eq!(rules.doc.layers[0], "**");
     assert!(

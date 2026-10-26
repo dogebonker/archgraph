@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use archgraph::model::{Config, Document, Edge, EdgeKind, Source};
+use boundrail::model::{Config, Document, Edge, EdgeKind, Source};
 use serde_json::{Value, json};
 
 fn git(root: &Path, args: &[&str]) -> String {
@@ -100,7 +100,7 @@ impl Fixture {
     }
 
     fn command(&self) -> Command {
-        let mut cmd = Command::new(env!("CARGO_BIN_EXE_archgraph"));
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_boundrail"));
         cmd.args(["impact", &format!("{}..{}", self.base, self.head), "--root"])
             .arg(&self.root)
             .arg("--graph")
@@ -127,7 +127,7 @@ fn graph(commit: &str, owned: bool, deleted: bool) -> Document {
     }))
     .unwrap();
     if owned {
-        config.codeowners = Some(archgraph::codeowners::parse("CODEOWNERS", ".", "* @team\n"));
+        config.codeowners = Some(boundrail::codeowners::parse("CODEOWNERS", ".", "* @team\n"));
     }
     let pairs = [
         ("app/app.ts", "src/util.ts"),
@@ -154,10 +154,10 @@ fn graph(commit: &str, owned: bool, deleted: bool) -> Document {
             verdict: None,
             rule: None,
             reach: None,
-            ..archgraph::model::Edge::default()
+            ..boundrail::model::Edge::default()
         })
         .collect();
-    archgraph::analyze(source, config, files, edges, vec![], None).unwrap()
+    boundrail::analyze(source, config, files, edges, vec![], None).unwrap()
 }
 
 fn parse(out: Output) -> Value {
@@ -229,7 +229,7 @@ fn impact_cli_defaults_to_success_and_depth_failure_is_opt_in() {
             .status
             .success()
     );
-    let out = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let out = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args([
             "impact",
             &format!("{}..{}", fixture.base, fixture.head),
@@ -314,7 +314,7 @@ fn impact_cli_additional_test_globs_and_markdown_describe_lower_bound() {
         doc["selected_tests"],
         json!(["app/app.ts", "tests/app.spec.ts"])
     );
-    let out = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let out = Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args([
             "impact",
             &format!("{}..{}", fixture.base, fixture.head),

@@ -1,10 +1,10 @@
 mod common;
 
-use archgraph::collect::{
+use boundrail::collect::{
     excludes::{Options, Policy},
     native::elixir,
 };
-use archgraph::model::EdgeKind;
+use boundrail::model::EdgeKind;
 use std::path::Path;
 
 #[test]
@@ -12,7 +12,7 @@ fn native_elixir_matches_recorded_fixture_without_a_vm() {
     let root = common::fixture("elixir-basic");
     let policy = Policy::new(
         &root,
-        archgraph::model::Language::Elixir,
+        boundrail::model::Language::Elixir,
         Options::default(),
     )
     .unwrap();
@@ -97,7 +97,7 @@ end
     );
     let out = elixir::collect(
         root,
-        &Policy::new(root, archgraph::model::Language::Elixir, Options::default()).unwrap(),
+        &Policy::new(root, boundrail::model::Language::Elixir, Options::default()).unwrap(),
     )
     .unwrap();
     assert!(
@@ -122,7 +122,7 @@ end
     assert_eq!(
         imports
             .iter()
-            .filter(|r| matches!(r.unresolved, Some(archgraph::model::ImportReason::Dynamic)))
+            .filter(|r| matches!(r.unresolved, Some(boundrail::model::ImportReason::Dynamic)))
             .count(),
         2
     );
@@ -150,7 +150,7 @@ fn native_elixir_nested_definitions_and_exclusions_never_execute_source() {
     );
     let out = elixir::collect(
         root,
-        &Policy::new(root, archgraph::model::Language::Elixir, Options::default()).unwrap(),
+        &Policy::new(root, boundrail::model::Language::Elixir, Options::default()).unwrap(),
     )
     .unwrap();
     assert!(
@@ -179,7 +179,7 @@ fn native_elixir_multi_alias_binds_last_segment_and_indexes_excluded_modules() {
     );
     let out = elixir::collect(
         root,
-        &Policy::new(root, archgraph::model::Language::Elixir, Options::default()).unwrap(),
+        &Policy::new(root, boundrail::model::Language::Elixir, Options::default()).unwrap(),
     )
     .unwrap();
     assert!(

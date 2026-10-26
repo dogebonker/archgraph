@@ -80,7 +80,7 @@ fn native_impact_and_saved_native_graph_never_run_node_or_prepare_unused_collect
     );
 
     for saved in [false, true] {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_archgraph"));
+        let mut command = Command::new(env!("CARGO_BIN_EXE_boundrail"));
         command.args([
             "impact",
             "HEAD~1..HEAD",

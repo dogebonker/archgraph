@@ -76,7 +76,7 @@ print(json.dumps({'grimp_version':'fixture','modules':modules,'imports':imports,
     fs::set_permissions(&python, fs::Permissions::from_mode(0o755)).unwrap();
     for granularity in ["folder", "file"] {
         let graph = directory.join(format!("graph-{granularity}.json"));
-        let scan = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        let scan = Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .arg("scan")
             .arg(&root)
             .args(["--language", "python", "--package", "pkg", "--python"])
@@ -101,7 +101,7 @@ print(json.dumps({'grimp_version':'fixture','modules':modules,'imports':imports,
                 .unwrap()
                 .is_empty()
         );
-        let investigation = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        let investigation = Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .arg("bisect")
             .arg(&graph)
             .arg("--root")
@@ -121,7 +121,7 @@ print(json.dumps({'grimp_version':'fixture','modules':modules,'imports':imports,
         assert_eq!(result["introduced_by"]["commit"], head, "{result}");
         assert_eq!(result["status"], "verified-transition", "{result}");
         let out_dir = directory.join("history");
-        let history = Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        let history = Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .arg("history")
             .arg(&root)
             .args([

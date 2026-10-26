@@ -179,7 +179,7 @@ pub(crate) fn block(rules: &RulesRef, full: bool, body: &str) -> String {
 }
 pub fn render(rules: &RulesRef, full: bool) -> String {
     let header = "Architecture from layout.yaml. Precedence: forbid, entrypoints, allow, public, layers, module/default.\n";
-    let footer = "Before edits use connected archgraph MCP rules/explain, or `archgraph explain FILE --graph CURRENT_SCAN.json --for-agent` with a saved scan when MCP is unavailable. Installed hooks check new violations. Run archgraph sync-rules --full for all rules.\n";
+    let footer = "Before edits use connected boundrail MCP rules/explain, or `boundrail explain FILE --graph CURRENT_SCAN.json --for-agent` with a saved scan when MCP is unavailable. Installed hooks check new violations. Run boundrail sync-rules --full for all rules.\n";
     let all = lines(rules);
     let mut selected = Vec::new();
     for line in &all {
@@ -243,7 +243,7 @@ pub(crate) fn span(bytes: &[u8]) -> Result<Option<(usize, usize)>> {
     }
     ensure!(
         starts.len() == 1 && ends.len() == 1 && starts[0] < ends[0],
-        "malformed or duplicate archgraph fences; restore the owned block before syncing"
+        "malformed or duplicate managed fences; restore the owned block before syncing"
     );
     Ok(Some((starts[0], ends[0] + END.len())))
 }

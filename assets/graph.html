@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<title>archgraph</title>
+<title>Boundrail</title>
 <style>
 /* A pro app in macOS dark mode with Liquid Glass: the map runs full-bleed on black, and the chrome
    floats over it as glass capsules and an inset glass sheet. Apple's dark system colours. */
@@ -608,7 +608,7 @@ td.rv-no { padding: 0; background: var(--broken-tint); box-shadow: inset 3px 0 0
 <header class="chrome" id="chrome">
   <div class="line">
     <div class="brand-cap">
-      <h1 class="brand" id="title"><svg class="i" viewBox="0 0 20 20" aria-hidden="true"><circle cx="5" cy="13.5" r="2.6"/><circle cx="14.5" cy="6" r="3.4"/><circle cx="15" cy="15.5" r="1.8"/><path d="M7.2 12l4.4-3.7M13.2 15.1l-5.6-1"/></svg>archgraph</h1>
+      <h1 class="brand" id="title"><svg class="i" viewBox="0 0 20 20" aria-hidden="true"><circle cx="5" cy="13.5" r="2.6"/><circle cx="14.5" cy="6" r="3.4"/><circle cx="15" cy="15.5" r="1.8"/><path d="M7.2 12l4.4-3.7M13.2 15.1l-5.6-1"/></svg>Boundrail</h1>
       <dl class="meta" id="meta"></dl>
     </div>
     <span class="spacer"></span>
@@ -1282,7 +1282,7 @@ function advice(kind, f) {
     "Dependencies point toward another module, while declared ownership marks a different team boundary.",
     "Review the ownership boundary with the named owners before proposing a move."]
     : kind === "misplaced-file" && f && !f.suggestion ? [KIND_ADVICE[kind][0],
-    "No move is suggested: a file of that name already sits at the destination, or the destination would fall in another module. Pick a new name there and run archgraph simulate on that move before proposing it."]
+    "No move is suggested: a file of that name already sits at the destination, or the destination would fall in another module. Pick a new name there and run boundrail simulate on that move before proposing it."]
     : KIND_ADVICE[kind];
   if (!a) return [];
   const why = el("p", { class: "advice" }), what = el("p", { class: "advice" });
@@ -1419,7 +1419,7 @@ function hotspotStepPriority(parts) {
   return priority;
 }
 
-/* Ring colour comes only from what archgraph checked, the strongest signal first. Red: either end
+/* Ring colour comes only from what boundrail checked, the strongest signal first. Red: either end
    of a forbidden import. Amber: folder-cycle members, candidate cuts and any module a finding names. Grey: none.
    Cohesion and link counts are shown as numbers, not colour: nearly every real folder has cohesion
    near 0, and being imported a lot marks stable code, not a problem. */
@@ -1457,7 +1457,7 @@ const moreVolatile = mods.map((m, i) => medges.filter(me => me.a === i && m.inst
   mods[me.b].instability > m.instability).map(me => me.b));
 /* The modules a module imports that are less stable than itself (higher instability), counted on
    outgoing_to like ca and ce: a change in them can reach it, a change in a more stable one rarely
-   does. A document without outgoing_to (older archgraph) falls back to the module edges. */
+   does. A document without outgoing_to (older Boundrail) falls back to the module edges. */
 const lessStable = mods.map((m, i) => !m.outgoing_to ? moreVolatile[i] : m.instability === null ? [] :
   Object.keys(m.outgoing_to).filter(id => id !== m.id && modIndex.has(id) && mods[modIndex.get(id)].instability > m.instability).map(id => modIndex.get(id)));
 function roleOf(i) {
@@ -1484,7 +1484,7 @@ function names(list, part) {
 /* Cohesion as the assessment judges it: imports into foundations are the intended design, not
    scatter, so they count neither for nor against a module. Same basis as the document's
    cohesion: internal_edges / (internal_edges + outgoing_edges - outgoing_to[foundation]).
-   A document without outgoing_to (older archgraph) is judged on its own cohesion. */
+   A document without outgoing_to (older Boundrail) is judged on its own cohesion. */
 const foundations = ids(N).filter(i => roleOf(i) === "foundation").sort((a, b) => mods[b].ca - mods[a].ca);
 const isFoundation = new Uint8Array(N);
 for (const i of foundations) isFoundation[i] = 1;
@@ -1717,7 +1717,7 @@ const assessment = (() => {
     next.push([{ fd: fd.i, label: `Untie ${ev.from} from ${ev.to}` }, `: stable ${ev.from} imports volatile ${ev.to} ${times(ev.imports)}; depend on an abstraction ${ev.from} owns, or move the code it needs.`]);
   }
   /* The generic advice comes after every concrete step. */
-  if (!doc.config.rules && N > 2) next.push(["Write a layout.yaml with layers and public entries for the boundaries you agree on, so archgraph check can hold them in CI."]);
+  if (!doc.config.rules && N > 2) next.push(["Write a layout.yaml with layers and public entries for the boundaries you agree on, so boundrail check can hold them in CI."]);
   if (doc.hotspots) next.sort((a, b) => hotspotStepPriority(b) - hotspotStepPriority(a));
   return { good, bad, coverage, observations, next: next.slice(0, MAX_NEXT) };
 })();
@@ -4000,7 +4000,7 @@ function overview() {
   }
   if (ofKind("small-repo").length) panel.append(el("p", { class: "note" }, "Few files or modules: read the lines below as hints, the signal is weak."));
   if (doc.source.collector.type_marking === "unavailable") panel.append(el("p", { class: "note" }, "Type-only imports could not be told apart in this repository, so some cycles may include imports TypeScript removes."));
-  if (foundations.length && !hasOutgoingTo) panel.append(el("p", { class: "note" }, "This scan has no outgoing_to per module (an older archgraph), so cohesion here also counts imports of foundations. Rescan to judge it without them."));
+  if (foundations.length && !hasOutgoingTo) panel.append(el("p", { class: "note" }, "This scan has no outgoing_to per module (an older Boundrail), so cohesion here also counts imports of foundations. Rescan to judge it without them."));
   assessSection(panel, "What holds up", "good", assessment.good, "Checked rules, stable foundations, cohesion, cycles and entries: none stands out as solid.");
   assessSection(panel, "Policy coverage (informational)", "info", assessment.coverage.map(b => b.parts), "No uncovered imports recorded. Coverage does not establish correctness.");
   assessSection(panel, "Folder dependencies (informational)", "info", assessment.observations, "No reciprocal folder dependencies recorded. Cross-module circular file imports may be summarized as folder loops; use --granularity file to inspect the full file graph.");

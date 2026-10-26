@@ -1,8 +1,8 @@
-# archgraph guide
+# Boundrail guide
 
 The full reference: install options, every command, the CI action, the rules file, the scan document contract, every finding kind and the limits. The [README](../README.md) is the short tour.
 
-archgraph checks declared architecture rules against a repository's import graph. The graph establishes dependencies; the policy establishes which are undesirable. `init` combines reasoned presets with observed code, `sync-rules` shares the policy with agents, and installed hooks compare edits with a pre-edit snapshot. New violations include fix recipes; ADR imports can supply the reason and source. Architecture documents are optional. The analysis commands retain coupling, cohesion, cycle cuts, surfaces and simulated file moves. The [edit-loop evidence](agents/loop.md), [paired agent results](../bench/results/README.md) and [interoperation gaps](interop.md) distinguish measured behavior from remaining limits.
+boundrail checks declared architecture rules against a repository's import graph. The graph establishes dependencies; the policy establishes which are undesirable. `init` combines reasoned presets with observed code, `sync-rules` shares the policy with agents, and installed hooks compare edits with a pre-edit snapshot. New violations include fix recipes; ADR imports can supply the reason and source. Architecture documents are optional. The analysis commands retain coupling, cohesion, cycle cuts, surfaces and simulated file moves. The [edit-loop evidence](agents/loop.md), [paired agent results](../bench/results/README.md) and [interoperation gaps](interop.md) distinguish measured behavior from remaining limits.
 
 The default reference engine uses those collectors; its Python pass also reads importing files with the standard `ast` module, without running them, to distinguish deferred and type-only imports. The experimental native engine uses tree-sitter queries for every supported language, with Rust resolvers. Both feed the same graph analysis. For Go, imports and identifiers are resolved with Go's standard library (`go/types`) by an embedded helper run with your Go toolchain, which compiles nothing from the repository and runs no repository code. `report` and `history` write into `<root>/.archgraph/` without `--out-dir`; `serve` also maintains its local endpoint and live graph there.
 
@@ -10,24 +10,24 @@ The default reference engine uses those collectors; its Python pass also reads i
 
 ## Install
 
-For the current-main agent workflows, build from source with stable Rust:
+For the current Boundrail CLI, build the checked-out source with stable Rust:
 
 ```sh
-cargo +stable install --git https://github.com/dogebonker/archgraph --locked
+cargo +stable install --path . --locked --bin boundrail
 ```
 
-Check the required command's `--help` when using a released binary; releases can differ from current main.
+The Boundrail package rename is prepared for the next release. Existing releases may contain the earlier Archgraph application and can lack current-main commands. Check the required command's `--help` before relying on a released binary.
 
-A prebuilt binary (Linux x64 and arm64, static; macOS x64 and arm64), installed to `~/.local/bin`:
+The installer supports current and legacy prebuilt release layouts on Linux and macOS, installing the executable as `boundrail` in `~/.local/bin`:
 
 ```sh
 curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/dogebonker/archgraph/main/install.sh | sh
-archgraph --version
+boundrail --version
 ```
 
-[install.sh](install.sh) downloads the release archive and the release's `SHA256SUMS` over HTTPS only, and installs only when the archive's SHA-256 matches (it needs `sha256sum` or `shasum`). `ARCHGRAPH_VERSION=0.1.0` picks a release (default the latest), `ARCHGRAPH_INSTALL_DIR` the directory. On Windows, download `archgraph-<tag>-x86_64-pc-windows-msvc.zip` from [releases](https://github.com/dogebonker/archgraph/releases), or use npm.
+[install.sh](../install.sh) reads the release's `SHA256SUMS`, prefers the exact Boundrail archive entry, and falls back to an exact legacy Archgraph entry only when the Boundrail entry is absent. It downloads over HTTPS only and installs only when the archive's SHA-256 matches (it needs `sha256sum` or `shasum`). `ARCHGRAPH_VERSION=0.1.0` picks a release (default the latest), `ARCHGRAPH_INSTALL_DIR` the directory. On Windows, download the matching Windows x64 ZIP from [releases](https://github.com/dogebonker/archgraph/releases). Older assets retain the Archgraph filename. npm is an option after the renamed package is published.
 
-A checksum file next to the archive proves the download is intact, not who built it. Every release archive also carries a build provenance attestation from the release workflow; check one with the GitHub CLI:
+A checksum file next to the archive proves the download is intact, not who built it. Every release archive also carries a build provenance attestation from the release workflow; check the actual filename listed for that release with the GitHub CLI. For an earlier release:
 
 ```sh
 gh attestation verify archgraph-v0.1.0-x86_64-unknown-linux-musl.tar.gz --repo dogebonker/archgraph
@@ -35,10 +35,10 @@ gh attestation verify archgraph-v0.1.0-x86_64-unknown-linux-musl.tar.gz --repo d
 
 For the maintainers: keep immutable releases turned on in the repository settings, so a published release's archives and tag cannot be replaced afterwards.
 
-With Node 18 or later, [archgraph-cli](npm/README.md) downloads, verifies and caches the same binary on first run:
+After npm publication, Node 18 or later can run [boundrail-cli](../npm/README.md), which downloads, verifies, and caches the same binary on first use:
 
 ```sh
-npx archgraph-cli report . --out-dir /tmp/arch
+npx boundrail-cli report . --out-dir /tmp/arch
 ```
 
 From source, with a Rust toolchain:
@@ -49,7 +49,7 @@ cargo install --git https://github.com/dogebonker/archgraph --locked
 
 The collector runs inside the scanned repository:
 
-- TypeScript/JavaScript: `npm install --save-dev dependency-cruiser@18.4.0 typescript@6.0.3` in that repository. `scan` runs `npx --no-install depcruise`. Or install both once elsewhere (`npm install --prefix /opt/archgraph-tools dependency-cruiser@18.4.0 typescript@6.0.3`) and pass `--depcruise /opt/archgraph-tools/node_modules/.bin/depcruise`, which runs it with the same arguments.
+- TypeScript/JavaScript: `npm install --save-dev dependency-cruiser@18.4.0 typescript@6.0.3` in that repository. `scan` runs `npx --no-install depcruise`. Or install both once elsewhere (`npm install --prefix /opt/boundrail-tools dependency-cruiser@18.4.0 typescript@6.0.3`) and pass `--depcruise /opt/boundrail-tools/node_modules/.bin/depcruise`, which runs it with the same arguments.
 - Python: a Python with `grimp==3.17` (`pip install grimp==3.17`, or `uv run --with grimp==3.17`), passed with `--python`.
 - Go: Go 1.21 or later on `PATH` (tested with 1.27.1, from [go.dev/dl](https://go.dev/dl)), or passed with `--go <path>`. Nothing is installed into the repository, and dependencies outside the repository are never loaded. The module cache is used only when the go command needs a module's dependency graph; without it, that module is read with `go/build` (see Go below).
 
@@ -70,8 +70,8 @@ Inferred entrypoints describe observed export conventions. A deep import gets a 
 ## Day-zero presets and init
 
 ```sh
-archgraph init --preset layered --scope internal
-archgraph check                 # fresh native scan of this directory
+boundrail init --preset layered --scope internal
+boundrail check                 # fresh native scan of this directory
 ```
 
 `init [root]` creates a reviewable `layout.yaml` and prints the top three actionable findings or `clean`. It asks one scope question when stdin is interactive; scripts must supply `--scope`. The default preset is `layered`; alternatives are `hexagonal`, `feature-sliced`, `modular-monolith` and `minimal`. Presets express folder-layer direction and explicit reasoned boundaries. Adapt their paths and declare project-specific entrypoints before relying on a framework's complete architecture conventions. Minimal keeps one ownership layer and the inferred/default module boundaries for the grab-bag guard; it adds no inferred import bans. Scope limits apply to all presets.
@@ -91,7 +91,7 @@ For an existing repository, init runs the existing layout inference, merges its 
 
 ## Generated agent rule files
 
-`archgraph sync-rules [root]` renders `layout.yaml` into owned `<!-- archgraph:start -->` / `<!-- archgraph:end -->` blocks in `CLAUDE.md`, `AGENTS.md`, `.cursorrules` and `.github/copilot-instructions.md`. It includes layer direction, explicit import constraints, declared entrypoints/public surfaces, package categories, available reasons and a pointer to MCP/hooks. Default output targets at most 600 **estimated** tokens per block (UTF-8 bytes / 4, including marker/hash framing); omitted rule lines are counted and the layout/MCP remain authoritative. `--full` includes every rendered rule.
+`boundrail sync-rules [root]` renders `layout.yaml` into owned `<!-- archgraph:start -->` / `<!-- archgraph:end -->` blocks in `CLAUDE.md`, `AGENTS.md`, `.cursorrules` and `.github/copilot-instructions.md`. It includes layer direction, explicit import constraints, declared entrypoints/public surfaces, package categories, available reasons and a pointer to MCP/hooks. Default output targets at most 600 **estimated** tokens per block (UTF-8 bytes / 4, including marker/hash framing); omitted rule lines are counted and the layout/MCP remain authoritative. `--full` includes every rendered rule.
 
 Init synchronizes these files after creating its draft. Live `check` warns when blocks are stale, including an explicit `--rules layout.yaml` resolving to the repository policy; this warning does not change the policy verdict. Saved scans and genuinely alternative policies do not pretend to identify the current repository rule files. Use `sync-rules --check` in CI: exit 0 means current, exit 1 means missing/stale, and exit 2 means malformed input or another setup error. Default check accepts the stored full/brief mode; `--check --full` requires full blocks.
 
@@ -100,9 +100,9 @@ Content and layout hashes distinguish manual edits from a changed source policy.
 ## Project architecture skill
 
 ```sh
-archgraph skill draft .
+boundrail skill draft .
 # Review the inactive SKILL.md and its policy references.
-archgraph skill adopt .
+boundrail skill adopt .
 ```
 
 `skill draft [root]` uses native source analysis and writes
@@ -134,17 +134,17 @@ draft before adopting an update. The existing policy files remain the rule sourc
 
 ## ADR import and lifecycle checks
 
-`archgraph adr import docs/adr` proposes a YAML fragment; it leaves the layout unchanged until `--apply`. Use `--json` for the full inventory or `--brief` for its bounded envelope. Clear positive import prohibitions in Decision/Decision Outcome sections map to reasoned rules; existing module IDs resolve to unique declared file globs. Examples, alternatives, ambiguous scopes and call restrictions stay informational. Proposals include the ADR ID/title, repository-relative `source`, and source digest; apply rechecks source/lifecycle and layout bytes before publishing. It preserves existing comments and refuses ambiguous flow-style/anchor edits.
+`boundrail adr import docs/adr` proposes a YAML fragment; it leaves the layout unchanged until `--apply`. Use `--json` for the full inventory or `--brief` for its bounded envelope. Clear positive import prohibitions in Decision/Decision Outcome sections map to reasoned rules; existing module IDs resolve to unique declared file globs. Examples, alternatives, ambiguous scopes and call restrictions stay informational. Proposals include the ADR ID/title, repository-relative `source`, and source digest; apply rechecks source/lifecycle and layout bytes before publishing. It preserves existing comments and refuses ambiguous flow-style/anchor edits.
 
-`archgraph adr check [root]` flags stale or missing sources and distinguishes unknown lifecycle. `--require-source` also lists, under `unsourced`, each `forbid` and `allow` rule (by `id`, else `forbid[N]`/`allow[N]`) that cites no `source`, and fails when any does; run it in CI to keep every enforced boundary tied to an ADR. `layers` has no `source` field and is not checked. Check output, generated rule blocks and recipe notes cite source paths. MADR, ADR-kit and Archgate metadata differ; Archgate does not supply a standard status field. Regex checks and arbitrary companion TypeScript are retained in their original tools. A narrow reviewed Archgate ARCH-018 adapter supplies three runtime-only package rules with type/dynamic exemptions. The measured upstream conversion remains below the requested 50% target; see [the pinned compatibility report and gap list](interop.md).
+`boundrail adr check [root]` flags stale or missing sources and distinguishes unknown lifecycle. `--require-source` also lists, under `unsourced`, each `forbid` and `allow` rule (by `id`, else `forbid[N]`/`allow[N]`) that cites no `source`, and fails when any does; run it in CI to keep every enforced boundary tied to an ADR. `layers` has no `source` field and is not checked. Check output, generated rule blocks and recipe notes cite source paths. MADR, ADR-kit and Archgate metadata differ; Archgate does not supply a standard status field. Regex checks and arbitrary companion TypeScript are retained in their original tools. A narrow reviewed Archgate ARCH-018 adapter supplies three runtime-only package rules with type/dynamic exemptions. The measured upstream conversion remains below the requested 50% target; see [the pinned compatibility report and gap list](interop.md).
 
 ## Native engine
 
 ```sh
-archgraph scan . --language typescript --engine native --symbols -o graph.json
-archgraph report . --language python --package myapp --engine native
-archgraph history . --engine native
-archgraph scan . --language typescript --engine depcruise --depcruise /opt/tools/depcruise -o reference.json
+boundrail scan . --language typescript --engine native --symbols -o graph.json
+boundrail report . --language python --package myapp --engine native
+boundrail history . --engine native
+boundrail scan . --language typescript --engine depcruise --depcruise /opt/tools/depcruise -o reference.json
 ```
 
 `--engine reference` is the default. `--engine native` supports TypeScript, JavaScript, Python, Go, Rust, Java and Elixir. `--engine depcruise` is the TypeScript/JavaScript reference escape hatch. Collector options such as `--depcruise` and `--python` apply to the reference path. Native collection and native `--symbols` use embedded tree-sitter grammars and query captures, without launching Node, npx, a Python interpreter, rust-analyzer, Cargo, a JDK, an Elixir VM or repository code. Native Go still runs read-only `go list` metadata queries with your installed Go toolchain; it does not run the go/types helper or compile project code. Git is still used for provenance and history.
@@ -167,14 +167,14 @@ The [comparison runner](../benchmarks/native_engine.py) scans the first 20 entri
 
 ```sh
 # From the repository you want the agent to inspect:
-claude mcp add --transport stdio archgraph -- archgraph mcp . --engine native --symbols
+claude mcp add --transport stdio boundrail -- boundrail mcp . --engine native --symbols
 # Or launch the protocol server directly:
-archgraph mcp /absolute/path/to/repo --engine native --symbols
+boundrail mcp /absolute/path/to/repo --engine native --symbols
 ```
 
 `mcp [root]` serves the ten tools below using the official [Rust MCP SDK](https://github.com/modelcontextprotocol/rust-sdk). The client starts a local stdio process: stdout contains MCP messages and diagnostics go to stderr. It accepts the shared scan options, including `--rules`, `--hotspots`, language selection and exclusions. Hotspot/history facts remain unavailable unless collected; unavailable facts are never treated as zero. The reference engine remains the default; the examples explicitly select the experimental native engine and enable symbol evidence. Recorded `--collector-input` snapshots are rejected because MCP verification requires live source collection. Collector trust requirements and language limits still apply.
 
-Use the [Claude Code config](mcp/claude-code.json) as a project `.mcp.json`, the [Cursor config](mcp/cursor.json) as `.cursor/mcp.json`, or merge [the Codex TOML](mcp/codex.toml) into your Codex configuration. Replace `/absolute/path/to/repo` in the Claude/Codex examples; Cursor expands `${workspaceFolder}` from the folder containing `.cursor/mcp.json`. Install `archgraph` on the client's PATH, or set `command` to its absolute executable path. Merge existing configuration rather than overwriting other servers. Client configuration details: [Claude Code](https://code.claude.com/docs/en/mcp), [Cursor](https://cursor.com/docs/mcp), [Codex](https://developers.openai.com/codex/mcp).
+Use the [Claude Code config](mcp/claude-code.json) as a project `.mcp.json`, the [Cursor config](mcp/cursor.json) as `.cursor/mcp.json`, or merge [the Codex TOML](mcp/codex.toml) into your Codex configuration. Replace `/absolute/path/to/repo` in the Claude/Codex examples; Cursor expands `${workspaceFolder}` from the folder containing `.cursor/mcp.json`. Install `boundrail` on the client's PATH, or set `command` to its absolute executable path. Merge existing configuration rather than overwriting other servers. Client configuration details: [Claude Code](https://code.claude.com/docs/en/mcp), [Cursor](https://cursor.com/docs/mcp), [Codex](https://developers.openai.com/codex/mcp).
 
 | Tool | Inputs besides optional `brief` | Evidence returned |
 | --- | --- | --- |
@@ -185,24 +185,24 @@ Use the [Claude Code config](mcp/claude-code.json) as a project `.mcp.json`, the
 | `verify` | Optional typed `expect` | Fresh findings and pass/fail for the requested predicates. |
 | `explain` | Exactly one of `path`, `module` | Importers, imports and available architecture evidence within the smaller explanation cap. |
 | `rules` | `paths` | Relevant configured layout rules and surface constraints. |
-| `review` | Optional `base` | What the working tree changed in the target since `base`, as `data.markdown` (also the text content) for an AI reviewer to quote: newly broken slices, other new forbidden imports with their rules' reasons, newly fixed slices, each import at `file:line`, a `Base` line, and a note on the rows `layout.known.yaml` lists (`known: true` in JSON) and on listed entries that no longer occur. The JSON arrays hold every row; `brief` drops them. `archgraph review [root] [--base <ref>] [--format markdown\|json]` prints the same markdown. |
+| `review` | Optional `base` | What the working tree changed in the target since `base`, as `data.markdown` (also the text content) for an AI reviewer to quote: newly broken slices, other new forbidden imports with their rules' reasons, newly fixed slices, each import at `file:line`, a `Base` line, and a note on the rows `layout.known.yaml` lists (`known: true` in JSON) and on listed entries that no longer occur. The JSON arrays hold every row; `brief` drops them. `boundrail review [root] [--base <ref>] [--format markdown\|json]` prints the same markdown. |
 | `target` | none | The scan's `target` (claim verdicts, slice progress, pending move cost), or `null` when the rules state no claim or move. |
 | `services` | Optional `manifest`, exact `service` | Live service metrics, call evidence, owned client usages, authored `forbid` rules, `policy_source`, and caveats. `global_summary` and policy cover the whole model. `scope.service` identifies an optional evidence focus. |
 
 The `services` tool uses native service inference directly and does not run the reference import
 collector. Its optional manifest must be a file inside the MCP repository root, including after
 symlink resolution. Service IDs are exact, not globs. With no manifest it infers the root, like
-`archgraph services .`. Calls include either direction for a selected service; client usages
+`boundrail services .`. Calls include either direction for a selected service; client usages
 belong to that service. It returns a compact view, not a complete CLI report with graph indices.
 `forbid` preserves all authored rules in precedence order, including rules with no observed match.
 `policy_source` contains the resolved repository-relative manifest path and the SHA-256 of the
 bytes used for this report. Without an explicit manifest, `policy_source` is `null` and `forbid`
 is empty. That means no service policy was supplied, rather than approved architecture.
 The service tool namespace and each rule's `id` identify the policy. Import rules remain in
-`layout.yaml` and the `rules` tool. Use `archgraph services . --manifest services.yaml --format json`
+`layout.yaml` and the `rules` tool. Use `boundrail services . --manifest services.yaml --format json`
 for complete evidence when the MCP response is truncated. Omit `--manifest` if none was supplied.
 
-Tool input and output JSON Schemas are advertised by MCP `tools/list`; use discovery as the contract rather than parsing display text. Every tool accepts `brief: bool`, default `true`. MCP `propose` returns the typed recipe once in `structuredContent.data`, with a short text pointer, so duplicated JSON does not consume its output cap. A truncated recipe is incomplete; use `archgraph propose <finding_id>` for the full contract. Lists use deterministic ordering. Finding IDs derive from semantic identity rather than array positions, scores or timestamps; use an ID from the current findings when calling `propose`. A fixed commit and collection inputs retain the same IDs. A changed finding can have a new identity. Proposed steps are import-graph evidence, not proof that code compiles; run the project's tests after editing. Tools inspect or simulate code, and do not apply code changes.
+Tool input and output JSON Schemas are advertised by MCP `tools/list`; use discovery as the contract rather than parsing display text. Every tool accepts `brief: bool`, default `true`. MCP `propose` returns the typed recipe once in `structuredContent.data`, with a short text pointer, so duplicated JSON does not consume its output cap. A truncated recipe is incomplete; use `boundrail propose <finding_id>` for the full contract. Lists use deterministic ordering. Finding IDs derive from semantic identity rather than array positions, scores or timestamps; use an ID from the current findings when calling `propose`. A fixed commit and collection inputs retain the same IDs. A changed finding can have a new identity. Proposed steps are import-graph evidence, not proof that code compiles; run the project's tests after editing. Tools inspect or simulate code, and do not apply code changes.
 
 Results use an envelope `{data, truncated, omitted, counts?, hint?, error?}`. `data` is an object or `null`; `omitted` counts removed values and `counts` records original top-level array counts where available. Both brief projection and hard-cap pruning set `truncated: true` with a hint, so an original count can exceed the displayed array length. Read the marker before interpreting a partial answer. Errors carry an actionable message and MCP error status.
 
@@ -222,14 +222,14 @@ A matching running `serve` daemon can provide scans through its authenticated lo
 
 ## Reviewing a pull request with an AI reviewer
 
-`archgraph review [root] [--base <ref>]` prints what a branch changed in the target, short enough for an AI reviewer to quote: newly broken claim slices and other new forbidden imports at file:line with the reason they quote, newly fixed slices, the progress line and the base commit used. MCP clients call the `review` tool for the same text. Two ready-made reviewer instructions tell an AI reviewer to quote it, treat its verdict on import direction as final, and judge only what it does not check:
+`boundrail review [root] [--base <ref>]` prints what a branch changed in the target, short enough for an AI reviewer to quote: newly broken claim slices and other new forbidden imports at file:line with the reason they quote, newly fixed slices, the progress line and the base commit used. MCP clients call the `review` tool for the same text. Two ready-made reviewer instructions tell an AI reviewer to quote it, treat its verdict on import direction as final, and judge only what it does not check:
 
 ```sh
-mkdir -p .agents/checks && cp integrations/amp-review.check.md .agents/checks/archgraph.md          # Amp
-mkdir -p .claude/agents && cp integrations/claude-review.agent.md .claude/agents/archgraph-reviewer.md  # Claude Code
+mkdir -p .agents/checks && cp integrations/amp-review.check.md .agents/checks/boundrail.md          # Amp
+mkdir -p .claude/agents && cp integrations/claude-review.agent.md .claude/agents/boundrail-reviewer.md  # Claude Code
 ```
 
-The Claude Code reviewer lists no `tools`, so it inherits the session's archgraph MCP tools. Copy the file once; neither `init` nor `sync-rules` writes it.
+The Claude Code reviewer lists no `tools`, so it inherits the session's boundrail MCP tools. Copy the file once; neither `init` nor `sync-rules` writes it.
 
 ## Fix recipes and verification
 
@@ -237,12 +237,12 @@ Every actionable `findings[]` entry has a stable `finding_id` and a typed `recip
 
 ```sh
 # Collect source evidence and choose a findings[].finding_id from graph.json.
-archgraph scan . --engine native --symbols --cochange -o graph.json
-archgraph propose <finding_id> --root . --engine native --symbols --cochange
-archgraph apply <finding_id> --root . --engine native --symbols --cochange --dry-run
+boundrail scan . --engine native --symbols --cochange -o graph.json
+boundrail propose <finding_id> --root . --engine native --symbols --cochange
+boundrail apply <finding_id> --root . --engine native --symbols --cochange --dry-run
 # Once the exact plan is within the requested change:
-archgraph apply <finding_id> --root . --engine native --symbols --cochange --yes
-archgraph verify <finding_id> --root . --engine native --symbols --cochange
+boundrail apply <finding_id> --root . --engine native --symbols --cochange --yes
+boundrail verify <finding_id> --root . --engine native --symbols --cochange
 ```
 
 Use identical collection, module, rule and hotspot options throughout. These commands also accept `--graph graph.json` to reuse its saved configuration; `apply --yes` and `verify` still collect live source. `--collector-input` cannot substitute for that live scan. `--brief` gives the shared bounded projection; omit it to review complete steps, planned source buffers and verification checks. Obtain an ID from the current scan rather than a finding's array position. IDs exclude timestamps, scores and measured deltas, so reordering findings does not change their identities.
@@ -262,7 +262,7 @@ Mechanical support is deliberately conservative. TypeScript/JavaScript and Pytho
 
 Successful application runs `git mv` through a private Git index, edits only planned source files, rescans and checks actual deltas against predictions before publishing staging changes. Existing staged entries are preserved; moves are staged, while specifier edits remain worktree edits. Inspect **both** `git diff --cached` and `git diff` before staging the final change. This command does not commit. A failed scan or verification rolls back the recipe's edits; a concurrent user edit is preserved and reported as a rollback conflict rather than overwritten. A verification mismatch returns expected/actual checks and a `verify: FAILED` hint; it is not reported as successful application.
 
-Live `propose` stores a before-scan under `.archgraph/proposed/`; successful `apply` stores a receipt under `.archgraph/applied/`. Keep this local state out of commits. CLI `verify <finding_id>` requires the successful apply receipt. For manual agent steps, call `propose` **before editing**, then pass the returned `verify.structured` JSON as `archgraph verify <finding_id> --expect '<JSON>'` or MCP `verify({expect: <structured>})`. Its `baseline_id` locates the original measurement; do not invent a replacement baseline after the fix. Changed configuration or stale receipt fingerprints require a fresh, explicit verification contract. Verification exits **0** when predicates pass and **1** when they fail; setup/input failures exit **2**. Always run the language build/type checker and tests as well: graph predicates cannot establish runtime correctness or initialization behavior.
+Live `propose` stores a before-scan under `.archgraph/proposed/`; successful `apply` stores a receipt under `.archgraph/applied/`. Keep this local state out of commits. CLI `verify <finding_id>` requires the successful apply receipt. For manual agent steps, call `propose` **before editing**, then pass the returned `verify.structured` JSON as `boundrail verify <finding_id> --expect '<JSON>'` or MCP `verify({expect: <structured>})`. Its `baseline_id` locates the original measurement; do not invent a replacement baseline after the fix. Changed configuration or stale receipt fingerprints require a fresh, explicit verification contract. Verification exits **0** when predicates pass and **1** when they fail; setup/input failures exit **2**. Always run the language build/type checker and tests as well: graph predicates cannot establish runtime correctness or initialization behavior.
 
 Cycle recipes exclude test and structural namespace edges. Unsupported Rust/Java/Elixir import cuts are non-mechanical from the initial proposal, rather than waiting for apply preflight to reject them. Numerical predictions remain unavailable for such semantic work; the source-aware apply planner is still the authority for mechanically executable edits. Recipe generation computes forecasts before attaching generated recipes to the graph, avoiding repeated copies of previously generated recipes without changing IDs, ranking or predicted deltas.
 
@@ -272,12 +272,12 @@ Findings now sort by `hotspot × confidence weight × max(pairs_removed, 0)`, wi
 
 ```sh
 # Run in a dedicated terminal, from the checkout agents will edit.
-archgraph serve . --engine native --symbols
+boundrail serve . --engine native --symbols
 # In another terminal, in the same checkout and environment:
-archgraph status . --brief
-archgraph check .archgraph/daemon-graph.json --brief
-archgraph context --graph .archgraph/daemon-graph.json --root . --task "change billing" --budget 8k --brief
-archgraph explain src/billing/invoice.ts --graph .archgraph/daemon-graph.json --brief
+boundrail status . --brief
+boundrail check .archgraph/daemon-graph.json --brief
+boundrail context --graph .archgraph/daemon-graph.json --root . --task "change billing" --budget 8k --brief
+boundrail explain src/billing/invoice.ts --graph .archgraph/daemon-graph.json --brief
 ```
 
 `serve [root]` warms the graph, watches the checkout and answers local commands serially. It accepts the same collection options as `scan`; use matching engine, rules, exclusions and symbol options when requesting a cached scan. The reference engine remains the default. Start with `--engine native` for incremental TypeScript/JavaScript, Python and Go collection; the other native languages and reference collectors use a logged full-collection fallback. No dependency-cruiser partial overlay is assumed to preserve reference semantics.
@@ -290,17 +290,17 @@ The daemon maintains `.archgraph/daemon-graph.json` as its current graph. It use
 
 Changed source files are reparsed individually on the incremental path. Import resolution and barrel propagation are composed against the complete cached source index; these steps can still scale with the repository. Go package membership changes require metadata refresh. A dirty dependency region uses a conservative weakly connected closure when recomputing SCCs, so joining or splitting a cycle cannot hide a component outside a previous SCC. Structural/configuration changes, watcher overflow, unsupported collectors and uncertain dependencies trigger an explicit full-refresh log. Read-only filesystem events and private-cache writes are filtered before queuing, so a full scan cannot overflow its own watcher queue. Refresh failures return an error rather than presenting the previous generation as current.
 
-At most **two graph generations** are retained (current and previous), alongside source/resolver and analysis indexes. This bounds snapshot count, not resident memory in bytes; memory still grows with repository size. `archgraph serve . --engine native --once` warms, answers one request and exits without a watcher; launch it in the background, wait for the descriptor/readiness message, then issue a matching CLI command. This mode validates the serving path in CI; it does not watch edits.
+At most **two graph generations** are retained (current and previous), alongside source/resolver and analysis indexes. This bounds snapshot count, not resident memory in bytes; memory still grows with repository size. `boundrail serve . --engine native --once` warms, answers one request and exits without a watcher; launch it in the background, wait for the descriptor/readiness message, then issue a matching CLI command. This mode validates the serving path in CI; it does not watch edits.
 
 ### Per-edit agent checks
 
-`archgraph hook install --agent claude|codex --root .` installs project-local pre-edit context and post-edit/Stop checks. Add repeatable `--scope 'src/**'` paths or globs to restrict accepted workspace changes. Hooks use native collection with symbols, select an existing `layout.yaml`, and accept `--language`, `--package`, `--depth` and `--rules`. Start `archgraph serve . --engine native --symbols` with matching options/environment for warm checks. Idempotent installation prints what it wrote.
+`boundrail hook install --agent claude|codex --root .` installs project-local pre-edit context and post-edit/Stop checks. Add repeatable `--scope 'src/**'` paths or globs to restrict accepted workspace changes. Hooks use native collection with symbols, select an existing `layout.yaml`, and accept `--language`, `--package`, `--depth` and `--rules`. Start `boundrail serve . --engine native --symbols` with matching options/environment for warm checks. Idempotent installation prints what it wrote.
 
 Pre-edit context is capped at 400 UTF-8 bytes, conservatively below 400 tokens. New forbidden imports, new/grown cycles, declared public-entry bypasses and out-of-scope changes block with recipes; pre-existing problems pass. A blocked baseline survives repair attempts. Policy changes while pending return `UNAVAILABLE`. Blocks leave edits on disk. Mechanical recipes are saved for `apply`; semantic instructions require agent work and project tests. Known read-only tools skip edit transactions; shell and unknown tools are checked. Concurrent edits are refused.
 
 Claude includes failed-tool checks and `onFailure: block` for supported events (requires Claude Code v2.1.295+); Stop crashes/timeouts remain a host limitation. Codex hooks require explicit trust in `/hooks`; installation does not grant trust. Pre-tool context is consumed on the next model request and cannot replan an already-generated call. A same-session Stop validates an unfinished transaction left by cancellation/permission denial. Cursor and OpenCode require `--feedback-only`: their completion hooks cannot provide the same veto, and allowed pre-tool context injection is not established. See [host contracts and the scripted loop](agents/loop.md).
 
-`ARCHGRAPH_BYPASS='reason'` accepts current violations and appends an override record. It explicitly collects standalone because the override changes the caller environment. Approve a specific finding with `hook check --baseline SNAPSHOT_ID --allow-once FINDING_ID --reason 'reason'`; the same finding cannot be approved twice in that snapshot. `hook reset --baseline SNAPSHOT_ID --reason 'reason'` releases exactly one abandoned transaction with an audit record. Neither edits source. Every block appends rule/file/agent/UTC timestamp records to `.archgraph/fires.log`; `archgraph fires --top` counts them by rule. Overrides go to `.archgraph/overrides.log`. Malformed logs cause errors rather than being overwritten.
+`ARCHGRAPH_BYPASS='reason'` accepts current violations and appends an override record. It explicitly collects standalone because the override changes the caller environment. Approve a specific finding with `hook check --baseline SNAPSHOT_ID --allow-once FINDING_ID --reason 'reason'`; the same finding cannot be approved twice in that snapshot. `hook reset --baseline SNAPSHOT_ID --reason 'reason'` releases exactly one abandoned transaction with an audit record. Neither edits source. Every block appends rule/file/agent/UTC timestamp records to `.archgraph/fires.log`; `boundrail fires --top` counts them by rule. Overrides go to `.archgraph/overrides.log`. Malformed logs cause errors rather than being overwritten.
 
 Scripted integrations call `hook capture --agent codex --files src/example.ts`, then `hook check --baseline ID --brief` or MCP `check_diff({snapshot: ID})`. Snapshot IDs and Git `base` are mutually exclusive; existing Git comparisons retain their behavior. MCP snapshot checks are read-only and do not consume transactions or add fire records. The complete CLI check prints `PASS`/`BLOCK`, then recipe JSON, and exits 0/1; setup errors exit 2. Native hooks return host JSON, including `UNAVAILABLE` on setup errors. Inspect MCP truncation markers before claiming complete evidence.
 
@@ -310,9 +310,9 @@ Inventory includes gitignored workspace files and deletes, excluding `.git`, `.a
 
 `--brief` is a global agent-oriented output option. Structured commands emit `schema: "archgraph/brief/v1"`, with `kind`, `result`, full top-level array `counts`, explicit JSON-pointer `omitted` records and a hint for requesting the complete output. Limits are **20 array entries across the result**, 240 value nodes, nesting depth 8 and 512 characters per string. Per-module metric dictionaries in scan/simulation summaries are omitted explicitly to retain findings and summary counts. The brief wrapper is a projection, not a complete v1/v1.1 graph; remove `--brief` before feeding output to graph-reading commands. Output files remain complete graph/report documents even when stdout is brief. Text-only commands use a bounded text projection. Brief mode overrides Markdown display for context, impact and surface.
 
-`archgraph explain <subject> --graph <graph.json>` accepts an exact repository-relative file path, module ID or finding subject. It returns imports, importers, relevant cycles and findings, with owning module metrics for files. It does not infer runtime dispatch beyond the collected static evidence. `archgraph status [root]` reports whether a daemon is running and its graph counts; a stopped daemon includes the command to start it. `check --brief` reports cycles alongside policy evidence, while retaining existing exit semantics: forbidden imports exit 1, valid policy checks exit 0, input/setup errors exit 2. Merely having a cycle does not change that policy exit code.
+`boundrail explain <subject> --graph <graph.json>` accepts an exact repository-relative file path, module ID or finding subject. It returns imports, importers, relevant cycles and findings, with owning module metrics for files. It does not infer runtime dispatch beyond the collected static evidence. `boundrail status [root]` reports whether a daemon is running and its graph counts; a stopped daemon includes the command to start it. `check --brief` reports cycles alongside policy evidence, while retaining existing exit semantics: forbidden imports exit 1, valid policy checks exit 0, input/setup errors exit 2. Merely having a cycle does not change that policy exit code.
 
-`archgraph explain <file> --for-agent --graph <graph.json>` emits compact `archgraph/explain-agent/v1` JSON bounded to 400 UTF-8 bytes, including its framing. This conservative byte cap stays below a 400-token edit-context allowance without adding a tokenizer. It reports aggregate import/importer counts, matching rules and available module/layer facts; `omitted: true` makes the summary's missing detail explicit. A new file is labeled unscanned and can still receive matching layout evidence. `--brief` does not add another wrapper to this bounded format. Detailed `explain` output remains unchanged.
+`boundrail explain <file> --for-agent --graph <graph.json>` emits compact `archgraph/explain-agent/v1` JSON bounded to 400 UTF-8 bytes, including its framing. This conservative byte cap stays below a 400-token edit-context allowance without adding a tokenizer. It reports aggregate import/importer counts, matching rules and available module/layer facts; `omitted: true` makes the summary's missing detail explicit. A new file is labeled unscanned and can still receive matching layout evidence. `--brief` does not add another wrapper to this bounded format. Detailed `explain` output remains unchanged.
 
 Scan `source.generated_at` is reproducible: integer `SOURCE_DATE_EPOCH` when set, otherwise Git HEAD commit time, otherwise `1970-01-01T00:00:00Z`. It identifies source revision time rather than execution time. Invalid or out-of-range environment values fail with a correction hint. Identical source, Git state, collector/dependency environment and options therefore produce identical scan bytes; changing the checkout's dirty state or dependency evidence remains a real input change.
 
@@ -341,8 +341,8 @@ Reproduce from the repository root (the runners require Python 3 and Git):
 
 ```sh
 cargo build --release --locked
-ci/bench-daemon.sh --archgraph target/release/archgraph --repeats 3 --output /tmp/daemon-results.json
-python3 -B ci/bench_daemon_2k.py --archgraph target/release/archgraph --repeats 3 --output /tmp/daemon-2k-results.json
+ci/bench-daemon.sh --boundrail target/release/boundrail --repeats 3 --output /tmp/daemon-results.json
+python3 -B ci/bench_daemon_2k.py --boundrail target/release/boundrail --repeats 3 --output /tmp/daemon-2k-results.json
 ```
 
 The showcase runner clones isolated checkouts; `--cache /path/to/showcase/clones` reuses local Git objects without editing the originals. The fixture runner creates and commits its generated sources using command-local Git settings. Both restore edited files, stop their daemons, and retain their work directories and logs for inspection.
@@ -354,9 +354,9 @@ The showcase runner clones isolated checkouts; `--cache /path/to/showcase/clones
 **scan** writes the scan document (`kind: scan`).
 
 ```sh
-archgraph scan . -o graph.json                        # language detected, modules = 2 folders below src/
-archgraph scan . --rules layout.yaml -o graph.json    # with edge verdicts
-archgraph scan . --cochange -o graph.json             # also read the last 300 commits (--cochange=N, N >= 1)
+boundrail scan . -o graph.json                        # language detected, modules = 2 folders below src/
+boundrail scan . --rules layout.yaml -o graph.json    # with edge verdicts
+boundrail scan . --cochange -o graph.json             # also read the last 300 commits (--cochange=N, N >= 1)
 ```
 
 A module is a file's directory truncated to `--depth` segments below the source root (`src/` when present, else the root; for Python, the package directory). Each file directly in the source root is a module of its own, named by its file name with extension (`main.ts`, `errors.py`), so a package's lowest layer and its entry points never merge into one module (in Go the root's files are one package, so they form the module `.`). Imports between two such files are therefore cross-module: the same-module rule no longer allows them, so under `default: forbidden` they need an `allow` or `layers` rule. Scan documents written by commit 2bf5805 put these files in module `.` and fail `check`, `render` and `simulate` as inconsistent: rescan them. When the root has a `src/` directory, only `src/` is cruised (files outside it appear when `src/` imports them, with module ids prefixed `../`: `../lib`, and `../tool.ts` for a file directly in the root). TypeScript/JavaScript scans keep `.ts/.tsx/.js/.jsx/.mjs/.cjs` files and Python scans keep `.py` files; other collectors keep their language’s source files, including `.ex`/`.exs` for Elixir. Imports of stylesheets, JSON and other assets are dropped. Edges distinguish `runtime` (load-time imports), `lazy` (`import()` or imports inside functions), `type` (type-only imports) and `reexport` (structural re-exports). Type-only re-exports use `kind: type` with `is_reexport: true`. Metrics weight these kinds separately; rule verdicts consider every kind unless filtered. Cycles use runtime edges by default, with other cyclic components accounted for separately (see [Edge quality and migration](#edge-quality-and-migration)). For Python, an import that appears only under `if TYPE_CHECKING:` is `type`, and one that appears only inside function or method bodies is `lazy` (grimp's import lines, with the file parsed by the standard library's `ast`, never run). For TypeScript, `package_entries` lists the files a `package.json` in the scanned tree publishes through `exports`, `main`, `module` and `types`, mapped from build output (`dist/`, `build/`, `lib/`, `.js`, `.mjs`, `.cjs`, `.d.ts`) back to their sources; like barrels they are public entries. A composition root is a file nobody imports that imports 3 or more other modules (`app.ts`, `cli.ts`), a registrar a file with 5 or more imports into one module, or with imports into 5 or more sibling modules under one parent folder other than the root (code choosing one of many drivers): their imports are wiring, left out of sink-split consumers, unstable-dependency counts and two-way cuts.
@@ -378,15 +378,15 @@ A module is a file's directory truncated to `--depth` segments below the source 
 
 For a call-level claim such as "a service never calls a controller", a `forbid` on the files is enough. In Go, Java, Rust and Elixir it already catches calls and field uses. In TypeScript and Python it catches the import, which is the coupling: an unused import it flags is still a true positive, and the fix is to delete it. `kinds: [runtime]` leaves out type-only imports where the engine separates them. Go, Java and Rust cannot tell a call from a type use, so such a claim also forbids naming the controller's types.
 
-Options: `--depth N` (default 2; for Java, each package is a module unless it is given), `--exclude <glob>` (repeatable), `--include-tests`, `--include-generated`, `--no-default-excludes`, `--language typescript|python|go|rust|java|elixir`, `--depcruise <path>` (a dependency-cruiser executable to run instead of `npx --no-install depcruise`; exit 2 when the path does not exist), `--python <interp>`, `--package <pkg>`, `--python-path <directory>` (repeatable), `--go <path>` (the Go toolchain, default `go`), `--elixir <path>` (the Elixir runtime, default `elixir`), `--rules <layout.yaml>`, `--symbols` (collect public surface evidence), `--cochange[=N]`, `--collector-input <recorded.json>`. A shared exclusion policy drops tests, generated/build output, dependency/vendor directories and fixture/story/example content by default; `archgraph show-excludes` prints its actual patterns and override precedence. See [Exclusions and included tests](#exclusions-and-included-tests) for category flags and ignore-file support. dependency-cruiser runs with `tsPreCompilationDeps: "specify"`, from a config archgraph writes to the temporary directory (the repository's own config is not read): an import of types or interfaces only, written without `import type`, is kept and marked, and becomes `type`. When dependency-cruiser crashes in that mode, the scan runs it with and without pre-compilation dependencies and marks the difference; when that fails too, these imports stay `runtime` and `source.collector.type_marking` is `unavailable`, which the page and `report` mention.
+Options: `--depth N` (default 2; for Java, each package is a module unless it is given), `--exclude <glob>` (repeatable), `--include-tests`, `--include-generated`, `--no-default-excludes`, `--language typescript|python|go|rust|java|elixir`, `--depcruise <path>` (a dependency-cruiser executable to run instead of `npx --no-install depcruise`; exit 2 when the path does not exist), `--python <interp>`, `--package <pkg>`, `--python-path <directory>` (repeatable), `--go <path>` (the Go toolchain, default `go`), `--elixir <path>` (the Elixir runtime, default `elixir`), `--rules <layout.yaml>`, `--symbols` (collect public surface evidence), `--cochange[=N]`, `--collector-input <recorded.json>`. A shared exclusion policy drops tests, generated/build output, dependency/vendor directories and fixture/story/example content by default; `boundrail show-excludes` prints its actual patterns and override precedence. See [Exclusions and included tests](#exclusions-and-included-tests) for category flags and ignore-file support. dependency-cruiser runs with `tsPreCompilationDeps: "specify"`, from a config boundrail writes to the temporary directory (the repository's own config is not read): an import of types or interfaces only, written without `import type`, is kept and marked, and becomes `type`. When dependency-cruiser crashes in that mode, the scan runs it with and without pre-compilation dependencies and marks the difference; when that fails too, these imports stay `runtime` and `source.collector.type_marking` is `unavailable`, which the page and `report` mention.
 
-**Go.** Detection counts `.go` files (not tests, outside `vendor/` and `testdata/`) only when the scan root has a `go.mod` or `go.work`; the language with the most files wins, and a tie keeps TypeScript, then Python, then Go. The source root is the scan root (`src/` is a folder like any other). **Modules are folders:** as for other languages, `--depth` (default 2) merges the packages below each folder into one module, so `internal/platform/db` and `internal/platform/cache` are both in `internal/platform` and show as sub-discs of it on the map; the root's own files are the module `.`. A large `--depth` (`--depth 99`) makes each package its own module. Scans written before this default have `config.package_modules: true` and keep one module per package. Go rejects import cycles between packages, and since a package compiles as a unit, files of one directory form no file cycle with each other either: a module cycle in Go is a grouping cycle between the packages a module merges, never one Go compiled. Every `go.mod` below the root with a `module` line is a module of the scan (one without, or an empty one, is skipped with a warning; `--exclude` matching `<dir>/go.mod` skips it), so modules joined by `replace` or merely sitting side by side resolve to each other's files. A file is a file of its package when `go list` puts it in `GoFiles`, `CgoFiles`, `TestGoFiles` or `XTestGoFiles`, or in `IgnoredGoFiles` without needing the `ignore` build tag: every platform's files at once (`foo_linux.go` and `foo_windows.go`), whatever GOOS archgraph runs on, and cgo files although cgo is off. When `go list` fails in a module (it needs that module's dependency graph for some `replace` directives, which `GOPROXY=off` cannot fetch when the module cache lacks it), the scan warns and reads that module's packages with `go/build` instead. Each package is type-checked with `go/types` (the standard library through `go/importer`, the repository's own packages from source, other modules not at all), and an edge goes from a file to every file declaring something it uses: a function, type, variable or constant, a field, or a method, so `s.db.Get()` leads to the file declaring the field `db` and to the one declaring `Get`. A name declared in several platform files leads to all of them. A blank import (`import _ "x"`) leads to the package's `doc.go`, else `<dir>.go`, else its first file, picked among the files that are neither tests nor generated when there are any. An import none of whose uses resolved (they sit inside an expression whose type comes from a module that is not loaded) gives no edge; it counts in `source.collector.unresolved`, with imports that look local (under a scanned module path) but name no package in the repository. Every Go edge is `runtime`, including those between files of one package, which keep cohesion and `misplaced-file` meaningful. `source.collector.main_packages` lists the directories of `package main` packages and `bound` the pairs of files that cannot leave their package and still compile: `{from, to, names, together}`, where `from` uses the unexported `names` that `to` declares (a field or method as `Type.name`, named by the type it is selected on, so a promoted field `s.x` of an embedded type is `Server.x` when `s` is a `Server`; a composite-literal key by its literal's type, `DB.values`), and `together` marks a file holding a method of a type declared in the other, or declaring a package-level name the other declares too (platform variants under exclusive build constraints, `notify_linux.go` and `notify_windows.go`). A pair counts only when both files are scanned, so a method in an excluded test binds nothing, and a collector limitation counts the pairs left out that way. The native engine cannot tell these pairs and lists every file in `bound_files` instead. `misplaced-file`, `sink-split` and registrar moves never propose moving them, and `misplaced-file` never proposes moving a public file (outside `internal/`, not `package main`), which other modules may import, nor a file that has edges within its own package without using the target module itself: such a file is a piece of the library its package offers, whoever uses it now. `seam` is not reported for Go: file clusters would split packages, which Go cannot do. `go_modules` lists the directories holding a `go.mod` (`.` for the root): no move is proposed into another Go module, which would change the file's module path and its module's published API, so a `misplaced-file` whose only destination lies in another module is not reported. `internals-reach` comes only from `public` rules, since the compiler already rejects imports into another tree's `internal/`. The default excludes add `**/*_test.go` (tests), test support (kept with `--include-tests`, and named in a warning): packages named `*testing` or `*testutil`, and each non-test file that uses package `testing` for more than `testing.Testing()` when no production file of another package uses it (a stub beside production code that others use stays) and, if it has variants for other platforms, every variant is such a file too; the other files of its package stay, `**/*.pb.go`, `**/*.pb.gw.go`, `**/zz_generated*.go` and every file with a `// Code generated ... DO NOT EDIT.` header (generated code); `vendor/`, `testdata/` and folders starting with `.` or `_` are never scanned. Reflection, `go:linkname`, `go:embed`, assembly and C are invisible.
+**Go.** Detection counts `.go` files (not tests, outside `vendor/` and `testdata/`) only when the scan root has a `go.mod` or `go.work`; the language with the most files wins, and a tie keeps TypeScript, then Python, then Go. The source root is the scan root (`src/` is a folder like any other). **Modules are folders:** as for other languages, `--depth` (default 2) merges the packages below each folder into one module, so `internal/platform/db` and `internal/platform/cache` are both in `internal/platform` and show as sub-discs of it on the map; the root's own files are the module `.`. A large `--depth` (`--depth 99`) makes each package its own module. Scans written before this default have `config.package_modules: true` and keep one module per package. Go rejects import cycles between packages, and since a package compiles as a unit, files of one directory form no file cycle with each other either: a module cycle in Go is a grouping cycle between the packages a module merges, never one Go compiled. Every `go.mod` below the root with a `module` line is a module of the scan (one without, or an empty one, is skipped with a warning; `--exclude` matching `<dir>/go.mod` skips it), so modules joined by `replace` or merely sitting side by side resolve to each other's files. A file is a file of its package when `go list` puts it in `GoFiles`, `CgoFiles`, `TestGoFiles` or `XTestGoFiles`, or in `IgnoredGoFiles` without needing the `ignore` build tag: every platform's files at once (`foo_linux.go` and `foo_windows.go`), whatever GOOS boundrail runs on, and cgo files although cgo is off. When `go list` fails in a module (it needs that module's dependency graph for some `replace` directives, which `GOPROXY=off` cannot fetch when the module cache lacks it), the scan warns and reads that module's packages with `go/build` instead. Each package is type-checked with `go/types` (the standard library through `go/importer`, the repository's own packages from source, other modules not at all), and an edge goes from a file to every file declaring something it uses: a function, type, variable or constant, a field, or a method, so `s.db.Get()` leads to the file declaring the field `db` and to the one declaring `Get`. A name declared in several platform files leads to all of them. A blank import (`import _ "x"`) leads to the package's `doc.go`, else `<dir>.go`, else its first file, picked among the files that are neither tests nor generated when there are any. An import none of whose uses resolved (they sit inside an expression whose type comes from a module that is not loaded) gives no edge; it counts in `source.collector.unresolved`, with imports that look local (under a scanned module path) but name no package in the repository. Every Go edge is `runtime`, including those between files of one package, which keep cohesion and `misplaced-file` meaningful. `source.collector.main_packages` lists the directories of `package main` packages and `bound` the pairs of files that cannot leave their package and still compile: `{from, to, names, together}`, where `from` uses the unexported `names` that `to` declares (a field or method as `Type.name`, named by the type it is selected on, so a promoted field `s.x` of an embedded type is `Server.x` when `s` is a `Server`; a composite-literal key by its literal's type, `DB.values`), and `together` marks a file holding a method of a type declared in the other, or declaring a package-level name the other declares too (platform variants under exclusive build constraints, `notify_linux.go` and `notify_windows.go`). A pair counts only when both files are scanned, so a method in an excluded test binds nothing, and a collector limitation counts the pairs left out that way. The native engine cannot tell these pairs and lists every file in `bound_files` instead. `misplaced-file`, `sink-split` and registrar moves never propose moving them, and `misplaced-file` never proposes moving a public file (outside `internal/`, not `package main`), which other modules may import, nor a file that has edges within its own package without using the target module itself: such a file is a piece of the library its package offers, whoever uses it now. `seam` is not reported for Go: file clusters would split packages, which Go cannot do. `go_modules` lists the directories holding a `go.mod` (`.` for the root): no move is proposed into another Go module, which would change the file's module path and its module's published API, so a `misplaced-file` whose only destination lies in another module is not reported. `internals-reach` comes only from `public` rules, since the compiler already rejects imports into another tree's `internal/`. The default excludes add `**/*_test.go` (tests), test support (kept with `--include-tests`, and named in a warning): packages named `*testing` or `*testutil`, and each non-test file that uses package `testing` for more than `testing.Testing()` when no production file of another package uses it (a stub beside production code that others use stays) and, if it has variants for other platforms, every variant is such a file too; the other files of its package stay, `**/*.pb.go`, `**/*.pb.gw.go`, `**/zz_generated*.go` and every file with a `// Code generated ... DO NOT EDIT.` header (generated code); `vendor/`, `testdata/` and folders starting with `.` or `_` are never scanned. Reflection, `go:linkname`, `go:embed`, assembly and C are invisible.
 
 **Rust.** Detection counts `.rs` files when the scan root has `Cargo.toml`, ignoring `target/`. Scans resolve cross-file workspace symbol references and trait implementations through `rust-analyzer scip`; local symbols stay out of the file graph, and recorded external imports use separate package nodes. Paths are relative to the scan root and ordinary folder depth/rules determine modules. `--rust-features all|default` chooses enabled Cargo features (default `all`). Build scripts and proc macros are disabled by default; `--rust-build-scripts` enables them and executes repository code. The collector uses cached dependencies offline and refuses repository toolchain/program overrides; missing dependencies fail with a fetch instruction. Generated references can be missing with build scripts disabled. SCIP can emit references inside inactive `#[cfg(test)]` code even when test definitions are omitted; inline test references can remain in architecture edges. `--include-tests` controls file exclusions only. Some `pub extern crate` facade links are absent from SCIP and therefore missing from the graph.
 
 **Java.** Detection counts `.java` files, ignoring tests and build output. Without `--depth`, each source directory is a module (`config.package_modules: true`); an explicit depth groups folders from the scan root. References resolve to declaring files, including same-package, qualified, static and inherited references. An import alone gives no edge, so an unused import has none. Edges are `runtime`. The compiler receives only selected sources, no external classpath or annotation processors. Missing external libraries, unsupported syntax or module layouts can leave a partial graph; `source.collector.unresolved` retains compiler error diagnostics and produces a warning; import-statement accounting is separate. Default excludes add `target/`, `out/`, `test/`, `*Test.java` and `*Tests.java`; `--include-tests` keeps tests. Hidden directories and node_modules are never traversed. Kotlin is not supported.
 
-**Elixir.** `archgraph scan . --language elixir --elixir elixir -o graph.json` reads `.ex` and `.exs` files under the scan root, including `apps/*/lib` in umbrella projects. The source root is the scan root (`config.source_root: "."`), so `lib/`, `apps/` and `src/` remain ordinary folders. Modules use the usual folder depth or explicit layout rules; they do not correspond one-to-one to Elixir `defmodule` names. Detection recognizes `mix.exs` and counts eligible source files alongside the other supported languages; use `--language elixir` in a mixed repository when needed.
+**Elixir.** `boundrail scan . --language elixir --elixir elixir -o graph.json` reads `.ex` and `.exs` files under the scan root, including `apps/*/lib` in umbrella projects. The source root is the scan root (`config.source_root: "."`), so `lib/`, `apps/` and `src/` remain ordinary folders. Modules use the usual folder depth or explicit layout rules; they do not correspond one-to-one to Elixir `defmodule` names. Detection recognizes `mix.exs` and counts eligible source files alongside the other supported languages; use `--language elixir` in a mixed repository when needed.
 
 The parser records module definitions and resolves scoped aliases (`as:`, grouped and nested aliases, and `__MODULE__`) when recording `import`, `require`, `use`, static remote calls and struct references. An unused alias alone does not add an edge. References in `@spec` and `@type` are `type` edges. Other static references, including compile-time `use` and `require`, conservatively use `runtime`: this label is a graph-analysis category, not a claim about Elixir's compilation phases. A module defined in multiple files produces edges to each definition because source order alone does not establish which definition will be compiled. Dynamic and unknown references in module-required positions remain in import accounting as unresolved. Unknown bare alias atoms used as data are omitted; table names and namespace prefixes do not establish module dependencies. Internal edges are deduplicated by file pair and kind; the ledger retains individual dependency-reference occurrences.
 
@@ -395,8 +395,8 @@ External identities are OTP application names proven by installed `.app` module-
 **report** is the one command for people: it scans with the same options as `scan`, applies rules from `--rules`, else from `<root>/layout.yaml` when it exists (it prints which file it used), writes `archgraph.json` (the scan document) and `archgraph.html` (the `render` page) into `--out-dir` (default `<root>/.archgraph/`; add it to `.gitignore`; it refuses to write when that folder or either file is a symbolic link, which a scanned repository could plant to aim the write elsewhere), and prints a short summary built from the scan document: files, modules and imports; with rules, forbidden and unplanned counts by rule; module cycles with the largest one's size, any leading registrar move (for a `grouping` cycle with a sentence naming the files the moved one shares its module with, and for an `entrypoint` a reminder to update deploy and config references), a line for each `grouping` cycle without a move (for Go, that packages are acyclic and the cycle exists only at the configured folder depth, so change `--depth` or the module grouping; three lines at most, then a count), and the break set of the cycle holding the lightest two-way pair, as imports to cut grouped by importing file (top three, then how many more; "approximate" when `exact` is false); findings by kind with counts and up to three subjects each; then the two paths, the page last. Headings are bold only when stdout is a terminal and `NO_COLOR` is unset. Exit codes are those of `check`: 1 when an import is forbidden and not in the known list, or a listed one no longer occurs, 0 otherwise, 2 on errors.
 
 ```sh
-$ archgraph report . --out-dir /tmp/arch
-archgraph report: .
+$ boundrail report . --out-dir /tmp/arch
+boundrail report: .
 rules: ./layout.yaml
 
 Graph
@@ -423,7 +423,7 @@ Wrote
 **check** prints forbidden and unplanned imports. Exit 1 when any import is forbidden and not in the [known list](#known-violations), or a listed one no longer occurs; 2 on usage or input errors.
 
 ```sh
-$ archgraph check graph.json --rules layout.yaml
+$ boundrail check graph.json --rules layout.yaml
 unplanned src/domains/cart/controller.ts -> src/lib/clock.ts (none)
 forbidden src/domains/checkout/controller.ts -> src/domains/checkout/client.ts (browser-no-server) via src/domains/checkout/client.ts -> src/domains/checkout/model.server.ts
 forbidden src/shared/format.ts -> src/domains/cart/types.ts (shared-no-domain)
@@ -435,21 +435,21 @@ forbidden src/shared/format.ts -> src/domains/cart/types.ts (shared-no-domain)
 **simulate** compares forbidden imports, unplanned imports, cycles and module metrics before and after moving one or more files (`kind: simulation`, with full `before` and `after` summaries). Repeat `--move FILE DEST` to apply several moves together. The destination path decides the new module and layer.
 
 ```sh
-archgraph simulate graph.json --move src/utils/dates.ts src/calendar/dates.ts
+boundrail simulate graph.json --move src/utils/dates.ts src/calendar/dates.ts
 ```
 
-**render** writes one self-contained HTML page. When the scan has a target (claims or moves), it opens on a review page: a verdict in sentences (the slices that follow every claim, the slices moved, the imports that break a rule, any cycles) beside a title block with the scan's path, language, collector, commit and rules, then a table of claims by slice (a tick where the claim holds, a red cell with the number of broken imports, hatching where the rule can't fail) whose red cells open the map on that slice's files and imports, a move cost table (files, import lines, names to export, imports in new package cycles, moved; sortable by any column) whose slices open the map with their destination folders, and the side panel's findings to review and next steps. The header's Review and Map switch changes view and is kept in the URL as `#review` or `#map`, so a link opens the same view; without a target the page opens on the map. The side panel opens with an assessment read from the scan: what holds up, what hurts (ranked by how much of the code it touches) and at most seven next steps, each with its numbers and a link to its evidence; each module panel opens with its role (foundation, hub, entry point and so on) and what is good, risky and next. Cohesion there is judged without imports into foundation modules, using `modules[].outgoing_to`. Below that is a zoomable map of modules as circles whose ring shows what archgraph checked (red: on either end of a forbidden import, or holding an import to cut or a registrar move for a module cycle; amber: the other members of a module cycle, or named by a finding; grey: nothing found), holding their files grouped by folder, with module imports as curved arrows (red forbidden, amber unplanned, dashed type-only). Zoom in (wheel, pinch, `+`/`-`) and the files, their imports and their names appear. Hover or click a module for its importers and imports, a file or an import for its verdict and rule; the side panel lists findings by kind and draws suggested moves with their before and after numbers. Search, filters for forbidden, unplanned and cycle imports, and hiding busy modules keep large graphs readable. The page makes no network requests.
+**render** writes one self-contained HTML page. When the scan has a target (claims or moves), it opens on a review page: a verdict in sentences (the slices that follow every claim, the slices moved, the imports that break a rule, any cycles) beside a title block with the scan's path, language, collector, commit and rules, then a table of claims by slice (a tick where the claim holds, a red cell with the number of broken imports, hatching where the rule can't fail) whose red cells open the map on that slice's files and imports, a move cost table (files, import lines, names to export, imports in new package cycles, moved; sortable by any column) whose slices open the map with their destination folders, and the side panel's findings to review and next steps. The header's Review and Map switch changes view and is kept in the URL as `#review` or `#map`, so a link opens the same view; without a target the page opens on the map. The side panel opens with an assessment read from the scan: what holds up, what hurts (ranked by how much of the code it touches) and at most seven next steps, each with its numbers and a link to its evidence; each module panel opens with its role (foundation, hub, entry point and so on) and what is good, risky and next. Cohesion there is judged without imports into foundation modules, using `modules[].outgoing_to`. Below that is a zoomable map of modules as circles whose ring shows what boundrail checked (red: on either end of a forbidden import, or holding an import to cut or a registrar move for a module cycle; amber: the other members of a module cycle, or named by a finding; grey: nothing found), holding their files grouped by folder, with module imports as curved arrows (red forbidden, amber unplanned, dashed type-only). Zoom in (wheel, pinch, `+`/`-`) and the files, their imports and their names appear. Hover or click a module for its importers and imports, a file or an import for its verdict and rule; the side panel lists findings by kind and draws suggested moves with their before and after numbers. Search, filters for forbidden, unplanned and cycle imports, and hiding busy modules keep large graphs readable. The page makes no network requests.
 
 ```sh
-archgraph render graph.json -o graph.html
+boundrail render graph.json -o graph.html
 ```
 
 **diff** compares two scan documents (`kind: diff`): per-module metric pairs `[old, new]`, added and removed modules, new and resolved cycles, new and resolved forbidden imports, new unplanned imports.
 
 ```sh
-archgraph diff before.json after.json
-archgraph diff before.json after.json --fail-on new-forbidden,new-cycles --format markdown >> "$GITHUB_STEP_SUMMARY"
-archgraph diff before.json after.json --html changes.html
+boundrail diff before.json after.json
+boundrail diff before.json after.json --fail-on new-forbidden,new-cycles --format markdown >> "$GITHUB_STEP_SUMMARY"
+boundrail diff before.json after.json --html changes.html
 ```
 
 - `--fail-on <list>`: comma list of `new-forbidden`, `new-cycles`, `new-unplanned`, `stale-known` (an entry of the new scan's [known list](#known-violations) that no forbidden import matches, listed under `stale_known` and in markdown as `### Known entries no longer forbidden`), `new-vacuous` (a [claim](#claims) vacuous in the new scan that the old scan states and that is not vacuous there, listed under `target.newly_vacuous` with the claim's notes and in markdown as `### Newly vacuous claims`; a claim the old scan lacks never counts); any other value is a usage error (exit 2). Exit 1 when any listed condition is in the diff, else 0. The document is printed either way.
@@ -486,15 +486,15 @@ must already exist. Policy-only rule effects are identified separately in the vi
 
 ## Service architecture
 
-`archgraph services <directory>` infers service boundaries, infrastructure clients, HTTP calls and
+`boundrail services <directory>` infers service boundaries, infrastructure clients, HTTP calls and
 queue topics from local source. It does not run the application or contact infrastructure.
 TypeScript, JavaScript, Go, and Python are supported. Reports stay incomplete because configuration,
 indirect calls and dynamic values can hide evidence.
 
 ```sh
-archgraph services . --format json
-archgraph services . --manifest services.yaml --output services-report.json
-archgraph services examples/services.yaml --format json
+boundrail services . --format json
+boundrail services . --manifest services.yaml --output services-report.json
+boundrail services examples/services.yaml --format json
 ```
 
 With no path, the command reads `./services.yaml` when that file exists, otherwise it infers `.`.
@@ -504,8 +504,8 @@ A file path always reads a declarative YAML or JSON manifest, preserving the exi
 To inspect the model in a browser, export its JSON and render it:
 
 ```sh
-archgraph services . --format json -o services-report.json
-archgraph render services-report.json -o services.html
+boundrail services . --format json -o services-report.json
+boundrail render services-report.json -o services.html
 ```
 
 The offline page has a searchable service catalog, directed calls, per-service client usages,
@@ -565,7 +565,7 @@ forbid:
 To check the authored rules in a script or CI job:
 
 ```sh
-archgraph services . --manifest services.yaml --fail-on-forbidden --format json -o services-report.json
+boundrail services . --manifest services.yaml --fail-on-forbidden --format json -o services-report.json
 ```
 
 `--fail-on-forbidden` emits the normal report and exits 1 when the full report contains a forbidden
@@ -578,10 +578,10 @@ forbid rules exits 2. Without the flag, a valid report exits 0 even when it cont
 To check only newly observed service violations, save reports before and after an edit:
 
 ```sh
-archgraph services . --manifest services.yaml --format json -o .archgraph/services-before.json
+boundrail services . --manifest services.yaml --format json -o .archgraph/services-before.json
 # Make the code change, then collect again.
-archgraph services . --manifest services.yaml --format json -o .archgraph/services-after.json
-archgraph diff .archgraph/services-before.json .archgraph/services-after.json --fail-on new-forbidden --format markdown
+boundrail services . --manifest services.yaml --format json -o .archgraph/services-after.json
+boundrail diff .archgraph/services-before.json .archgraph/services-after.json --fail-on new-forbidden --format markdown
 ```
 
 Service diffs evaluate both reports under the after-report's ordered rules. JSON uses
@@ -645,7 +645,7 @@ The report includes all calls with confidence and file:line evidence, strongly c
 
 Forbid rules use existing glob semantics: `*` stays within one namespace segment, `**` crosses `/`; captures such as `<name>` are not supported. The first matching rule of an applicable transport wins. An edge marked `allowed` means **no declared forbid matched**, not approval of architectural intent. Rule IDs must be unique. Unknown fields, duplicate services/exact call records, unknown endpoints, invalid protocols/confidence/globs, control characters and malformed evidence are errors. Service IDs and evidence paths use normalized relative names; evidence paths may contain spaces. No absolute, drive-letter, backslash, empty or dot path segments are accepted.
 
-JSON reports use `schema: archgraph/v1.1`, `kind: services`. Their transport-valued edges have their own schema definition; source-import kinds are unchanged. [Manifest schema](../schema/services.v1.schema.json) validates the input structure, while [the v1.1 schema](../schema/archgraph.v1.1.schema.json) validates reports. Cross-references and semantic constraints are additionally checked by Rust. Array indices in cycle and forbidden-call evidence are zero-based; Markdown numbers calls from one. Report source metadata says `collector: declarative`, `complete: false`.
+JSON reports use `schema: archgraph/v1.1`, `kind: services`. Their transport-valued edges have their own schema definition; source-import kinds are unchanged. [Manifest schema](../schema/services.v1.schema.json) validates the input structure, while [the v1.1 schema](../schema/boundrail.v1.1.schema.json) validates reports. Cross-references and semantic constraints are additionally checked by Rust. Array indices in cycle and forbidden-call evidence are zero-based; Markdown numbers calls from one. Report source metadata says `collector: declarative`, `complete: false`.
 
 This is a standalone report type. `render` accepts it, while import-only commands such as `check`, `simulate`, `tour` and `context` do not. There is no legacy-v1 service export. Valid reports exit 0 even when they contain cycles or forbidden calls; invalid declarations exit 2. JSON may be saved with `--output` while Markdown is printed; the output path must differ from the input manifest. All declared transports participate; file `--granularity` does not apply.
 
@@ -656,10 +656,10 @@ This is a standalone report type. `render` accepts it, while import-only command
 `infer-layout` drafts rules from the architecture observed in a saved v1 or v1.1 graph. **The result is a draft for review, not a statement of architectural intent.** Folder names do not prove intent, and missing imports or excluded files weaken evidence that a dependency is absent.
 
 ```sh
-archgraph infer-layout graph.json                       # print annotated YAML
-archgraph infer-layout graph.json --apply               # create ./layout.yaml
-archgraph infer-layout graph.json --apply layout.draft.yaml
-archgraph check graph.json --rules layout.draft.yaml     # after reviewing/editing
+boundrail infer-layout graph.json                       # print annotated YAML
+boundrail infer-layout graph.json --apply               # create ./layout.yaml
+boundrail infer-layout graph.json --apply layout.draft.yaml
+boundrail check graph.json --rules layout.draft.yaml     # after reviewing/editing
 ```
 
 Printing is the default and writes no files. `--apply` creates a new file and refuses to overwrite an existing file or symbolic link. Inference does not run collectors, inspect source, or change the graph.
@@ -671,8 +671,8 @@ Inference uses **all import kinds**, because existing layer rules apply to all k
 Sparse-boundary proposals require at least two files on each side and **100 potential file pairs** by default. Density is distinct observed importing-file/target-file pairs divided by source files × target files, across all kinds. A density at or below **0.01** qualifies. Comments give the evidence and list existing violating dependencies with source lines when available: adopting such a rule means reviewing and fixing those imports. Proposals already implied by layer ordering are omitted. At most **20** forbid proposals are printed. Slice claims (below) come first, then external-free layer proposals; the remaining internal proposals are ordered by density, potential pairs and module IDs. All share `--max-rules`, and comments report omitted proposals.
 
 ```sh
-archgraph infer-layout graph.json --min-potential-edges 500 --max-density 0.005
-archgraph infer-layout graph.json --max-rules 0           # layers only
+boundrail infer-layout graph.json --min-potential-edges 500 --max-density 0.005
+boundrail infer-layout graph.json --max-rules 0           # layers only
 ```
 
 When import accounting is present and at least one known external package exists elsewhere in the scan, inference also proposes `to: "pkg:**"` for an acyclic layer with **zero external imports and zero unresolved imports**. It requires `layer file count × distinct package identities observed repo-wide` to meet `--min-potential-edges` (default 100). Comments show the factors; these are file/package opportunities, not measured missing edges. No package rule is inferred from an unavailable ledger or unresolved absence evidence.
@@ -680,7 +680,7 @@ When import accounting is present and at least one known external package exists
 Inference also drafts claims from a direction that holds across sibling slices. For a folder `root` with at least `--min-slices` (default **5**) child folders, each child is a slice and the next path segment its role: a folder is kept (`ui/`), a file is cut at its first `.` or `_` (`handler_documents.go` is `handler`), and the role's glob is `<root>/<name>/<role>{/**,.*,_*}`. When A imports B in at least `--min-slices` slices, and `B ↛ A` binds at least `--min-slices` slices and holds in at least `--min-share` (default **0.8**) of them, the draft proposes the claim `infer-claim-N` from B to A with the reason `B does not import A (drafted from the graph; review intent)`. Its comments give the counts, as `# internal/<name>: handler imports service in 18 of 18 slices; service imports handler in 0 of 18 (holds in 18).`, and list each slice it breaks in and the imports that break it. Counts come from the rule as `check` evaluates it and include tests. Claims are ordered by bound slices, then share; each role pair gets its own id, and merging claims under one id is a review step. No claim is drafted for a direction no slice shows, such as a layer skipped: add those by hand.
 
 ```sh
-archgraph infer-layout graph.json --min-slices 3 --min-share 1
+boundrail infer-layout graph.json --min-slices 3 --min-share 1
 ```
 
 These thresholds limit over-fitting; zero observed imports still do not establish an intended boundary. Review the draft before making it a CI policy. No scan-schema or rules-format migration is required.
@@ -688,24 +688,24 @@ These thresholds limit over-fitting; zero observed imports still do not establis
 ## Live what-if in the map
 
 ```sh
-archgraph render graph.json -o graph.html
+boundrail render graph.json -o graph.html
 ```
 
 Open the HTML, enable **What-if**, zoom until files appear, and drag a file into a different module disc. The target module's common physical directory becomes the proposed destination folder; confirm it in the panel, especially for custom modules spanning several folders. The source basename is retained. A labeled file/folder form provides the same preview with keyboard or touch; it also accepts new folders.
 
-**Add to list** keeps the previewed move in an ordered move list. Each later preview applies every listed move plus the new one together, from the original graph, as `archgraph simulate` does with repeated `--move`. Moving a listed file again, by its original or its previewed path, replaces that item's destination; moving it back to its original folder removes it. Destinations are checked against the scan, so a path an earlier move vacates cannot be reused, and two moves cannot share a destination. Each item has a labeled **Remove** button and **Clear all** empties the list. Previews never change files or the saved layout.
+**Add to list** keeps the previewed move in an ordered move list. Each later preview applies every listed move plus the new one together, from the original graph, as `boundrail simulate` does with repeated `--move`. Moving a listed file again, by its original or its previewed path, replaces that item's destination; moving it back to its original folder removes it. Destinations are checked against the scan, so a path an earlier move vacates cannot be reused, and two moves cannot share a destination. Each item has a labeled **Remove** button and **Clear all** empties the list. Previews never change files or the saved layout.
 
 The panel compares total cycles (module and within-module file SCCs), largest module cycle, distinct two-way module pairs, forbidden/unplanned imports, and changed module instability. Map links and health rings show preview cycle/rule evidence. Original findings are hidden until preview mode closes: heuristics such as seams, placement, ownership, cut sets, public surfaces and package readiness are **not** recomputed in JS. A new module appears in results; module disc positions stay fixed. Clear restores original paths, positions, counts and health. Preview moves are not persisted to browser layout storage and never edit the repository. Ordinary dragging outside What-if still arranges the map.
 
 A preview rewrites the path and import endpoints, including written barrel destinations. Module assignment, runtime/all-kind SCCs, test exclusions, weighted barrel-aware metrics, and supported glob/capture rules follow the Rust pipeline. Rules use their normal precedence, including kind filters, reachable forbids, public entries, strict entrypoints and layers. A layout written for a target previews too: `moves`, rule `source`, `layer-reason` and `early-smells` are accepted, a `<name>` capture may sit inside braces, and when the rules only forbid, an import no rule decides is not flagged unplanned, as on the map. With a target in the scan, the panel also shows each claim's verdict and broken imports and the slices that conform and have moved after the moves, with the scan's counts beside any that change; the move cost stays the scan's. A claim with a `pkg:`, `category:` or `global:` rule keeps its scan verdict, marked "package rules are not previewed", and the conforming count then stays the scan's, marked "(not previewed)". A residual SCC contained in a previous SCC is not called new cycle membership; a new or expanded component is flagged. This membership comparison is a preview explanation, not a CI verdict.
 
-**Rust remains authoritative.** Grab-bag refinement, legacy boundary assumptions, unknown schema/rule fields and unsupported glob syntax visibly mark a limited/raw preview and withhold the no-new-cycle assurance. Dynamic/unresolved imports remain invisible. The preview does not rewrite import strings, check build compatibility, recompute symbol surfaces or execute code. The export covers every previewed move, shell-quoted: one `archgraph simulate graph.json --move A B --move C D` command, one script with `mkdir -p` for destination folders the scan does not contain and a `git mv --` per move, the layout `moves` for the list (exact paths, to paste above other moves; moves a rule cannot express become comments), and the layout rule changes: for each moved file, the `layers` globs and `forbid` `from`/`to` globs embedded in the scan that it stops and starts matching, read with the preview's glob matcher (`src/domain/rules.ts: leaves layer "src/domain/**", enters layer "src/adapters/**"`). A scan without embedded rules says so in one line. With several moves, the `simulate` JSON keeps `move` (the first) and adds `moves`, every move in order. Verify the command before running the script; set its graph JSON path and run from the scanned root. Moving files can still require import and build-configuration edits. Clipboard-denied and local-file environments fall back to selecting the command for manual copying.
+**Rust remains authoritative.** Grab-bag refinement, legacy boundary assumptions, unknown schema/rule fields and unsupported glob syntax visibly mark a limited/raw preview and withhold the no-new-cycle assurance. Dynamic/unresolved imports remain invisible. The preview does not rewrite import strings, check build compatibility, recompute symbol surfaces or execute code. The export covers every previewed move, shell-quoted: one `boundrail simulate graph.json --move A B --move C D` command, one script with `mkdir -p` for destination folders the scan does not contain and a `git mv --` per move, the layout `moves` for the list (exact paths, to paste above other moves; moves a rule cannot express become comments), and the layout rule changes: for each moved file, the `layers` globs and `forbid` `from`/`to` globs embedded in the scan that it stops and starts matching, read with the preview's glob matcher (`src/domain/rules.ts: leaves layer "src/domain/**", enters layer "src/adapters/**"`). A scan without embedded rules says so in one line. With several moves, the `simulate` JSON keeps `move` (the first) and adds `moves`, every move in order. Verify the command before running the script; set its graph JSON path and run from the scanned root. Moving files can still require import and build-configuration edits. Clipboard-denied and local-file environments fall back to selecting the command for manual copying.
 
 The HTML remains self-contained and offline, including maps embedded in history timelines. No runtime package or schema migration is required. A fixture test rebuilds canonical Rust results and compares them with [the committed parity cases](../tests/fixtures/whatif-parity.json); Node tests run those cases against the exact JS embedded in reports. Regenerate intentionally with `UPDATE_WHATIF_FIXTURES=1 cargo test --test whatif`, then run `node --test tests/whatif-parity.test.cjs tests/whatif-ui.test.cjs`. Grab-bag fixtures verify the limitation warning rather than claim raw SCC parity with refined Rust cycles.
 
 ### Record the demo
 
-The [capture script](../scripts/record-whatif-demo.cjs) uses a development-only Playwright/Chromium installation and `img2webp` (WebP tools); these are not archgraph dependencies. It drives a real browser mouse drag, clicks Copy, clears the preview, and asserts the browser has no errors and original state returns. It does not paint or fabricate the result.
+The [capture script](../scripts/record-whatif-demo.cjs) uses a development-only Playwright/Chromium installation and `img2webp` (WebP tools); these are not boundrail dependencies. It drives a real browser mouse drag, clicks Copy, clears the preview, and asserts the browser has no errors and original state returns. It does not paint or fabricate the result.
 
 ```sh
 python3 - <<'PY' > /tmp/whatif-demo.json
@@ -713,7 +713,7 @@ import json
 cases = json.load(open('tests/fixtures/whatif-parity.json'))
 print(json.dumps(next(c['document'] for c in cases if c['name'] == 'cut-module-cycle')))
 PY
-archgraph render /tmp/whatif-demo.json -o /tmp/whatif-demo.html
+boundrail render /tmp/whatif-demo.json -o /tmp/whatif-demo.html
 node scripts/record-whatif-demo.cjs /tmp/whatif-demo.html demo.webp a/three.ts b
 ```
 
@@ -722,11 +722,11 @@ Set `PLAYWRIGHT_MODULE`, `CHROMIUM_EXECUTABLE` or `IMG2WEBP` to existing tool pa
 ## Reading order
 
 ```sh
-archgraph tour                                      # .archgraph/archgraph.json
-archgraph tour graph.json > TOUR.md                  # dependencies before their importers
-archgraph tour graph.json --reverse                 # entrypoints before dependencies
-archgraph tour graph.json --agent                   # include saved export names and locations
-archgraph tour graph.json --all-kinds                # include type, lazy and re-export imports
+boundrail tour                                      # .archgraph/archgraph.json
+boundrail tour graph.json > TOUR.md                  # dependencies before their importers
+boundrail tour graph.json --reverse                 # entrypoints before dependencies
+boundrail tour graph.json --agent                   # include saved export names and locations
+boundrail tour graph.json --all-kinds                # include type, lazy and re-export imports
 ```
 
 `tour` prints Markdown from a saved v1 or v1.1 scan without collecting imports, reading source bodies, or writing files. No schema migration or new dependencies are required. Runtime edges define the reading graph by default; a saved `config.all_kinds` or `--all-kinds` includes all recorded kinds. Dependencies use resolved semantic destinations, so an import through a resolved barrel points at its defining module. Included test files and external packages do not become stops or affect counts.
@@ -740,9 +740,9 @@ Every stop explains how many distinct outside modules import it and how many it 
 ## Context pruning
 
 ```sh
-archgraph scan . --symbols -o .archgraph/archgraph.json
-archgraph context --task "Fix billing tax rounding" --files src/billing/tax.ts --budget 40k
-archgraph context --graph graph.json --root . --task "Fix billing tax rounding" --files src/billing/tax.ts --symbols TaxRate --budget 20k --depth 3 --format markdown
+boundrail scan . --symbols -o .archgraph/archgraph.json
+boundrail context --task "Fix billing tax rounding" --files src/billing/tax.ts --budget 40k
+boundrail context --graph graph.json --root . --task "Fix billing tax rounding" --files src/billing/tax.ts --symbols TaxRate --budget 20k --depth 3 --format markdown
 ```
 
 `context` reads supported saved scans and prints a standalone JSON reading plan in the current schema (`kind: context`); `--format markdown` prints a pasteable plan. It does not modify files or run collectors. Use the source root corresponding to the saved graph. Current files supply source text, sizes and layouts; graph dependencies and export names reflect the saved scan, so rescan after structural changes. JSON contains ordered `entries` with `tier`, `path`, `reason`, `tokens`, `mode`, optional inline `content`, `depth` and `score`, plus omissions and limitations. Body entries name files for the agent to open; they do not inline their bodies.
@@ -753,7 +753,7 @@ Root and seed-ancestor `layout.yaml` files and the saved graph's embedded rules 
 
 Budgets accept positive integers or decimal suffixes `k` (1000) and `m` (1000000). Estimated tokens use UTF-8 bytes / 4, rounded up, including task/framing, mandatory constraints, selected bodies, and inline export summaries. Greedy packing guarantees `used_tokens <= budget` for this estimate, not an exact model tokenizer limit or the serialized JSON envelope. Large required files may fit only as exports or be omitted. Missing dynamic dependencies and stale graph evidence still require judgment.
 
-The Python 3 hook examples require a POSIX host. The project skill is [archgraph-context](../skills/archgraph-context/SKILL.md). Editor integration is opt-in: merge [Claude settings](../integrations/claude-context.settings.json) into project `.claude/settings.json`, or [Cursor hooks](../integrations/cursor-context.hooks.json) into `.cursor/hooks.json` and copy [the rule](../integrations/cursor-context.mdc) to `.cursor/rules/archgraph-context.mdc`. Keep `integrations/context-hook.py` in the project. Install the skill in the editor's project skill directory when desired. Nothing is installed automatically.
+The Python 3 hook examples require a POSIX host. The project skill is [boundrail-context](../skills/boundrail-context/SKILL.md). Editor integration is opt-in: merge [Claude settings](../integrations/claude-context.settings.json) into project `.claude/settings.json`, or [Cursor hooks](../integrations/cursor-context.hooks.json) into `.cursor/hooks.json` and copy [the rule](../integrations/cursor-context.mdc) to `.cursor/rules/boundrail-context.mdc`. Keep `integrations/context-hook.py` in the project. Install the skill in the editor's project skill directory when desired. Nothing is installed automatically.
 
 Claude `UserPromptSubmit` receives a compact, constraints-first context handoff and artifact paths; it must read the plan. Cursor `beforeSubmitPrompt` prepares artifacts but cannot inject context. Its asynchronous `sessionStart` guidance is best effort; the always-apply rule reruns the CLI when an artifact's workspace, task, generation or seeds cannot be verified. Hook subprocesses time out after eight seconds and fail softly; failure invalidates previous context for that conversation. `ARCHGRAPH_BINARY`, `ARCHGRAPH_CONTEXT_GRAPH`, `ARCHGRAPH_CONTEXT_BUDGET`, and optional `ARCHGRAPH_CONTEXT_FILES` (JSON array for Claude seeds) configure the adapter. Missing graphs do not block normal editing. See [the preregistered PR benchmark](../benchmarks/CONTEXT.md) for recall methodology and results.
 
@@ -762,10 +762,10 @@ Claude `UserPromptSubmit` receives a compact, constraints-first context handoff 
 `package-splits` ranks physical folder subtrees that could become packages, including folders spanning several graph modules. **Import-level ready** describes the observed dependency boundary; it does not mean extraction, compilation, packaging, or deployment has been verified.
 
 ```sh
-archgraph package-splits graph.json --root .
-archgraph package-splits graph.json --root . --format json
-archgraph package-splits graph.json --root . --output packages.json
-archgraph render packages.json -o packages.html
+boundrail package-splits graph.json --root .
+boundrail package-splits graph.json --root . --format json
+boundrail package-splits graph.json --root . --output packages.json
+boundrail render packages.json -o packages.html
 ```
 
 Each candidate needs at least two production files, a non-barrel implementation, an internal dependency, and at least one importing production module outside the folder. The score is **distinct importing modules × production files**. Weighted cohesion must be at least **0.8** by default: canonical internal dependencies divided by internal plus unextracted outgoing dependencies. Known dependencies on separate existing packages are externalized for this factor. Written barrel paths and import-ledger destinations still constrain the physical boundary; resolving a symbol into the folder cannot hide a dependency on an outside facade.
@@ -777,8 +777,8 @@ Each candidate needs at least two production files, a non-barrel implementation,
 All import kinds constrain the boundary, including lazy/type imports. Included tests inside the folder contribute boundary dependencies, while production files determine size, cohesion and fan-in. The cycle simulation removes the candidate from the remainder, compares SCC membership with the original graph, and also checks the collapsed package boundary after the listed cuts. Counts can increase when one SCC splits; that alone is not a new cycle. Simulation uses runtime imports by default, or all kinds with `--all-kinds`, and excludes test endpoints. Its SCC counts are for the physical dependency graph, before grab-bag reclassification.
 
 ```sh
-archgraph package-splits graph.json --root . --max-cuts 0  # free boundaries only
-archgraph package-splits graph.json --root . --min-cohesion 0.9 --limit 10
+boundrail package-splits graph.json --root . --max-cuts 0  # free boundaries only
+boundrail package-splits graph.json --root . --min-cohesion 0.9 --limit 10
 ```
 
 `--root` is the **directory originally scanned**, which may be a subfolder of the Git repository. Static inspection supports npm/Yarn workspace declarations, pnpm patterns and exclusions, and explicit Nx project metadata. A [configured Nx project](https://nx.dev/docs/reference/project-configuration) is tracked separately from a manifest-backed package; workspace layout conventions alone are not a package inventory. Existing package/project roots are not suggested again, and ancestors spanning those roots are skipped. A smaller folder inside an existing package can still be a candidate. Nx plugins and package-manager commands are never executed. Unsupported, skipped or incomplete metadata is reported.
@@ -792,8 +792,8 @@ No scan-version migration is required: `package_splits` and `source.scan_root` a
 ## Exclusions and included tests
 
 ```sh
-archgraph show-excludes
-archgraph scan . --include-tests --include-generated -o graph.json
+boundrail show-excludes
+boundrail scan . --include-tests --include-generated -o graph.json
 ```
 
 The defaults cover test names/directories (`*_test.go`, `*.test.*`, `*.spec.*`, `test_*.py`, `*_test.py`, `test/`, `tests/`, `__tests__/`, `conftest.py`, `*_test.exs`, `test_helper.exs`), generated code (`*.generated.*`, `*_pb.*`, `*.pb.go` and language-specific generated files), build/dependency directories (`dist/`, `build/`, `node_modules/`, `vendor/`, `.venv/`, `_build/`, `deps/`), and fixtures, stories and examples. Use `show-excludes` for the complete list. Git ignore rules, including nested `.gitignore` files, and `.archgraphignore` also filter files; `.archgraphignore` uses gitignore syntax, including directory patterns, comments and negation.
@@ -811,10 +811,10 @@ Rust defaults also exclude `tests.rs`, `*_tests.rs`, `*_test.rs` and `test_suppo
 ## Import resolution accounting
 
 ```sh
-archgraph report .
-archgraph unresolved .archgraph/archgraph.json
-archgraph unresolved graph.json --json
-archgraph scan . --language python --package app --python-path lib --python-path shared -o graph.json
+boundrail report .
+boundrail unresolved .archgraph/archgraph.json
+boundrail unresolved graph.json --json
+boundrail scan . --language python --package app --python-path lib --python-path shared -o graph.json
 ```
 
 Fresh collector output carries an `imports` ledger independent of symbol-reference edges. An explicit module specifier is counted once per occurrence: `from x import a, b` is one clause, while `import x, y` names two specifiers. Repeated imports on different lines remain separate; a single Go import can produce many reference edges. `report` prints the total imports, resolved count and percentage, and unresolved count. Each unresolved entry retains the importing file, line, raw specifier, kind and `reason`: `alias` (unresolved configured alias), `missing` (no proven destination), `dynamic` (computed specifier), or `native` (unsupported native source resolution). A known local namespace package can resolve without a file edge and carries its root-relative directory as `namespace`.
@@ -847,10 +847,10 @@ forbid:
 ```
 
 ```sh
-archgraph scan . --rules layout.yaml -o graph.json
-archgraph check graph.json
-archgraph report . --rules layout.yaml
-archgraph render graph.json -o graph.html
+boundrail scan . --rules layout.yaml -o graph.json
+boundrail check graph.json
+boundrail report . --rules layout.yaml
+boundrail render graph.json -o graph.html
 ```
 
 Match identities actually present in `external_nodes[].package`: package roots and subpaths vary by collector and ecosystem. For Go, use full import paths such as `gorm.io/gorm`; `gorm.io/gorm{,/**}` covers that root and its subpackages. `gorm` is not an inferred alias. Standard-library packages count when the collector identifies them as external; external does not mean downloaded or third-party licensed code.
@@ -884,15 +884,15 @@ grabbag:
   internal_edges_per_file_max: 0.5
 ```
 
-For a cycle containing a candidate, archgraph splits that folder into per-file units temporarily and verifies which cycles survive. A `cycle-via-grabbag` finding is emitted only when this removes or shrinks the original module cycle. Its evidence lists original members, candidate factors, involved files/imports and any remaining cycles, with a suggestion to split the folder. Surviving cycles and their cuts remain ordinary cycle findings, using edges verified within the split components. If overlapping surviving components map back into the full original module cycle, archgraph conservatively retains the original cycle instead of claiming the folder split fixed it.
+For a cycle containing a candidate, boundrail splits that folder into per-file units temporarily and verifies which cycles survive. A `cycle-via-grabbag` finding is emitted only when this removes or shrinks the original module cycle. Its evidence lists original members, candidate factors, involved files/imports and any remaining cycles, with a suggestion to split the folder. Surviving cycles and their cuts remain ordinary cycle findings, using edges verified within the split components. If overlapping surviving components map back into the full original module cycle, boundrail conservatively retains the original cycle instead of claiming the folder split fixed it.
 
 Test modules are never candidates, and test edges never enter these cycle probes. With `--include-tests`, visible weighted fan-in can still include test consumers, consistently with ordinary metric calculations; candidate selection alone is not proof of a cycle artifact. The verified split is the deciding evidence.
 
 Choose graph grouping explicitly with the global option:
 
 ```sh
-archgraph --granularity file scan . -o files.json
-archgraph --granularity folder render files.json -o folders.html
+boundrail --granularity file scan . -o files.json
+boundrail --granularity folder render files.json -o folders.html
 ```
 
 `folder` is the default grouping by depth or layout `modules`; `file` makes each source file its own graph module and overrides those grouping choices. Folder-based layout policy boundaries still govern rule verdicts, so switching the view does not weaken a boundary. The choice is saved in the scan config and replayed by historical probes and caches. File mode already exposes individual units and does not run the temporary grab-bag split again.
@@ -920,9 +920,9 @@ Ownership qualifies the existing `misplaced-file` finding. It supports a destina
 ## Architecture bisect
 
 ```sh
-archgraph bisect graph.json --root path/to/repo --finding 0 --format markdown
-archgraph bisect graph.json --root path/to/repo --edge src/a.ts src/b.ts --from v1.0
-archgraph bisect graph.json --root path/to/repo --finding 0 --github
+boundrail bisect graph.json --root path/to/repo --finding 0 --format markdown
+boundrail bisect graph.json --root path/to/repo --edge src/a.ts src/b.ts --from v1.0
+boundrail bisect graph.json --root path/to/repo --finding 0 --github
 ```
 
 `--finding` is the zero-based index in the saved graph; the first cycle finding is selected by default. `--edge` selects a forbidden import. Optional collector options such as `--depcruise`, `--python` and `--java` select the tooling. Probes preserve the graph's module boundaries, exclusion mode, selected Python package/Rust features and embedded rules, so a forbidden-edge introduction is judged under that fixed policy, not a claim that the rule existed historically.
@@ -931,16 +931,16 @@ The engine tries rename-following pickaxe candidates for supported import syntax
 
 Searches use first-parent history, default to two years and at most 10,000 commits, and have a `--max-scans` budget of 64. `--from` supplies an inclusive lower revision. Presence at the lower boundary, missing collectors/dependencies, ambiguous rename identities and exhausted budgets remain explicit unknown/boundary results. Binary fallback verifies a local transition; nonmonotonic history means it does not prove the earliest-ever birth or uninterrupted presence. A later reintroduction can be a separate transition. Squash/merge authorship describes the Git commit, not necessarily the original contributor.
 
-`report` adds bounded provenance to findings automatically when live Git history is available. All findings can be investigated by their kind/subject predicate; dates appear only after a verified transition. Reports share 64 historical collector calls and reuse probe results across findings. `--no-provenance` skips this cost. Recorded collector input cannot describe historical commits. The output's guard statement is conditional on the checked cycle/rule policy; it does not claim that archgraph CI was installed or ran on the historical PR.
+`report` adds bounded provenance to findings automatically when live Git history is available. All findings can be investigated by their kind/subject predicate; dates appear only after a verified transition. Reports share 64 historical collector calls and reuse probe results across findings. `--no-provenance` skips this cost. Recorded collector input cannot describe historical commits. The output's guard statement is conditional on the checked cycle/rule policy; it does not claim that boundrail CI was installed or ran on the historical PR.
 
 ## Hotspots
 
 ```sh
-archgraph scan . --hotspots --hotspot-authors -o graph.json
-archgraph report . --hotspots='12 months ago'
-archgraph hotspots graph.json --root . --since '12 months ago' --authors --top 20
-archgraph hotspots graph.json --root . --format json -o enriched.json
-archgraph render enriched.json -o hotspots.html
+boundrail scan . --hotspots --hotspot-authors -o graph.json
+boundrail report . --hotspots='12 months ago'
+boundrail hotspots graph.json --root . --since '12 months ago' --authors --top 20
+boundrail hotspots graph.json --root . --format json -o enriched.json
+boundrail render enriched.json -o hotspots.html
 ```
 
 The Git pass records per-file commits, added/deleted lines, distinct mailmapped author emails and fix-message commits, following detected renames. Only files in the scan participate in normalization; excluded generated/vendored files cannot dominate the score. The default window ends at the graph's commit, not today's date, so historical scans remain reproducible. Relative windows accept `<N> days/weeks/months/years ago`; twelve months is 365 days. `YYYY-MM-DD` dates are also accepted and start at 00:00 UTC.
@@ -964,17 +964,17 @@ Shallow clones report a history gap and zero churn rather than treating the boun
 Collect symbol evidence when scanning, then inspect the saved graph:
 
 ```sh
-archgraph scan . --symbols -o graph.json
-archgraph surface graph.json
-archgraph surface graph.json --max-symbols 50 --format json -o enriched.json
-archgraph render enriched.json -o surface.html
+boundrail scan . --symbols -o graph.json
+boundrail surface graph.json
+boundrail surface graph.json --max-symbols 50 --format json -o enriched.json
+boundrail render enriched.json -o surface.html
 ```
 
-`surface` prints a per-module report to standard output; `--format json` selects JSON. `-o` saves the enriched **scan document** for `render` and `check`, rather than redirecting the report. `archgraph report . --symbols` collects the same evidence and includes it in the report and map.
+`surface` prints a per-module report to standard output; `--format json` selects JSON. `-o` saves the enriched **scan document** for `render` and `check`, rather than redirecting the report. `boundrail report . --symbols` collects the same evidence and includes it in the report and map.
 
 For each module, the report lists its entrypoints, exposed symbols and their definitions, symbols used from outside the module, and the importing files. Explicit `entrypoints` or existing `public` rules define the intended facade. Otherwise a top-level TypeScript/JavaScript `index` supplies its inferred facade. Python `__init__.py` is an inferred facade only when the saved symbol index proves named exports: an empty or docstring-only initializer does not make ordinary submodule imports violations. Explicit `entrypoints` and `public` policies still apply to empty entry files. A module without a facade exposes its direct file exports or Go package exports. Inferred surface findings are observations, not approved layout policy.
 
-- **Could be internal:** an exposed symbol has no external consumer **inside this scan**. These suggestions appear only when symbol coverage is complete across the scan. This does not prove that a published library's API is unused by downstream projects, and archgraph never removes exports automatically.
+- **Could be internal:** an exposed symbol has no external consumer **inside this scan**. These suggestions appear only when symbol coverage is complete across the scan. This does not prove that a published library's API is unused by downstream projects, and boundrail never removes exports automatically.
 - **Deep import:** an outside file bypasses a module's facade. The report lists the importer, target and available symbol names, and suggests importing through the entrypoint, re-exporting the required symbol or declaring a boundary rule.
 - **Oversized surface:** external consumers touch more than `--max-symbols` distinct symbols (default 50). This suggests a facade around the operations those consumers need; it does not count every unused export toward the threshold.
 
@@ -987,12 +987,12 @@ entrypoints:
 ```
 
 ```sh
-archgraph check graph.json --rules layout.yaml
+boundrail check graph.json --rules layout.yaml
 ```
 
 The value names one exact entry file. Captures also work: `"src/domains/<name>/**": "src/domains/<name>/index.ts"` binds the same domain on both sides. A bypass is forbidden even when the entry file is missing. Explicit `forbid` rules take precedence; `entrypoints` rejects bypasses before `allow` rules. Existing `public` rules retain their earlier precedence, allowing explicit `allow` exceptions. Entry imports remain subject to layer rules. See [rule ordering](#rules-file).
 
-Symbol collection uses the installed TypeScript compiler to resolve named/default imports, re-exports and `tsconfig` path aliases; Python's standard `ast` to read `from` imports, static `__all__` and star re-exports; and Go's `go/types` to resolve exported functions, types, methods and fields with qualified names. Go method analysis conservatively retains exports that implicit interface satisfaction might need. The symbol helpers read source without executing project code or fetching dependencies; the underlying file collector still has its [usual trust requirements](#archgraph-guide).
+Symbol collection uses the installed TypeScript compiler to resolve named/default imports, re-exports and `tsconfig` path aliases; Python's standard `ast` to read `from` imports, static `__all__` and star re-exports; and Go's `go/types` to resolve exported functions, types, methods and fields with qualified names. Go method analysis conservatively retains exports that implicit interface satisfaction might need. The symbol helpers read source without executing project code or fetching dependencies; the underlying file collector still has its [usual trust requirements](#boundrail-guide).
 
 Dynamic Python export lists, unresolved stars, namespace ambiguity and missing dependencies can make coverage incomplete. Rust, Java and Elixir currently report an explicit symbol-collection gap. When `complete` is false, counts are provisional and **all could-be-internal suggestions are withheld**. Missing data can understate the surface, while namespace consumers and implicit Go interfaces conservatively credit extra symbols as used. File-level deep-import evidence remains available without symbols: `surface` accepts older scan documents and reports the missing coverage.
 
@@ -1001,11 +1001,11 @@ The map uses a bounded logarithmic ring width (1.25–6 pixels) for exposed symb
 ## History
 
 ```sh
-archgraph history . --append                         # monthly first commits, up to 24 points
-archgraph history . --sample commits --every 50 --limit 30
-archgraph history . --sample tags --limit 20
-archgraph history . --since 2024-01-01 --hotspots --annotate
-archgraph history . --diff v3.0 v4.0                 # release-note Markdown
+boundrail history . --append                         # monthly first commits, up to 24 points
+boundrail history . --sample commits --every 50 --limit 30
+boundrail history . --sample tags --limit 20
+boundrail history . --since 2024-01-01 --hotspots --annotate
+boundrail history . --diff v3.0 v4.0                 # release-note Markdown
 ```
 
 The default selects the first first-parent commit of each month over two years ending at the selected `--rev` (default `HEAD`). `--sample commits` restores commit-by-commit sampling; `--every N` chooses intervals in that mode. Tags select release commits. `--limit` caps new selected samples. `--append` retains earlier cached points beyond that cap and scans only missing points. A root inside a monorepo scans that same subdirectory at every point. One language is selected from the current root (or `--language`) for the whole timeline; unrelated language tooling is not executed for cache metadata.
@@ -1014,20 +1014,20 @@ The default selects the first first-parent commit of each month over two years e
 
 Full scan documents and sample indices are cached under `.archgraph/history/`. Cache identity includes scan root/options, current binary and dependency lock, explicit rules, selected external collector entry points and tool versions. Explicit `--rules` stays fixed; otherwise rules and ownership come from each commit. `--diff OLD NEW` scans those endpoints and reports new/resolved cycles and forbidden imports in Markdown. Its rule comparison uses each endpoint's own rules unless explicitly fixed.
 
-Snapshots are collected in a disposable clone. The working tree, index, refs and registered worktrees remain unchanged. Failed snapshots are skipped, logged and listed in the report; an entirely failed selection exits 2. Shallow repositories expose only available commits. Ignored dependency installations and submodules are absent from snapshots; archgraph does not install/build historical projects automatically. TypeScript reuses an installed collector from the original checkout or `--depcruise`; Rust snapshots need cached locked dependencies. Missing tooling at old revisions is recorded as a failed point, not a fabricated empty graph.
+Snapshots are collected in a disposable clone. The working tree, index, refs and registered worktrees remain unchanged. Failed snapshots are skipped, logged and listed in the report; an entirely failed selection exits 2. Shallow repositories expose only available commits. Ignored dependency installations and submodules are absent from snapshots; boundrail does not install/build historical projects automatically. TypeScript reuses an installed collector from the original checkout or `--depcruise`; Rust snapshots need cached locked dependencies. Missing tooling at old revisions is recorded as a failed point, not a fabricated empty graph.
 
 [The monthly workflow](../.github/workflows/history.yml) restores cached snapshots, runs append on a schedule and uploads the report as an artifact. It is a repository workflow definition; local verification does not execute GitHub Actions.
 
 ## Impact
 
-`archgraph impact BASE..HEAD` reports the blast radius of a committed diff: changed files, affected modules and files with shortest reverse-import depth and a decaying weight, selected tests, suggested reviewers, and cycle/hotspot risk. It leaves your checkout untouched and scans committed endpoints in a disposable local clone. It never installs dependencies or runs selected tests.
+`boundrail impact BASE..HEAD` reports the blast radius of a committed diff: changed files, affected modules and files with shortest reverse-import depth and a decaying weight, selected tests, suggested reviewers, and cycle/hotspot risk. It leaves your checkout untouched and scans committed endpoints in a disposable local clone. It never installs dependencies or runs selected tests.
 
 ```sh
-archgraph impact origin/main..HEAD
-archgraph impact v1.0..v1.1 --root path/to/repo --max-depth 5 --format json
-archgraph impact origin/main..HEAD --tests '**/checks/*.ts' --tests-output tests.txt -o impact.json
-archgraph impact origin/main..HEAD --max-depth 5 --fail-on-depth 3
-archgraph impact origin/main..HEAD --language go --go-packages-output packages.txt
+boundrail impact origin/main..HEAD
+boundrail impact v1.0..v1.1 --root path/to/repo --max-depth 5 --format json
+boundrail impact origin/main..HEAD --tests '**/checks/*.ts' --tests-output tests.txt -o impact.json
+boundrail impact origin/main..HEAD --max-depth 5 --fail-on-depth 3
+boundrail impact origin/main..HEAD --language go --go-packages-output packages.txt
 ```
 
 Named/default TypeScript imports through pure re-export barrels are resolved to source declarations using the installed TypeScript compiler. Namespace imports, side-effect imports, unresolved symbols and changes to barrels retain conservative edges. The helper parses and typechecks source without executing it; if the compiler is unavailable, output records the fallback. Reverse imports consume one step; remaining pure re-export hops consume none, so an `index.ts` does not hide consumers behind an artificial depth limit. Depth defaults to 3; weight is `1 / (1 + depth)`, including changed files at depth 0. Module depth is the minimum across affected files. `--depth` retains its scan meaning (module folder depth); use `--max-depth` for traversal. Normal analysis succeeds even with risk; `--fail-on-depth N` exits 1 when a module's shortest depth exceeds N. Set `--max-depth` greater than N. Invalid inputs and collector failures exit 2.
@@ -1041,14 +1041,14 @@ Reviewers prefer CODEOWNERS for each affected module; modules without declared o
 Reuse existing clean endpoint scans to avoid collectors:
 
 ```sh
-archgraph impact BASE..HEAD --graph head.json --base-graph base.json
+boundrail impact BASE..HEAD --graph head.json --base-graph base.json
 ```
 
 The recorded commit must match the endpoint, the graph must be clean, and `--root` must match the scanned directory within the repository. Base traversal preserves deleted files and removed imports; returned test paths are filtered to files still present at head. Live scans attempt both endpoints; unavailable base collectors produce a limitation rather than dropping the head result. A saved head graph alone cannot recover missing base dependencies. Counts follow each snapshot's module boundaries, so renamed folders can appear separately.
 
 Results mean **at least these**, not an exhaustive list. Dynamic imports missing from collectors, dependency injection, reflection, build conditions and runtime wiring can add impact. Barrel edges without enough symbol information retain conservative consumers. Vendored/generated paths and explicit scan exclusions stay excluded. This is dependency evidence, not a guarantee that running selected tests alone is sufficient.
 
-For GitHub Actions, use the PR's actual head and base commits (checkout's default merge commit is different). Fetch both endpoints and install archgraph and its collector as usual. Have a read-only analysis job produce clean `head.json` and `base.json` scans with tests included, then pass those artifacts to a posting job:
+For GitHub Actions, use the PR's actual head and base commits (checkout's default merge commit is different). Fetch both endpoints and install boundrail and its collector as usual. Have a read-only analysis job produce clean `head.json` and `base.json` scans with tests included, then pass those artifacts to a posting job:
 
 ```yaml
 permissions:
@@ -1061,7 +1061,7 @@ steps:
       GH_TOKEN: ${{ github.token }}
       IMPACT_BASE: ${{ github.event.pull_request.base.sha }}
       IMPACT_HEAD: ${{ github.event.pull_request.head.sha }}
-    run: archgraph impact "$IMPACT_BASE..$IMPACT_HEAD" --graph head.json --base-graph base.json --github-actions --tests-output tests.txt -o impact.json
+    run: boundrail impact "$IMPACT_BASE..$IMPACT_HEAD" --graph head.json --base-graph base.json --github-actions --tests-output tests.txt -o impact.json
 ```
 
 `--github-actions` writes `GITHUB_STEP_SUMMARY` and creates a new PR comment via [`gh pr comment --body-file`](https://cli.github.com/manual/gh_pr_comment); it takes the PR number from `GITHUB_EVENT_PATH`, or `--pr N`. Posting failures (including read-only fork tokens) become limitations and leave analysis successful. JSON and exported files remain available for artifact upload or later steps. Lists in comments are capped at 100 items; machine-readable output is complete. Each invocation creates a new comment. Keep write tokens out of untrusted collector/build execution; use separate analysis and posting jobs for fork PRs.
@@ -1076,7 +1076,7 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
-  archgraph:
+  boundrail:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1103,7 +1103,7 @@ permissions:
   security-events: write
   actions: read # private repositories only
 jobs:
-  archgraph:
+  boundrail:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1113,15 +1113,15 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-      - id: archgraph
+      - id: boundrail
         uses: dogebonker/archgraph@v0.1.0
       - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
-        if: ${{ !cancelled() && steps.archgraph.outputs.sarif }}
+        if: ${{ !cancelled() && steps.boundrail.outputs.sarif }}
         with:
-          sarif_file: ${{ steps.archgraph.outputs.sarif }}
+          sarif_file: ${{ steps.boundrail.outputs.sarif }}
 ```
 
-The upload step runs after a failed archgraph step, since the file is written before the gate result. The SHA is the peeled `^{}` line of `git ls-remote https://github.com/github/codeql-action 'refs/tags/v4*'` for the `v4.39.1` tag; update it from that repository's releases.
+The upload step runs after a failed boundrail step, since the file is written before the gate result. The SHA is the peeled `^{}` line of `git ls-remote https://github.com/github/codeql-action 'refs/tags/v4*'` for the `v4.39.1` tag; update it from that repository's releases.
 
 - Private repositories need GitHub Code Security enabled; public repositories do not.
 - Fork and Dependabot pull requests can upload under `pull_request`. Never use `pull_request_target`, as below.
@@ -1133,23 +1133,23 @@ Never run it on `pull_request_target`. That event gets the base repository's wri
 
 - **Push:** `report` with `layout.yaml` from `path` (or `rules`), its summary in the job summary. The step fails as `report` exits: on a forbidden import the known list does not hold, or a listed one that no longer occurs.
   The summary includes the `Target` block of `report` (claim verdicts, slices conforming and moved, move cost). With no base ref the step exits with `report`'s status: 1 when an import is forbidden and not in `layout.known.yaml`, or a listed one no longer occurs. A repository whose baseline forbidden imports are all listed passes pushes.
-- **Pull request** (or with `base-ref`): `report` on HEAD, then a scan of the base commit, checked out with `git worktree` into `$RUNNER_TEMP/base`, with HEAD's rules file and the same options, then `diff --fail-on <fail-on> --format markdown` into the job summary. The summary's `Target` section shows slices conforming before and after and the slices a claim newly breaks; the gate stays `fail-on`. The step fails only on what the pull request adds: by default new forbidden imports, new cycles, stale known entries and newly vacuous claims (`fail-on: new-forbidden,new-cycles,stale-known,new-vacuous,new-unplanned` adds unplanned imports), so a pull request that fixes a listed import must also drop its entry (`archgraph check --update-known shrink`), and one that moves every file a claim covers must update the claim in the same change. The diff never reads `layout.known.yaml`: a moved file with known debt still counts as a new forbidden import. An older pinned `version` rejects `stale-known` or `new-vacuous` as a usage error (exit 2); set `fail-on: new-forbidden,new-cycles` there. `fetch-depth: 0` keeps the base commit in the checkout; with the default shallow checkout the action fetches that one commit from `origin`, which needs the repository to be public or the credentials kept.
+- **Pull request** (or with `base-ref`): `report` on HEAD, then a scan of the base commit, checked out with `git worktree` into `$RUNNER_TEMP/base`, with HEAD's rules file and the same options, then `diff --fail-on <fail-on> --format markdown` into the job summary. The summary's `Target` section shows slices conforming before and after and the slices a claim newly breaks; the gate stays `fail-on`. The step fails only on what the pull request adds: by default new forbidden imports, new cycles, stale known entries and newly vacuous claims (`fail-on: new-forbidden,new-cycles,stale-known,new-vacuous,new-unplanned` adds unplanned imports), so a pull request that fixes a listed import must also drop its entry (`boundrail check --update-known shrink`), and one that moves every file a claim covers must update the claim in the same change. The diff never reads `layout.known.yaml`: a moved file with known debt still counts as a new forbidden import. An older pinned `version` rejects `stale-known` or `new-vacuous` as a usage error (exit 2); set `fail-on: new-forbidden,new-cycles` there. `fetch-depth: 0` keeps the base commit in the checkout; with the default shallow checkout the action fetches that one commit from `origin`, which needs the repository to be public or the credentials kept.
 - **Co-change.** On a full checkout (`git rev-parse --is-shallow-repository` prints `false`, as with `fetch-depth: 0`) the push `report` and both pull request scans read the last 300 commits (`--cochange`), so the push summary lists each slice's [co-changed pairs](#claims) and the pull request summary those new in HEAD, advisory and never failing the step; it also adds `hidden-coupling` findings and `git log` time. On a shallow checkout the summary ends `Co-change not read: shallow checkout; check out with fetch-depth: 0.`; outside git nothing is said.
 - **Rules changes.** Both commits are judged by HEAD's rules, so a pull request that deletes a `forbid` rule and adds the import it forbade passes the diff. When the rules file differs from the base commit's (changed, added or removed), the job summary opens with a warning and a table of forbidden imports in base and HEAD under each commit's rules, and the output `rules-changed` is `true`. That is a signal, not a failure: `fail-on-rules-change: true` fails the step on it, for teams that review rule changes separately.
-- It installs the archgraph release whose version is in the action's own `Cargo.toml`, so `@v0.1.0`, a commit SHA or a branch each run the archgraph they were cut from (`version` overrides). The collector goes into `$RUNNER_TEMP`, locked: dependency-cruiser 18.4.0 and typescript 6.0.3 with `npm ci` from [ci/tools/package-lock.json](ci/tools/package-lock.json) when `path` has `package.json` or `tsconfig.json`; grimp 3.17 in a venv with `pip install --only-binary :all: --require-hashes` from [ci/tools/requirements.txt](ci/tools/requirements.txt) when it has `pyproject.toml`, `setup.py` or `setup.cfg` (else set `language`), which needs CPython 3.10 to 3.14 as `python3` (`actions/setup-python`); Go 1.27.1 from go.dev, checked against its SHA-256 in [ci/action.sh](ci/action.sh), when it has `go.mod` or `go.work` (no `actions/setup-go` needed; `ARCHGRAPH_GO` names one to use instead). Linux and macOS runners.
+- It installs the boundrail release whose version is in the action's own `Cargo.toml`, so `@v0.1.0`, a commit SHA or a branch each run the boundrail they were cut from (`version` overrides). The collector goes into `$RUNNER_TEMP`, locked: dependency-cruiser 18.4.0 and typescript 6.0.3 with `npm ci` from [ci/tools/package-lock.json](ci/tools/package-lock.json) when `path` has `package.json` or `tsconfig.json`; grimp 3.17 in a venv with `pip install --only-binary :all: --require-hashes` from [ci/tools/requirements.txt](ci/tools/requirements.txt) when it has `pyproject.toml`, `setup.py` or `setup.cfg` (else set `language`), which needs CPython 3.10 to 3.14 as `python3` (`actions/setup-python`); Go 1.27.1 from go.dev, checked against its SHA-256 in [ci/action.sh](ci/action.sh), when it has `go.mod` or `go.work` (no `actions/setup-go` needed; `ARCHGRAPH_GO` names one to use instead). Linux and macOS runners.
 - Paths and messages from the scanned repository reach the log with workflow commands turned off (`::stop-commands::`), and the push summary's code fence is longer than any backtick run in it.
-- `archgraph.html` and `archgraph.json` are uploaded as the artifact `archgraph-<job id>`, also when the step fails. In a matrix job, set `artifact-name` per entry (`artifact-name: archgraph-${{ matrix.os }}`), since artifact names must be unique in a run.
+- `archgraph.html` and `archgraph.json` are uploaded as the artifact `boundrail-<job id>`, also when the step fails. In a matrix job, set `artifact-name` per entry (`artifact-name: boundrail-${{ matrix.os }}`), since artifact names must be unique in a run.
 
 - Elixir action scans use a preinstalled Elixir 1.14+ / OTP 25+ runtime. Install it before the action (for example, `sudo apt-get update && sudo apt-get install --yes elixir` on Ubuntu), set `language: elixir` when detection is ambiguous, and optionally set `ARCHGRAPH_ELIXIR` to its executable. The action does not install Elixir or run Mix.
 
-Inputs: `path` (default `.`), `rules`, `depth` (default 2; for Java, each package is a module), `language`, `engine` (`reference`, experimental `native`, or TypeScript-only `depcruise`), `package`, `exclude` (globs, one per line or comma-separated), `fail-on`, `fail-on-rules-change` (default `false`), `version`, `binary` (an archgraph executable to use instead of a release), `base-ref`, `artifact-name`. With `engine: native`, the action forwards the engine to HEAD and base scans and skips all external collector setup, including npm, Python, Go and Elixir. Native Go needs a preinstalled Go toolchain; `ARCHGRAPH_GO` selects its executable without a download. Outputs: `json`, `html` and `sarif` (paths; `sarif` is empty without rules), `forbidden` (count at HEAD), `new-forbidden`, `new-cycles` (counts) and `rules-changed`, the last three for pull requests only. All logic is in [ci/action.sh](ci/action.sh), which reads its inputs from `INPUT_*` environment variables, so it runs outside Actions too.
+Inputs: `path` (default `.`), `rules`, `depth` (default 2; for Java, each package is a module), `language`, `engine` (`reference`, experimental `native`, or TypeScript-only `depcruise`), `package`, `exclude` (globs, one per line or comma-separated), `fail-on`, `fail-on-rules-change` (default `false`), `version`, `binary` (a Boundrail executable to use instead of a release), `base-ref`, `artifact-name`. With `engine: native`, the action forwards the engine to HEAD and base scans and skips all external collector setup, including npm, Python, Go and Elixir. Native Go needs a preinstalled Go toolchain; `ARCHGRAPH_GO` selects its executable without a download. Outputs: `json`, `html` and `sarif` (paths; `sarif` is empty without rules), `forbidden` (count at HEAD), `new-forbidden`, `new-cycles` (counts) and `rules-changed`, the last three for pull requests only. All logic is in [ci/action.sh](ci/action.sh), which reads its inputs from `INPUT_*` environment variables, so it runs outside Actions too.
 
 ## Schema contract
 
-New import-analysis documents use `schema: "archgraph/v1.2"`. The current contract is [schema/archgraph.v1.2.schema.json](../schema/archgraph.v1.2.schema.json) (JSON Schema draft 2020-12); [v1.1](../schema/archgraph.v1.1.schema.json) and [v1](../schema/archgraph.v1.schema.json) contracts remain available. v1.2 adds typed recipes, stable `finding_id`s and advisory `diagnostics`; it does not change the edge-kind or weighted-metric definitions. Upgraded readers accept all three versions and recompute current findings from saved graph evidence. Tests validate generated documents against their schema.
+New import-analysis documents use `schema: "archgraph/v1.2"`. The current contract is [schema/boundrail.v1.2.schema.json](../schema/boundrail.v1.2.schema.json) (JSON Schema draft 2020-12); [v1.1](../schema/boundrail.v1.1.schema.json) and [v1](../schema/boundrail.v1.schema.json) contracts remain available. v1.2 adds typed recipes, stable `finding_id`s and advisory `diagnostics`; it does not change the edge-kind or weighted-metric definitions. Upgraded readers accept all three versions and recompute current findings from saved graph evidence. Tests validate generated documents against their schema.
 
 - Consumers check `schema` and reject unknown major versions. They ignore unknown fields and unknown finding kinds (`kind` is an open string in the schema; known kinds have typed evidence).
-- `source.language` and `source.collector.name` are closed enums that may grow within archgraph/v1 as languages are added (`go` and `go-types` were). An older archgraph, or a consumer validating against an older copy of the schema, rejects a document with a language or collector it does not know: read a language’s scans with an archgraph that has its collector, including `elixir` / `elixir-ast`.
+- `source.language` and `source.collector.name` are closed enums that may grow within archgraph/v1 as languages are added (`go` and `go-types` were). An older boundrail, or a consumer validating against an older copy of the schema, rejects a document with a language or collector it does not know: read a language’s scans with a Boundrail that has its collector, including `elixir` / `elixir-ast`.
 - A scan has a top-level `summary`: forbidden, unplanned and cycle counts and each module's cohesion, Ca, Ce and instability. A finding's `simulation` is `{ "after": … }`: the same counts after the move, with `modules` listing only the modules whose metrics changed (`null` for a module the move empties). Compare it with the scan's `summary`.
 - A scan document whose files, modules and edges disagree (an edge naming a file not in `files`, a file listed twice, a module its config does not give) is an input error, exit 2.
 - Scans may carry optional `external_exposure` summaries and separate `external_nodes`/`external_edges` package data. These are additive v1.1 fields; the v1 package-data contract remains unchanged (its language/collector enums may grow), and compatibility exports retain additive package data. Missing occurrence accounting means unavailable exposure.
@@ -1170,8 +1170,8 @@ Each edge carries a `weight`. Defaults are runtime **1.0**, lazy **0.3**, type *
 For frozen consumers requiring v1 field names and discriminator, add the global JSON export flag:
 
 ```sh
-archgraph --legacy-v1 scan . -o graph-v1.json
-archgraph --all-kinds scan . -o graph-all-kinds.json
+boundrail --legacy-v1 scan . -o graph-v1.json
+boundrail --all-kinds scan . -o graph-all-kinds.json
 ```
 
 `--legacy-v1` exports the compatibility shape, including old edge-kind names; it does not restore the old analysis or its unweighted metric ratios. A file-granularity scan exported with this flag is regrouped into the legacy folder view so old readers can validate it; the exported module and cycle numbers describe that folder view. Keep the ordinary v1.2 export for file-view numbers and recipes. Compatibility exports omit recipes/IDs, merge advisory diagnostics back into legacy findings and omit the new explicit forbidden-edge/deep-import finding kinds; verdict and surface evidence remain available. Rescan both sides with the same options before comparing architecture changes across engines. A mixed old/new comparison can reflect methodology changes rather than repository changes. Frozen readers may ignore newer policy fields such as rule `kinds`; use an upgraded, pinned CLI when enforcing those policies in CI.
@@ -1212,7 +1212,7 @@ allow:
 default: forbidden            # optional; imports no rule decides are forbidden, not unplanned
 ```
 
-Globs: `*` is one path segment, `**` any depth, `{a,b}` alternation. `<name>` captures one segment and binds it within a rule: `modules` path to id, `public` module to entries, `entrypoints` module to entry file, and `forbid`/`allow` importer to target, so `{ from: "src/modules/<name>/**", to: "src/modules/<name>/**" }` matches only imports within one module. `to`, `id`, `entries` and entrypoint values may use only their rule's capture, and `layers` take no capture (write `*`). A file matching several layers takes the first. Unknown keys in `layout.yaml` are an error, and so is a control character (a line break, a tab) in any of its strings, since ids, reasons and globs are printed into logs and job summaries; rules embedded in a scan document may carry keys a newer archgraph added.
+Globs: `*` is one path segment, `**` any depth, `{a,b}` alternation. `<name>` captures one segment and binds it within a rule: `modules` path to id, `public` module to entries, `entrypoints` module to entry file, and `forbid`/`allow` importer to target, so `{ from: "src/modules/<name>/**", to: "src/modules/<name>/**" }` matches only imports within one module. `to`, `id`, `entries` and entrypoint values may use only their rule's capture, and `layers` take no capture (write `*`). A file matching several layers takes the first. Unknown keys in `layout.yaml` are an error, and so is a control character (a line break, a tab) in any of its strings, since ids, reasons and globs are printed into logs and job summaries; rules embedded in a scan document may carry keys a newer boundrail added.
 
 `forbid`, `allow` and `public` rules optionally accept `kinds: [runtime]` (or any selection of the four kinds); omitted `kinds` applies to every kind. A reachable forbid filters every edge along its path by the same selection, including the initial import. Strict `entrypoints` mappings always apply to every kind. Weights affect metrics, not rule matching: a zero-weight import can still be forbidden.
 
@@ -1227,7 +1227,7 @@ Verdict per import, first match wins:
 7. Cross-module import of an `entrypoints` or `public` entry: **allowed** (rule `entrypoints` or `public`).
 8. Otherwise: **unplanned** (rule `none`), or with `default: forbidden` **forbidden** (rule `default`), so `check` exits 1 on them.
 
-`default: forbidden` turns the rules into a whitelist. An archgraph older than this key reads a scan document whose embedded rules carry it and ignores the key (unknown keys in embedded rules are tolerated), so its `check` reports those imports as unplanned and exits 0. Pin the archgraph version wherever a whitelist gates CI.
+`default: forbidden` turns the rules into a whitelist. A Boundrail older than this key reads a scan document whose embedded rules carry it and ignores the key (unknown keys in embedded rules are tolerated), so its `check` reports those imports as unplanned and exits 0. Pin the boundrail version wherever a whitelist gates CI.
 
 ### Claims
 
@@ -1249,15 +1249,15 @@ claim layered: holds in 16 of 18 slices; broken in interview, sop reason="Depend
 A layout written for code that already breaks it fails `check` on every existing import. List them in `layout.known.yaml` beside the rules file (`<stem>.known.yaml`: `ci/strict.yaml` reads `ci/strict.known.yaml`) and `check` fails only on a forbidden import missing from the list, or on a listed one that no longer occurs. The list only shrinks: fixing a listed import fails `check` until the entry goes.
 
 ```sh
-archgraph check --update-known accept    # list every forbidden import now (creates the file)
-archgraph check --update-known shrink    # drop entries that no longer occur, add none
+boundrail check --update-known accept    # list every forbidden import now (creates the file)
+boundrail check --update-known shrink    # drop entries that no longer occur, add none
 ```
 
 Both print `layout.known.yaml: N kept, N dropped, N added` on stderr and then check as usual; `shrink` without the file exits 2, and a saved scan needs `--rules` to name where the file goes. Run them by hand and commit the file; CI only reads it.
 
 ```yaml
 # Forbidden imports layout.yaml already has. check fails on any other, and on an entry that no
-# longer occurs. Shrink with: archgraph check --update-known shrink
+# longer occurs. Shrink with: boundrail check --update-known shrink
 version: 1
 known:
   - { rule: "forbid[0]", from: "src/adapters/in/http.ts", to: "src/adapters/out/pg.ts" }
@@ -1265,7 +1265,7 @@ known:
 
 An entry is the importer, the written target as `check` prints it (`pkg:<package>` for a package) and the rule that decides the import, without a line, sorted one per line. Unknown keys and control characters are an error, as in `layout.yaml`. Moving a file or renaming a rule makes its entries stale and the imports unlisted: run `accept` again. Unnamed rules are numbered (`forbid[0]`), so adding one renumbers the rest: give rules an `id`. An intended exception belongs in `allow`, not here.
 
-`check` leaves listed imports out of its lines and counts them in the totals (`3 forbidden (2 known), 0 unplanned`), and prints `stale known <from> -> <to> (<rule>): no longer forbidden; run archgraph check --update-known shrink` for an entry that no longer occurs. Claims still count a listed import as broken. `report` exits the same way and prints `N forbidden (M known)`. The scan document embeds the list as `config.rules.known`, marks listed edges `known: true` and counts them in `summary.known`, and lists stale entries in `stale_known`; `--rules` replaces the rules and the list together.
+`check` leaves listed imports out of its lines and counts them in the totals (`3 forbidden (2 known), 0 unplanned`), and prints `stale known <from> -> <to> (<rule>): no longer forbidden; run boundrail check --update-known shrink` for an entry that no longer occurs. Claims still count a listed import as broken. `report` exits the same way and prints `N forbidden (M known)`. The scan document embeds the list as `config.rules.known`, marks listed edges `known: true` and counts them in `summary.known`, and lists stale entries in `stale_known`; `--rules` replaces the rules and the list together.
 
 ### Moves
 
@@ -1289,9 +1289,9 @@ On the map, selecting a slice under **Move cost** in the Target panel draws an a
 
 For Go, each slice also lists the unexported names its moves force to export as `names`, `{name, declared_in, used_by}` from `source.collector.bound` (`, 2 names to export` on the `move` line), and as `together` the pairs that hold a method and its type or two platform variants, which split across packages would not compile. A pair whose two files land in one folder after the move is left out, so moving `service.go` with its partner lists nothing. `names` is `[]` when none is needed and `null` when unknown: the native Go engine (with a note in `target.notes`) and other languages.
 
-For Go, archgraph also applies every pending move together and lists the imports that would sit in new package cycles as `new_cycles` (`, 2 imports in new package cycles` on the `move` line): one cycle between two packages shows at least two imports. A cycle belongs to each slice with a source or destination folder on either side of it, so a cycle that needs two slices to move is listed under both. When the moves cannot be applied, such as a destination that already exists, `target.notes` says why and the other move fields still report. Other languages report no `new_cycles`.
+For Go, boundrail also applies every pending move together and lists the imports that would sit in new package cycles as `new_cycles` (`, 2 imports in new package cycles` on the `move` line): one cycle between two packages shows at least two imports. A cycle belongs to each slice with a source or destination folder on either side of it, so a cycle that needs two slices to move is listed under both. When the moves cannot be applied, such as a destination that already exists, `target.notes` says why and the other move fields still report. Other languages report no `new_cycles`.
 
-Write each claim side over both locations, as in the claim above, so it keeps holding while a slice is half moved: a moved handler importing an unmoved repository still breaks it. Keep the target root free of files: with `{internal/<name>/handler*.go,...}`, a file `internal/app/handler.go` binds a slice `app`. An archgraph older than `moves` rejects a `layout.yaml` that has it, so pin the archgraph version in CI before adding it.
+Write each claim side over both locations, as in the claim above, so it keeps holding while a slice is half moved: a moved handler importing an unmoved repository still breaks it. Keep the target root free of files: with `{internal/<name>/handler*.go,...}`, a file `internal/app/handler.go` binds a slice `app`. A Boundrail older than `moves` rejects a `layout.yaml` that has it, so pin the boundrail version in CI before adding it.
 
 ## Findings
 
@@ -1313,7 +1313,7 @@ Write each claim side over both locations, as in the claim above, so it keeps ho
 - Source selection and exclusions limit the graph. Included Python tests can be discovered outside the selected package; excluded files do not establish missing test coverage.
 - Type-only, lazy and structural re-export imports retain weighted metrics and rule verdicts. They do not close default runtime cycles; separate deferred-cycle accounting and `--all-kinds` make their cycles visible.
 - Imports are not semantics: DI containers, event buses, string-based lookups, reflection and dynamic imports without static strings are invisible. `--cochange` partly covers this.
-- Go: references come from type-checking each package without its dependencies outside the repository, so a use reached only through such a dependency's types (a method of a value it returns, an argument of a call to a function it provides) is missing, and an import left with no resolved use counts as unresolved; every platform's files are merged; reflection, `go:linkname`, `go:embed`, assembly and C are invisible. A `go` line in `go.mod` newer than the Go running the scan fails it: archgraph never downloads a toolchain.
+- Go: references come from type-checking each package without its dependencies outside the repository, so a use reached only through such a dependency's types (a method of a value it returns, an argument of a call to a function it provides) is missing, and an import left with no resolved use counts as unresolved; every platform's files are merged; reflection, `go:linkname`, `go:embed`, assembly and C are invisible. A `go` line in `go.mod` newer than the Go running the scan fails it: boundrail never downloads a toolchain.
 - Small repositories have little signal; the `small-repo` diagnostic says so.
 - Actionable findings contain recipe steps and verification predicates; advisory diagnostics preserve evidence without a concrete edit. Ranking prioritizes review and is not a target score to optimize. Module colors in `render` are a reading aid.
 - Folder boundaries come from `--depth` or rules `modules:`; `--granularity file` offers a file view. Wrong boundaries give wrong metrics; grab-bag findings require a verified split rather than a name heuristic.

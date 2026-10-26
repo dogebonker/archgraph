@@ -30,7 +30,7 @@ class ContextHookTests(unittest.TestCase):
                                    {"tier": "must-read", "path": "a.ts", "reason": "explicit seed",
                                     "tokens": 6, "mode": "body"}],
                        "budget": 40000, "used_tokens": 16, "limitations": ["estimates"]}
-        self.environment = mock.patch.dict(os.environ, {"ARCHGRAPH_BINARY": "/opt/archgraph",
+        self.environment = mock.patch.dict(os.environ, {"ARCHGRAPH_BINARY": "/opt/boundrail",
                                                        "ARCHGRAPH_CONTEXT_BUDGET": "40k",
                                                        "ARCHGRAPH_CONTEXT_FILES": "[]"})
         self.environment.start()
@@ -56,7 +56,7 @@ class ContextHookTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {"ARCHGRAPH_CONTEXT_FILES": '["a.ts", "-odd.ts"]'}):
             result = HOOK.run("claude", self.event())
         args, options = self.process.call_args
-        self.assertEqual(args[0][:2], ["/opt/archgraph", "context"])
+        self.assertEqual(args[0][:2], ["/opt/boundrail", "context"])
         self.assertEqual(args[0][args[0].index("--task") + 1], self.event()["prompt"])
         self.assertEqual(args[0][-3:], ["--files", "./-odd.ts", "a.ts"])
         self.assertEqual(options["timeout"], 8)
@@ -88,12 +88,23 @@ class ContextHookTests(unittest.TestCase):
         self.assertEqual(manifest["seed_files"], ["a.ts"])
         self.assertEqual(manifest["generation"], "generation-one")
 
+    def test_default_command_is_boundrail_and_legacy_state_path_is_preserved(self):
+        with mock.patch.dict(os.environ, {}):
+            os.environ.pop("ARCHGRAPH_BINARY", None)
+            os.environ.pop("ARCHGRAPH_CONTEXT_GRAPH", None)
+            HOOK.run("claude", self.event())
+        args, _ = self.process.call_args
+        self.assertEqual(args[0][0], "boundrail")
+        self.assertEqual(args[0][args[0].index("--graph") + 1],
+                         str(self.root / ".archgraph" / "archgraph.json"))
+        self.assertEqual(self.manifest()["status"], "ready")
+
     def test_failure_and_timeout_invalidate_only_current_session(self):
         HOOK.run("claude", self.event())
         other = self.event(session_id="other")
         HOOK.run("claude", other)
-        for failure in (subprocess.TimeoutExpired("archgraph", 8),
-                        subprocess.CalledProcessError(2, "archgraph"), FileNotFoundError()):
+        for failure in (subprocess.TimeoutExpired("boundrail", 8),
+                        subprocess.CalledProcessError(2, "boundrail"), FileNotFoundError()):
             self.process.side_effect = failure
             with mock.patch("sys.stderr", io.StringIO()):
                 self.assertEqual(HOOK.run("claude", self.event(prompt="new request")), {})
@@ -180,7 +191,7 @@ class ContextHookTests(unittest.TestCase):
 
     def test_real_executable_protocol_preserves_unicode_and_task_as_data(self):
         self.collect.stop()
-        binary = self.root / "fake archgraph"
+        binary = self.root / "fake boundrail"
         trace = self.root / "arguments.json"
         binary.write_text("#!" + sys.executable + "\nimport json, pathlib, sys\n"
                           + "pathlib.Path(" + repr(str(trace)) + ").write_text(json.dumps(sys.argv))\n"

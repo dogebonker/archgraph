@@ -1,11 +1,11 @@
 mod common;
-use archgraph::{adr, collect::TempDir};
+use boundrail::{adr, collect::TempDir};
 use serde_json::Value;
 use std::fs;
 use std::process::{Command, Output};
 
 fn run(root: &std::path::Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .arg("--no-daemon")
         .args(args)
         .current_dir(root)
@@ -96,12 +96,12 @@ fn review_apply_check_and_recipe_retain_adr_provenance() {
     for version in ["archgraph/v1", "archgraph/v1.1", "archgraph/v1.2"] {
         let mut legacy = graph.clone();
         if version == "archgraph/v1" {
-            archgraph::compat::v1(&mut legacy).unwrap();
+            boundrail::compat::v1(&mut legacy).unwrap();
         } else {
             legacy["schema"] = version.into();
         }
         common::validate(&legacy);
-        let restored = archgraph::restore_scan(serde_json::from_value(legacy).unwrap()).unwrap();
+        let restored = boundrail::restore_scan(serde_json::from_value(legacy).unwrap()).unwrap();
         assert_eq!(
             restored.config.rules.unwrap().doc.forbid[0]
                 .source
@@ -167,10 +167,10 @@ fn source_metadata_is_optional_but_normalized_and_resolved_by_decision() {
             serde_json::to_string(source).unwrap()
         );
         fs::write(&path, yaml).unwrap();
-        assert!(archgraph::rules::load(&path).is_err(), "{source}");
+        assert!(boundrail::rules::load(&path).is_err(), "{source}");
     }
     fs::write(&path,"version: 1\nforbid:\n- from: src/a/**\n  to: src/b/**\n  source: docs/ADR-001.md\nallow:\n- id: accepted-exception\n  from: src/a/**\n  to: src/c/**\n  source: docs/ADR-002.md\n").unwrap();
-    let rules = archgraph::rules::load(&path).unwrap();
+    let rules = boundrail::rules::load(&path).unwrap();
     assert_eq!(rules.doc.sources("forbid[0]"), ["docs/ADR-001.md"]);
     assert_eq!(rules.doc.sources("accepted-exception"), ["docs/ADR-002.md"]);
     assert!(rules.doc.sources("unrelated").is_empty());

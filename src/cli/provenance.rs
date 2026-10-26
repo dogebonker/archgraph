@@ -1,12 +1,12 @@
 //! CLI and report enrichment for verified architecture provenance.
 
 use super::*;
-use archgraph::bisect::{self, Investigation, Options, Target};
-use archgraph::model::{Evidence, Provenance};
+use boundrail::bisect::{self, Investigation, Options, Target};
+use boundrail::model::{Evidence, Provenance};
 
 #[derive(Args)]
 pub(super) struct BisectArgs {
-    /// Existing archgraph scan document; its module boundaries and rules stay fixed
+    /// Existing boundrail scan document; its module boundaries and rules stay fixed
     graph: PathBuf,
     /// Repository root used to produce the graph
     #[arg(long, default_value = ".")]
@@ -165,7 +165,7 @@ pub(super) fn probe_with_symbols(
     config.import_records = collected.imports;
     config.globals = collected.globals;
     let saved_symbols = collected.symbols.clone();
-    let mut doc = archgraph::analyze(
+    let mut doc = boundrail::analyze(
         collected.source,
         config,
         collected.files.into_iter().map(|file| file.path).collect(),
@@ -174,13 +174,13 @@ pub(super) fn probe_with_symbols(
         collected.cochange,
     )?;
     if let Some(symbols) = saved_symbols {
-        archgraph::surface::attach(
+        boundrail::surface::attach(
             &mut doc,
             symbols,
             original
                 .surface
                 .as_ref()
-                .map_or(archgraph::surface::DEFAULT_MAX_SYMBOLS, |s| s.max_symbols),
+                .map_or(boundrail::surface::DEFAULT_MAX_SYMBOLS, |s| s.max_symbols),
         )?;
     }
     Ok(doc)
@@ -323,7 +323,7 @@ pub(super) fn enrich_from(
                 |oid| {
                     if let Some(bytes) = cached.get(oid) {
                         let input: ScanInput = serde_json::from_slice(bytes)?;
-                        return archgraph::restore_scan(input);
+                        return boundrail::restore_scan(input);
                     }
                     if scans >= 64 {
                         bail!("shared report provenance budget exhausted (64 historical scans)");
@@ -385,7 +385,7 @@ fn repository(url: &str) -> Option<&str> {
 }
 
 fn github_pr(root: &Path, commit: &str) -> Result<Option<u64>> {
-    let origin = archgraph::git::text(root, &["remote", "get-url", "origin"])
+    let origin = boundrail::git::text(root, &["remote", "get-url", "origin"])
         .ok()
         .context("no origin remote")?;
     let repository =
@@ -459,7 +459,7 @@ fn markdown(result: &Investigation) -> String {
             ));
         }
         if !matches!(result.target, Target::Finding { .. }) {
-            text.push_str("\nCounterfactual: archgraph-guard would have failed this change when configured to reject this new cycle or forbidden import under the supplied graph's fixed configuration. Historical CI installation was not checked.\n");
+            text.push_str("\nCounterfactual: boundrail-guard would have failed this change when configured to reject this new cycle or forbidden import under the supplied graph's fixed configuration. Historical CI installation was not checked.\n");
         }
     } else {
         text.push_str("\nNo introduction date or author has been verified.\n");
@@ -481,7 +481,7 @@ mod tests {
     fn native_provenance_freezes_go_executable_before_historical_checkout() {
         use clap::Parser;
         let super::super::Cmd::Scan(args) = super::super::Cli::try_parse_from([
-            "archgraph",
+            "boundrail",
             "scan",
             ".",
             "--engine",
@@ -500,7 +500,7 @@ mod tests {
             std::path::Path::new("/nonexistent/historical-root"),
             &args.collector,
             args.opts.engine,
-            Some(archgraph::model::Language::Go),
+            Some(boundrail::model::Language::Go),
         )
         .unwrap();
         assert_eq!(
@@ -511,7 +511,7 @@ mod tests {
             std::path::Path::new("/nonexistent/historical-root"),
             &args.collector,
             args.opts.engine,
-            Some(archgraph::model::Language::Typescript),
+            Some(boundrail::model::Language::Typescript),
         )
         .unwrap();
         assert_eq!(options.go, "./Cargo.toml");
@@ -522,7 +522,7 @@ mod tests {
         use clap::Parser;
         let source = serde_json::from_value(serde_json::json!({"language":"rust", "collector":{"name":"rust-analyzer","version":null,"cruised":1},"git":null,"generated_at":"test"})).unwrap();
         let config = serde_json::from_value(serde_json::json!({"depth":2,"source_root":".","excludes":[],"include_tests":false,"rules":null,"collection":{"python_package":null,"rust_features":"default","rust_build_scripts":true}})).unwrap();
-        let graph = archgraph::analyze(
+        let graph = boundrail::analyze(
             source,
             config,
             vec!["src/lib.rs".into()],
@@ -532,7 +532,7 @@ mod tests {
         )
         .unwrap();
         let super::super::Cmd::Scan(args) =
-            super::super::Cli::try_parse_from(["archgraph", "scan", "."])
+            super::super::Cli::try_parse_from(["boundrail", "scan", "."])
                 .unwrap()
                 .command
         else {
@@ -559,20 +559,20 @@ mod tests {
             "--engine=native",
         ] {
             assert_eq!(
-                error(&["archgraph", "bisect", "g.json", flag]),
+                error(&["boundrail", "bisect", "g.json", flag]),
                 ErrorKind::UnknownArgument
             );
         }
-        parse(&["archgraph", "bisect", "g.json", "--go=go", "--depcruise=d"]).unwrap();
+        parse(&["boundrail", "bisect", "g.json", "--go=go", "--depcruise=d"]).unwrap();
         // Impact with --graph reuses its selection; hotspots and collectors still apply.
         for flag in ["--depth=1", "--include-tests", "--language=go", "--symbols"] {
             assert_eq!(
-                error(&["archgraph", "impact", "a..b", "--graph=g.json", flag]),
+                error(&["boundrail", "impact", "a..b", "--graph=g.json", flag]),
                 ErrorKind::ArgumentConflict
             );
         }
         parse(&[
-            "archgraph",
+            "boundrail",
             "impact",
             "a..b",
             "--graph=g.json",
@@ -580,11 +580,11 @@ mod tests {
             "--go=go",
         ])
         .unwrap();
-        parse(&["archgraph", "impact", "a..b", "--depth=1"]).unwrap();
+        parse(&["boundrail", "impact", "a..b", "--depth=1"]).unwrap();
         // Scans accept every option.
         for command in ["scan", "report", "history"] {
             parse(&[
-                "archgraph",
+                "boundrail",
                 command,
                 ".",
                 "--engine=native",
@@ -645,7 +645,7 @@ mod tests {
             to: "new".into(),
             commits: 2,
             scans: 2,
-            introduced_by: Some(archgraph::bisect::Commit {
+            introduced_by: Some(boundrail::bisect::Commit {
                 commit: "new".into(),
                 author: "Author".into(),
                 email: "author@example.invalid".into(),

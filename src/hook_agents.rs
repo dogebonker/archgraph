@@ -389,7 +389,7 @@ fn opencode_plugin(executable: &str, root: &str) -> Result<String> {
         r#"// archgraph:managed
 // Feedback-only: session.idle cannot veto completion.
 import {{ spawn }} from "node:child_process";
-export const Archgraph = async ({{ client }}) => {{
+export const Boundrail = async ({{ client }}) => {{
   const run = (event, input) => new Promise((resolve, reject) => {{
     const child = spawn({}, ["hook", "run", "--agent", "opencode", "--event", event, "--root", {}, "--feedback-only"], {{ cwd: {}, stdio: ["pipe", "pipe", "pipe"], timeout: 10000 }});
     let stdout = "", stderr = "";
@@ -397,14 +397,14 @@ export const Archgraph = async ({{ client }}) => {{
     child.stderr.on("data", chunk => stderr += chunk);
     child.on("error", reject);
     child.on("close", code => {{
-      if (code !== 0) return reject(new Error(stderr || "archgraph hook failed"));
+      if (code !== 0) return reject(new Error(stderr || "boundrail hook failed"));
       try {{ resolve(JSON.parse(stdout)); }} catch (error) {{ reject(error); }}
     }});
     child.stdin.on("error", reject);
     child.stdin.end(JSON.stringify(input));
   }});
   const notify = async result => {{
-    if (result.message) await client.app.log({{ body: {{ service: "archgraph", level: result.blocked ? "warn" : "info", message: result.message }} }});
+    if (result.message) await client.app.log({{ body: {{ service: "boundrail", level: result.blocked ? "warn" : "info", message: result.message }} }});
   }};
   return {{
     "tool.execute.before": async (input, output) => {{
@@ -437,7 +437,7 @@ mod tests {
     fn directory() -> std::path::PathBuf {
         static NEXT: AtomicU64 = AtomicU64::new(0);
         let path = std::env::temp_dir().join(format!(
-            "archgraph hooks {} {}",
+            "boundrail hooks {} {}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -563,6 +563,37 @@ mod tests {
             assert!(text.contains("--feedback-only"));
             assert!(text.contains("--root '"));
             assert!(text.contains("arch'\\\\''graph"));
+            fs::remove_dir_all(root).unwrap();
+        }
+    }
+
+    #[test]
+    fn legacy_managed_handlers_reinstall_with_the_boundrail_executable() {
+        for (agent, relative) in [
+            (Agent::Claude, ".claude/settings.json"),
+            (Agent::Codex, ".codex/hooks.json"),
+            (Agent::Cursor, ".cursor/hooks.json"),
+            (Agent::Opencode, ".opencode/plugins/archgraph.ts"),
+        ] {
+            let root = directory();
+            install(&root, agent, Path::new("/legacy/archgraph"), true).unwrap();
+            let path = root.join(relative);
+            if agent == Agent::Opencode {
+                let legacy = fs::read_to_string(&path)
+                    .unwrap()
+                    .replace("export const Boundrail", "export const Archgraph");
+                fs::write(&path, legacy).unwrap();
+            }
+            let updated = install(&root, agent, Path::new("/current/boundrail"), true).unwrap();
+            assert_eq!(updated["written"], json!([relative]));
+            let text = fs::read_to_string(&path).unwrap();
+            assert!(text.contains("/current/boundrail"));
+            assert!(!text.contains("/legacy/archgraph"));
+            assert!(text.contains("archgraph:managed"));
+            assert!(!root.join(".opencode/plugins/boundrail.ts").exists());
+            let repeated = install(&root, agent, Path::new("/current/boundrail"), true).unwrap();
+            assert_eq!(repeated["unchanged"], json!([relative]));
+            assert_eq!(fs::read_to_string(path).unwrap(), text);
             fs::remove_dir_all(root).unwrap();
         }
     }

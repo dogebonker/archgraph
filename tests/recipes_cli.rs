@@ -74,7 +74,7 @@ impl Repo {
         output.stdout
     }
     fn cli(&self, args: &[&str]) -> Output {
-        Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .current_dir(&self.root)
             .arg("--no-daemon")
             .args(args)

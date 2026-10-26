@@ -99,8 +99,8 @@ const ROWS: usize = 20;
 /// whose cohesion or instability moved by `MOVED` or more, added and removed module counts.
 pub fn markdown(d: &Diff, failed: &[&str]) -> String {
     let mut out = match failed {
-        [] => "**archgraph diff: pass**".to_owned(),
-        _ => format!("**archgraph diff: fail** ({})", failed.join(", ")),
+        [] => "**boundrail diff: pass**".to_owned(),
+        _ => format!("**boundrail diff: fail** ({})", failed.join(", ")),
     };
     out += &format!(
         ": {}, {}, {}, {}, {}.\n",
@@ -317,7 +317,7 @@ pub fn review(old: &Document, new: &Document) -> Value {
         })
         .collect();
     let mut md = format!(
-        "**archgraph review**: {}, {}, {}.\n",
+        "**boundrail review**: {}, {}, {}.\n",
         count(broken.len(), "newly broken slice"),
         count(other.len(), "other new forbidden import"),
         count(fixed.len(), "newly fixed slice"),
@@ -421,7 +421,7 @@ pub fn review(old: &Document, new: &Document) -> Value {
         let mut out = String::new();
         if more > 0 {
             out += &format!(
-                "{} in `archgraph review --format json`.\n",
+                "{} in `boundrail review --format json`.\n",
                 count(more, "more row")
             );
         }
@@ -430,7 +430,7 @@ pub fn review(old: &Document, new: &Document) -> Value {
                 1 => "1 known entry no longer occurs".to_owned(),
                 n => format!("{n} known entries no longer occur"),
             };
-            out += &format!("{line}: run archgraph check --update-known shrink.\n");
+            out += &format!("{line}: run boundrail check --update-known shrink.\n");
         }
         if unknown > 0 {
             out += &format!(

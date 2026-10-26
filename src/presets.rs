@@ -146,7 +146,7 @@ pub fn rules(preset: Preset, scope: Scope, source_root: &str) -> Rules {
 
 pub fn render(preset: Preset, scope: Scope, rules: &Rules, comments: &[String]) -> Result<String> {
     let mut output = format!(
-        "# archgraph preset: {preset:?}; scope: {scope:?}\n# Enforcement comes from imports; this draft needs an ownership review.\n# reason: Layer order keeps foundational code independent of outer concerns.\n# reason: Grab-bag thresholds surface weakly related, widely imported modules.\n#\n# ## How to change this\n# Rename paths to match your source tree; layers are foundation-first.\n# Review CONFLICT comments before adopting inferred boundaries.\n# Keep a reason on every explicit rule and rerun archgraph check after changes.\n# Single observed implementations are medium-confidence review candidates.\n"
+        "# boundrail preset: {preset:?}; scope: {scope:?}\n# Enforcement comes from imports; this draft needs an ownership review.\n# reason: Layer order keeps foundational code independent of outer concerns.\n# reason: Grab-bag thresholds surface weakly related, widely imported modules.\n#\n# ## How to change this\n# Rename paths to match your source tree; layers are foundation-first.\n# Review CONFLICT comments before adopting inferred boundaries.\n# Keep a reason on every explicit rule and rerun boundrail check after changes.\n# Single observed implementations are medium-confidence review candidates.\n"
     );
     for comment in comments {
         output.push_str("# ");

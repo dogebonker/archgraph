@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installs a prebuilt archgraph release binary after checking its SHA-256.
+# Installs a prebuilt Boundrail release binary after checking its SHA-256.
 #
 #   curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/dogebonker/archgraph/main/install.sh | sh
 #
@@ -12,7 +12,7 @@ set -eu
 repo=https://github.com/dogebonker/archgraph
 
 die() {
-  echo "archgraph install: $*" >&2
+  echo "boundrail install: $*" >&2
   exit 1
 }
 
@@ -30,13 +30,13 @@ case $(uname -s) in
   Linux) os=unknown-linux-musl ;;
   Darwin) os=apple-darwin ;;
   MINGW* | MSYS* | CYGWIN* | Windows_NT)
-    die "on Windows, download archgraph-<tag>-x86_64-pc-windows-msvc.zip from $repo/releases, or run: npx archgraph-cli" ;;
-  *) die "no prebuilt archgraph for $(uname -s); build it with: cargo install --git $repo --locked" ;;
+    die "on Windows, download the matching release archive from $repo/releases, or build from source" ;;
+  *) die "no prebuilt boundrail for $(uname -s); build it with: cargo install --git $repo --locked" ;;
 esac
 case $(uname -m) in
   x86_64 | amd64) arch=x86_64 ;;
   aarch64 | arm64) arch=aarch64 ;;
-  *) die "no prebuilt archgraph for $(uname -m); build it with: cargo install --git $repo --locked" ;;
+  *) die "no prebuilt boundrail for $(uname -m); build it with: cargo install --git $repo --locked" ;;
 esac
 target=$arch-$os
 
@@ -64,32 +64,39 @@ else
   die "sha256sum or shasum is required to verify the download; not installing"
 fi
 
-stem=archgraph-$tag-$target
-archive=$stem.tar.gz
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-echo "archgraph install: downloading $archive"
-fetch -o "$tmp/$archive" "$base/$tag/$archive" || die "could not download $base/$tag/$archive"
 fetch -o "$tmp/SHA256SUMS" "$base/$tag/SHA256SUMS" || die "could not download $base/$tag/SHA256SUMS"
 
+product=boundrail
+stem=$product-$tag-$target
+archive=$stem.tar.gz
 expected=$(awk -v f="$archive" '$2 == f || $2 == "*" f { print $1 }' "$tmp/SHA256SUMS")
-[ -n "$expected" ] || die "SHA256SUMS has no entry for $archive; not installing"
+if [ -z "$expected" ]; then
+  product=archgraph
+  stem=$product-$tag-$target
+  archive=$stem.tar.gz
+  expected=$(awk -v f="$archive" '$2 == f || $2 == "*" f { print $1 }' "$tmp/SHA256SUMS")
+fi
+[ -n "$expected" ] || die "SHA256SUMS has no matching Boundrail or legacy Archgraph archive; not installing"
+echo "boundrail install: downloading $archive"
+fetch -o "$tmp/$archive" "$base/$tag/$archive" || die "could not download $base/$tag/$archive"
 actual=$(sha256 "$tmp/$archive")
 [ "$actual" = "$expected" ] ||
   die "checksum mismatch for $archive: expected $expected, got $actual; not installing"
 
 tar -xzf "$tmp/$archive" -C "$tmp"
-[ -f "$tmp/$stem/archgraph" ] || die "$archive holds no $stem/archgraph"
+[ -f "$tmp/$stem/$product" ] || die "$archive holds no $stem/$product"
 
 dir=${ARCHGRAPH_INSTALL_DIR:-$HOME/.local/bin}
 mkdir -p "$dir"
-cp "$tmp/$stem/archgraph" "$dir/.archgraph.tmp"
-chmod 755 "$dir/.archgraph.tmp"
-mv -f "$dir/.archgraph.tmp" "$dir/archgraph"
+cp "$tmp/$stem/$product" "$dir/.boundrail.tmp"
+chmod 755 "$dir/.boundrail.tmp"
+mv -f "$dir/.boundrail.tmp" "$dir/boundrail"
 
-echo "archgraph install: installed $tag to $dir/archgraph"
+echo "boundrail install: installed $tag to $dir/boundrail"
 case :$PATH: in
   *:"$dir":*) ;;
-  *) echo "archgraph install: $dir is not on PATH; add it: export PATH=\"$dir:\$PATH\"" ;;
+  *) echo "boundrail install: $dir is not on PATH; add it: export PATH=\"$dir:\$PATH\"" ;;
 esac

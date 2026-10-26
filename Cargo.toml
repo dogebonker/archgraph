@@ -1,8 +1,8 @@
 [package]
-name = "archgraph"
+name = "boundrail"
 version = "0.1.0"
 edition = "2024"
-description = "Import-graph evidence for architecture decisions: module metrics, cycles, rule verdicts and simulated moves"
+description = "Source-based architecture evidence: dependency rules, service models, agent workflows and visual diffs"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/dogebonker/archgraph"
 readme = "README.md"

@@ -1,6 +1,6 @@
 use super::*;
-use archgraph::diff::count;
-use archgraph::model::CycleLevel;
+use boundrail::diff::count;
+use boundrail::model::CycleLevel;
 
 #[derive(Args)]
 pub(super) struct Report {
@@ -72,7 +72,7 @@ pub(super) fn run(args: Report) -> Result<ExitCode> {
             summary(&doc, root, rules.as_deref(), &json, &html, bold)
         );
     }
-    Ok(if archgraph::known::fails(&doc) {
+    Ok(if boundrail::known::fails(&doc) {
         ExitCode::from(1)
     } else {
         ExitCode::SUCCESS
@@ -97,7 +97,7 @@ fn summary(
     };
     let mut out = format!(
         "{}\n",
-        heading(&format!("archgraph report: {}", root.display()))
+        heading(&format!("boundrail report: {}", root.display()))
     );
     match &rules {
         Some(path) => out += &format!("rules: {}\n", path.display()),
@@ -129,7 +129,7 @@ fn summary(
             .map(|p| format!("{p:.1}%"))
             .unwrap_or_else(|| "n/a".into());
         out += &format!(
-            "  {} imports, {} resolved ({percent}), {} unresolved — run archgraph unresolved for the list\n",
+            "  {} imports, {} resolved ({percent}), {} unresolved — run boundrail unresolved for the list\n",
             resolution.imports, resolution.resolved, resolution.unresolved
         );
     } else {
@@ -241,14 +241,14 @@ fn summary(
             };
         }
         for entry in &doc.stale_known {
-            out += &format!("  {}\n", archgraph::known::stale_line(entry));
+            out += &format!("  {}\n", boundrail::known::stale_line(entry));
         }
     }
     if let Some(target) = &doc.target {
         out += &format!(
             "\n{}\n{}",
             heading("Target"),
-            archgraph::target::text(target)
+            boundrail::target::text(target)
         );
     }
     out += &format!("\n{}\n", heading("Cycles"));
@@ -296,7 +296,7 @@ fn summary(
             );
             // A registrar move leads when it beats the cycle's single-import cut and the cycle
             // shrinks; the others follow the cut.
-            let single_cut = |c: &&archgraph::model::Cycle| {
+            let single_cut = |c: &&boundrail::model::Cycle| {
                 c.two_way.iter().flatten().any(|t| {
                     t.imports == 1 && !t.registry && !t.entry && !t.even && !t.resolved_by_move
                 })
@@ -309,7 +309,7 @@ fn summary(
             // Go imports packages: files are not imported one by one, and moving one file does
             // not change the folder grouping a package cycle comes from.
             let go = doc.source.language == Language::Go;
-            let placed = |r: &&archgraph::model::RegistrarMove| {
+            let placed = |r: &&boundrail::model::RegistrarMove| {
                 r.to.is_some() && r.pairs_removed.is_some_and(|n| n > 0)
             };
             let mut trailing = String::new();

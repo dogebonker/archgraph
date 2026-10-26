@@ -75,7 +75,7 @@ fn legacy_export_restores_advisories_and_removes_recipe_fields() {
         "diagnostics":[{"finding":{"kind":"small-repo","subject":".",
             "evidence":{"files":2,"modules":1},"finding_id":"ag-advisory"},"reason":"advisory"}]
     });
-    archgraph::compat::v1(&mut value).unwrap();
+    boundrail::compat::v1(&mut value).unwrap();
     assert_eq!(value["schema"], "archgraph/v1");
     assert!(value.get("diagnostics").is_none());
     assert_eq!(value["findings"].as_array().unwrap().len(), 2);
@@ -90,7 +90,7 @@ fn legacy_export_restores_advisories_and_removes_recipe_fields() {
 fn legacy_export_also_accepts_v11_documents() {
     let mut value = json!({"schema":"archgraph/v1.1","kind":"scan","findings":[],
         "edges":[{"from":"a.ts","to":"b.ts","kind":"runtime"}]});
-    archgraph::compat::v1(&mut value).unwrap();
+    boundrail::compat::v1(&mut value).unwrap();
     assert_eq!(value["schema"], "archgraph/v1");
     assert_eq!(value["edges"][0]["kind"], "static");
 }
@@ -98,9 +98,9 @@ fn legacy_export_also_accepts_v11_documents() {
 #[test]
 fn reader_recognizes_all_published_graph_versions() {
     for version in ["archgraph/v1", "archgraph/v1.1", "archgraph/v1.2"] {
-        assert!(archgraph::model::supported_schema(version), "{version}");
+        assert!(boundrail::model::supported_schema(version), "{version}");
     }
-    assert!(!archgraph::model::supported_schema("archgraph/v2"));
+    assert!(!boundrail::model::supported_schema("archgraph/v2"));
 }
 
 #[test]
@@ -109,12 +109,12 @@ fn old_scan_documents_restore_into_current_recipe_schema() {
     for version in ["archgraph/v1", "archgraph/v1.1", "archgraph/v1.2"] {
         let mut value = current.clone();
         if version == "archgraph/v1" {
-            archgraph::compat::v1(&mut value).unwrap();
+            boundrail::compat::v1(&mut value).unwrap();
         } else {
             value["schema"] = json!(version);
         }
         let input = serde_json::from_value(value).unwrap();
-        let restored = serde_json::to_value(archgraph::restore_scan(input).unwrap()).unwrap();
+        let restored = serde_json::to_value(boundrail::restore_scan(input).unwrap()).unwrap();
         assert_eq!(restored["schema"], "archgraph/v1.2");
         common::validate(&restored);
     }

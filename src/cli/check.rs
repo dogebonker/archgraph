@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use archgraph::known;
+use boundrail::known;
 
 use super::*;
 
@@ -59,7 +59,7 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
             .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
         let listed = doc.config.rules.as_ref().and_then(|r| r.known.as_ref());
         if mode == known::Mode::Shrink && listed.is_none() {
-            bail!("no {name} to shrink: create it with archgraph check --update-known accept");
+            bail!("no {name} to shrink: create it with boundrail check --update-known accept");
         }
         let entries = known::update(&doc, mode);
         let old: BTreeSet<_> = listed.into_iter().flat_map(|f| &f.entries).collect();
@@ -89,7 +89,7 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
         }
         println!(
             "{}",
-            serde_json::to_string_pretty(&archgraph::sarif::sarif(&doc))?
+            serde_json::to_string_pretty(&boundrail::sarif::sarif(&doc))?
         );
         return Ok(ExitCode::from(u8::from(known::fails(&doc))));
     }
@@ -102,21 +102,21 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
         && default_policy.is_some()
         && (active_policy.is_none() || active_policy == default_policy)
     {
-        match archgraph::sync_rules::run(root, false, true) {
+        match boundrail::sync_rules::run(root, false, true) {
             Ok(report) if !report.stale.is_empty() => eprintln!(
-                "warning: generated agent rules are stale in {}; run archgraph sync-rules",
+                "warning: generated agent rules are stale in {}; run boundrail sync-rules",
                 report.stale.join(", ")
             ),
             Err(error) => eprintln!(
-                "warning: cannot verify generated agent rules: {error:#}; run archgraph sync-rules --check"
+                "warning: cannot verify generated agent rules: {error:#}; run boundrail sync-rules --check"
             ),
             _ => (),
         }
     }
-    let smells = archgraph::early_smells::check(&doc, root.as_deref())?;
+    let smells = boundrail::early_smells::check(&doc, root.as_deref())?;
     let incomplete = smells.verdict == "INCOMPLETE";
     if incomplete {
-        eprintln!("incomplete source checks: run archgraph check <live repository directory>");
+        eprintln!("incomplete source checks: run boundrail check <live repository directory>");
     }
     if globals().brief {
         let forbidden: Vec<_> = doc
@@ -210,7 +210,7 @@ pub(super) fn run(args: Check) -> Result<ExitCode> {
         listed => println!("{forbidden} forbidden ({listed} known), {unplanned} unplanned"),
     }
     if let Some(target) = &doc.target {
-        print!("{}", archgraph::target::text(target));
+        print!("{}", boundrail::target::text(target));
     }
     for finding in &smells.violations {
         println!(

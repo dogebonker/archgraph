@@ -710,7 +710,7 @@ fn check_fails_only_on_forbidden_imports_missing_from_the_known_file() {
     let _ = std::fs::remove_file(&known);
     let scan = scan_file("ts-hexagonal", &[]);
     let header = "# Forbidden imports layout.yaml already has. check fails on any other, and on an entry that no\n\
-                  # longer occurs. Shrink with: archgraph check --update-known shrink\n\
+                  # longer occurs. Shrink with: boundrail check --update-known shrink\n\
                   version: 1\nknown:\n";
     let http = "  - { rule: \"forbid[0]\", from: \"src/adapters/in/http.ts\", to: \"src/adapters/out/pg.ts\" }\n";
     let queue = "  - { rule: \"forbid[1]\", from: \"src/adapters/out/queue.ts\", to: \"src/adapters/in/cli.ts\" }\n";
@@ -718,7 +718,7 @@ fn check_fails_only_on_forbidden_imports_missing_from_the_known_file() {
         "  - { rule: \"layers\", from: \"src/domain/user.ts\", to: \"src/adapters/out/pg.ts\" }\n";
     let all = format!("{header}{http}{queue}{user}");
     let stale = "stale known src/main.ts -> src/adapters/out/pg.ts (forbid[0]): no longer forbidden; \
-                 run archgraph check --update-known shrink\n";
+                 run boundrail check --update-known shrink\n";
 
     // Two listed: only the third fails.
     std::fs::write(&known, format!("{header}{http}{user}")).unwrap();
@@ -789,7 +789,7 @@ fn check_fails_only_on_forbidden_imports_missing_from_the_known_file() {
         stdout,
         "forbidden src/adapters/in/http.ts -> src/adapters/out/pg.ts (forbid[0])\n\
          stale known src/adapters/in/http.ts -> src/adapters/out/pg.ts (layers): no longer forbidden; \
-         run archgraph check --update-known shrink\n\
+         run boundrail check --update-known shrink\n\
          3 forbidden (2 known), 0 unplanned\n"
     );
 
@@ -1193,7 +1193,7 @@ fn captures_are_rejected_where_nothing_binds_them() {
 
 #[test]
 fn rules_embedded_in_a_scan_may_carry_unknown_fields() {
-    // A newer archgraph may add rule keys; reading its scan keeps working. Only layout.yaml is
+    // A newer boundrail may add rule keys; reading its scan keeps working. Only layout.yaml is
     // strict.
     let (mut doc, _, _) = scan_recorded("ts-hexagonal", &["--rules", &layout("ts-hexagonal")]);
     doc["config"]["rules"]["doc"]["future"] = json!(true);

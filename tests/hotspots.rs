@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use archgraph::hotspots::{self, Options};
-use archgraph::model::{Config, Document, Edge, EdgeKind, Git, Source};
+use boundrail::hotspots::{self, Options};
+use boundrail::model::{Config, Document, Edge, EdgeKind, Git, Source};
 use serde_json::json;
 
 struct Repo(PathBuf);
@@ -93,7 +93,7 @@ fn graph(paths: &[&str], edges: &[(&str, &str)], commit: &str) -> Document {
         "depth":1,"source_root":".","excludes":[],"include_tests":false,"rules":null
     }))
     .unwrap();
-    archgraph::analyze(
+    boundrail::analyze(
         source,
         config,
         paths.iter().map(|s| (*s).into()).collect(),
@@ -106,7 +106,7 @@ fn graph(paths: &[&str], edges: &[(&str, &str)], commit: &str) -> Document {
                 verdict: None,
                 rule: None,
                 reach: None,
-                ..archgraph::model::Edge::default()
+                ..boundrail::model::Edge::default()
             })
             .collect(),
         vec![],

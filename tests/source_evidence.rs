@@ -59,7 +59,7 @@ fn rust_report_and_agent_explanations_disclose_grouping_and_source_semantics() {
     );
     let value =
         serde_json::from_slice(&std::fs::read(output.join("archgraph.json")).unwrap()).unwrap();
-    let doc = archgraph::restore_scan(value).unwrap();
+    let doc = boundrail::restore_scan(value).unwrap();
     let cli = explain::explain(&doc, "src/a.rs").unwrap();
     assert!(
         explain::for_agent(&doc, &["src/a.rs".into()]).unwrap()["summary"]
@@ -67,22 +67,22 @@ fn rust_report_and_agent_explanations_disclose_grouping_and_source_semantics() {
             .unwrap()
             .contains("imports:0")
     );
-    let mcp = archgraph::mcp_tools::call(&doc, &root, "explain", json!({"path":"src/a.rs"}), None)
+    let mcp = boundrail::mcp_tools::call(&doc, &root, "explain", json!({"path":"src/a.rs"}), None)
         .unwrap();
     for value in [&cli, &mcp] {
         assert_eq!(value["grouping"], "folder depth 2 under src");
         assert_eq!(value["source_semantics"], "rust-source-references");
     }
     let mut config = doc.config.clone();
-    config.granularity = archgraph::model::Granularity::File;
+    config.granularity = boundrail::model::Granularity::File;
     assert_eq!(
-        archgraph::modules::grouping(&config),
+        boundrail::modules::grouping(&config),
         "file granularity under src"
     );
-    config.granularity = archgraph::model::Granularity::Folder;
+    config.granularity = boundrail::model::Granularity::Folder;
     config.package_modules = true;
     assert_eq!(
-        archgraph::modules::grouping(&config),
+        boundrail::modules::grouping(&config),
         "package directories under src"
     );
     std::fs::remove_dir_all(root).unwrap();

@@ -1,6 +1,6 @@
-macro_rules! print { ($($arg:tt)*) => { archgraph::output::stdout(format_args!($($arg)*)) }; }
-macro_rules! println { () => { archgraph::output::stdout(format_args!("\n")) }; ($($arg:tt)*) => { archgraph::output::stdout(format_args!("{}\n", format_args!($($arg)*))) }; }
-macro_rules! eprintln { ($($arg:tt)*) => { archgraph::output::stderr(format_args!("{}\n", format_args!($($arg)*))) }; }
+macro_rules! print { ($($arg:tt)*) => { boundrail::output::stdout(format_args!($($arg)*)) }; }
+macro_rules! println { () => { boundrail::output::stdout(format_args!("\n")) }; ($($arg:tt)*) => { boundrail::output::stdout(format_args!("{}\n", format_args!($($arg)*))) }; }
+macro_rules! eprintln { ($($arg:tt)*) => { boundrail::output::stderr(format_args!("{}\n", format_args!($($arg)*))) }; }
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fs;
@@ -18,7 +18,7 @@ struct Globals {
     brief: bool,
     tty: bool,
     tool_timeout: u64,
-    rank: archgraph::recipes::Rank,
+    rank: boundrail::recipes::Rank,
 }
 thread_local! { static GLOBALS: RefCell<Globals> = RefCell::new(Globals::default()); }
 fn globals() -> Globals {
@@ -26,9 +26,9 @@ fn globals() -> Globals {
 }
 
 use anyhow::{Context, Result, bail};
-use archgraph::collect::{self, rust};
-use archgraph::model::{Document, Git, Granularity, Language, SCHEMA, ScanInput, Source, Verdict};
-use archgraph::{codeowners, diff, history, modules, render, rules, simulate};
+use boundrail::collect::{self, rust};
+use boundrail::model::{Document, Git, Granularity, Language, SCHEMA, ScanInput, Source, Verdict};
+use boundrail::{codeowners, diff, history, modules, render, rules, simulate};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[path = "cli/adr.rs"]
@@ -83,7 +83,10 @@ mod sync_rules_cli;
 mod tour_cli;
 
 #[derive(Parser)]
-#[command(version, about = "Import-graph evidence for architecture decisions")]
+#[command(
+    version,
+    about = "Architecture evidence and dependency checks for developers and coding agents"
+)]
 struct Cli {
     /// Bounded deterministic JSON for agent context windows
     #[arg(long, global = true)]
@@ -92,8 +95,8 @@ struct Cli {
     #[arg(long, global = true)]
     no_daemon: bool,
     /// Finding ordering: hotspot × recipe confidence × pairs removed, or legacy
-    #[arg(long, global = true, value_enum, default_value_t = archgraph::recipes::Rank::Recipe)]
-    rank: archgraph::recipes::Rank,
+    #[arg(long, global = true, value_enum, default_value_t = boundrail::recipes::Rank::Recipe)]
+    rank: boundrail::recipes::Rank,
     /// Include every import kind in cycle detection, for comparison
     #[arg(long, global = true)]
     all_kinds: bool,
@@ -396,7 +399,7 @@ fn main() -> ExitCode {
         Ok(Some(out)) => {
             print!("{}", out.stdout);
             if !out.stderr.is_empty() {
-                archgraph::output::stderr(format_args!("{}", out.stderr));
+                boundrail::output::stderr(format_args!("{}", out.stderr));
             }
             return ExitCode::from(out.code);
         }
@@ -412,7 +415,7 @@ fn execute(cli: Cli) -> ExitCode {
     let brief = cli.brief
         && !matches!(&cli.command, Cmd::Hook(_) | Cmd::Fires(_))
         && !matches!(&cli.command, Cmd::Explain(args) if args.for_agent);
-    let capture = brief.then(archgraph::output::Capture::begin);
+    let capture = brief.then(boundrail::output::Capture::begin);
     let code = execute_inner(cli);
     if let Some(capture) = capture {
         let out = capture.finish(if code == ExitCode::SUCCESS {
@@ -436,7 +439,7 @@ fn execute(cli: Cli) -> ExitCode {
             );
         }
         if !out.stderr.is_empty() {
-            archgraph::output::stderr(format_args!("{}", out.stderr));
+            boundrail::output::stderr(format_args!("{}", out.stderr));
         }
     }
     code
@@ -536,7 +539,7 @@ fn unresolved(args: Unresolved) -> Result<()> {
             serde_json::to_string(&import.specifier)?,
             import
                 .unresolved
-                .map(archgraph::model::ImportReason::as_str)
+                .map(boundrail::model::ImportReason::as_str)
                 .unwrap_or_default()
         );
     }
@@ -565,10 +568,10 @@ fn show_excludes() -> Result<()> {
 }
 
 fn simulate(args: Simulate) -> Result<()> {
-    let moves: Vec<archgraph::model::Move> = args
+    let moves: Vec<boundrail::model::Move> = args
         .moves
         .chunks_exact(2)
-        .map(|pair| archgraph::model::Move {
+        .map(|pair| boundrail::model::Move {
             file: pair[0].clone(),
             to: pair[1].clone(),
         })
@@ -579,7 +582,7 @@ fn simulate(args: Simulate) -> Result<()> {
     if let Some(path) = &args.rules {
         config.rules = Some(rules::load(path)?);
     }
-    archgraph::resolution::require_policy_accounting(&config)?;
+    boundrail::resolution::require_policy_accounting(&config)?;
     let rules = rules::compile(&config)?;
     let owners = config
         .codeowners
@@ -587,7 +590,7 @@ fn simulate(args: Simulate) -> Result<()> {
         .map(codeowners::compile)
         .transpose()?;
     let files = input.files.into_iter().map(|f| f.path).collect();
-    let doc = archgraph::build(
+    let doc = boundrail::build(
         input.source,
         config,
         files,
@@ -596,7 +599,7 @@ fn simulate(args: Simulate) -> Result<()> {
         rules.as_ref(),
         owners.as_ref(),
     );
-    archgraph::exposure::validate(&doc)?;
+    boundrail::exposure::validate(&doc)?;
     write(
         None,
         &simulate::simulate_moves(&doc, rules.as_ref(), &moves)?,
@@ -615,7 +618,7 @@ fn render(args: Render) -> Result<()> {
         if args.rules.is_some() {
             bail!("--rules applies to import scans; service rules come from the service manifest");
         }
-        render::render_services(&archgraph::services::read_report(&text)?)?
+        render::render_services(&boundrail::services::read_report(&text)?)?
     } else {
         drop(text);
         render::render(&recompute(&args.graph, args.rules.as_deref())?)?
@@ -666,18 +669,18 @@ fn diff(args: DiffArgs) -> Result<ExitCode> {
         {
             bail!("service diffs support only --fail-on new-forbidden");
         }
-        let old = archgraph::services::read_report(&before)?;
-        let new = archgraph::services::read_report(&after)?;
+        let old = boundrail::services::read_report(&before)?;
+        let new = boundrail::services::read_report(&after)?;
         if !args.fail_on.is_empty() && new.forbid.is_empty() {
             bail!(
                 "--fail-on new-forbidden requires authored forbid rules in the after service report"
             );
         }
-        let report = archgraph::service_diff::diff(&old, &new)?;
+        let report = boundrail::service_diff::diff(&old, &new)?;
         let failed = !args.fail_on.is_empty() && report.has_new_forbidden();
         match args.format {
             Format::Json => write(None, &report)?,
-            Format::Markdown => print!("{}", archgraph::service_diff::markdown(&report, failed)),
+            Format::Markdown => print!("{}", boundrail::service_diff::markdown(&report, failed)),
         }
         return Ok(ExitCode::from(u8::from(failed)));
     }
@@ -689,13 +692,13 @@ fn diff(args: DiffArgs) -> Result<ExitCode> {
                 .to_string_lossy()
                 .into_owned()
         };
-        let (old, old_provenance) = archgraph::comparison::read(&before, &label(&args.old))?;
-        let (new, new_provenance) = archgraph::comparison::read(&after, &label(&args.new))?;
-        let mut old = archgraph::restore_scan(prepare_scan(old, &args.old)?)?;
-        let mut new = archgraph::restore_scan(prepare_scan(new, &args.new)?)?;
-        archgraph::recipes::rank(&mut old, globals().rank);
-        archgraph::recipes::rank(&mut new, globals().rank);
-        let view = archgraph::comparison::project(&old, &old_provenance, &new, &new_provenance)?;
+        let (old, old_provenance) = boundrail::comparison::read(&before, &label(&args.old))?;
+        let (new, new_provenance) = boundrail::comparison::read(&after, &label(&args.new))?;
+        let mut old = boundrail::restore_scan(prepare_scan(old, &args.old)?)?;
+        let mut new = boundrail::restore_scan(prepare_scan(new, &args.new)?)?;
+        boundrail::recipes::rank(&mut old, globals().rank);
+        boundrail::recipes::rank(&mut new, globals().rank);
+        let view = boundrail::comparison::project(&old, &old_provenance, &new, &new_provenance)?;
         write_file(output, render::render_comparison(&view)?.as_bytes())?;
         (old, new)
     } else {
@@ -754,7 +757,7 @@ fn recompute(path: &Path, rules: Option<&Path>) -> Result<Document> {
     if rules.is_none()
         && let Some(mut doc) = daemon_cli::cached_graph(path)
     {
-        archgraph::recipes::rank(&mut doc, globals().rank);
+        boundrail::recipes::rank(&mut doc, globals().rank);
         return Ok(doc);
     }
     let mut input = read_scan(path)?;
@@ -762,8 +765,8 @@ fn recompute(path: &Path, rules: Option<&Path>) -> Result<Document> {
         input.config.rules = Some(rules::load(path)?);
         reassign(&mut input)?;
     }
-    let mut doc = archgraph::restore_scan(input)?;
-    archgraph::recipes::rank(&mut doc, globals().rank);
+    let mut doc = boundrail::restore_scan(input)?;
+    boundrail::recipes::rank(&mut doc, globals().rank);
     Ok(doc)
 }
 
@@ -795,7 +798,7 @@ fn read_scan(path: &Path) -> Result<ScanInput> {
 }
 
 fn prepare_scan(mut input: ScanInput, path: &Path) -> Result<ScanInput> {
-    if !archgraph::model::supported_schema(&input.schema) || input.kind != "scan" {
+    if !boundrail::model::supported_schema(&input.schema) || input.kind != "scan" {
         bail!(
             "{} is `{}` `{}`, expected a `{SCHEMA}` scan document",
             path.display(),
@@ -804,7 +807,7 @@ fn prepare_scan(mut input: ScanInput, path: &Path) -> Result<ScanInput> {
         );
     }
     input.config.all_kinds |= globals().all_kinds;
-    archgraph::validate_scan(&input)
+    boundrail::validate_scan(&input)
         .with_context(|| format!("inconsistent scan document {}", path.display()))?;
     if let Some(granularity) = globals().granularity {
         input.config.granularity = granularity;
@@ -818,7 +821,7 @@ fn prepare_scan(mut input: ScanInput, path: &Path) -> Result<ScanInput> {
 fn write(output: Option<&Path>, value: &impl serde::Serialize) -> Result<()> {
     let mut value = serde_json::to_value(value)?;
     if globals().legacy_v1 {
-        archgraph::compat::v1(&mut value)?;
+        boundrail::compat::v1(&mut value)?;
     }
     if output.is_none() && globals().brief {
         value = brief_cli::project(&value);
@@ -859,12 +862,12 @@ fn scanned_checkout(source: &Source, root: &Path, outputs: &[&Path]) -> Result<b
 }
 
 fn git_scan_root(root: &Path) -> Option<String> {
-    let prefix = archgraph::git::text(root, &["rev-parse", "--show-prefix"]).ok()?;
+    let prefix = boundrail::git::text(root, &["rev-parse", "--show-prefix"]).ok()?;
     let prefix = prefix.trim_end_matches('\n').trim_end_matches('/');
     Some(if prefix.is_empty() { "." } else { prefix }.to_owned())
 }
 
-/// The checkout's commit, and whether anything other than archgraph's own outputs changed:
+/// The checkout's commit, and whether anything other than Boundrail's own outputs changed:
 /// `.archgraph/` and those of `outputs` inside `root`.
 fn git(root: &Path, outputs: &[&Path]) -> Option<Git> {
     let canonical_root = fs::canonicalize(root).ok()?;
@@ -885,11 +888,11 @@ fn git(root: &Path, outputs: &[&Path]) -> Option<Git> {
     }));
     let status: Vec<_> = status.iter().map(String::as_str).collect();
     Some(Git {
-        commit: archgraph::git::text(root, &["rev-parse", "HEAD"])
+        commit: boundrail::git::text(root, &["rev-parse", "HEAD"])
             .ok()?
             .trim()
             .to_owned(),
-        dirty: !archgraph::git::run_with_index(
+        dirty: !boundrail::git::run_with_index(
             root,
             &status,
             daemon_cli::cached_index(root).as_deref(),

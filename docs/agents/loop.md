@@ -2,7 +2,7 @@
 
 The edit gate compares current code with the graph captured immediately before an edit. A new forbidden import, concrete cyclic file/package import, declared surface bypass, or change outside the supplied scope blocks progression with a recipe. Existing findings remain advisory. Reciprocal display-folder dependencies alone never block: FastAPI app assembly importing a router that uses a separate app dependency file is ordinary wiring. The gate compares concrete cyclic import pairs, including a new file cycle inside a pre-existing folder loop. Go uses compiler packages as cycle units. A block retains its original baseline through repair attempts; capturing another repair does not turn the violation into pre-existing debt.
 
-Install with `archgraph hook install --agent claude --root . --scope 'src/**'` (or `--agent codex`) and start `archgraph serve . --engine native --symbols` with matching scan options/environment. Installer output names the files it wrote and the supported capabilities. Existing settings and foreign hooks are retained; repeated installation produces identical contents. For shell tools without known paths, pre-edit context states the transaction contract; actual workspace changes determine the post verdict. Known read-only tools skip transactions.
+Install with `boundrail hook install --agent claude --root . --scope 'src/**'` (or `--agent codex`) and start `boundrail serve . --engine native --symbols` with matching scan options/environment. Installer output names the files it wrote and the supported capabilities. Existing settings and foreign hooks are retained; repeated installation produces identical contents. For shell tools without known paths, pre-edit context states the transaction contract; actual workspace changes determine the post verdict. Known read-only tools skip transactions.
 
 Installation selects an existing layout. A first layout introduced later is adopted at the next clean Pre event; introducing it mid-edit makes the pending transaction unavailable. Changing an explicit rule path still requires reinstall. Generated/dependency directories are outside inventory. Explicit edits there are refused, while opaque shell writes there are not scope-enforced. Snapshot artifacts currently accumulate under `.archgraph/hooks/`; there is no automatic retention policy.
 
@@ -28,7 +28,7 @@ With the current-main binary installed as shown in the README, clone the reposit
 ```sh
 git clone https://github.com/dogebonker/archgraph
 cd archgraph
-python3 ci/bench_edit_loop.py --archgraph "$(command -v archgraph)" --fixture-only
+python3 ci/bench_edit_loop.py --boundrail "$(command -v boundrail)" --fixture-only
 ```
 
 The script creates its own temporary fixture. No project initialization, separately started daemon or live agent is needed for this scripted block/repair check. A binary installation alone does not contain the repository's `ci/` scripts.
@@ -37,7 +37,7 @@ To also reproduce the release-binary 2,000-file latency benchmark from that chec
 
 ```sh
 cargo +stable build --release --locked
-python3 ci/bench_edit_loop.py --archgraph target/release/archgraph --repeats 5
+python3 ci/bench_edit_loop.py --boundrail target/release/boundrail --repeats 5
 ```
 
 Use `--fixture-only` to run just the small acceptance session. The script prints the artifact directory's results as JSON and writes `results.json`, `transcript.json`, and the daemon log there. An explicit `--work /path/to/new-directory` makes the artifact location predictable. It does not overwrite existing fixtures.
@@ -47,13 +47,13 @@ The session uses CLI hook payloads and source edits, not a live Claude, Codex, C
 Equivalent core commands, with the snapshot ID returned by `capture`:
 
 ```sh
-archgraph hook capture --root . --agent claude --session demo --tool-id edit-1 \
+boundrail hook capture --root . --agent claude --session demo --tool-id edit-1 \
   --files src/domain/a.ts --rules "$PWD/layout.yaml" --scope 'src/**'
 # Add: import "../adapters/b";
-archgraph hook check --root . --baseline SNAPSHOT_ID --brief
+boundrail hook check --root . --baseline SNAPSHOT_ID --brief
 # Remove the forbidden import, then recheck the same baseline.
-archgraph hook check --root . --baseline SNAPSHOT_ID --brief
-archgraph fires --top --root .
+boundrail hook check --root . --baseline SNAPSHOT_ID --brief
+boundrail fires --top --root .
 ```
 
 `--brief` prints one verdict line followed by recipe JSON. `BLOCK` exits 1; `PASS` exits 0. Native agent hooks wrap that information in each host's documented JSON protocol. A post-edit block leaves the source edit on disk so the agent can repair it.

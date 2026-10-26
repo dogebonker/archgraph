@@ -70,7 +70,7 @@ struct Response {
     jsonrpc: String,
     id: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    result: Option<archgraph::output::Output>,
+    result: Option<boundrail::output::Output>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<RpcError>,
 }
@@ -261,7 +261,7 @@ fn copy_index(actual: &Path, private: &Path) -> Result<()> {
 }
 pub(super) fn configure_index(root: &Path) -> Result<()> {
     INDEX_CACHE.with(|cache| *cache.borrow_mut() = None);
-    let Ok(path) = archgraph::git::text(
+    let Ok(path) = boundrail::git::text(
         root,
         &["rev-parse", "--path-format=absolute", "--git-path", "index"],
     ) else {
@@ -405,7 +405,7 @@ fn receive<T: serde::de::DeserializeOwned>(stream: &mut dyn Stream) -> Result<T>
     stream.read_exact(&mut bytes)?;
     Ok(serde_json::from_slice(&bytes)?)
 }
-fn rpc(ep: &Endpoint, args: Vec<String>, tty: bool) -> Result<Option<archgraph::output::Output>> {
+fn rpc(ep: &Endpoint, args: Vec<String>, tty: bool) -> Result<Option<boundrail::output::Output>> {
     let Ok(mut stream) = connect(ep) else {
         return Ok(None);
     };
@@ -428,7 +428,7 @@ fn rpc(ep: &Endpoint, args: Vec<String>, tty: bool) -> Result<Option<archgraph::
     };
     Ok(response.result)
 }
-pub(super) fn forward(cli: &Cli) -> Result<Option<archgraph::output::Output>> {
+pub(super) fn forward(cli: &Cli) -> Result<Option<boundrail::output::Output>> {
     use std::io::IsTerminal;
     if cli.no_daemon {
         return Ok(None);
@@ -468,7 +468,7 @@ pub(super) fn forward_args(
     start: &Path,
     args: Vec<String>,
     tty: bool,
-) -> Result<Option<archgraph::output::Output>> {
+) -> Result<Option<boundrail::output::Output>> {
     // Nested scan requests reuse the active graph instead of calling this serial lane itself.
     if ACTIVE.with(|active| active.borrow().is_some()) {
         return Ok(None);
@@ -483,7 +483,7 @@ pub(super) fn status(args: Status) -> Result<()> {
     let value = if let Some(a) = active {
         json!({"schema":"archgraph/daemon/v1","kind":"status","running":true,"root":a.root,"files":a.doc.files.len(),"modules":a.doc.modules.len(),"cycles":a.doc.cycles.len(),"snapshot_limit":2,"generation":a.stats["generation"],"parsed_files":a.stats["parsed_files"],"refresh_ms":a.stats["refresh_ms"],"fallback_reason":a.stats["fallback_reason"],"cached_snapshots":a.stats["cached_snapshots"],"timings":a.stats["timings"]})
     } else {
-        json!({"schema":"archgraph/daemon/v1","kind":"status","running":false,"root":args.root.canonicalize()?,"hint":"Start archgraph serve . to keep this graph warm."})
+        json!({"schema":"archgraph/daemon/v1","kind":"status","running":false,"root":args.root.canonicalize()?,"hint":"Start boundrail serve . to keep this graph warm."})
     };
     write(None, &value)
 }
@@ -641,15 +641,15 @@ fn metadata_paths(root: &Path) -> Vec<PathBuf> {
         "info/exclude",
         "refs",
     ] {
-        if let Ok(value) = archgraph::git::text(
+        if let Ok(value) = boundrail::git::text(
             root,
             &["rev-parse", "--path-format=absolute", "--git-path", name],
         ) {
             paths.insert(PathBuf::from(value.trim()));
         }
     }
-    if let Ok(branch) = archgraph::git::text(root, &["symbolic-ref", "-q", "HEAD"])
-        && let Ok(value) = archgraph::git::text(
+    if let Ok(branch) = boundrail::git::text(root, &["symbolic-ref", "-q", "HEAD"])
+        && let Ok(value) = boundrail::git::text(
             root,
             &[
                 "rev-parse",
@@ -671,7 +671,7 @@ fn metadata_paths(root: &Path) -> Vec<PathBuf> {
         }
     }
     if let Ok(path) =
-        archgraph::git::text(root, &["config", "--path", "--get", "core.excludesFile"])
+        boundrail::git::text(root, &["config", "--path", "--get", "core.excludesFile"])
     {
         let path = PathBuf::from(path.trim());
         paths.insert(if path.is_absolute() {
@@ -1044,12 +1044,12 @@ pub(super) fn serve(mut args: Serve) -> Result<ExitCode> {
                 continue;
             }
         };
-        let result = (|| -> Result<archgraph::output::Output> {
+        let result = (|| -> Result<boundrail::output::Output> {
             if request.jsonrpc != "2.0"
                 || request.method != "command"
                 || request.params.token != ep.token
             {
-                bail!("invalid local daemon request; use the matching archgraph CLI")
+                bail!("invalid local daemon request; use the matching boundrail CLI")
             }
             if request.params.env != env {
                 bail!(
@@ -1061,7 +1061,7 @@ pub(super) fn serve(mut args: Serve) -> Result<ExitCode> {
                 &mut warm, &rx, &mut known, &mut dirty, &overflow, &mut extra,
             )?;
             let cli = Cli::try_parse_from(
-                std::iter::once("archgraph".into()).chain(request.params.args.clone()),
+                std::iter::once("boundrail".into()).chain(request.params.args.clone()),
             )
             .map_err(|e| anyhow::anyhow!("{e}"))?;
             if !matches!(
@@ -1086,7 +1086,7 @@ pub(super) fn serve(mut args: Serve) -> Result<ExitCode> {
             std::env::set_current_dir(&cwd)?;
             warm.activate();
             CALLER_TTY.with(|v| v.set(Some(request.params.tty)));
-            let capture = archgraph::output::Capture::begin();
+            let capture = boundrail::output::Capture::begin();
             let code = execute(cli);
             let code = if code == ExitCode::SUCCESS {
                 0

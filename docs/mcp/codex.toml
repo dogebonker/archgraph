@@ -1,6 +1,6 @@
 # Merge into ~/.codex/config.toml or the trusted project's .codex/config.toml.
 # Replace cwd with the absolute checkout path. "native" is experimental.
-[mcp_servers.archgraph]
-command = "archgraph"
+[mcp_servers.boundrail]
+command = "boundrail"
 args = ["mcp", ".", "--engine", "native", "--symbols"]
 cwd = "/absolute/path/to/repo"

@@ -160,7 +160,7 @@ fn simulation_accepts_dash_leading_move_paths_used_by_copied_commands() {
         "typescript",
     ]);
     let graph = write_tmp("whatif-dash-path/-graph.json", &stdout);
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .current_dir(std::path::Path::new(&graph).parent().unwrap())
         .args(["simulate", "./-graph.json", "--move", "-old.ts", "-new.ts"])
         .output()

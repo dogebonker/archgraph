@@ -1,9 +1,9 @@
 use std::fs;
 use std::path::PathBuf;
 
-use archgraph::collect::excludes::{Options, Policy};
-use archgraph::collect::native::python;
-use archgraph::model::{EdgeKind, ImportReason, Language};
+use boundrail::collect::excludes::{Options, Policy};
+use boundrail::collect::native::python;
+use boundrail::model::{EdgeKind, ImportReason, Language};
 
 struct Fixture(PathBuf);
 impl Fixture {
@@ -35,7 +35,7 @@ fn collect(
     dir: &Fixture,
     package: Option<&str>,
     paths: &[PathBuf],
-) -> archgraph::collect::native::Output {
+) -> boundrail::collect::native::Output {
     let policy = Policy::new(dir.path(), Language::Python, Options::default()).unwrap();
     python::collect(dir.path(), "src", package, paths, &policy).unwrap()
 }
@@ -432,7 +432,7 @@ fn native_python_barrel_all_filters_surface_without_inventing_wildcard_target_ex
     assert_eq!(edges[0].to, "src/pkg/one.py");
     assert_eq!(
         edges[0].confidence,
-        Some(archgraph::model::Confidence::High)
+        Some(boundrail::model::Confidence::High)
     );
 }
 #[test]
@@ -454,7 +454,7 @@ fn native_python_distinct_wildcard_providers_remain_ambiguous() {
         .find(|e| e.from == "src/consumer/a.py")
         .unwrap();
     assert_eq!(edge.to, "src/pkg/__init__.py");
-    assert_eq!(edge.confidence, Some(archgraph::model::Confidence::Low));
+    assert_eq!(edge.confidence, Some(boundrail::model::Confidence::Low));
     assert!(
         edge.resolution_reason
             .as_ref()

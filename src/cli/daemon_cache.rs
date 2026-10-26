@@ -22,7 +22,7 @@ pub(super) struct Warm {
     pub(super) doc: Arc<Document>,
     pub(super) previous: Option<Arc<Document>>,
     pub(super) session: Option<collect::incremental::Session>,
-    pub(super) analysis: archgraph::incremental::Analysis,
+    pub(super) analysis: boundrail::incremental::Analysis,
     pub(super) graph: PathBuf,
     pub(super) generation: u64,
     pub(super) parsed: usize,
@@ -108,9 +108,9 @@ impl Warm {
             let cochange = args
                 .opts
                 .cochange
-                .map(|count| archgraph::cochange::collect(&args.root, count, &output.raw.files))
+                .map(|count| boundrail::cochange::collect(&args.root, count, &output.raw.files))
                 .transpose()?;
-            doc = archgraph::analyze(
+            doc = boundrail::analyze(
                 source,
                 config,
                 output.raw.files,
@@ -119,23 +119,23 @@ impl Warm {
                 cochange,
             )?;
             if args.opts.symbols {
-                archgraph::surface::attach(
+                boundrail::surface::attach(
                     &mut doc,
                     output.symbols,
-                    archgraph::surface::DEFAULT_MAX_SYMBOLS,
+                    boundrail::surface::DEFAULT_MAX_SYMBOLS,
                 )?;
             }
             if let Some(since) = &args.hotspots.hotspots {
-                let report = archgraph::hotspots::collect(
+                let report = boundrail::hotspots::collect(
                     &args.root,
                     &doc,
-                    &archgraph::hotspots::Options {
+                    &boundrail::hotspots::Options {
                         since: since.clone(),
                         max_files: args.hotspots.hotspot_max_files,
                         authors: args.hotspots.hotspot_authors,
                     },
                 )?;
-                archgraph::apply_hotspots(&mut doc, report);
+                boundrail::apply_hotspots(&mut doc, report);
             }
             timings.analyze_ms += analyze_started.elapsed().as_secs_f64() * 1000.0;
             Some(session)
@@ -148,10 +148,10 @@ impl Warm {
             .iter()
             .map(|file| (file.path.clone(), file.module.clone()))
             .collect();
-        let analysis = archgraph::incremental::Analysis::new(
+        let analysis = boundrail::incremental::Analysis::new(
             module_of.clone(),
             doc.edges.clone(),
-            archgraph::incremental::Options {
+            boundrail::incremental::Options {
                 entries: modules::cycle_entries(
                     module_of.keys(),
                     &doc.config.source_root,
@@ -175,7 +175,7 @@ impl Warm {
         )?;
         timings.analyze_ms += analyze_started.elapsed().as_secs_f64() * 1000.0;
         let dirty_proof = doc.source.git.is_some()
-            && archgraph::git::has_tracked_changes(
+            && boundrail::git::has_tracked_changes(
                 &args.root,
                 &doc.files
                     .iter()
@@ -312,7 +312,7 @@ impl Warm {
             })
             .collect();
         if let Some(provenance) = &mut source.git
-            && archgraph::git::has_tracked_changes(&self.args.root, &changed_paths)
+            && boundrail::git::has_tracked_changes(&self.args.root, &changed_paths)
                 .is_ok_and(|changed| changed)
         {
             // A tracked dirty source proves the checkout dirty; a negative result cannot prove it clean.
@@ -343,13 +343,13 @@ impl Warm {
                 }
             }
             // Forbidden-edge findings and their recipes carry those lines.
-            archgraph::recipes::attach(&mut doc)?;
+            boundrail::recipes::attach(&mut doc)?;
             doc
         } else {
             eprintln!(
                 "daemon: global findings fallback; SCCs and metrics reuse closed dirty dependency regions"
             );
-            archgraph::analyze_cached(
+            boundrail::analyze_cached(
                 source,
                 config,
                 raw.files,
@@ -360,10 +360,10 @@ impl Warm {
             )?
         };
         if self.args.opts.symbols {
-            archgraph::surface::attach(
+            boundrail::surface::attach(
                 &mut doc,
                 output.symbols,
-                archgraph::surface::DEFAULT_MAX_SYMBOLS,
+                boundrail::surface::DEFAULT_MAX_SYMBOLS,
             )?;
         }
         self.timings.analyze_ms = analyze_started.elapsed().as_secs_f64() * 1000.0;
@@ -458,11 +458,11 @@ impl Warm {
 }
 
 fn native_config(
-    previous: &archgraph::model::Config,
+    previous: &boundrail::model::Config,
     opts: &ScanOpts,
     output: &mut collect::native::Output,
     excluded: Vec<String>,
-) -> archgraph::model::Config {
+) -> boundrail::model::Config {
     let mut config = previous.clone();
     config.source_root.clone_from(&output.source_root);
     config.file_metadata = std::mem::take(&mut output.raw.metadata);
@@ -481,7 +481,7 @@ fn native_config(
 
 fn policy(
     root: &Path,
-    config: &archgraph::model::Config,
+    config: &boundrail::model::Config,
     language: Language,
     opts: &ScanOpts,
 ) -> Result<collect::excludes::Policy> {
@@ -509,7 +509,7 @@ fn normalize(
     output: &mut collect::native::Output,
     policy: &collect::excludes::Policy,
     selection: &mut Option<Selection>,
-    rules: Option<&archgraph::rules::Rules>,
+    rules: Option<&boundrail::rules::Rules>,
 ) -> Result<Vec<String>> {
     if output
         .raw
@@ -520,7 +520,7 @@ fn normalize(
         output.symbols.complete = false;
         output.symbols.limitations.push("Unresolved requests can hide local symbol consumers; unused-export suggestions are withheld.".into());
     }
-    if output.raw.globals.is_some() && rules.is_some_and(archgraph::rules::Rules::names_globals) {
+    if output.raw.globals.is_some() && rules.is_some_and(boundrail::rules::Rules::names_globals) {
         output
             .symbols
             .limitations
@@ -654,7 +654,7 @@ mod tests {
         fn warm_with(&self, symbols: bool) -> Warm {
             let root = self.0.to_str().unwrap();
             let rules = self.0.join("policy.yaml");
-            let mut args = vec!["archgraph", "serve", root, "--engine", "native"];
+            let mut args = vec!["boundrail", "serve", root, "--engine", "native"];
             args.extend(symbols.then_some("--symbols"));
             args.extend(["--rules", rules.to_str().unwrap()]);
             let cli = Cli::try_parse_from(args).unwrap();

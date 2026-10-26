@@ -1,7 +1,7 @@
 use super::*;
-use archgraph::cochange;
-use archgraph::collect::{depcruise, elixir, go, grimp, java};
-use archgraph::model::Config;
+use boundrail::cochange;
+use boundrail::collect::{depcruise, elixir, go, grimp, java};
+use boundrail::model::Config;
 
 #[derive(Args)]
 pub(super) struct Scan {
@@ -40,7 +40,7 @@ pub(super) fn run(args: Scan) -> Result<()> {
 /// Live native evidence shared by first-run setup and directory checks.
 pub(super) fn live(root: &Path, rules: Option<&Path>) -> Result<Document> {
     let mut argv = vec![
-        "archgraph".into(),
+        "boundrail".into(),
         "scan".into(),
         root.to_string_lossy().into_owned(),
         "--engine".into(),
@@ -75,7 +75,7 @@ pub(super) fn scan_doc(
 ) -> Result<Document> {
     if let Some(mut doc) = daemon_cli::cached_scan(root, args, hotspots, collector, rules, outputs)
     {
-        archgraph::recipes::rank(&mut doc, globals().rank);
+        boundrail::recipes::rank(&mut doc, globals().rank);
         return Ok(doc);
     }
     // Resolved here: a relative program path is not reliably resolved against the child's
@@ -392,7 +392,7 @@ pub(super) fn scan_doc(
         codeowners: codeowners::load(root)?,
         collection: (args.engine == collect::Engine::Native
             || matches!(language, Language::Python | Language::Rust))
-        .then_some(archgraph::model::CollectionOptions {
+        .then_some(boundrail::model::CollectionOptions {
             engine: args.engine,
             python_package,
             python_paths: args
@@ -429,7 +429,7 @@ pub(super) fn scan_doc(
             Vec::new()
         }
     };
-    let mut doc = archgraph::analyze(source, config, raw.files, raw.edges, entries, cochange)?;
+    let mut doc = boundrail::analyze(source, config, raw.files, raw.edges, entries, cochange)?;
     if args.symbols {
         let symbols = if let Some(mut symbols) = native_symbols {
             let kept: std::collections::BTreeSet<_> =
@@ -447,31 +447,31 @@ pub(super) fn scan_doc(
             });
             symbols
         } else {
-            archgraph::symbols::collect(
+            boundrail::symbols::collect(
                 root,
                 &doc,
-                archgraph::symbols::Options {
+                boundrail::symbols::Options {
                     depcruise: depcruise.as_deref(),
                     python: &collector.python,
                     go: &collector.go,
                 },
             )?
         };
-        archgraph::surface::attach(&mut doc, symbols, archgraph::surface::DEFAULT_MAX_SYMBOLS)?;
+        boundrail::surface::attach(&mut doc, symbols, boundrail::surface::DEFAULT_MAX_SYMBOLS)?;
     }
     if let Some(since) = &hotspots.hotspots {
-        let report = archgraph::hotspots::collect(
+        let report = boundrail::hotspots::collect(
             root,
             &doc,
-            &archgraph::hotspots::Options {
+            &boundrail::hotspots::Options {
                 since: since.clone(),
                 max_files: hotspots.hotspot_max_files,
                 authors: hotspots.hotspot_authors,
             },
         )?;
-        archgraph::apply_hotspots(&mut doc, report);
+        boundrail::apply_hotspots(&mut doc, report);
     }
-    archgraph::recipes::rank(&mut doc, globals().rank);
+    boundrail::recipes::rank(&mut doc, globals().rank);
     Ok(doc)
 }
 
@@ -480,7 +480,7 @@ pub(super) fn source_time(root: &Path) -> Result<String> {
     let secs = match std::env::var("SOURCE_DATE_EPOCH") {
         Ok(value) => value.parse::<i64>().ok().filter(|value| (0..=253_402_300_799).contains(value))
             .ok_or_else(|| anyhow::anyhow!("invalid SOURCE_DATE_EPOCH; set an integer Unix timestamp between 0 and 253402300799, or unset it to use Git HEAD time"))?,
-        Err(std::env::VarError::NotPresent) => archgraph::git::text(root, &["show", "-s", "--format=%ct", "HEAD"])
+        Err(std::env::VarError::NotPresent) => boundrail::git::text(root, &["show", "-s", "--format=%ct", "HEAD"])
             .ok().and_then(|value| value.trim().parse::<i64>().ok())
             .filter(|value| (0..=253_402_300_799).contains(value)).unwrap_or(0),
         Err(error) => return Err(anyhow::anyhow!("cannot read SOURCE_DATE_EPOCH: {error}; unset it or provide an integer Unix timestamp")),

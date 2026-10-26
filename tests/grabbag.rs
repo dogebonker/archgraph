@@ -1,4 +1,4 @@
-use archgraph::{
+use boundrail::{
     grabbag::Thresholds,
     model::{Config, Document, Edge, EdgeKind, Granularity, Language, Source},
     rules::{Compiled, Rules},
@@ -39,7 +39,7 @@ fn scan_language(
         .collect::<std::collections::BTreeSet<_>>()
         .into_iter()
         .collect();
-    archgraph::analyze(source, config, files, edges, Vec::new(), None).unwrap()
+    boundrail::analyze(source, config, files, edges, Vec::new(), None).unwrap()
 }
 
 fn consumers() -> Vec<(&'static str, &'static str)> {
@@ -71,7 +71,7 @@ fn disconnected_helper_files_reclassify_a_false_folder_cycle() {
     assert!(
         doc.findings
             .iter()
-            .any(|f| f.kind == archgraph::model::FindingKind::CycleViaGrabbag)
+            .any(|f| f.kind == boundrail::model::FindingKind::CycleViaGrabbag)
     );
 }
 
@@ -159,7 +159,7 @@ fn threshold_file_and_kind_guards_do_not_hide_findings() {
     assert_eq!(doc.grabbags.len(), 1);
     let mut config = doc.config.clone();
     config.all_kinds = false;
-    let deferred = archgraph::analyze(
+    let deferred = boundrail::analyze(
         doc.source.clone(),
         config,
         doc.files.iter().map(|f| f.path.clone()).collect(),
@@ -213,10 +213,10 @@ fn threshold_config_defaults_ranges_and_typos_are_checked() {
     }
     let path = std::env::temp_dir().join(format!("archgraph-grabbag-{}.yaml", std::process::id()));
     std::fs::write(&path, "version: 1\ngrabbag: {fan_in_min: 3}").unwrap();
-    archgraph::rules::load(&path).unwrap();
+    boundrail::rules::load(&path).unwrap();
     std::fs::write(&path, "version: 1\ngrabbag: {fan_in_mni: 3}").unwrap();
     assert!(
-        format!("{:#}", archgraph::rules::load(&path).unwrap_err())
+        format!("{:#}", boundrail::rules::load(&path).unwrap_err())
             .contains("unknown field `fan_in_mni` in grabbag")
     );
     std::fs::remove_file(path).unwrap();
@@ -241,7 +241,7 @@ fn existing_internal_file_cycles_survive_folder_reclassification() {
         ["utils/date.ts", "utils/work.ts"]
     );
     assert_eq!(doc.cycles.len(), 1);
-    assert_eq!(doc.cycles[0].level, archgraph::model::CycleLevel::File);
+    assert_eq!(doc.cycles[0].level, boundrail::model::CycleLevel::File);
     assert_eq!(
         doc.cycles[0].members,
         ["utils/counter-a.ts", "utils/counter-b.ts"]
@@ -303,7 +303,7 @@ fn deferred_runtime_flags_follow_verified_cycles_in_both_kind_modes() {
     for all_kinds in [false, true] {
         let mut config = base.config.clone();
         config.all_kinds = all_kinds;
-        let doc = archgraph::analyze(
+        let doc = boundrail::analyze(
             base.source.clone(),
             config,
             base.files.iter().map(|f| f.path.clone()).collect(),
@@ -351,7 +351,7 @@ fn retained_all_kind_scc_still_gets_strict_runtime_flag_verification() {
     for all_kinds in [false, true] {
         let mut config = base.config.clone();
         config.all_kinds = all_kinds;
-        let doc = archgraph::analyze(
+        let doc = boundrail::analyze(
             base.source.clone(),
             config,
             base.files.iter().map(|f| f.path.clone()).collect(),

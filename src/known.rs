@@ -147,7 +147,7 @@ pub fn fails(doc: &Document) -> bool {
 /// The line `check` and `report` print for a stale entry.
 pub fn stale_line(entry: &Entry) -> String {
     format!(
-        "stale known {} -> {} ({}): no longer forbidden; run archgraph check --update-known shrink",
+        "stale known {} -> {} ({}): no longer forbidden; run boundrail check --update-known shrink",
         entry.from, entry.to, entry.rule
     )
 }
@@ -181,7 +181,7 @@ pub fn render(rules: &str, entries: &[Entry]) -> String {
     let quote = |s: &str| serde_json::Value::from(s).to_string();
     let mut out = format!(
         "# Forbidden imports {rules} already has. check fails on any other, and on an entry that no\n\
-         # longer occurs. Shrink with: archgraph check --update-known shrink\n\
+         # longer occurs. Shrink with: boundrail check --update-known shrink\n\
          version: 1\nknown:{}\n",
         if entries.is_empty() { " []" } else { "" }
     );

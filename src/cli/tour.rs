@@ -15,9 +15,9 @@ pub(super) struct TourArgs {
 
 pub(super) fn run(args: TourArgs) -> Result<()> {
     let input = read_scan(&args.graph)?;
-    let tour = archgraph::tour::markdown(
+    let tour = boundrail::tour::markdown(
         &input,
-        &archgraph::tour::Options {
+        &boundrail::tour::Options {
             reverse: args.reverse,
             agent: args.agent,
         },

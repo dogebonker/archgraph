@@ -1,12 +1,12 @@
 mod common;
 
-use archgraph::{
+use boundrail::{
     model::{Language, ScanInput},
     symbols::{self, Options},
 };
 use std::{fs, path::Path};
 
-fn fixture(name: &str) -> (String, archgraph::model::Document) {
+fn fixture(name: &str) -> (String, boundrail::model::Document) {
     let (root, input) = common::synthetic(
         &format!("{name}-{}", std::process::id()),
         2,
@@ -22,7 +22,7 @@ fn fixture(name: &str) -> (String, archgraph::model::Document) {
         &input,
     ]);
     let input: ScanInput = serde_json::from_str(&json).unwrap();
-    let mut doc = archgraph::restore_scan(input).unwrap();
+    let mut doc = boundrail::restore_scan(input).unwrap();
     doc.source.language = Language::Python;
     for file in &mut doc.files {
         file.path = file.path.replace(".ts", ".py");

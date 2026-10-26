@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process::Command;
 
 use anyhow::{Context, Result, bail};
-use archgraph::model::{Document, EdgeKind};
+use boundrail::model::{Document, EdgeKind};
 use serde::Deserialize;
 
 const HELPER: &str = include_str!("../impact_typescript.cjs");
@@ -36,7 +36,7 @@ pub(super) fn resolve_barrels(
         "files": doc.files.iter().map(|file| serde_json::json!({"path":file.path,"barrel":file.barrel})).collect::<Vec<_>>()
     }))?;
     let output =
-        archgraph::collect::run_with_input(Command::new("node").args(["-e", HELPER]), input)
+        boundrail::collect::run_with_input(Command::new("node").args(["-e", HELPER]), input)
             .context("running TypeScript impact symbol resolver")?;
     if !output.status.success() {
         bail!(
@@ -95,7 +95,7 @@ pub(super) fn resolve_barrels(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use archgraph::model::{Config, Edge, Source};
+    use boundrail::model::{Config, Edge, Source};
     use serde_json::json;
 
     #[test]
@@ -116,9 +116,9 @@ mod tests {
             verdict: None,
             rule: None,
             reach: None,
-            ..archgraph::model::Edge::default()
+            ..boundrail::model::Edge::default()
         };
-        let mut doc = archgraph::analyze(
+        let mut doc = boundrail::analyze(
             source,
             config,
             ["consumer.ts", "index.ts", "nested/index.ts", "a.ts"]

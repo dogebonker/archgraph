@@ -63,12 +63,12 @@ def verify(binary, corpus, checkout):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", type=Path, default=Path("target/debug/archgraph"))
+    parser.add_argument("--binary", type=Path, default=Path("target/debug/boundrail"))
     parser.add_argument("--checkouts", type=Path, help="existing pinned checkouts named adr-kit and archgate; otherwise clone to a temporary directory")
     args = parser.parse_args()
     binary = args.binary.resolve()
     corpora = json.loads(Path(__file__).with_name("adr-corpora.json").read_text())["corpora"]
-    with tempfile.TemporaryDirectory(prefix="archgraph-adr-interop-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="boundrail-adr-interop-") as temporary:
         results = []
         for corpus in corpora:
             checkout = (args.checkouts or Path(temporary)) / corpus["name"]

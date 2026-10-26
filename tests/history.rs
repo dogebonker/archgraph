@@ -408,8 +408,8 @@ fn drift_repo(name: &str) -> (PathBuf, Vec<String>) {
     (root, vec![first, second, third, fourth])
 }
 
-fn drift_graph(root: &Path) -> anyhow::Result<archgraph::model::Document> {
-    use archgraph::model::{Config, Edge, EdgeKind, Source};
+fn drift_graph(root: &Path) -> anyhow::Result<boundrail::model::Document> {
+    use boundrail::model::{Config, Edge, EdgeKind, Source};
     let cycle = fs::read_to_string(root.join("marker"))?.contains("March");
     let source: Source = serde_json::from_value(
         json!({"language":"typescript","collector":{"name":"fixture","version":null,"cruised":2},"generated_at":"test","git":null}),
@@ -424,7 +424,7 @@ fn drift_graph(root: &Path) -> anyhow::Result<archgraph::model::Document> {
         verdict: None,
         rule: None,
         reach: None,
-        ..archgraph::model::Edge::default()
+        ..boundrail::model::Edge::default()
     }];
     if cycle {
         edges.push(Edge {
@@ -434,10 +434,10 @@ fn drift_graph(root: &Path) -> anyhow::Result<archgraph::model::Document> {
             verdict: None,
             rule: None,
             reach: None,
-            ..archgraph::model::Edge::default()
+            ..boundrail::model::Edge::default()
         });
     }
-    archgraph::analyze(
+    boundrail::analyze(
         source,
         config,
         vec!["a/a.ts".into(), "b/b.ts".into()],
@@ -449,7 +449,7 @@ fn drift_graph(root: &Path) -> anyhow::Result<archgraph::model::Document> {
 
 #[test]
 fn drift_sampling_selects_first_monthly_commits_intervals_and_releases() {
-    use archgraph::history::{HistoryOptions, Sampling, collect_with_options};
+    use boundrail::history::{HistoryOptions, Sampling, collect_with_options};
     let (root, commits) = drift_repo("samples");
     let monthly =
         collect_with_options(&root, "HEAD", &HistoryOptions::default(), drift_graph).unwrap();
@@ -553,7 +553,7 @@ fn drift_sampling_selects_first_monthly_commits_intervals_and_releases() {
 
 #[test]
 fn drift_cache_append_keeps_old_points_and_scans_only_missing_contexts() {
-    use archgraph::history::{HistoryOptions, collect_with_options};
+    use boundrail::history::{HistoryOptions, collect_with_options};
     let (root, commits) = drift_repo("cache");
     let mut scans = 0;
     let mut scan = |path: &Path| {
@@ -593,7 +593,7 @@ fn drift_cache_append_keeps_old_points_and_scans_only_missing_contexts() {
 
 #[test]
 fn drift_skips_failed_scans_but_rejects_an_entirely_failed_timeline() {
-    use archgraph::history::{HistoryOptions, collect_with_options};
+    use boundrail::history::{HistoryOptions, collect_with_options};
     let (root, commits) = drift_repo("failures");
     let options = HistoryOptions::default();
     let result = collect_with_options(&root, "HEAD", &options, |path| {
@@ -615,7 +615,7 @@ fn drift_skips_failed_scans_but_rejects_an_entirely_failed_timeline() {
             .to_string()
             .contains("all selected history snapshots failed")
     );
-    let page = archgraph::history::render(&result).unwrap();
+    let page = boundrail::history::render(&result).unwrap();
     assert!(page.contains("Architecture drift"));
     assert!(page.contains("Skipped snapshots"));
     assert!(!page.contains("__HISTORY_DATA__"));
@@ -635,7 +635,7 @@ fn checkout_removes_clones_left_by_dead_processes() {
     for dir in [&stale, &live, &unrelated] {
         fs::create_dir_all(dir.join("repo")).unwrap();
     }
-    drop(archgraph::history::Checkout::new(&root).unwrap());
+    drop(boundrail::history::Checkout::new(&root).unwrap());
     running.kill().unwrap();
     running.wait().unwrap();
     let (live_kept, unrelated_kept) = (live.exists(), unrelated.exists());
@@ -649,7 +649,7 @@ fn checkout_removes_clones_left_by_dead_processes() {
 #[test]
 #[cfg(unix)]
 fn drift_keeps_scans_whose_cache_writes_fail() {
-    use archgraph::history::{HistoryOptions, collect_with_options};
+    use boundrail::history::{HistoryOptions, collect_with_options};
     use std::os::unix::fs::PermissionsExt;
     let (root, commits) = drift_repo("readonly-cache");
     let cache = root.join("readonly-cache");
@@ -686,7 +686,7 @@ fn drift_keeps_scans_whose_cache_writes_fail() {
 #[test]
 #[cfg(unix)]
 fn drift_refuses_symlink_cache_directories() {
-    use archgraph::history::{HistoryOptions, collect_with_options};
+    use boundrail::history::{HistoryOptions, collect_with_options};
     let (root, _) = drift_repo("symlink");
     let outside = root.join("outside");
     fs::create_dir_all(&outside).unwrap();
@@ -896,8 +896,8 @@ fn history_cache_tracks_the_collector_package_not_only_the_interpreter() {
 
 #[test]
 fn history_retains_persisted_finding_context_without_scanning_cached_points() {
-    use archgraph::history::{HistoryOptions, collect_with_options, persist_context};
-    use archgraph::model::{FindingKind, Provenance};
+    use boundrail::history::{HistoryOptions, collect_with_options, persist_context};
+    use boundrail::model::{FindingKind, Provenance};
     let (root, commits) = drift_repo("cached-context");
     let options = HistoryOptions {
         cache_dir: Some(root.join(".archgraph/history")),

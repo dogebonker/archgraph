@@ -1,8 +1,8 @@
 //! Persisted pre-edit baselines; an unresolved block remains debt through repair edits.
 use super::*;
 use anyhow::ensure;
-use archgraph::hook_agents::{self, Agent, Event};
-use archgraph::{edit_audit, edit_gate};
+use boundrail::hook_agents::{self, Agent, Event};
+use boundrail::{edit_audit, edit_gate};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -508,7 +508,7 @@ fn scan(setup: &Setup) -> Result<(Document, BTreeMap<String, String>)> {
             args.extend(["--rules".into(), rules.to_string_lossy().into_owned()]);
         }
         // Request-local captured output keeps native hook stdout valid JSON.
-        let capture = archgraph::output::Capture::begin();
+        let capture = boundrail::output::Capture::begin();
         // A reasoned bypass changes the caller environment; collect independently of daemon trust.
         let response = if globals().no_daemon || std::env::var_os("ARCHGRAPH_BYPASS").is_some() {
             None
@@ -519,9 +519,9 @@ fn scan(setup: &Setup) -> Result<(Document, BTreeMap<String, String>)> {
         let result = (|| -> Result<Document> {
             if let Some(output) = response {
                 ensure!(output.code == 0, "daemon scan failed: {}", output.stderr);
-                archgraph::restore_scan(read_scan(&graph_path)?)
+                boundrail::restore_scan(read_scan(&graph_path)?)
             } else {
-                let cli = Cli::try_parse_from(std::iter::once("archgraph".to_owned()).chain(args))?;
+                let cli = Cli::try_parse_from(std::iter::once("boundrail".to_owned()).chain(args))?;
                 let Cmd::Scan(args) = cli.command else {
                     unreachable!()
                 };
@@ -554,7 +554,7 @@ fn snapshot(root: &Path, id: &str) -> Result<(Snapshot, Document)> {
         hash(&fs::read(&path)?) == state.graph_hash,
         "snapshot graph changed"
     );
-    Ok((state, archgraph::restore_scan(read_scan(&path)?)?))
+    Ok((state, boundrail::restore_scan(read_scan(&path)?)?))
 }
 fn capture(setup: &Setup, agent: Agent, session: &str) -> Result<(String, Document)> {
     let policy_before = policy(setup)?;
@@ -623,7 +623,7 @@ pub(super) fn snapshot_check(root: &Path, id: &str) -> Result<Value> {
         },
     )?;
     let mut value =
-        archgraph::mcp_tools::call(&after, &root, "check_diff", json!({}), Some(&before))?;
+        boundrail::mcp_tools::call(&after, &root, "check_diff", json!({}), Some(&before))?;
     for (key, item) in serde_json::to_value(report)?
         .as_object()
         .context("invalid gate report")?
@@ -697,10 +697,10 @@ fn enforce(
     .into();
     if report.verdict == "BLOCK" {
         for violation in &mut report.violations {
-            if let Ok(recipe) = archgraph::recipes::recipe_for(&doc, &violation.finding_id) {
+            if let Ok(recipe) = boundrail::recipes::recipe_for(&doc, &violation.finding_id) {
                 let mut recipe = recipe.clone();
                 recipe.verify.structured.baseline_id = Some(violation.finding_id.clone());
-                archgraph::apply::remember_proposal(root, &doc, &violation.finding_id, &recipe)?;
+                boundrail::apply::remember_proposal(root, &doc, &violation.finding_id, &recipe)?;
                 violation.recipe = serde_json::to_value(recipe)?;
             }
         }

@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "archgraph": {
-      "command": "archgraph",
+    "boundrail": {
+      "command": "boundrail",
       "args": [
         "mcp",
         "${workspaceFolder}",

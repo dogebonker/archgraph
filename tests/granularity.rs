@@ -81,5 +81,5 @@ fn file_granularity_overrides_grouping_preserves_policy_and_round_trips() {
             .iter()
             .all(|f| f["module"] == "monolith")
     );
-    archgraph::restore_scan(serde_json::from_value(legacy).unwrap()).unwrap();
+    boundrail::restore_scan(serde_json::from_value(legacy).unwrap()).unwrap();
 }

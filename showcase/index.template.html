@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<title>archgraph showcase</title>
+<title>Boundrail showcase</title>
 <style>
 /* The visual language of assets/graph.html: Apple's dark system colours on black. */
 :root {
@@ -69,11 +69,11 @@ footer { margin-top: 40px; font-size: 12px; color: var(--label2); }
 <body>
 <main>
   <header>
-    <h1>archgraph showcase</h1>
-    <p>archgraph reports on well-known open-source repositories, each scanned at a pinned commit.</p>
+    <h1>Boundrail showcase</h1>
+    <p>Boundrail reports on well-known open-source repositories, each scanned at a pinned commit.</p>
   </header>
   <section class="intro" aria-label="How these reports were made">
-    <p><a href="https://github.com/dogebonker/archgraph">archgraph</a> turns a repository's import graph into evidence for architecture decisions: per-module coupling and cohesion, module cycles with their smallest break set, and findings that propose file moves backed by a simulation of each move. It collects dependencies with dependency-cruiser (TypeScript/JavaScript), grimp and the standard-library AST (Python), or go/types (Go), without executing repository code.</p>
+    <p><a href="https://github.com/dogebonker/archgraph">Boundrail</a> turns a repository's import graph into evidence for architecture decisions: per-module coupling and cohesion, module cycles with their smallest break set, and findings that propose file moves backed by a simulation of each move. It collects dependencies with dependency-cruiser (TypeScript/JavaScript), grimp and the standard-library AST (Python), or go/types (Go), without executing repository code.</p>
     <p>Each repository was fetched at the pinned commit and scanned with the flags shown. Defaults exclude tests, generated/vendor code, fixtures, stories and examples, and respect ignore files. Known external packages are recorded separately from internal architecture metrics; unresolved specifiers remain visible. Runtime cycles omit deferred, type-only and structural re-export edges, and grab-bag findings require file-split verification. These choices change scope; production APIs in build/test-named folders need particular care. See the <a href="https://github.com/dogebonker/archgraph/blob/main/showcase/edge-quality-report.md">measured methodology and caveats</a>.</p>
     <dl id="method"></dl>
     <p>No co-change analysis: the clones are shallow, so <span class="mono">hidden-coupling</span> never appears here. Imports are not semantics: dependency injection, event buses, string lookups, reflection and dynamic imports without static strings are invisible to the graph. Findings are moves with evidence for a person to judge, not verdicts. The repositories are well-known examples chosen for their size and layout; these reports are reading aids, not endorsements or criticism of the projects.</p>
@@ -106,7 +106,7 @@ function term(dl, dt, dd, cls) {
 }
 
 for (const [dt, dd] of [
-  ["archgraph", `${index.archgraph.version}, commit ${String(index.archgraph.commit).slice(0, 12)}`],
+  ["Boundrail", `${index.archgraph.version}, commit ${String(index.archgraph.commit).slice(0, 12)}`],
   ["collectors", index.collectors.map(c => `${c.name} ${c.version}`).join(", ") || "n/a"],
   ["built", index.generated_at],
 ]) {

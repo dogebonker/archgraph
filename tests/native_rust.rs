@@ -1,4 +1,4 @@
-use archgraph::{
+use boundrail::{
     collect::{
         excludes::{Options, Policy},
         native::rust,
@@ -27,7 +27,7 @@ impl Fixture {
         }
         Self(root)
     }
-    fn scan(&self) -> archgraph::collect::native::Output {
+    fn scan(&self) -> boundrail::collect::native::Output {
         let policy = Policy::new(&self.0, Language::Rust, Options::default()).unwrap();
         rust::collect(&self.0, &policy).unwrap()
     }
@@ -335,7 +335,7 @@ fn relative_paths_prefer_child_modules_and_path_attributes_skip_comments() {
 
 #[test]
 fn containment_and_test_only_imports_do_not_create_runtime_cycles() {
-    use archgraph::model::EdgeKind;
+    use boundrail::model::EdgeKind;
     let f = Fixture::new(&[
         ("Cargo.toml", "[package]\nname='sample'\nversion='0.1.0'"),
         (
@@ -415,7 +415,7 @@ fn wildcard_parent_import_and_exported_macro_use_actual_definitions() {
     );
     assert!(!out.raw.edges.iter().any(|e| e.from == "src/consumer.rs"
         && e.to == "src/lib.rs"
-        && e.kind == archgraph::model::EdgeKind::Static));
+        && e.kind == boundrail::model::EdgeKind::Static));
 }
 
 #[test]
@@ -482,7 +482,7 @@ fn production_back_edges_survive_and_ambiguous_globs_are_structural() {
         assert!(
             out.raw.edges.iter().any(|e| e.from == from
                 && e.to == to
-                && e.kind == archgraph::model::EdgeKind::Static)
+                && e.kind == boundrail::model::EdgeKind::Static)
         );
     }
     assert!(
@@ -490,15 +490,15 @@ fn production_back_edges_survive_and_ambiguous_globs_are_structural() {
             .edges
             .iter()
             .filter(|e| e.names == ["*"])
-            .all(|e| e.kind == archgraph::model::EdgeKind::Reexport
-                && e.confidence == Some(archgraph::model::Confidence::Low))
+            .all(|e| e.kind == boundrail::model::EdgeKind::Reexport
+                && e.confidence == Some(boundrail::model::Confidence::Low))
     );
 }
 
 #[test]
 fn containment_is_not_a_reexport_cycle_but_public_forwarding_cycles_remain() {
     fn scan(f: &Fixture) -> serde_json::Value {
-        let output = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        let output = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
             .args([
                 "--no-daemon",
                 "scan",
@@ -553,7 +553,7 @@ fn included_cfg_test_files_are_classed_out_of_cycles_even_with_all_kinds() {
         ("src/lib.rs", "#[cfg(test)] mod checks; pub fn run() {}"),
         ("src/checks.rs", "use crate::run;"),
     ]);
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args([
             "--no-daemon",
             "scan",
@@ -585,7 +585,7 @@ fn included_cfg_test_files_are_classed_out_of_cycles_even_with_all_kinds() {
 
 #[test]
 fn bare_local_module_calls_are_dependencies_and_can_close_production_cycles() {
-    use archgraph::model::EdgeKind;
+    use boundrail::model::EdgeKind;
     let f = Fixture::new(&[
         ("Cargo.toml", "[package]\nname='sample'\nversion='0.1.0'"),
         (
@@ -617,7 +617,7 @@ fn bare_local_module_calls_are_dependencies_and_can_close_production_cycles() {
             .iter()
             .any(|i| i.specifier.contains("UnknownType") || i.specifier.contains("absent"))
     );
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args([
             "--no-daemon",
             "scan",
@@ -680,7 +680,7 @@ fn only_actual_macro_export_attributes_prove_crate_macro_resolution() {
                 .unwrap()
                 .iter()
                 .any(|r| r.specifier == name
-                    && r.unresolved == Some(archgraph::model::ImportReason::Native)
+                    && r.unresolved == Some(boundrail::model::ImportReason::Native)
                     && r.targets.is_empty())
         );
     }
@@ -707,10 +707,10 @@ fn a_test_alias_does_not_erase_a_production_module() {
         assert!(!out.raw.metadata["src/shared.rs"].test);
         assert!(out.raw.edges.iter().any(|e| e.from == "src/consumer.rs"
             && e.to == "src/shared.rs"
-            && e.kind == archgraph::model::EdgeKind::Static));
+            && e.kind == boundrail::model::EdgeKind::Static));
         assert!(out.raw.edges.iter().any(|e| e.from == "src/consumer.rs"
             && e.to == "src/shared/nested.rs"
-            && e.kind == archgraph::model::EdgeKind::Static));
+            && e.kind == boundrail::model::EdgeKind::Static));
     }
 }
 
@@ -771,14 +771,14 @@ fn parent_globs_keep_symbols_forwarded_by_nested_stars() {
     let out = f.scan();
     assert!(out.raw.edges.iter().any(|e| e.from == "src/consumer.rs"
         && e.to == "src/shapes.rs"
-        && e.kind == archgraph::model::EdgeKind::Static));
+        && e.kind == boundrail::model::EdgeKind::Static));
     assert!(out.raw.edges.iter().any(|e| e.from == "src/consumer.rs"
         && e.to == "src/direct.rs"
-        && e.kind == archgraph::model::EdgeKind::Static));
+        && e.kind == boundrail::model::EdgeKind::Static));
     assert!(out.raw.edges.iter().any(|e| e.from == "src/shapes.rs"
         && e.to == "src/consumer.rs"
-        && e.kind == archgraph::model::EdgeKind::Static));
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+        && e.kind == boundrail::model::EdgeKind::Static));
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args([
             "--no-daemon",
             "scan",

@@ -2,11 +2,11 @@ mod common;
 
 use std::path::Path;
 
-use archgraph::collect::{
+use boundrail::collect::{
     elixir,
     excludes::{Options, Policy},
 };
-use archgraph::model::{EdgeKind, ImportReason, Language};
+use boundrail::model::{EdgeKind, ImportReason, Language};
 use serde_json::{Value, json};
 
 fn policy(root: &Path) -> Policy {
@@ -385,7 +385,7 @@ fn elixir_cli_sanitizes_startup_flags_and_project_code_paths() {
             ),
         ],
     );
-    let out = std::process::Command::new(env!("CARGO_BIN_EXE_archgraph"))
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_boundrail"))
         .args(["scan", root.to_str().unwrap(), "--language", "elixir"])
         .env("ELIXIR_ERL_OPTIONS", "-not_a_real_runtime_option")
         .env("ELIXIR_ERL_PARAMETERS", "-not_a_real_runtime_option")

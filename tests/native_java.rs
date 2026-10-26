@@ -1,8 +1,8 @@
-use archgraph::collect::{
+use boundrail::collect::{
     excludes::{Options, Policy},
     native::java,
 };
-use archgraph::model::{ImportReason, Language};
+use boundrail::model::{ImportReason, Language};
 use std::fs;
 use std::path::{Path, PathBuf};
 struct Fixture(PathBuf);
@@ -31,7 +31,7 @@ fn fixture(files: &[(&str, &str)]) -> Fixture {
     }
     root
 }
-fn collect(root: &Path) -> archgraph::collect::native::Output {
+fn collect(root: &Path) -> boundrail::collect::native::Output {
     let policy = Policy::new(root, Language::Java, Options::default()).unwrap();
     java::collect(root, &policy).unwrap()
 }

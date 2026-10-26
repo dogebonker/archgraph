@@ -4,7 +4,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use archgraph::git::{has_tracked_changes, run};
+use boundrail::git::{has_tracked_changes, run};
 
 struct Fixture(PathBuf);
 impl Drop for Fixture {

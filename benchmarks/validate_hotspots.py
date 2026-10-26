@@ -106,7 +106,7 @@ def measure(entry, binary, output, timeout, prepare=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--coverage", type=Path, required=True)
-    parser.add_argument("--binary", type=Path, default=Path(__file__).resolve().parent.parent / "target/release/archgraph")
+    parser.add_argument("--binary", type=Path, default=Path(__file__).resolve().parent.parent / "target/release/boundrail")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--timeout", type=int, default=240)
     parser.add_argument("--jobs", type=int, default=3)

@@ -1,5 +1,5 @@
-use archgraph::collect::{barrels, depcruise, imports, typescript_resolution::enrich};
-use archgraph::model::{EdgeKind, ImportReason};
+use boundrail::collect::{barrels, depcruise, imports, typescript_resolution::enrich};
+use boundrail::model::{EdgeKind, ImportReason};
 use serde_json::json;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -17,7 +17,7 @@ fn write(root: &Path, file: &str, source: &str) {
 fn raw(file: &str) -> Vec<u8> {
     serde_json::to_vec(&json!({"modules":[{"source":file,"dependencies":[]}],"summary":{"totalCruised":1,"environment":{"version":"fixture"}}})).unwrap()
 }
-fn scan(root: &Path, file: &str) -> archgraph::collect::RawGraph {
+fn scan(root: &Path, file: &str) -> boundrail::collect::RawGraph {
     let mut sources = imports::Sources::new(root).unwrap();
     let (json, ledger) = enrich(&raw(file), &mut sources).unwrap();
     let mut graph = depcruise::parse_at(&json, &mut sources).unwrap();
@@ -439,7 +439,7 @@ fn local_interface_does_not_override_a_forwarded_runtime_export() {
         .iter()
         .map(|file| (file.clone(), file.clone()))
         .collect();
-    let cycles = archgraph::graph::cycles(
+    let cycles = boundrail::graph::cycles(
         &module_of,
         &graph.edges,
         &std::collections::BTreeSet::new(),
